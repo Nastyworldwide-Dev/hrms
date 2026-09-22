@@ -225,3 +225,15 @@ DEAD END: testing `if not team_of` for "has no team". `team_of` falls back to th
   was quiet today. Caught on the bench; `is_approver()` is the honest test and it is
   the app's existing definition.
 NEXT: D3 — Helpdesk counts, SOP search, Profile grouping.
+- 2026-09-22T17:44:26Z PUSH: nz-glass @ b8c3fc900
+- 2026-09-22T17:44:26Z COMMIT: b8c3fc900 fix(team): an employee with no team was told their team was quiet → review+design dispatched
+- 2026-09-22T17:53:05Z EVIDENCE: 2 correct — mapped tests green (bun ) for 22 file(s) ⟂7b381fd64ee9
+
+EVIDENCE: rung 2 (correct) — D3 (helpdesk counts, profile groups): 749/749 frontend
+  tests green, all 7 static gates green. Two mutants on the approver gate (removed,
+  and re-gated on the count) both KILLED.
+DEAD END: importing src/data/supportCounts.js directly in a node test. The module
+  uses Vite's `@/` alias, which node does not resolve; the pure parts are evaluated
+  in isolation with the resource stubs passed as FUNCTION PARAMETERS (a `new Function`
+  body sees its own arguments, not the closure it was built in).
+NEXT: SOP search-first (the last D3 piece), then the deploy note.

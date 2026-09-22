@@ -38,82 +38,43 @@
 							</div>
 						</div>
 
-						<!-- Profile Links -->
-						<div class="flex flex-col mt-2">
-							<div
-								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
-								v-for="link in profileLinks"
-								:key="link.title"
-								@click="openInfoModal(link)"
-							>
-								<div class="flex flex-row items-center gap-3 grow">
-									<component :is="link.icon" class="h-icon-md w-icon-md text-inkbase" />
-									<div class="text-button-label text-inkbase">
-										{{ link.title }}
-									</div>
-								</div>
-								<ChevronRight class="h-icon-md w-icon-md text-ink-600" />
-							</div>
+						<!-- FOUR GROUPS, not one list (revamp §7).
+						     Profile was a single undifferentiated column of nine
+						     rows, each hand-built with its own padding, border and
+						     hover — 17 of the app's 103 stray pixel values lived
+						     here. A person looking for "change my password" had to
+						     read all nine.
 
-							<!-- HR Contacts -->
-							<router-link
-								:to="{ name: 'HRContacts' }"
-								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
-							>
-								<div class="flex flex-row items-center gap-3 grow">
-									<Users class="h-icon-md w-icon-md text-inkbase" />
-									<div class="text-button-label text-inkbase">
-										{{ __("HR Contacts") }}
-									</div>
-								</div>
-								<ChevronRight class="h-icon-md w-icon-md text-ink-600" />
-							</router-link>
+						     The groups answer four different questions: who am I,
+						     where do I work, how does the app behave, and how do I
+						     get out. Nothing was removed; the order is now an
+						     argument rather than an accident.
 
-							<!-- Remote Approvals. Shown to APPROVERS (isApprover — HR,
-							     managers, named approvers), never gated on the pending
-							     COUNT: count-gating once made the entry vanish the moment
-							     the queue emptied, stranding an approver away from their
-							     decision History. A normal employee, whom no approval work
-							     can ever reach, sees no approvals surface at all. -->
-							<router-link
-								v-if="isApprover.data"
-								:to="{ name: 'RemoteApprovals' }"
-								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
-							>
-								<div class="flex flex-row items-center gap-3 grow">
-									<SquareCheck class="h-icon-md w-icon-md text-inkbase" />
-									<div class="text-button-label text-inkbase">
-										{{ __("Remote Approvals") }}
-									</div>
+						     GListPanel/GListRow, so the padding, the dividers and
+						     the 44px targets come from the system and cannot drift
+						     again. -->
+						<div class="flex flex-col gap-5 mt-2">
+							<template v-for="group in groups" :key="group.key">
+								<div v-if="group.rows.length" class="flex flex-col gap-2">
+									<span class="g-eyebrow">{{ group.title }}</span>
+									<GListPanel>
+										<GListRow
+											v-for="row in group.rows"
+											:key="row.key"
+											:label="row.label"
+											:sublabel="row.sublabel"
+											@click="row.go()"
+										>
+											<template #icon>
+												<component :is="row.icon" class="g-row-icon" />
+											</template>
+											<template v-if="row.badge" #badge>
+												<GBadge variant="accent">{{ row.badge }}</GBadge>
+											</template>
+										</GListRow>
+									</GListPanel>
 								</div>
-								<div class="flex flex-row items-center gap-2">
-									<span
-										v-if="pendingApprovalsCount > 0"
-										class="inline-flex bg-accent-ink text-ground text-caption font-sans font-extrabold px-1.5 py-0.5"
-									>
-										{{ pendingApprovalsCount }}
-									</span>
-									<ChevronRight class="h-icon-md w-icon-md text-ink-600" />
-								</div>
-							</router-link>
-
-							<!-- Settings. Never gated: this screen also holds the theme switcher
-							     and the only path to Change Password, so hiding it behind the
-							     push-relay check (the old v-if) locked every user out of both
-							     on sites with no push relay configured. AppSettings itself
-							     degrades the push toggle when the relay is absent. -->
-							<router-link
-								:to="{ name: 'Settings' }"
-								class="flex flex-row cursor-pointer p-4 pl-0.5 items-center justify-between border-b border-divider hover:bg-inkbase/[0.04]"
-							>
-								<div class="flex flex-row items-center gap-3 grow">
-									<Settings class="h-icon-md w-icon-md text-inkbase" />
-									<div class="text-button-label text-inkbase">
-										{{ __("Settings") }}
-									</div>
-								</div>
-								<ChevronRight class="h-icon-md w-icon-md text-ink-600" />
-							</router-link>
+							</template>
 						</div>
 
 						<button
@@ -176,8 +137,9 @@
 import {
 	Book,
 	ChevronLeft,
-	ChevronRight,
 	File,
+	Info,
+	KeyRound,
 	LogOut,
 	Settings,
 	SquareCheck,
@@ -193,6 +155,9 @@ import { IonContent, IonModal } from "@ionic/vue"
 import { createDocumentResource, createResource } from "frappe-ui"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"
+import GBadge from "@/components/glass/GBadge.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 
 import { showErrorAlert } from "@/utils/dialogs"
 import { formatCurrency } from "@/utils/formatters"
@@ -247,10 +212,110 @@ const profileLinks = [
 	},
 ]
 
+//: DECLARED BEFORE `groups`, on purpose. A computed's getter does not run at
+//: setup, but the script-setup order gate refuses a read above its
+//: declaration anyway — and it is right to: the moment somebody makes one of
+//: these eager, the screen throws "before initialization" and Ionic is left
+//: holding a view with no element. The KPI dashboard learned this the hard
+//: way and so did two check-in dialogs this morning.
+const pendingApprovalsCount = computed(() => Number(pendingCountResource.data) || 0)
+
+//: Stamped at compile time by vite (`__APP_BUILD__`), the same constant the
+//: diagnostics report carries — so the version a person reads off the screen
+//: is the version in the report they send.
+const buildString = typeof __APP_BUILD__ === "string" ? __APP_BUILD__ : "dev"
+
+//: FOUR GROUPS. Each answers a different question, which is what makes them
+//: groups rather than a divided list: who am I, where do I work, how does the
+//: app behave, and how do I get out.
+//:
+//: Role-gated rows keep the server as the authority — `isApprover` is a
+//: RESOURCE, answered by the backend, not a role string read here.
+const groups = computed(() => [
+	{
+		key: "you",
+		title: __("You"),
+		rows: [
+			...profileLinks.map((link) => ({
+				key: link.title,
+				icon: link.icon,
+				label: link.title,
+				sublabel: null,
+				go: () => openInfoModal(link),
+			})),
+		],
+	},
+	{
+		key: "work",
+		title: __("Work"),
+		rows: [
+			{
+				key: "hr-contacts",
+				icon: Users,
+				label: __("HR Contacts"),
+				sublabel: __("Who to ask, and how to reach them"),
+				go: () => router.push({ name: "HRContacts" }),
+			},
+			// Shown to APPROVERS, never gated on the pending COUNT: count-gating
+			// once made this vanish the moment the queue emptied, stranding an
+			// approver away from their own decision history.
+			...(isApprover.data
+				? [
+						{
+							key: "approvals",
+							icon: SquareCheck,
+							label: __("Remote Approvals"),
+							sublabel: null,
+							badge: pendingApprovalsCount.value > 0 ? String(pendingApprovalsCount.value) : null,
+							go: () => router.push({ name: "RemoteApprovals" }),
+						},
+				  ]
+				: []),
+		],
+	},
+	{
+		key: "app",
+		title: __("App"),
+		rows: [
+			{
+				key: "settings",
+				icon: Settings,
+				// Never gated: this is the only path to the theme switcher and
+				// to Change Password, and hiding it behind the push-relay check
+				// once locked users out of both.
+				label: __("Settings"),
+				sublabel: __("Theme, notifications, language"),
+				go: () => router.push({ name: "Settings" }),
+			},
+		],
+	},
+	{
+		key: "account",
+		title: __("Account"),
+		rows: [
+			{
+				key: "password",
+				icon: KeyRound,
+				label: __("Change password"),
+				sublabel: null,
+				go: () => router.push({ name: "ChangePassword" }),
+			},
+			{
+				key: "about",
+				icon: Info,
+				// EVERY phone-side defect this month began with "which version
+				// are you on". The answer is now on the screen people are
+				// already looking at when they report one.
+				label: __("About this app"),
+				sublabel: buildString,
+				go: () => {},
+			},
+		],
+	},
+])
+
 const isInfoModalOpen = ref(false)
 const selectedItem = ref(null)
-
-const pendingApprovalsCount = computed(() => Number(pendingCountResource.data) || 0)
 
 const openInfoModal = async (request) => {
 	selectedItem.value = request

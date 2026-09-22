@@ -29,7 +29,8 @@ import { useRoute, useRouter } from "vue-router"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
-import { helpdeskAvailable } from "@/data/helpdesk"
+import { helpdeskAvailable, myTickets } from "@/data/helpdesk"
+import { myIssuesForCount, openIssueCount, openTicketCount } from "@/data/supportCounts"
 import {
 	HR_TAB,
 	HUB_ROUTE_NAME,
@@ -69,9 +70,20 @@ const remember = (value) => {
 // "no" clamped a cold ?tab=it to hr and rewrote the URL before the probe
 // could say yes (review of 8b38ddfc8), losing every IT deep link on reload.
 const itRefused = computed(() => helpdeskAvailable.data === false)
+//: YOUR open count, on the pill (revamp §7). The hub has had two pills since
+//: 15 Sep and neither said whether there was anything behind it, so somebody
+//: with an unanswered issue had to open the pill to find out — every time.
+//:
+//: In the LABEL rather than as a badge: GSegmented renders one string, and a
+//: count inside it is read aloud with the name, which a coloured badge beside
+//: it would not be (§14.1).
+const withCount = (label, count) => (count > 0 ? `${label} (${count})` : label)
+
 const tabButtons = computed(() => [
-	{ key: HR_TAB, label: __("HR Issues") },
-	...(itRefused.value ? [] : [{ key: IT_TAB, label: __("IT Helpdesk") }]),
+	{ key: HR_TAB, label: withCount(__("HR Issues"), openIssueCount()) },
+	...(itRefused.value
+		? []
+		: [{ key: IT_TAB, label: withCount(__("IT Helpdesk"), openTicketCount()) }]),
 ])
 
 // Which pill a request asks for, clamped to what this site offers.
@@ -118,6 +130,12 @@ watch(
 onMounted(() => {
 	console.info("[HelpdeskHub] opened on pill:", tab.value)
 	syncQuery(tab.value)
+	// BOTH counts, whichever pill is showing: the point of a count on the
+	// pill you are NOT on is that it tells you to go there. Failures are
+	// swallowed — a pill that cannot count is a pill without a number, never
+	// a page that will not open.
+	myIssuesForCount.fetch().catch(() => {})
+	myTickets.fetch?.().catch(() => {})
 })
 
 // The availability probe can answer AFTER setup: a cached "it" pill on a site

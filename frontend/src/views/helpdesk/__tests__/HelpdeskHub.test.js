@@ -38,6 +38,14 @@ function page({ query = {}, stored = null, available = true } = {}) {
 		useRoute: () => route,
 		useRouter: () => router,
 		helpdeskAvailable,
+		// The pills now carry YOUR open count (revamp §7). These tests are
+		// about which pill is SHOWN and which is remembered, so the counts are
+		// stubbed at zero rather than exercised — a count that varied would
+		// make every label assertion here depend on fixture data.
+		openIssueCount: () => 0,
+		openTicketCount: () => 0,
+		myIssuesForCount: { fetch: () => Promise.resolve() },
+		myTickets: { fetch: () => Promise.resolve() },
 		localStorage: {
 			getItem: (key) => storage.get(key) ?? null,
 			setItem: (key, value) => storage.set(key, value),
