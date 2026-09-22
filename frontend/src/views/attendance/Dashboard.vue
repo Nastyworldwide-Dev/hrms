@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :pageTitle="__('Attendance')">
+	<BaseLayout :pageTitle="__('Calendar')">
 		<template #body>
 			<!-- §20.3: one 720px column (7.3 ruling). Was
 			     lg:grid-cols-[1.1fr_1fr], which left ~320px of dead space in the

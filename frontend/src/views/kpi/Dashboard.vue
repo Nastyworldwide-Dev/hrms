@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :pageTitle="__('KPI')">
+	<BaseLayout :pageTitle="__('Score')">
 		<template #body>
 			<div class="flex flex-col w-full max-w-3xl mx-auto px-4 py-7 gap-8 lg:px-7 lg:py-9">
 				<!-- Whose KPI. GSegmented refuses to draw a one-option control, so

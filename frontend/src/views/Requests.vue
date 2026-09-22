@@ -18,7 +18,7 @@
   is that Home no longer has to be the ONLY way to reach a request.
 -->
 <template>
-	<BaseLayout>
+	<BaseLayout :pageTitle="__('Requests')">
 		<template #body>
 			<GPullRefresh @refresh="refreshRequests" />
 			<div
