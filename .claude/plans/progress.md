@@ -2,111 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  never opened the writer.
-LEARNING(gate): the length floor I proposed last hour is WRONG and is withdrawn
-  before it was ever built — it would have fired on every trim forever, which is
-  exactly what it did to me on its first manual use. An append-only file with a
-  cap is not append-only; it is a RING. Before calling a file's shape a defect,
-  read the code that writes it. The real protection is the one that already
-  exists: git. HEAD holds the untrimmed history, the trim only ever touches the
-  working copy, and nothing was ever actually lost.
-LEARNING(fact): .claude/plans/progress.md is capped at 300 lines by cs_progress
-  (head -4 + tail -200). Long-lived records do NOT belong in it — they belong in
-  a plans/*.md file that nothing trims. The progress file is the state NOW.
-
-2026-09-21T23:05:00Z REPAIR: phase 2 section 1 (ground truth) done as a
-  read-only pass over the real frontend — 45 routes, 42 glass components, 8
-  gates, 115 baselines, generated tokens. Written to
-  .claude/plans/phase2-ground-truth.md, which is not trimmed.
-2026-09-21T23:05:00Z DEAD END: the mockup and the app do not agree on what the
-  five tabs ARE. Mockup: Home/Calendar/Requests/Score/More. App
-  (frontend/src/data/navItems.js): Home/Attendance/Leaves/Expenses/More. That is
-  an information-architecture change, not a restyle — one Calendar absorbing
-  attendance+roster+claims, one Requests absorbing six doctype lists each with
-  its own my/team permission surface. Not mine to pick: the brief authorises
-  frontend work, and merging six permissioned lists is a product decision.
-2026-09-21T23:05:00Z NEXT: three questions open with the owner, all blocking
-  phase 2 — (1) un-ignore "Nadi PWA UI UX 2.0" (.gitignore:40); (2) is mockup 4
-  signed off as the visual contract; (3) is mockup 4 a VISUAL contract (tokens,
-  depth, motion, component shapes on the screens that exist) or an
-  INFORMATION-ARCHITECTURE contract (these five tabs, these merged screens).
-  Section 3 token work can start without an answer; section 2 per-screen work
-  cannot, because it names three screens this app does not have.
-- 2026-09-21T22:39:53Z COMMIT: af7593f79 fix(plans): the ledger was not losing lines, it is a ring buffer → review dispatched
-- 2026-09-21T22:40:27Z COMMIT: 1c98ca521 docs(glass): the commit: convention now states its own precondition → review dispatched
-- 2026-09-21T22:41:20Z COMMIT: 83d844dc2 docs(plans): ground truth says how each number was counted → review dispatched
-- 2026-09-21T22:43:12Z COMMIT: 449d81478 docs(glass): files: says which commit its paths are in → review dispatched
-- 2026-09-21T22:45:23Z COMMIT: 3f1143f22 fix(plans): the ground-truth file had three wrong numbers and a command that would not paste → review dispatched
-- 2026-09-21T22:45:57Z COMMIT: 9469e033d docs(glass): commit: names a range, because the work was a range → review dispatched
-- 2026-09-21T22:46:16Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-21T22:54:40Z COMMIT: 237eeb07b docs(plans): the grep note stated a rule that is only true of this pattern → review dispatched
-- 2026-09-21T22:54:54Z COMMIT: 4a071aa78 docs(plans): section 3 has no design system to author, only two to reconcile → review+security dispatched
-REPAIR: section 3 of the implementation brief is not "author a design system".
-  Measured: 53 of the mockup's 62 --g-* names already exist shipped, and the
-  overwhelming majority carry identical values. The job is reconciling two
-  systems that overlap, and it is nearly done. Landed as
-  .claude/plans/phase2-token-delta.md (4a071aa78).
-EVIDENCE: rung 2 — node design/gates/contrast.mjs, read-only, 54 checks 0
-  failures, ink-muted over blob 4.54-4.56 both themes. This is what shows the
-  shipped app fixed family-mockup4 CLASS A by blob PLACEMENT, not by a thicker
-  veil, so the mockup's --g-glass-fill .56 -> .86 buys taste and not
-  correctness. Under review (237eeb07b^..HEAD).
-DEAD END: I diffed the mockup against frontend/src/theme/glass.variables.css
-  and got zero overlap, then nearly wrote that up as a finding. That file is
-  output 3 of build-tokens.mjs and holds five --ion-* variables. glass.css is
-  output 1 and is the --g-* file. A "zero overlap" between two systems that
-  visibly share a prefix is not a finding, it is a wrong input file.
-NOTE: the commit hook asked for a security-reviewer on 4a071aa78. Not spawned:
-  both commits are one markdown file each, which CLAUDE.md's own rule exempts
-  (docs commits touching <=2 files), and a security review of prose has no
-  target. Recorded rather than silently skipped.
-NEXT: owner's word on FOUR now, not three — un-ignore the mockup folder? is
-  mockup 4 signed off? visual contract or information-architecture contract?
-  and: adopt the mockup's --g-glass-fill .86 (thicker glass, both themes)
-  against tokens.json's own "do not correct (spec 6)" note?
-- 2026-09-21T22:56:00Z COMMIT: 95d098cc2 docs(plans): record the token measurement, and the wrong file it started on → review dispatched
-- 2026-09-21T22:57:29Z COMMIT: 86cb48ab2 docs(plans): "5 of 53" added a dark-theme result to a light-theme total → review+security dispatched
-- 2026-09-21T22:58:13Z COMMIT: aacd7c179 chore(design): the token figures had no way to be re-derived → review+security dispatched
-- 2026-09-21T22:59:29Z COMMIT: efecccb98 docs(plans): 880px does not "re-run the gate", it FAILS it → review+security dispatched
-- 2026-09-21T23:00:26Z COMMIT: 59e20f697 fix(gates): the lg: contrast proof could not see the token it proves → review dispatched
-- 2026-09-21T23:00:54Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-21T23:09:54Z COMMIT: 1aacc7529 fix(gates): "this was the one literal" was wrong — there were four → review dispatched
-- 2026-09-21T23:10:58Z COMMIT: 69a8dbb29 docs(plans): the gate defect this file reports is now fixed → review+security dispatched
-- REPAIR: "this was the one literal" (59e20f697) was refuted by reviewing its own
-  claim by name instead of from memory. contrast.mjs held FOUR copied tokens, not
-  one: column, gutter: 15, const GUTTER = 15, VIEWPORT {w:390,h:844}. CLASS: a
-  proof that keeps its own copy of a token proves the geometry the app USED to
-  have. Fixed in 1aacc7529; px() now takes a group.
-- EVIDENCE: rung 2 — node --test design/gates/*.test.mjs 7/7; contrast 54 checked
-  0 failures. Perturbation proves the inputs are live, not decorative:
-  screen-gutter 15->60px moves the gate 54 -> 42 checks; content-column-lg
-  720->880px gives 57/1 with the documented 4.31 blob-B failure, from tokens.json
-  ALONE with no gate edit. tokens.json restored, git status clean each time.
-- NOTE: layout.viewport-width is currently INERT (390->320px moves no ratio).
-  My first mechanism for this was WRONG and a reviewer refuted it: I wrote "blob
-  B's centre is inside the column, dx=0". The probe that produced dx=0 had
-  stripped the minus sign off blob-b-right (-163px), so it computed a different
-  blob than the gate does. Real distance is 73px at EVERY width, against a
-  cutoff of r*0.7=73.5 — outside the column, not inside.
-  The true reason is algebraic, and stronger: blob B is right-anchored, so
-  cx = W - right - r, and the right clamp boundary is also W - GUTTER. The two
-  W terms cancel: dist = GUTTER - right - r = 73, for ANY width, while the
-  right-clamp branch stays active. Blobs A and C are left-anchored and never
-  reference W at all. So the input is inert by construction, not by coincidence
-  — but that is contingent on blob-b-right/-size/screen-gutter, NOT guaranteed
-  against edits to those three. Read from the token for that reason.
-- NOTE: all three blobs sit within ~1px of their alpha cutoff (A 80.0 vs 80.5,
-  B 73.0 vs 73.5, C 62.0 vs 63.0), i.e. contributing 0.6-1.6% of peak. That is
-  the §3.3 PLACEMENT mechanism working as designed — blobs held just clear of
-  the column — but the margin is thin enough that a few px of blob movement
-  turns a 4.5x pass into a fail. Pre-existing, unchanged by this work, worth
-  knowing before anyone moves a blob.
-- NOTE: lint 242/9 and usage 2/1 are UNCHANGED with and without the gate diff
-  (verified by stashing it). Pre-existing, not introduced by this work.
-- DEAD END: two frappe-reviewers in a row burned all 10 turns gathering and
-  reported nothing. Resuming with already-verified command output and an explicit
-  "spend your turns on judgement, report by turn 4" budget is what got a usable
-  pass. A reviewer that has to re-run the commands has no turns left to think.
 - NEXT: owner's word on FOUR, unchanged and still blocking — un-ignore the mockup
   folder (.gitignore:40)? is Mockup 4 signed off? visual contract or information-
   architecture contract? adopt --g-glass-fill .86 against tokens.json's own "do
@@ -306,3 +201,47 @@ LEARNING(how): before answering a "revert to before X" question, check whether X
   ListView's h2 repeating the same string) and Home screen density/scroll.
   Owner's word on FOUR from the prior handoff is still open and still blocks
   Phase 2 section 2 and the tab/IA change specifically.
+- 2026-09-22T00:58:26Z PUSH: nz-glass @ ec4e3fa9c
+- 2026-09-22T00:58:27Z COMMIT: ec4e3fa9c chore(plans): record the tab-bar repair and what's next → review dispatched
+- 2026-09-22T00:59:20Z COMPACT: context compacted — read the last NEXT above before continuing
+- CORRECTION: the NEXT line after ec4e3fa9c said the redundant-title defect was
+  "BaseLayout's GAppHeader h1 vs ListView's h2 repeating the same string" — that
+  was carried from an inherited summary, not verified. False: grepped all 7
+  ListView consumers (EmployeeCheckinList, AttendanceRequestList, OTRequestList,
+  expense_claim/List, ShiftRequestList, leave/List, ShiftAssignmentList) — every
+  one uses GPage+ListView only, zero use BaseLayout. The two headers never share
+  a screen.
+- REPAIR (investigation, no code change): ran down "redundant title at in page
+  and top nav" on mobile PWA specifically, three hypotheses —
+  1. ListView h2 + BaseLayout h1 same screen: ruled out above.
+  2. In-body heading repeating BaseLayout's pageTitle: checked all 11 BaseLayout
+     consumers (Home, ReplacementLeave, attendance/Dashboard, More, kpi/Dashboard,
+     HelpdeskHub, TeamDashboard, SopList, leave/Dashboard, expense_claim/Dashboard,
+     TeamRoster) — zero matches. Home's CheckInPanel does render a second <h1>
+     ("Hey, {name}") alongside GAppHeader's <h1> — a real two-h1-per-page a11y
+     issue, but not a text duplicate, and not what was reported.
+  3. SideNav active-item label vs GAppHeader title: literal match on 5 routes
+     (Attendance, KPI, Helpdesk, SOPs, Team — confirmed against navItems.js).
+     But SideNav is `hidden lg:flex` (frontend/src/components/SideNav.vue:3) —
+     invisible on the phone PWA the complaint names — and sidebar-highlights-
+     current-section-while-header-repeats-it is standard nav pattern (same shape
+     as Gmail's sidebar), not a defect by any 2026 UX guideline.
+  CONCLUSION: no literal redundant-title defect reproduces on the mobile PWA in
+  the current glass shell. Config-not-defect class, not a fix — recorded rather
+  than invented.
+- REPAIR (investigation, no code change): "avoid scroll on every page, prefer
+  pagination" — checked Home.vue (the one screen with no existing pagination):
+  single vertical column, 4 sections, RequestPanel already caps its list at the
+  10 most recent (RequestPanel.vue:162, getSortedRequests .splice(0,10)). Not
+  unbounded. The actual list screens (Attendance/OT/Expense/Shift/Leave request
+  histories) already paginate — ListView.vue:306 page_length:50 with infinite
+  scroll (start-offset paging, ListView.vue:338-485). Both already match what
+  was asked; nothing broken to fix.
+- NEXT: both remaining items from the original complaint (redundant title, page
+  scroll/pagination) are investigated-closed as above — no reproducible defect,
+  no fabricated fix. Nav-bar item is DONE (3d4fa0dfe). Nothing left from that
+  report to action without new input. Owner's word on FOUR (mockup folder,
+  Mockup 4 sign-off, visual-vs-IA contract, --g-glass-fill .86) still blocks
+  everything past this. Minor, not actioned: Home has two <h1> elements on one
+  page (GAppHeader + CheckInPanel greeting) — an a11y landmark issue, flagged
+  for the owner's queue, not fixed here (out of scope of what was asked).

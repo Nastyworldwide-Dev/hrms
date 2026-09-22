@@ -1,19 +1,16 @@
 # HANDOFF
-prompt:   fix the missing/broken bottom nav bar (2.0 visual work, tabs unblocked)
-status:   done
-commit:   3d4fa0dfe on nz-glass
-files:    design/tokens.json
-          frontend/src/theme/glass.css
-          frontend/src/theme/glass-components.css
-          design/gates/tabbar-reservation.test.mjs
-verify:   node --test design/gates/*.test.mjs   # 13 pass, 0 fail
-          node design/gates/contrast.mjs        # 54 checked, 0 failures
-flags:    PUSHED to origin/nz-glass. Ionic forces content-box on the tab-bar
-          host; --g-tabbar-height was content-box only, so the bar rendered
-          86px but ion-content reserved 82px — 4px of every scroll rested
-          under the glass. Padding/border named as tokens, bar and
-          reservation now read the same source. Red proven on HEAD's CSS
-          before the fix. Design + security + code review: no Critical.
-next:     continue Mockup-4 visual work that doesn't depend on the blocked
-          tab/IA question (redundant titles, home density). Four owner
-          questions from the prior handoff still open.
+prompt:   redundant title / page-scroll items from the original bug report
+status:   done (investigated, no defect found — no code change)
+commit:   none (docs only, see below)
+files:    .claude/plans/progress.md
+verify:   none — no code changed
+flags:    Redundant title: no literal duplicate reproduces on mobile PWA.
+          Checked ListView+BaseLayout overlap (none), in-body heading dupes
+          (0/11 BaseLayout views), SideNav vs header (real but desktop-only,
+          hidden on phone, and standard nav pattern anyway). Scroll/pagination:
+          Home is bounded (RequestPanel caps at 10); real list screens already
+          paginate (ListView.vue page_length:50 + infinite scroll). Earlier
+          NEXT line's framing of the title bug was wrong — corrected in ledger.
+next:     nothing actionable left from the original report. Owner's word on
+          FOUR (mockup folder, Mockup 4 sign-off, visual/IA contract,
+          --g-glass-fill) still blocks further 2.0 work.
