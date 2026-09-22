@@ -93,7 +93,13 @@
 	/* layout */
 	--g-content-column: calc(100% - 30px);
 	--g-content-column-lg: 720px;
+	/* The address bar is showing most of the time on a phone, so 100vh is
+	   taller than the window and a sheet sized against it runs its confirm
+	   button off the bottom of the screen. 100dvh is what is visible now.
+	   The vh line stays as the fallback: a browser that cannot read dvh
+	   drops that whole declaration, and would otherwise have no height. */
 	--g-sheet-max-height: calc(100vh - 5rem);
+	--g-sheet-max-height: calc(100dvh - 5rem);
 	--g-tabbar-border: 1px;
 	--g-tabbar-gap: 9px;
 	--g-tabbar-height: 64px;

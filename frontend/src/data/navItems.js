@@ -7,7 +7,7 @@ import {
 	Headphones,
 	House,
 	Kanban,
-	Receipt,
+	CircleDollarSign,
 	UserCheck,
 } from "lucide-vue-next"
 import { markRaw } from "vue"
@@ -35,7 +35,7 @@ const NAV_ITEMS = [
 		route: "/dashboard/leaves",
 	},
 	{
-		icon: markRaw(Receipt),
+		icon: markRaw(CircleDollarSign),
 		title: "Expenses",
 		shortTitle: "Expenses",
 		route: "/dashboard/expense-claims",

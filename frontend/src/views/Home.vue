@@ -39,7 +39,7 @@ import {
 	CalendarDays,
 	ChartLine,
 	LifeBuoy,
-	Receipt,
+	CircleDollarSign,
 	UserCheck,
 } from "lucide-vue-next"
 import { computed, inject, markRaw } from "vue"
@@ -84,7 +84,7 @@ const baseQuickLinks = [
 		route: "LeaveApplicationFormView",
 	},
 	{
-		icon: markRaw(Receipt),
+		icon: markRaw(CircleDollarSign),
 		title: __("Claim an Expense"),
 		route: "ExpenseClaimFormView",
 	},

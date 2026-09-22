@@ -2,219 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-- 2026-09-22T04:31:09Z COMMIT: 43fd4093c docs(icons): the inventory was an estimate three times, so I counted it → review dispatched
-- 2026-09-22T05:10:00Z REPAIR: S2 — QuickLinks was seven full-width rows at
-  ~350px on a phone whose whole usable height is ~440px (invariant F1). Now a
-  4-across tile grid: two rows, ~120px with one-line labels and ~145px when they
-  wrap. Saving ~206px, the largest single item in the fold budget.
-  The panel itself became a primitive, GTileGrid, because the usage gate caught
-  the first version building .g-glass inline inside QuickLinks. The gate was
-  right: components/glass/** owns the surface class and everything else composes
-  it, which is exactly how GListPanel, GStatPanel and GBalanceGrid are built.
-EVIDENCE: rung 2 — 6 tests red first, then green, and every one mutation-checked.
-  Two mutants initially SURVIVED and both were my fault: swapping
-  g-cellgrid--quick for --balance (two columns, four rows, the whole saving gone)
-  passed five green tests because nothing tied the component to the modifier;
-  and the skeleton tile count was pinned to a comment rather than to Home. Both
-  now have assertions that fail on the mutant. Full suite 74/74, surfaces gate
-  Home 4/6 (the grid stayed ONE surface), contrast 54/0, biome clean, vite build
-  clean.
-NOTE: my own figures were wrong again and I caught it only by computing from the
-  tokens. The comments and tests said "eight links, ~450px, saving 274px". Home
-  passes SEVEN (baseQuickLinks is six plus one unconditional HR row) and the row
-  height is 50px, not 56. Every stated number is now derived, and the seventh
-  test reads the count out of Home.vue so adding a quick link fails the test
-  instead of silently making the panel jump a row on load.
-NOTE: design/gates/usage.mjs counted .g-glass inside COMMENTS, so a component
-  documenting which primitive owns its surface scored a violation and the test
-  enforcing the rule scored five for quoting the class it forbids. Same defect
-  class the gate's own direct-import rule already fixed ("a comment naming the
-  file is legitimate documentation") and the same class as the h1 test in
-  home-fold-budget.test.js. Fixed by stripping comments before counting and
-  exempting __tests__; verified the gate still catches a real inline .g-glass.
-  It still reports views/helpdesk/TicketDetail.vue, which is pre-existing at
-  HEAD and not mine — that exit 1 is unchanged by this commit, not introduced.
-LEARNING(gate): unmeasured-count-in-prose -> assert the count against its source
-  file, not against a comment (QuickLinks.grid.test.js test 6).
-NEXT: re-bake Home's visual baselines, then S4 (lucide-vue-next migration) —
-  carrying the reviewer's note to re-verify the Trash2 alias against the
-  INSTALLED package version, not the published .d.ts.
-- 2026-09-22T04:42:19Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-09-22T04:42:22Z COMMIT: 49a68f18f feat(home): seven quick links were eating four fifths of the fold → review+design dispatched
-- 2026-09-22T05:35:00Z REPAIR: the CSS comment for the tile grid still asserted
-  "eight rows, ~450px, ~176px" after the component comments and tests had been
-  corrected to seven/~350px/~145px. Exactly the drift class this repo already
-  has on record — a figure fixed in one place while the prose elsewhere keeps
-  quoting the superseded value — and I found it only because I had just warned a
-  reviewer to look for it. Fixed, with the old figures named so the correction
-  is legible rather than silent.
-EVIDENCE: rung 1 — three claims I had asserted but not checked are now checked
-  and the check is written next to the rule: (1) LABELS at the smallest width,
-  360px -> 328px panel / 4 = 82px tile = 74px of text, the longest label Home
-  passes ("Request Attendance") needs two lines and its longest word is ~55px,
-  so nothing clips and the line-clamp is a guard rather than a truncator;
-  (2) DIVIDERS at SEVEN tiles, not eight — tile 5 opens row two and 5 % 4 == 1
-  so it correctly takes no left border, and the absent eighth cell draws no
-  dangling line because borders belong to cells; (3) FOCUS RING in dark —
-  --g-shadow-focus-ring-inset is built from --g-ink and --g-brand, both
-  redefined in the dark block, so outline:none is replaced by a ring that
-  resolves per theme rather than by nothing (WCAG 2.4.7).
-  Suite 74/74, contrast 54/0, biome clean, vite build clean.
-NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files and delete
-  the 14 hand-rolled icon components, REMOVING feather-icons in the same commit,
-  and record the real gzip delta (revert if it is not negative). Carry the
-  reviewer's note: verify the Trash2/Filter aliases against the INSTALLED
-  package version, not the published .d.ts. Two reviews of 49a68f18f were still
-  in flight at this line; read their verdicts before starting.
-- 2026-09-22T04:45:32Z COMPACT: context compacted — read the last NEXT above before continuing
-
-REPAIR: S2 review follow-up, two findings, both real. (a) The design reviewer
-  found the precedent I had missed: .g-cellgrid--balance.g-cellgrid--odd spans
-  its short last tile, and .g-cellgrid--quick has no equivalent, so seven tiles
-  in four columns render [5][6][7][gap]. Its suggested fix is WRONG HERE and the
-  reason is now written beside the rule: spanning at TWO columns fills a 50% hole
-  for free, but at FOUR it pushes tile 7 onto a third row (+~72px on the one
-  panel whose purpose was removing rows) and draws the conditional HR tile at 4x
-  its siblings' width, signalling an importance it does not have. Recorded as a
-  decision, which was the reviewer's own second option. (b) DSN-03 was a real
-  gap: -webkit-line-clamp caps LINES, so a single word wider than the 74px column
-  would overflow sideways rather than wrap — overflow-wrap: break-word added.
-  The frappe reviewer's one Warning was the stale CSS comment already fixed in
-  the working tree; it is in this commit.
-EVIDENCE: 2 correct — new test "a label too long to break at a space still wraps
-  instead of overflowing" RED before the rule existed (6 pass / 1 fail, verified
-  by removing the declaration) and green after (7/7). Suite 63/63 across the
-  component and view test files, gate self-tests 13/13, surfaces PASS (24 screens,
-  0 over), contrast 54 checked / 0 failures, biome clean, vite build exit 0.
-  usage.mjs still exits 1 on views/helpdesk/TicketDetail.vue only — pre-existing
-  at HEAD, independently confirmed by the reviewer (the baseline has no diff in
-  49a68f18f, the file is not in that commit, and decomment/EXEMPT can only ever
-  REMOVE matches or EXCLUDE files, never manufacture a violation).
-NOTE: the reviewer's own suite count was 62 and mine is 63 because this commit
-  adds one test. Its NEXT_ACTION: FIX_CRITICAL was raised on the stale comment,
-  which it correctly observed was already written but uncommitted in the tree.
-LEARNING(how): a design finding can be correct about the ABSENCE and wrong about
-  the remedy. The balance grid's span rule is right for two columns and costs a
-  row at four. Check what the suggested fix does to the number the slice exists
-  to reduce before taking it.
-NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files, delete the
-  14 hand-rolled icon components and REMOVE feather-icons in the same commit,
-  recording the real gzip delta (revert if it is not negative). Verify the
-  Trash2/Filter aliases against the INSTALLED package, not the published .d.ts.
-- 2026-09-22T04:50:14Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-22T04:50:17Z COMMIT: 5b2486fca fix(home): a short last row is a decision, and a long word could clip → review+design dispatched
-- 2026-09-22T04:51:33Z COMMIT: 478b041e7 docs(glass): the handoff still described an attendance hotfix → review dispatched
-
-REPAIR: 5b2486fca review — one of the two findings was a FALSE CLAIM I wrote in
-  the same commit that was supposed to be closing that exact class. The
-  focus-ring comment said --g-shadow-focus-ring-inset "is built from --g-ink and
-  --g-brand, both of which the dark block redefines". Checked: --g-ink is
-  redefined (glass.css:36 -> :231, #0B0C10 -> #FFFFFF); --g-brand is defined
-  ONCE at :root (glass.css:6) and never overridden. The ring is still correct in
-  both themes, but for two different reasons — one half adapts, the other is a
-  deliberately constant accent — and the comment now says that instead of
-  asserting a symmetry that does not exist. Both reviewers also read "not\nN."
-  in the surface-budget sentence as an unsubstituted placeholder; it was §15.1's
-  own shorthand, but shorthand two readers decode wrongly is not shorthand, so
-  it now reads "rather than one per tile".
-EVIDENCE: 2 correct — the token claim is no longer prose. New test "the focus
-  ring's two halves behave the way the comment says they do" asserts --g-ink is
-  defined twice and --g-brand once, straight out of glass.css. Mutation-checked:
-  adding a dark --g-brand turns it red (7/1) and removing it green (8/0), and
-  glass.css was restored byte-identical (git diff --numstat empty).
-EVIDENCE: 3 works — suite 64/64, gate self-tests 13/13, surfaces exit 0,
-  contrast 54 checked / 0 failures, biome exit 0, vite build exit 0.
-NOTE: also took DSN-06 (the label rule carried two comment blocks explaining the
-  same fact one rule apart — merged into one covering height and width, since two
-  copies of a rationale is the drift generator this slice exists to remove) and
-  recorded the reviewer's third option for the short row (a :has() re-shape of
-  row two) as CONSIDERED AND DECLINED rather than leaving it to be re-raised: it
-  needs a second case for the six-tile no-HR set and the two would fall out of
-  alignment with row one.
-LEARNING(gate): a comment that asserts how a TOKEN behaves is a testable claim,
-  not prose — assert it against the token file (QuickLinks.grid.test.js, "the
-  focus ring's two halves"). Three figure-drift incidents in this slice were all
-  prose nobody could fail.
-NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files, delete the
-  14 hand-rolled icon components and REMOVE feather-icons in the same commit,
-  recording the real gzip delta (revert if it is not negative). Verify the
-  Trash2/Filter aliases against the INSTALLED package, not the published .d.ts.
-- 2026-09-22T04:55:32Z COMMIT: c61dd191d test(glass): pin the token claim a comment was making, and got wrong → review+design dispatched
-
-NOTE: progress.md lost 99 lines again — SECOND occurrence this session of the
-  same class. The file is append-only, so a commit showing "1 added, 100
-  deleted" is not an edit of mine; another process rewrote it from a stale copy
-  between my append and the commit. Caught by reading the numstat on a two-line
-  comment commit (101 deletions on a change that touched three words) rather
-  than by any gate. Rebuilt as HEAD~1 + the single hook line that was genuinely
-  new; verified 1 added / 0 deleted against HEAD~1 before staging.
-LEARNING(gate): append-only file + a commit whose numstat shows deletions = a
-  concurrent overwrite, every time. Read --numstat on every commit that includes
-  progress.md; the truncation is invisible in the message and in git status.
-NEXT: S4 — install lucide-vue-next, migrate 40 names across 28 files, delete the
-  14 hand-rolled icon components and REMOVE feather-icons in the same commit,
-  recording the real gzip delta (revert if it is not negative). Verify the
-  Trash2/Filter aliases against the INSTALLED package, not the published .d.ts.
-- 2026-09-22T06:21:44Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-22T06:37:33Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-22T06:47:32Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-22T06:47:32Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 4 extra test file(s) ⟂c68dc5c03ea4
-- 2026-09-22T06:48:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-22T06:48:08Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 4 extra test file(s) ⟂c68dc5c03ea4
-- 2026-09-22T06:48:11Z COMMIT: 86f324f4b fix(checkin): a night shift's grace was swallowing the next morning's IN → review dispatched
-- 2026-09-22T06:52:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
-- 2026-09-22T06:52:32Z COMMIT: 16cdf6a68 feat(checkin): repair the punches the grace fix cannot reach by itself → review dispatched
-- 2026-09-22T06:52:50Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-09-22T07:01:02Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
-- 2026-09-22T07:01:05Z COMMIT: ecf4ac9b8 fix(fix-day): a two-row day had no way out of itself → review dispatched
-- 2026-09-22T07:03:11Z COMPACT: context compacted — read the last NEXT above before continuing
-
-REPAIR: two defects in my OWN Move door (ecf4ac9b8), found before the review
-  landed. (a) `move_one` wiped `this.state` entirely. Both days DID change on
-  the server, but `visited()` reads that same object, so the wipe also dropped
-  HR's unsaved ticks on every OTHER day of a multi-day walk and the next Save &
-  rebuild would have saved fewer days than HR had walked, silently. It now
-  deletes exactly the days the server's `answer.after.days` names, plus the
-  current one. (b) the Move dialog's Date field defaulted to the punch's CLOCK
-  date. What a Move rewrites is the SHIFT day, and for a night shift's
-  after-midnight OUT they differ by one — so the screen opened BECAUSE a shift
-  day is wrong would have offered the wrong value as its default. `tap_view`
-  already sends `shift_start`; `fresh_state` carries it and the field uses it.
-EVIDENCE: 2 correct — two new node tests, each RED first, 4 mutants killed
-  (restore the whole wipe; ignore the server's day list; drop shift_start from
-  fresh_state; default to row.time). Suite 45 node / 0 fail, test_fix_day_screen
-  21/21, test_restamp 15/15, test_shift_resolution 85/85,
-  test_grace_restamp_repair 11/11, ruff + biome clean.
-NOTE: the frappe review of ecf4ac9b8 came back NEXT_ACTION: DEPLOY, no Critical.
-  It independently verified move_tap's server guards (_require_hr, _tap refuses
-  a mirrored tap, _lock_and_guard still fences the arrival day) and judged the
-  amended test_fix_day_screen assertion honest rather than loosened — it adds a
-  STRICTER pin (save_day has exactly one call site) alongside the new entry. Its
-  two open notes: the `.catch` in move_one shows the server's sentence through
-  fd_call, same as save_one (checked, no change needed); and fix_day.bundle.js
-  is a 10-fix/90d hotspot that now needs a consolidation ticket — filed in
-  family.md against the day-cache, which is what both defects above were.
-LEARNING(gate): progress.md lost 116 lines a THIRD time this session, same
-  concurrent-overwrite class as e2f01419f. `git diff --numstat` on an
-  append-only file is the only thing that has ever caught it. Rebuild as
-  `git show HEAD:<file>` + the genuinely new tail; never `git add` the tree copy.
-NEXT: push nz-glass (86f324f4b, 16cdf6a68, ecf4ac9b8 + this), write
-  docs/glass/HANDOFF.md, and hand over. Nabil deploys — bench migrate runs the
-  one-time grace re-stamp repair patch on its own.
-
-EVIDENCE: 3 works — frappe review of c16453e48 came back clean, no Critical, no
-  Warning. It verified at source the one thing the fix rests on: move_tap builds
-  `days = sorted({_tap_day(row), target_day})` and _finish returns exactly those
-  in `after.days`, so nothing the server rebuilt can be missing from the list
-  the screen invalidates. Its suggestion is taken here: the trailing
-  `delete this.state[this.date]` is marked a safety net, not a second rule.
-NEXT: hand over. Post-check: Norazmi 11 Aug shows ONE Attendance row with the
-  morning IN on its own shift, and the Fix dialog offers Move.
-- 2026-09-22T07:06:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-09-22T07:06:19Z COMMIT: c16453e48 fix(fix-day): a Move was throwing away days it had not changed → review dispatched
-- 2026-09-22T07:06:45Z PUSH: nz-glass @ c16453e48
-- 2026-09-22T07:08:40Z PUSH: nz-glass @ 9efb942fc
-- 2026-09-22T07:08:40Z COMMIT: 9efb942fc docs(glass): the handoff still described last week's Home slice → review dispatched
 - 2026-09-22T07:45:00Z COMPACT: context compacted — read the last NEXT above before continuing
 
 REPAIR: the shipped grace repair would barely have touched Nabil's data — two
@@ -373,3 +160,45 @@ LEARNING(gate): a review subagent must be told read-only git ONLY (git show,
   different commit to verify a claim silently reverts whoever is working in it.
 NEXT: S6 — RequestPanel capped at 3 rows + "See all (N)". Then S7, 100vh ->
   dvh across the 5 sites (the plan says 10; measured, it is 5).
+- 2026-09-22T08:47:25Z COMMIT: 1bcb41e1a refactor(icons): four views drew their own arrow, and it had already drifted → review+design dispatched
+
+REPAIR: S7 — a sheet sized against 100vh runs its confirm button off the
+  bottom of a phone, because 100vh is the viewport with the address bar
+  RETRACTED and the bar is showing most of the time. The token now declares
+  dvh with the vh line kept above it as the fallback (a browser that cannot
+  read dvh drops that declaration entirely and would have no height at all),
+  and the three views that hardcoded the same calc use the token instead.
+  Five sites, not the ten the plan said.
+REPAIR: two design-review findings on bed29bbee, both real, both mine.
+  (a) WEIGHT: all fourteen hand-rolled components drew at stroke-width 1.5 and
+  Lucide defaults to 2 — a third heavier on every nav tab, side-nav item and
+  Home quick link. Its defaultAttributes are module-internal and not exported,
+  so main.js has nothing to assign; every icon does carry a `lucide` class, so
+  the weight is set once in CSS beside §9's own. 1.5, not §9's 1.55: that is
+  the line this set already drew at, and matching §9 exactly is a different
+  change (a 24-grid glyph at 1.55 is not a 16-grid glyph at 1.55).
+  (b) PICTOGRAM: ExpenseIcon was NOT a Lucide glyph. It drew a dollar COIN on
+  a "-1 -1 28 28" viewBox, from Streamline — its group id is that library's
+  slug — and I shipped it as Lucide's Receipt, a torn-paper receipt. A
+  different picture for the same idea, in a commit whose whole claim was that
+  only the source changed. Now CircleDollarSign, the coin the app had.
+  I checked the other thirteen the same way: six carry Lucide's own
+  `class="lucide lucide-*"` marker and seven draw its geometry on its 24-grid.
+  ExpenseIcon was the only one.
+EVIDENCE: 2 correct — sheet-height-dvh.test.mjs RED first (2 of 3), 4 mutants
+  killed (drop the fallback; put the fallback after dvh; leak dvh onto a glass
+  surface; a view reverts to the raw calc). Two new icon tests, each red
+  first. Suite 522 tests / 518 pass — the same 4 that fail at HEAD. Lint
+  clean. Gates byte-identical to baseline: contrast 54/0, surfaces 46/0,
+  tokens ok. Build clean, total JS gz 1127671.
+NOTE: two of my own test rules were wrong before the code was, same class both
+  times — a rule that counts a unit also counts the COMMENT explaining it.
+  Fixed by stripping /* */, // and <!-- --> before counting; the last of those
+  was found by a Vue comment in Home.vue. And `/\bdvh\b/` never matched
+  `50dvh` at all: there is no word boundary between a digit and a letter, so
+  the leak mutant survived a rule whose author could not see the hole.
+LEARNING(gate): a CSS length is a number glued to its unit — match
+  /\d(?:dvh|svh|lvh)\b/, never /\bdvh\b/. A mutant that adds the forbidden
+  unit is the only thing that finds this.
+NEXT: S6 — RequestPanel capped at 3 rows + "See all (N)".
+- 2026-09-22T08:54:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 11 file(s) ⟂4c8e69619202

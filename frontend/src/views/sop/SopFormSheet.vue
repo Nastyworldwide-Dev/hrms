@@ -6,7 +6,7 @@
 		@didDismiss="close"
 		@willPresent="prefill"
 	>
-		<div class="bg-ground w-full flex flex-col max-h-[calc(100vh-5rem)]">
+		<div class="bg-ground w-full flex flex-col max-h-[var(--g-sheet-max-height)]">
 			<!-- header -->
 			<div class="flex items-center justify-between p-4 border-b border-divider flex-none">
 				<h3 class="text-button-label font-extrabold text-inkbase">

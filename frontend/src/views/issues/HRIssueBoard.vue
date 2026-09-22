@@ -101,7 +101,7 @@
 			<ResourceError :resource="detail" what="this issue" />
 			<div
 				v-if="detail.data"
-				class="bg-ground w-full flex flex-col pb-8 max-h-[calc(100vh-5rem)] overflow-y-auto"
+				class="bg-ground w-full flex flex-col pb-8 max-h-[var(--g-sheet-max-height)] overflow-y-auto"
 			>
 				<div class="w-full flex flex-col gap-1 pt-6 pb-3 px-4">
 					<div class="g-eyebrow">{{ detail.data.name }}</div>

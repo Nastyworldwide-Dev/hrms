@@ -1586,6 +1586,21 @@ html[data-theme="dark"] .g-badge--open {
 	opacity: 0.85;
 }
 
+/* The icon package draws on a 24-grid and defaults to stroke 2; the fourteen
+   hand-rolled components it replaced every one drew at 1.5, so taking the
+   default would have put a third more weight on every nav tab, side-nav item
+   and Home quick link (design review of bed29bbee). Its `defaultAttributes`
+   are module-internal and cannot be patched, and ~40 call sites each passing
+   their own is the drift a system decision exists to prevent — so the weight
+   is set once, here, where §9's own is set.
+   1.5, not §9's 1.55: this is the SAME line the migrated set already drew at,
+   and matching §9 exactly would be a different change (a 24-grid glyph at
+   1.55 is not a 16-grid glyph at 1.55). Whether the two families should agree
+   at all is a spec question, recorded rather than decided here. */
+svg.lucide {
+	stroke-width: 1.5;
+}
+
 /* ---------- GCalendar (§10.2 #18) ---------- */
 
 .g-cal {

@@ -55,7 +55,7 @@ test("no file renders a feather icon any more", () => {
 
 test("nothing imports FeatherIcon, not even unused", () => {
 	const offenders = FILES.filter((path) => /\bFeatherIcon\b/.test(source(path)))
-		.filter((path) => !/GIconButton\.vue$/.test(path)) // names it in a comment explaining why it went
+		.filter((path) => !path.endsWith('GIconButton.vue')) // names it in a comment explaining why it went
 		.map((path) => path.slice(SRC.length))
 	assert.deepEqual(offenders, [], "an unused import still pins the dependency")
 })
@@ -111,4 +111,56 @@ test("every lucide icon inherits the theme colour", () => {
 		[],
 		"an icon that pins a colour is invisible in one of the two themes"
 	)
+})
+
+// The fourteen hand-rolled components every one drew at stroke-width 1.5, and
+// Lucide's own default is 2 — a 33% heavier line on every nav tab, side-nav
+// item and Home quick link, which is a visible change and was not one anybody
+// asked for. Design review of bed29bbee found it; the weight is now set once,
+// globally, rather than passed at ~40 call sites where one omission is a
+// mismatched icon nobody notices.
+test("migrated icons keep the weight the hand-rolled ones drew at", () => {
+	// Not in main.js: the package's `defaultAttributes` are module-internal
+	// and not exported, so there is nothing to assign. Every icon it renders
+	// does carry a `lucide` class, so CSS is the one global lever — and it is
+	// where §9's own weight is already set.
+	const css = readFileSync(join(SRC, "theme/glass-components.css"), "utf8")
+	assert.match(
+		css,
+		/svg\.lucide\s*\{[^}]*stroke-width:\s*1\.5/,
+		"2 is a third heavier than the fourteen components this set replaced"
+	)
+})
+
+// ...and nothing may quietly opt back out of it. A call site that passes its
+// own stroke-width is the drift the global default exists to stop.
+test("no call site overrides the icon weight", () => {
+	const offenders = []
+	for (const path of FILES) {
+		if (!/lucide-vue-next/.test(source(path))) continue
+		for (const tag of source(path).matchAll(/<[A-Z]\w+\b[^>]*\/?>/g)) {
+			if (/:?stroke-width=|:strokeWidth=/.test(tag[0])) offenders.push(path.slice(SRC.length))
+		}
+	}
+	assert.deepEqual(offenders, [], "the weight is a system decision, not a per-icon one")
+})
+
+// The one glyph of the fourteen that was NOT a Lucide icon pasted by hand:
+// ExpenseIcon drew a dollar COIN on a "-1 -1 28 28" viewBox, from Streamline
+// (its group id is that library's slug), and it went out as Lucide's Receipt
+// — a torn-paper receipt. A different picture for the same idea, changed
+// silently in a commit whose whole claim was that nothing but the source
+// changed. Design review of bed29bbee caught it; `CircleDollarSign` is the
+// coin the app actually had.
+//
+// The other thirteen were checked the same way and are genuine: six carry
+// Lucide's own `class="lucide lucide-*"` marker, and the remaining seven draw
+// Lucide's geometry (headphones, chart-line, kanban, life-buoy, circle-check,
+// external-link, user-check) on its 24-grid.
+test("the expenses glyph is still a coin, not a receipt", () => {
+	for (const file of ["views/Home.vue", "data/navItems.js"]) {
+		const text = readFileSync(join(SRC, file), "utf8")
+		assert.match(text, /\bCircleDollarSign\b/, `${file} should draw the coin the app had`)
+		assert.doesNotMatch(text, /\bReceipt\b/, `${file}: Receipt is a different pictogram`)
+	}
 })
