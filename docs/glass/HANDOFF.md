@@ -1,16 +1,17 @@
 # HANDOFF
-prompt:   Fix attendance: wrong shift days, duplicate rows, useless Fix dialog
-commit:   c16453e48+ on nz-glass (with 86f324f4b, 16cdf6a68, ecf4ac9b8)
+prompt:   Fix attendance: a shift belonging to two people held everyone's punches
+commit:   6e07c61cb on nz-glass (after 86f324f4b, 16cdf6a68, ecf4ac9b8, c16453e48)
 status:   done
-files:    hrms/utils/shift_resolution.py
-          hrms/utils/grace_restamp_repair.py
-          hrms/patches/v16_0/run_grace_restamp_repair_once.py
-          hrms/public/js/fix_day.bundle.js
-          hrms/tests/test_shift_resolution.py
-          hrms/tests/test_grace_restamp_repair.py
-verify:   node --test hrms/public/js/fix_day.bundle.test.js && PYTHONPATH=. python3 hrms/tests/test_fix_day_screen.py
-flags:    bench migrate runs the one-time re-stamp repair itself (long queue,
-          idempotent, mirrored punches untouched). No site was reachable; every
-          check is stub/source-level. Retro agent blocked by the sandbox.
-next:     Norazmi 11 Aug should come back as ONE Attendance row with the morning
-          IN on its own shift, and the Fix dialog should offer Move.
+files:    hrms/utils/wrong_shift_repair.py
+          hrms/patches/v16_0/run_wrong_shift_repair_once.py
+          hrms/utils/restamp.py
+          hrms/utils/day_remark.py
+          hrms/tests/test_wrong_shift_repair.py
+          hrms/patches.txt
+verify:   PYTHONPATH=. python3 hrms/tests/test_wrong_shift_repair.py
+flags:    ERP-pulled punches and HR's hand-keyed rows are BOTH in scope, by the
+          owner's word (22 Sep). Money still holds a day. No site reachable;
+          every check is stub/source-level. 9 mutants killed.
+next:     Run the repair FIRST, then save the corrected shift times
+          (19:00-03:30) — the "Unmarked Check-in Logs" refusal clears once the
+          stray punches are gone. Then cut the check-out grace from 120.
