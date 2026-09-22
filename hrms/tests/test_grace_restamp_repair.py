@@ -179,7 +179,16 @@ class TestMirroredPunchesAreNeverTouched(unittest.TestCase):
 		from hrms.utils import restamp as restamp_mod
 
 		source = pathlib.Path(restamp_mod.__file__).read_text()
-		self.assertIn('"synced_from_instance": ("is", "not set")', source)
+		# Amended 22 Sep 2026: the fence became conditional so the wrong-shift
+		# repair could carry the owner's one-off grant over the ERP window
+		# (hrms/utils/wrong_shift_repair.py). What this job needs is that the
+		# grant is OFF unless asked for, and that THIS job never asks — the
+		# grace repair calls restamp with neither flag.
+		self.assertIn("mirrored_ok=False", source, "the guardrail is still the default")
+		self.assertIn('filters["synced_from_instance"] = ("is", "not set")', source)
+		self.assertIn("if not mirrored_ok:", source)
+		job = pathlib.Path(repair.__file__).read_text()
+		self.assertNotIn("mirrored_ok", job, "the grace repair holds no grant over mirrored punches")
 
 
 if __name__ == "__main__":

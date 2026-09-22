@@ -60,7 +60,9 @@ COMPARED_FIELDS = ("shift", "shift_start", "shift_end", "offshift")
 CLEARED = {field: None for field in STAMP_FIELDS} | {"offshift": 1}
 
 
-def restamp(employee, from_date, to_date, *, reason, dry_run=True) -> dict:
+def restamp(
+	employee, from_date, to_date, *, reason, dry_run=True, mirrored_ok=False, authoritative=False
+) -> dict:
 	"""Re-resolve the unlinked local punches of `employee` in [from_date, to_date].
 
 	The read runs one day past `to_date`: a night shift's OUT lands after
@@ -68,21 +70,35 @@ def restamp(employee, from_date, to_date, *, reason, dry_run=True) -> dict:
 	"applied": bool}; `planned` lists each punch whose stamp differs
 	(old -> new), `released` the linked ones among them whose Attendance link
 	is cleared, `days` every distinct shift day touched, oldest first.
+
+	`mirrored_ok` includes the punches the old ERP sent (`synced_from_instance`).
+	Default False — the post-cutover guardrail: a mirrored punch belongs to the
+	instance that owns it. The owner granted it for ONE repair, 22 Sep 2026:
+	"anything on 4th september and before, they are all check in out attendance
+	pulled from erp. basically it needs to be fix." `preview` and the
+	roster-driven path do not pass it.
+
+	`authoritative` says the re-mark this queues carries HR's own authority
+	(`hr_asked` / `requests_ok`), so a day a person keyed by hand ON TOP OF a
+	wrong stamp is rebuilt rather than held. Money still holds the day: a
+	submitted Salary Slip or submitted Overtime Details is never waived.
 	"""
 	from_date, to_date = getdate(from_date), getdate(to_date)
+	filters = {
+		"employee": employee,
+		"time": (
+			"between",
+			[
+				datetime.combine(from_date, time.min),
+				datetime.combine(to_date + timedelta(days=1), time.max),
+			],
+		),
+	}
+	if not mirrored_ok:
+		filters["synced_from_instance"] = ("is", "not set")
 	rows = frappe.get_all(
 		"Employee Checkin",
-		filters={
-			"employee": employee,
-			"synced_from_instance": ("is", "not set"),
-			"time": (
-				"between",
-				[
-					datetime.combine(from_date, time.min),
-					datetime.combine(to_date + timedelta(days=1), time.max),
-				],
-			),
-		},
+		filters=filters,
 		fields=["name", "time", "attendance", *COMPARED_FIELDS],
 		order_by="time asc",
 		limit_page_length=0,
@@ -101,9 +117,10 @@ def restamp(employee, from_date, to_date, *, reason, dry_run=True) -> dict:
 		# The write names the link it saw: a punch linked (or re-linked) meanwhile is left alone.
 		where = {
 			"name": row["name"],
-			"synced_from_instance": ("is", "not set"),
 			"attendance": row["attendance"] if row.get("attendance") else ("is", "not set"),
 		}
+		if not mirrored_ok:
+			where["synced_from_instance"] = ("is", "not set")
 		if row.get("attendance"):
 			released.append(row["name"])
 			values["attendance"] = None
@@ -113,7 +130,7 @@ def restamp(employee, from_date, to_date, *, reason, dry_run=True) -> dict:
 	days.sort()
 	if not dry_run:
 		for day in days:
-			remark_day_after_commit(employee, day, reason)
+			remark_day_after_commit(employee, day, reason, hr_asked=authoritative, requests_ok=authoritative)
 	logger.info(
 		"[restamp] %s %s..%s (%s): %d punch(es) re-stamped, %d released from attendance, %d day(s) %s",
 		employee,

@@ -95,10 +95,20 @@ def also_rebuilding(employee, day) -> None:
 	logger.debug("[day_remark] the running pass also owns %s on %s", employee, day)
 
 
-def remark_day_after_commit(employee, day, reason) -> bool:
+def remark_day_after_commit(employee, day, reason, *, hr_asked=False, requests_ok=False) -> bool:
 	"""Queue the engine's re-mark of `employee` on `day` for after commit. False when
 	there is nothing to queue: no employee or day, the day is today or later, or an
-	automatic pass in this worker is rebuilding that day itself."""
+	automatic pass in this worker is rebuilding that day itself.
+
+	`hr_asked` / `requests_ok` carry the SAME authority the Fix Day screen
+	carries, for a caller that has it. Default False, so the nightly job and
+	every ordinary punch save keep the protections exactly as they were: a day a
+	person keyed by hand is still held against automation that nobody asked for.
+	Owner ruling, 22 Sep 2026 (option B): the wrong-shift repair DOES have it,
+	because the hand-keyed rows it overwrites were keyed on top of a lying
+	stamp — "despite manual hr effort, it might still do wrong due to this wrong
+	mechanism". Money is not waived by either flag: a submitted Salary Slip or
+	submitted Overtime Details still holds the day (`_repair_financial_dependency`)."""
 	if not employee or not day:
 		return False
 	day = getdate(day)
@@ -113,22 +123,39 @@ def remark_day_after_commit(employee, day, reason) -> bool:
 			reason,
 		)
 		return False
-	frappe.db.after_commit.add(partial(_enqueue, employee, str(day), reason))
+	frappe.db.after_commit.add(
+		partial(_enqueue, employee, str(day), reason, hr_asked=hr_asked, requests_ok=requests_ok)
+	)
 	logger.info("[day_remark] %s on %s queued after commit: %s", employee, day, reason)
 	return True
 
 
-def _enqueue(employee, day, reason):
+def _enqueue(employee, day, reason, hr_asked=False, requests_ok=False):
 	# ceiling: a job already RUNNING for the day drops this one (deduplicate), upgrade:
 	# re-queue from the job's end if a change lands mid-run; the hourly/nightly read it meanwhile
+	#
+	# The authority is IN the job id. Two queues of one day that carry different
+	# authority are two different questions — deduplicating an authoritative
+	# re-mark into a plain one already waiting would silently answer the
+	# stronger question with the weaker one. The ordinary id is unchanged, so a
+	# job queued before this deploy still deduplicates against its successors.
+	authority = "".join(sorted(k for k, on in (("hr", hr_asked), ("req", requests_ok)) if on))
+	job_id = f"day-remark::{employee}::{day}" + (f"::{authority}" if authority else "")
 	frappe.enqueue(
 		JOB_METHOD,
 		queue="short",
-		job_id=f"day-remark::{employee}::{day}",
+		job_id=job_id,
 		deduplicate=True,
 		employee=employee,
 		day=day,
 		reason=reason,
+		hr_asked=hr_asked,
+		requests_ok=requests_ok,
+		# This IS the job, never a request, whatever authority it carries.
+		# `remark_day` defaults `inline` to `hr_asked`, and an inline unit does
+		# not retry a deadlock — at the worker that would surface as a lost
+		# transaction instead of a retry.
+		inline=False,
 	)
 
 

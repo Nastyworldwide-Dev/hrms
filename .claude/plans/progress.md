@@ -213,3 +213,45 @@ NEXT: hand over. Post-check: Norazmi 11 Aug shows ONE Attendance row with the
 - 2026-09-22T07:06:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
 - 2026-09-22T07:06:19Z COMMIT: c16453e48 fix(fix-day): a Move was throwing away days it had not changed → review dispatched
 - 2026-09-22T07:06:45Z PUSH: nz-glass @ c16453e48
+- 2026-09-22T07:08:40Z PUSH: nz-glass @ 9efb942fc
+- 2026-09-22T07:08:40Z COMMIT: 9efb942fc docs(glass): the handoff still described last week's Home slice → review dispatched
+- 2026-09-22T07:45:00Z COMPACT: context compacted — read the last NEXT above before continuing
+
+REPAIR: the shipped grace repair would barely have touched Nabil's data — two
+  filters excluded almost all of it: only MULTI-shift employees were selected,
+  and `restamp` skipped every punch the old ERP sent, which is the whole
+  1 Aug - 4 Sep window. The owner then found the real shape of the defect in
+  the shift's own config: "7PM - 3.30AM" was 19:30-07:00 with a 120-minute
+  check-out grace, so it accepted punches until 09:00 and swallowed day-shift
+  staff's morning INs. Shift Assignment, filtered: 2 of 2. His rule: "if the
+  fix on X isnt Y or Z then X should revert to its original shift."
+  So the WHO is a definition, not a heuristic — a punch on a guarded shift
+  whose employee is not one of its two owners is wrong whatever produced it.
+  hrms/utils/wrong_shift_repair.py + its patch. Two powers granted for this one
+  job and passed explicitly: `mirrored_ok` (ERP punches in scope — his word for
+  this exact change) and `authoritative` (a day HR keyed BY HAND on top of a
+  lying stamp is rebuilt, option B, 22 Sep). Money is never waived.
+EVIDENCE: 2 correct — 22 new tests, 9 mutants killed: drop mirrored_ok; drop
+  authoritative; select by shift_start instead of the clock; stop excluding the
+  two owners; flip the mirrored default to True; drop the write-side fence;
+  stop passing authority to the re-mark; collapse the job id; unforce
+  inline=False. restamp 15/15, grace 11/11, day_remark 35/35, fix_day_screen
+  21/21, ruff + format clean.
+EVIDENCE: 3 works — blast radius green on every importer of restamp/day_remark:
+  attendance_recovery, day_remark_retires_an_emptied_day, offshift_punch_heal,
+  day_remark_hooks, erp_backfill_copy, attendance_fix_day_writes_no_hours.
+  test_hr_asked_for_this_day needs a real bench (imports frappe) and fails the
+  same way at HEAD — unchanged by this commit.
+NOTE: two stale assertions elsewhere were amended rather than loosened. The
+  grace repair's mirrored test now pins the stronger fact (the guardrail is the
+  DEFAULT, and that job holds no grant); test_day_remark's job-id test still
+  passes because the plain id kept its old shape — only an authority-carrying
+  job gets a suffix, so a job queued before this deploy still deduplicates.
+NEXT: Nabil deploys. Order: this repair first, THEN save the corrected shift
+  times (19:00-03:30) — the "Unmarked Check-in Logs Found" refusal clears once
+  the stray punches are gone and their days re-marked. Then cut the check-out
+  grace from 120.
+- 2026-09-22T08:04:38Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-22T08:04:38Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 14 extra test file(s) ⟂5ba32964af47
+- 2026-09-22T08:05:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-09-22T08:05:08Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 14 extra test file(s) ⟂5ba32964af47
