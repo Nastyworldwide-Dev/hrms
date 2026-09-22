@@ -97,10 +97,16 @@
 /* indicator-pill pattern: pill bg = <color>-100, text = <color>-700, 6px dot = <color>-600 */
 /* Verified 22 Sep 2026 against verify-bench/apps/frappe/frappe/public/scss — every hex above
    is Frappe's own value, transcribed, not chosen here.
-   Three of those pills fail WCAG 2.1 AA for normal text as Frappe ships them:
-   blue 3.83:1, green 3.02:1, orange 4.22:1 (red passes). --desk-gray-500 (2.41:1 on white)
-   and --desk-gray-600 (3.35:1) fail as body text and are Desk's muted/tertiary greys.
+   Contrast, WCAG 2.1 (AA normal text = 4.5:1), -700 text on its own -100 pill:
+   blue 4.58 PASS · orange 4.92 PASS · red 5.70 PASS · GREEN 3.58 FAIL — the one pill that
+   fails as Frappe ships it. The -600 dot beside the text is decoration, not text: blue 3.91,
+   orange 3.61, red 4.84 clear 3:1, green 2.73 does not.
+   Greys on white: gray-500 2.85 and gray-600 4.17 both FAIL as body text, and are Desk's
+   muted/tertiary greys; gray-700 is the first that passes (7.81).
+   Figures recomputed 22 Sep 2026 after a first pass of this note understated every ratio and
+   called orange a failure — check the arithmetic before quoting a number as a defect.
    This is recorded, not corrected: a snapshot that "fixes" the palette stops matching the
-   product and every mockup built from it then lies about what Desk looks like. A mockup
-   that needs AA-compliant body text uses -700 on -100, or the gray-800/900 end.
+   product and every mockup built from it then lies about what Desk looks like. A mockup that
+   needs AA-compliant body text uses gray-700 or darker; -700 on -100 passes for every pill
+   colour here EXCEPT green.
    Light-only, deliberately: Desk's dark theme is a separate snapshot if one is ever needed. */
