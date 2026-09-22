@@ -228,3 +228,22 @@ NEXT: Nabil deploys. Pre-2.0 and 2.0 are both on nz-glass, unreleased.
 - 2026-09-22T16:26:54Z COMMIT: ce4de0c9f refactor(helpdesk): a chat thread cost one glass surface per message → review+design dispatched
 - 2026-09-22T16:27:03Z PUSH: nz-glass @ ce4de0c9f
 - 2026-09-22T16:32:56Z EVIDENCE: 2 correct — mapped tests green (bun ) for 41 file(s) ⟂3e88cfe6592f
+- 2026-09-22T16:32:58Z COMMIT: 86408c934 refactor(design): 103 hand-picked sizes became four scales → review+security+design dispatched
+- 2026-09-22T16:33:06Z PUSH: nz-glass @ 86408c934
+- 2026-09-22T16:40:51Z COMMIT: 5a645c720 chore(kpi): pin the fence before the revamp goes near it → review dispatched
+- 2026-09-22T16:41:04Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 3 file(s) ⟂892bfc303afb
+- 2026-09-22T16:41:06Z COMMIT: 1be1c4d81 feat(score): the empty screen was the screen, and it was never built → review+design dispatched
+- 2026-09-22T16:41:13Z PUSH: nz-glass @ 1be1c4d81
+- 2026-09-22T16:43:51Z COMMIT: f4ebcee0c refactor(design): the stylesheet was 96 values off the grid the tokens sit on → review+design dispatched
+- 2026-09-22T16:43:58Z PUSH: nz-glass @ f4ebcee0c
+- 2026-09-22T16:50:35Z EVIDENCE: 2 correct — mapped tests green (bun ) for 9 file(s) ⟂0e91782f6c7d
+- 2026-09-22T16:50:37Z COMMIT: 0c8447068 feat(motion): reduced motion was honoured in 4 components out of ninety → review+security+design dispatched
+- 2026-09-22T16:50:46Z PUSH: nz-glass @ 0c8447068
+- 2026-09-22T16:56:16Z EVIDENCE: 2 correct — mapped tests green (bun ) for 22 file(s) ⟂7b381fd64ee9
+- 2026-09-22T16:56:16Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-22T16:56:49Z EVIDENCE: 2 correct — mapped tests green (bun ) for 23 file(s) ⟂0e43e1303bdf
+- 2026-09-22T16:56:49Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-22T16:57:14Z EVIDENCE: 2 correct — mapped tests green (bun ) for 23 file(s) ⟂0e43e1303bdf
+- 2026-09-22T16:57:14Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-22T16:57:27Z EVIDENCE: 2 correct — mapped tests green (bun ) for 23 file(s) ⟂0e43e1303bdf
+- 2026-09-22T16:57:27Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98

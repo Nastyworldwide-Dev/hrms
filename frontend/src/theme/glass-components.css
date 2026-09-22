@@ -3053,3 +3053,36 @@ ion-router-outlet {
 		scroll-behavior: auto !important;
 	}
 }
+
+/* ---------- skip link (WCAG 2.2 SC 2.4.1; revamp §18) -----------------------
+
+   Off-screen until focused, never `display: none`: an element that is not
+   rendered is not focusable, and a skip link nobody can reach is decoration.
+   It sits above the scrim layer because it must be visible over anything the
+   first Tab press might land on top of. */
+.g-skip-link {
+	position: fixed;
+	top: 8px;
+	left: 8px;
+	z-index: var(--g-layer-scrim-backdrop);
+	transform: translateY(-200%);
+	padding: 12px 16px;
+	border-radius: var(--g-radius-action);
+	background: var(--g-accent-ink);
+	/* --g-bg, not --g-ground: `ground` is a Tailwind alias, not a token the
+	   builder emits. Caught by design/gates/motion.mjs a minute after it was
+	   written, which is the whole argument for that gate — the same mistake in
+	   CheckInPanel went unseen for weeks. */
+	color: var(--g-bg);
+	font-family: var(--g-type-button-label-family);
+	font-size: var(--g-type-button-label-size);
+	font-weight: var(--g-type-button-label-weight);
+	text-decoration: none;
+	transition: transform var(--g-motion-state-change-duration)
+		var(--g-motion-state-change-easing);
+}
+.g-skip-link:focus-visible {
+	transform: translateY(0);
+	outline: none;
+	box-shadow: var(--g-shadow-focus-ring);
+}
