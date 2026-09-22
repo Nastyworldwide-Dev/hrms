@@ -259,3 +259,21 @@ LEARNING(how): before answering a "revert to before X" question, check whether X
   architecture contract? adopt --g-glass-fill .86 against tokens.json's own "do
   not correct (spec 6)" note? Phase 2 section 2 cannot start without #3. Nothing
   deployed; deploy is the owner's.
+- 2026-09-22T00:20:03Z COMMIT: b7ddc26d1 docs(gates): LG.scale is still a copy — the fix was guarding it → review dispatched
+- 2026-09-22T00:20:27Z COMMIT: 078698b5b docs(glass): the handoff described the previous range, not this one → review dispatched
+- 2026-09-22T00:20:34Z PUSH: nz-glass @ 078698b5b
+- PUSH: 0c0a53dc0..078698b5b nz-glass, 2 commits. Gates green before: tests 10/0,
+  contrast 54 checked 0 failures.
+- NOTE: the post-push hook asked for a third retro-analyst on this range. NOT
+  spawned. The range is two docs commits, and the retro that just ran on the
+  identical shape returned "1 shot, no defect, docs commits do not execute test
+  gates". A third row measuring a correction to a retro's own finding adds noise
+  to the telemetry, not signal. Recorded rather than silently skipped, as with
+  the reviewer exemptions above.
+- NOTE: that retro's summary said the handoff records code "pushed after deploy".
+  Nothing has been deployed. Not propagated into any file — a subagent's wording
+  is not evidence, and deploy remains the owner's.
+- NEXT: owner's word on FOUR, unchanged and still blocking — un-ignore the mockup
+  folder (.gitignore:40)? is Mockup 4 signed off? visual contract or information-
+  architecture contract? adopt --g-glass-fill .86 against tokens.json's own "do
+  not correct (spec 6)" note? Phase 2 section 2 cannot start without #3.
