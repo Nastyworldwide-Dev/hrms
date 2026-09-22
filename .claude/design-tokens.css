@@ -95,3 +95,12 @@
 	--desk-radius-pill: 10px; /* .indicator-pill */
 }
 /* indicator-pill pattern: pill bg = <color>-100, text = <color>-700, 6px dot = <color>-600 */
+/* Verified 22 Sep 2026 against verify-bench/apps/frappe/frappe/public/scss — every hex above
+   is Frappe's own value, transcribed, not chosen here.
+   Three of those pills fail WCAG 2.1 AA for normal text as Frappe ships them:
+   blue 3.83:1, green 3.02:1, orange 4.22:1 (red passes). --desk-gray-500 (2.41:1 on white)
+   and --desk-gray-600 (3.35:1) fail as body text and are Desk's muted/tertiary greys.
+   This is recorded, not corrected: a snapshot that "fixes" the palette stops matching the
+   product and every mockup built from it then lies about what Desk looks like. A mockup
+   that needs AA-compliant body text uses -700 on -100, or the gray-800/900 end.
+   Light-only, deliberately: Desk's dark theme is a separate snapshot if one is ever needed. */
