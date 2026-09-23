@@ -35,11 +35,13 @@
 				     session, which is most of a day off. -->
 				<NowBar />
 				<CheckInPanel />
-				<NeedsYou />
-				<!-- Last: something to KNOW, under the things to DO. Renders nothing
-				     when the board is empty. What you asked for lives on Requests,
-				     not here (approved Home plan, H1). -->
+				<!-- Owner-approved Home (23 Sep 2026): News sits right under
+				     Today "so everyone will notice… kinda like news". Every block
+				     below ALWAYS renders and says why it is empty. -->
 				<Announcements />
+				<HomeWeek />
+				<HomeComingUp />
+				<NeedsYou />
 			</div>
 		</template>
 	</BaseLayout>
@@ -47,6 +49,7 @@
 
 <script setup>
 import { homeAnnouncements } from "@/data/announcements"
+import { homeComingUp, homeWeek } from "@/data/home"
 import { needsYouResource } from "@/data/needsYou"
 import { nowResource } from "@/data/now"
 import { pendingCountResource } from "@/data/remoteCheckin"
@@ -55,6 +58,8 @@ import CheckInPanel from "@/components/CheckInPanel.vue"
 import NowBar from "@/components/NowBar.vue"
 import NeedsYou from "@/components/NeedsYou.vue"
 import Announcements from "@/components/Announcements.vue"
+import HomeWeek from "@/components/HomeWeek.vue"
+import HomeComingUp from "@/components/HomeComingUp.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 
@@ -71,6 +76,8 @@ async function refresh(event) {
 		// NeedsYou's remote check-in row reads its own count (data/remoteCheckin).
 		pendingCountResource.reload(),
 		homeAnnouncements.reload(),
+		homeWeek.reload(),
+		homeComingUp.reload(),
 	])
 	event.target?.complete?.()
 }

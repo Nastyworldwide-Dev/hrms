@@ -36,10 +36,11 @@ function template(file) {
 }
 
 test("Home reads in the plan's order", () => {
-	// Approved Home plan (23 Sep): what is true now, what is waiting on you,
-	// then what HR wants you to know. Your own requests live on Requests.
+	// SUPERSEDED 23 Sep 2026 (owner-approved one-screen Home): News moved up
+	// under Today "so everyone will notice… kinda like news", then This week,
+	// Coming up, and Waiting on you last. Full order: home-one-screen.test.js.
 	const body = template("views/Home.vue")
-	const order = ["NowBar", "CheckInPanel", "NeedsYou", "Announcements"]
+	const order = ["NowBar", "CheckInPanel", "Announcements", "NeedsYou"]
 	const at = order.map((name) => body.indexOf(`<${name}`))
 	for (const [i, name] of order.entries()) {
 		assert.ok(at[i] > 0, `${name} should be on Home`)

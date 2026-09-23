@@ -68,6 +68,13 @@
 		     an alert: a new notice is not worth interrupting a sentence for. -->
 		<p class="sr-only" role="status">{{ liveText }}</p>
 	</div>
+	<!-- First load: the block holds its place with a skeleton instead of
+	     appearing late and pushing the blocks below it down (owner-approved
+	     Home, 23 Sep 2026: every block always renders). -->
+	<div v-else class="w-full">
+		<div class="g-eyebrow mb-4">{{ __("Announcements") }}</div>
+		<GListPanel loading :rows="2" />
+	</div>
 </template>
 
 <script setup>

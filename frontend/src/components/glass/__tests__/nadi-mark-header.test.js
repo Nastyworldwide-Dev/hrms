@@ -35,3 +35,11 @@ test("Home's title is the brand, and the date is the first line of Today", () =>
 	assert.match(now, /class="g-now__date"/)
 	assert.match(now, /format\("dddd, D MMMM"\)/)
 })
+
+test("Home's header is the mark alone, not the mark plus the word", () => {
+	// Owner: "use the nadi logo … instead of words". BaseLayout passed "Nadi"
+	// as the title on Home, so the word showed beside the mark.
+	const layout = read("../../BaseLayout.vue")
+	assert.match(layout, /:title="props\.pageTitle"/)
+	assert.doesNotMatch(layout, /pageTitle \|\| __\('Nadi'\)/)
+})

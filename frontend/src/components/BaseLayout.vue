@@ -3,7 +3,7 @@
 		<ion-header class="ion-no-border g-page__content">
 			<div class="w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
 				<GAppHeader
-					:title="props.pageTitle || __('Nadi')"
+					:title="props.pageTitle"
 					:unread="unreadNotificationsCount.data || 0"
 					:avatar-url="user.data?.user_image"
 					:avatar-label="user.data?.first_name"
