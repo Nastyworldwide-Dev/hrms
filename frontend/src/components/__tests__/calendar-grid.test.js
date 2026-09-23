@@ -55,10 +55,13 @@ test("D1: the absent legend key matches the day (an outline, not a fill)", () =>
 	assert.match(key, /background:\s*transparent/)
 })
 
-test("D1: an absent TODAY keeps its danger outline (the today ring must not hide it)", () => {
-	// Equal specificity: .g-cal__day--today came later in the file and took the
-	// border, leaving colour alone to say "absent" on the one day it matters
-	// most (WCAG 1.4.1; design review of 8f16f87ed).
+
+test("today is its own channel (an inner ring), so no day state can hide it or be hidden by it", () => {
+	// The today ring was a border-color at equal specificity: it took the border
+	// from absent and half days (design reviews of 8f16f87ed and bc635174c).
+	// As an inset ring it sits inside whatever border the state draws.
 	const css = read("../../theme/glass-components.css")
-	assert.match(css, /\.g-cal__day--absent\.g-cal__day--today\s*\{[^}]*border-color:\s*var\(--g-danger-ink\)/)
+	const today = css.match(/\.g-cal__day--today\s*\{[^}]*\}/)[0]
+	assert.match(today, /box-shadow:\s*inset 0 0 0 2px var\(--g-ink3\)/)
+	assert.doesNotMatch(today, /border-color/)
 })
