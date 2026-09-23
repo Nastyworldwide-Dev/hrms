@@ -157,11 +157,20 @@ test("a failed load toasts plain words, never the server's sentence", async () =
 	assert.equal(toasts.length, 1)
 	assert.doesNotMatch(toasts[0].text, /doctype|role permission|@/i)
 	assert.equal(toasts[0].title, "Something didn't load")
-	assert.equal(toasts[0].text, "Pull down to try again.")
+	// Not "pull down": forms, dialogs and desktop have no pull-to-refresh.
+	assert.equal(toasts[0].text, "Try again in a moment.")
 })
 
 test("a read whose screen shows its own error is not toasted a second time", async () => {
 	const { loud, toasts } = harness()
 	await assert.rejects(() => loud({ url: "/api/method/hrms.api.announcements.home_announcements" }))
 	assert.equal(toasts.length, 0)
+})
+
+test("a write whose caller shows the server's reason is not toasted twice", async () => {
+	for (const url of ["hrms.api.upload_base64_file", "hrms.api.delete_attachment", "frappe.model.workflow.apply_workflow"]) {
+		const { loud, toasts } = harness()
+		await assert.rejects(() => loud({ url: `/api/method/${url}` }))
+		assert.equal(toasts.length, 0, url)
+	}
 })

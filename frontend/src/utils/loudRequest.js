@@ -62,6 +62,12 @@ const SILENT_ENDPOINTS = new Set([
 	// Home's Announcements block shows its own "didn't load" banner in place;
 	// the toast on top was the same failure reported twice (audit F-6).
 	"hrms.api.announcements.home_announcements",
+	// Writes whose callers already toast the server's own reason
+	// (composables/index.js, composables/workflow.js). The generic "didn't
+	// load" on top was wrong for a write and said it twice (review of a3fe4b4a4).
+	"hrms.api.upload_base64_file",
+	"hrms.api.delete_attachment",
+	"frappe.model.workflow.apply_workflow",
 ])
 
 function endpointOf(options) {
@@ -137,7 +143,7 @@ export function makeLoudRequest(request, { notify = toast, now = () => Date.now(
 				// screen that owns the data shows its own "didn't load" in place.
 				notify({
 					title: "Something didn't load",
-					text: "Pull down to try again.",
+					text: "Try again in a moment.",
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",
