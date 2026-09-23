@@ -59,6 +59,9 @@ const SILENT_ENDPOINTS = new Set([
 	"hrms.api.approval.decide",
 	// Same sheet, same onActionError, for the plain submit/cancel transition.
 	"hrms.api.approval.finalize",
+	// Home's Announcements block shows its own "didn't load" banner in place;
+	// the toast on top was the same failure reported twice (audit F-6).
+	"hrms.api.announcements.home_announcements",
 ])
 
 function endpointOf(options) {
@@ -129,9 +132,12 @@ export function makeLoudRequest(request, { notify = toast, now = () => Date.now(
 				!SILENT_ENDPOINTS.has(endpoint) &&
 				!isRepeat(endpoint, now())
 			) {
+				// Plain words only (audit F-6): the server's sentence names doctypes,
+				// roles and e-mail addresses. It is in the console line above; the
+				// screen that owns the data shows its own "didn't load" in place.
 				notify({
-					title: "Could not load",
-					text: firstMessage(error),
+					title: "Something didn't load",
+					text: "Pull down to try again.",
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",

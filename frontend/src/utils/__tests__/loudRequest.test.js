@@ -95,7 +95,7 @@ test("the same failure on any other endpoint still toasts", async () => {
 	const { loud, toasts } = harness()
 	await assert.rejects(() => loud({ url: "/api/method/hrms.api.get_expense_claims" }))
 	assert.equal(toasts.length, 1, "unrelated endpoints keep their loud failure")
-	assert.equal(toasts[0].title, "Could not load")
+	assert.equal(toasts[0].title, "Something didn't load")
 })
 
 test("ordinary checkout leaves its error to the sheet without a duplicate load toast", async () => {
@@ -141,4 +141,27 @@ test("firstMessage is the one reader of a server refusal, shared with the forms"
 		}),
 		"Already applied: HR-LAP-1"
 	)
+})
+
+// Audit F-6 / APP-6: a failed READ toasted the raw server sentence — "User
+// nurul.aisyah@… does not have doctype access via role permission for
+// document DocType" — to an employee, and at 320px it covered half the screen.
+// A load toast now says one plain thing; the server's words go to the console.
+test("a failed load toasts plain words, never the server's sentence", async () => {
+	const raw = {
+		exc_type: "PermissionError",
+		messages: ["User a@b.c does not have doctype access via role permission for document DocType"],
+	}
+	const { loud, toasts } = harness(raw)
+	await loud({ url: "hrms.api.some_read" }).catch(() => {})
+	assert.equal(toasts.length, 1)
+	assert.doesNotMatch(toasts[0].text, /doctype|role permission|@/i)
+	assert.equal(toasts[0].title, "Something didn't load")
+	assert.equal(toasts[0].text, "Pull down to try again.")
+})
+
+test("a read whose screen shows its own error is not toasted a second time", async () => {
+	const { loud, toasts } = harness()
+	await assert.rejects(() => loud({ url: "/api/method/hrms.api.announcements.home_announcements" }))
+	assert.equal(toasts.length, 0)
 })
