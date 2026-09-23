@@ -10,6 +10,15 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `nadi-v<version>` (the plain `v2.x` names belong to older
 selfie releases).
 
+## [2.0.0-alpha.3] — 2026-09-23 (hotfix)
+
+### Fixed
+- **Sheets take taps again.** Every sheet (check in and out, the day sheet,
+  approvals) showed a faint overlay and could not be used.
+- **"A new version is ready" → Reload now reloads**, and the bar goes away.
+- **"Refreshing…" / "Pull to refresh" no longer sit on top of the page**
+  when nobody is pulling.
+
 ## [2.0.0-alpha.2] — 2026-09-23
 
 ### Fixed
