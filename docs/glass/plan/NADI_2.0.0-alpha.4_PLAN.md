@@ -1,5 +1,6 @@
 # Nadi 2.0.0-alpha.4 — the plan
 
+Detail, element by element: `NADI_2.0.0-alpha.4_DETAIL.md`.
 Status: **APPROVED IN PRINCIPLE, owner rulings in (23 Sep 2026).** Code starts on
 the owner's go. **One release, one deploy** at the end.
 Follows: v2.0.0-alpha.3 (hotfix, deployed 23 Sep: sheets tappable, Reload works).
@@ -114,6 +115,12 @@ there is a source (reported back before coding).
 - Plain sentences ("Your leave on 22 Sep wasn't approved. See why ›"), no
   record numbers breaking mid-word.
 - "Load more" styled like every other button.
+
+### P1-8 Header: the Nadi mark, date inside the page (owner, 23 Sep)
+- The Nadi mark (lime square with "n", already used in the side menu and as
+  the app icon) at the left of every tab page's header. One shared component.
+- The date leaves the header and becomes the first line of Home's Today card.
+- Detail: `NADI_2.0.0-alpha.4_DETAIL.md` §1.3.
 
 ### P1-7 Every page: never blank, both themes
 - Skeleton while loading, one error line if it fails.
