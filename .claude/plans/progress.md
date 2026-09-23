@@ -241,3 +241,12 @@ DEAD END: bench run-tests still broken (py3.14/orjson); verified per-file with s
 NEXT: Nabil deploys nz-glass to Frappe Cloud; then F-13 tab-label ruling, OT form "Replacement Leave" option ruling (no banked OT policy), desktop drag-to-dismiss on centred sheets, per-list Team tabs cut.
 - 2026-09-23T07:34:10Z COMMIT: 76240e245 docs(handoff): 2.0.0-alpha.2 ready to deploy → review dispatched
 NEXT: push nz-glass after the CLS review (111402a6d) returns clean; Nabil deploys 2.0.0-alpha.2 on Frappe Cloud.
+- 2026-09-23T07:34:31Z COMMIT: 0c6b45ffe chore(progress): next step recorded → review dispatched
+- 2026-09-23T07:36:06Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-23T07:36:09Z COMMIT: b88f52ba5 fix(requests): a screen reader heard nothing while balances loaded → review+design dispatched
+- 2026-09-23T07:36:32Z COMMIT: 5a4de55fd docs(handoff): latest commit and follow-ups → review dispatched
+- 2026-09-23T07:37:48Z PUSH: nz-glass @ 5a4de55fd
+- 2026-09-23T07:37:57Z PUSH: nz-glass @ 5a4de55fd
+- 2026-09-23T07:38:54Z EVIDENCE: 3 works — scripts/smoke.sh on fresh.local: migrate clean, patches.txt fully applied, deciding-status columns live in the schema ⟂62ddd9a606da
+DEAD END: 07:37 PUSH lines were refused pushes (release gate wanted tag v2.0.0-alpha.2), yet reset the evidence window; rung 2 for b88f52ba5 is at 07:36:06, full suite 957/957, rung 3 smoke at 07:38:54.
+NEXT: Nabil deploys nz-glass (tag v2.0.0-alpha.2) on Frappe Cloud.
