@@ -1,5 +1,6 @@
 import frappe
 from frappe.boot import load_translations
+from frappe.utils import get_system_timezone
 
 no_cache = 1
 
@@ -31,6 +32,10 @@ def get_boot():
 		}
 	)
 
+	# The site clock, where utils/siteTime.js reads it. Without it every
+	# server time rendered on Asia/Dubai (the client fallback), so a UTC+8
+	# site's 18:31 approval read "in an hour" (owner report, 23 Sep 2026).
+	bootinfo.sysdefaults = {"time_zone": get_system_timezone()}
 	bootinfo.lang = frappe.local.lang
 	load_translations(bootinfo)
 

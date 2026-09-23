@@ -76,6 +76,7 @@
 </template>
 
 <script setup>
+import { siteTime } from "@/utils/siteTime"
 import { computed, inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { CalendarDays, Megaphone, ShieldAlert, TriangleAlert } from "lucide-vue-next"
@@ -112,7 +113,7 @@ function iconFor(category) {
 }
 
 function when(card) {
-	return card.publish_from ? $dayjs(card.publish_from).fromNow() : ""
+	return card.publish_from ? siteTime(card.publish_from).fromNow() : ""
 }
 
 function open(card) {

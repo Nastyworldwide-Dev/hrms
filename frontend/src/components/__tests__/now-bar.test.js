@@ -28,7 +28,7 @@ const bar = code(read("components/NowBar.vue"))
 test("the elapsed time is derived from the start, never accumulated", () => {
 	// A counter that adds a minute per tick drifts, and drifts most while the
 	// phone is asleep — which is exactly when nobody is watching it.
-	assert.match(bar, /Date\.now\(\) - started\.getTime\(\)/)
+	assert.match(bar, /Date\.now\(\) - started\.valueOf\(\)/)
 	assert.doesNotMatch(bar, /minutes\s*\+=|minutes\.value\s*\+\+/, "nothing accumulates")
 })
 
@@ -44,8 +44,10 @@ test("an unparseable timestamp renders nothing, not NaN", () => {
 	// Safari parses "2026-09-22 19:00:00" as Invalid Date — the exact defect
 	// CheckInPanel already carries a note about — and "Working · NaNm" at the
 	// top of Home is worse than no line.
-	assert.match(bar, /replace\(" ", "T"\)/, "the space is normalised")
-	assert.match(bar, /Number\.isNaN\(started\.getTime\(\)\)/, "and a bad value is refused")
+	// siteTime parses "YYYY-MM-DD HH:mm:ss" on the SITE clock (dayjs.tz, no
+	// Safari Date parsing) and returns an invalid instant for junk.
+	assert.match(bar, /const started = siteTime\(session\.value\.since\)/, "parsed on the site clock")
+	assert.match(bar, /if \(!started\.isValid\(\)\) return ""/, "and a bad value is refused")
 })
 
 test("the bar ALWAYS renders", () => {

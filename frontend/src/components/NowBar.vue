@@ -40,6 +40,7 @@
 </template>
 
 <script setup>
+import { siteTime } from "@/utils/siteTime"
 import { clockTime } from "@/utils/daySheet"
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue"
 
@@ -75,9 +76,11 @@ const elapsed = computed(() => {
 	// Safari parses "2026-09-22 19:00:00" as Invalid Date — the defect
 	// CheckInPanel already carries a note about — and "NaNm" at the top of
 	// Home is worse than no number.
-	const started = new Date(String(session.value.since).replace(" ", "T"))
-	if (Number.isNaN(started.getTime())) return ""
-	const minutes = Math.max(0, Math.floor((Date.now() - started.getTime()) / 60000))
+	// On the SITE clock: a device in another zone read "since" as its own
+	// wall time and was off by the zone gap (alpha.5 audit).
+	const started = siteTime(session.value.since)
+	if (!started.isValid()) return ""
+	const minutes = Math.max(0, Math.floor((Date.now() - started.valueOf()) / 60000))
 	const hours = Math.floor(minutes / 60)
 	return hours > 0 ? __("{0}h {1}m", [hours, minutes % 60]) : __("{0}m", [minutes])
 })

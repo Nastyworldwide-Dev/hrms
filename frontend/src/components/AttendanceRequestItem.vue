@@ -29,6 +29,7 @@
 </template>
 
 <script setup>
+import { siteTime } from "@/utils/siteTime"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed, inject } from "vue"
 
@@ -64,7 +65,7 @@ const waiting = computed(() =>
 		? ""
 		: waitingWith(props.doc, {
 				pending: requestStatus("Attendance Request", props.doc).pending,
-				since: (date) => dayjs(date).fromNow(),
+				since: (date) => siteTime(date).fromNow(),
 				t: __,
 		  })
 )

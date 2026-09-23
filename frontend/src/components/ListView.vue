@@ -414,7 +414,7 @@ const openRequestModal = async (request) => {
 	selectedRequest.value = request
 	selectedRequest.value.doctype = "Employee Checkin"
 	selectedRequest.value.date = request.time
-	selectedRequest.value.formatted_time = dayjs(request.time).format("HH:mm a")
+	selectedRequest.value.formatted_time = dayjs(request.time).format("h:mm a")
 	selectedRequest.value.formatted_latitude = formatCoord(request.latitude)
 	selectedRequest.value.formatted_longitude = formatCoord(request.longitude)
 	isRequestModalOpen.value = true

@@ -19,6 +19,7 @@
 </template>
 
 <script setup>
+import { siteTime } from "@/utils/siteTime"
 import GBadge from "@/components/glass/GBadge.vue"
 import { computed, inject } from "vue"
 
@@ -33,10 +34,10 @@ const props = defineProps({
 	},
 })
 
-const formattedTime = computed(() => dayjs(props.doc.time).format("hh:mm a"))
+const formattedTime = computed(() => siteTime(props.doc.time).format("h:mm a"))
 
 const dayLabel = computed(() => {
-	const date = dayjs(props.doc.time)
+	const date = siteTime(props.doc.time)
 
 	if (date.isToday()) return __("Today")
 	if (date.isYesterday()) return __("Yesterday")
