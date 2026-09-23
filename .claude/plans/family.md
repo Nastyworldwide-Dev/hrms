@@ -1,3 +1,3 @@
-CLASS: an approver shown a stored snapshot while the decision is judged by a fresh figure.
+CLASS: the date shown in the header in place of the brand.
 
-Call sites: leave_application.validate_balance_leaves + get_leave_balance_on — same-root, fixed (one helper get_consumable_leave_balance). approval.get_decision_actions — same-root, fixed (leave_balance_now). RequestActionSheet Leave Balance row — same-root, fixed. Other sheet fields (total_leave_days, claimed hours, amounts) — not-affected, they are the request itself, not a balance. Pre-existing: test_a_decision_is_always_recordable 3 Shift tests red on HEAD 1604a7f53 — ticket, next commit.
+Call sites: GAppHeader.vue (title/kicker) — same-root, fixed (GLogo on tab pages, kicker removed). BaseLayout.vue dateKicker — same-root, removed. Home.vue todayTitle — same-root, removed; date now in NowBar.vue. SideNav.vue inline mark — same-root, now GLogo. DesignSpecimen kicker demo — same-root, updated. FormView header — not-affected (pushed pages show Back, no mark).

@@ -16,9 +16,9 @@ test("H1: the Requests panel is not on Home (it lives on Requests)", () => {
 	assert.doesNotMatch(template, /<RequestPanel/)
 })
 
-test("H2/H3: the date is the header title, said once, not in capitals", () => {
-	assert.match(template, /:page-title="todayTitle"|:pageTitle="todayTitle"/)
-	assert.match(home, /format\("ddd D MMM"\)/)
+test("H2/H3: the date is said once, inside Today, not in capitals (owner 23 Sep: the mark is the header)", () => {
+	assert.doesNotMatch(template, /todayTitle/)
+	assert.match(read("../../components/NowBar.vue"), /format\("dddd, D MMMM"\)/)
 	assert.doesNotMatch(checkinTemplate, /toUpperCase\(\)/)
 	assert.doesNotMatch(checkinTemplate, /format\("dddd, D MMMM YYYY"\)/)
 })
@@ -44,7 +44,7 @@ test("pulling down refreshes what Home shows: the Now bar, what waits on you, an
 	assert.doesNotMatch(body, /reloadRequestLists/)
 })
 
-test("on desktop the date is not said twice (the title already says it)", () => {
+test("on desktop the date is not said twice (no header kicker)", () => {
 	const layout = read("../../components/BaseLayout.vue")
-	assert.match(layout, /:kicker="props\.pageTitle \? undefined : dateKicker"/)
+	assert.doesNotMatch(layout, /kicker/)
 })

@@ -267,11 +267,12 @@
 				</section>
 
 				<section class="spec__section">
-					<h2 class="spec__label">GAPPHEADER (§10.3 #24) — avatar hides at lg:, kicker appears</h2>
+					<h2 class="spec__label">
+						GAPPHEADER (§10.3 #24) — Nadi mark on tab pages, avatar hides at lg:
+					</h2>
 					<GAppHeader
 						title="My KPI"
 						:unread="3"
-						kicker="Wednesday, 20 August"
 						avatar-label="Siti Rahman"
 						@notifications="log('notifications')"
 						@profile="log('profile')"

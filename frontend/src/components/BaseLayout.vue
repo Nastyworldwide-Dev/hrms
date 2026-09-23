@@ -5,7 +5,6 @@
 				<GAppHeader
 					:title="props.pageTitle || __('Nadi')"
 					:unread="unreadNotificationsCount.data || 0"
-					:kicker="props.pageTitle ? undefined : dateKicker"
 					:avatar-url="user.data?.user_image"
 					:avatar-label="user.data?.first_name"
 					@notifications="router.push({ name: 'Notifications' })"
@@ -31,15 +30,11 @@ import { IonHeader, IonContent } from "@ionic/vue"
 import { unreadNotificationsCount } from "@/data/notifications"
 
 import { useRouter } from "vue-router"
-import { inject, computed } from "vue"
+import { inject } from "vue"
 
 const router = useRouter()
 const user = inject("$user")
-const $dayjs = inject("$dayjs")
 const __ = inject("$translate")
-
-// Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
-const dateKicker = computed(() => $dayjs().format("dddd, D MMMM YYYY"))
 
 const props = defineProps({
 	pageTitle: {

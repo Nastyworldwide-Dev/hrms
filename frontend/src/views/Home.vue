@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :page-title="todayTitle">
+	<BaseLayout>
 		<template #body>
 			<!-- §20.3: ONE content column, 720px, left-aligned against the side nav.
 			     Until the 7.3 ruling this split into lg:grid-cols-2 — measured 550px
@@ -46,8 +46,6 @@
 </template>
 
 <script setup>
-import { computed, inject } from "vue"
-
 import { homeAnnouncements } from "@/data/announcements"
 import { needsYouResource } from "@/data/needsYou"
 import { nowResource } from "@/data/now"
@@ -60,10 +58,8 @@ import Announcements from "@/components/Announcements.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 
-const $dayjs = inject("$dayjs")
 //: The date is the header title, said once and in plain case (approved Home
 //: plan, H2/H3): "Wed 23 Sep". A fixed length, so it never crowds the bell.
-const todayTitle = computed(() => $dayjs().format("ddd D MMM"))
 
 //: Pull to refresh reloads what HOME shows. It reloaded the request lists,
 //: which left Home with the Requests panel (review of 1cdd9ff56).

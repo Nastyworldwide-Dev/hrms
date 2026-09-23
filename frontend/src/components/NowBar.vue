@@ -24,6 +24,9 @@
 -->
 <template>
 	<div class="g-now" :class="`g-now--${stateKey}`">
+		<!-- The date is content, so it sits with today's content, once — not in
+		     the header in place of the Nadi mark (owner, 23 Sep; DETAIL §1.3). -->
+		<p class="g-now__date" data-visual-mask>{{ today }}</p>
 		<div class="g-now__row">
 			<span class="g-now__dot" aria-hidden="true" />
 			<p class="g-now__state">{{ stateLine }}</p>
@@ -44,6 +47,7 @@ import { nowResource } from "@/data/now"
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
+const today = computed(() => $dayjs().format("dddd, D MMMM"))
 
 //: Once a minute. The number is stated in minutes, so a faster tick re-renders
 //: Home for a digit that has not changed.

@@ -3041,6 +3041,13 @@ ion-router-outlet {
 .g-now--before .g-now__dot {
 	background: var(--g-warn);
 }
+.g-now__date {
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	letter-spacing: var(--g-type-caption-tracking);
+	color: var(--g-ink2);
+	margin-bottom: 4px;
+}
 .g-now__state {
 	font-family: var(--g-type-panel-title-family);
 	font-size: var(--g-type-panel-title-size);

@@ -8,11 +8,10 @@
   glass tab bar would spend 2 of the 6-surface budget on chrome before any
   content exists. Flagged: the spec never states the header's material.
 
-  lg: BEHAVIOUR — preserved from the existing header, which differs at lg::
-  the avatar link is hidden (the side nav carries identity, §20.2) and a date
-  kicker appears. NOTE: §20.7 does not list #24 among the components that
-  differ at lg:. That list is incomplete — flagged for a spec amendment rather
-  than resolved here.
+  BRAND (owner, 23 Sep): a tab page shows the Nadi mark at the left; a pushed
+  page shows Back there instead. The date is content and lives in Home's
+  Today card, not here. lg: the avatar link is hidden (the side nav carries
+  identity, §20.2).
 
   Routing is emitted, not hardcoded, so phase 4's shell owns navigation:
   @notifications → the Notifications route, @profile → the Profile route.
@@ -20,7 +19,6 @@
   Props:
     title       string — falls back to "Nadi", as the existing header does
     unread      number, default 0 — >0 shows the unread dot
-    kicker      string — lg:-only date kicker, e.g. "WEDNESDAY, 20 AUGUST"
     avatarUrl   string — avatar image; falls back to the initial
     avatarLabel string — name behind the initial and the accessible name
   Emits: notifications, profile
@@ -41,12 +39,8 @@
 			</svg>
 		</GIconButton>
 
-		<h1 class="g-header__title">{{ title || __("Nadi") }}</h1>
-
-		<!-- data-visual-mask: the kicker is today's date, so its baseline rots at
-		     midnight. Masked here rather than at each caller — BaseLayout and
-		     FormView both feed it. -->
-		<span v-if="kicker" class="g-header__kicker" data-visual-mask>{{ kicker }}</span>
+		<GLogo v-if="!showBack" class="g-header__mark" :label="title ? '' : __('Nadi')" />
+		<h1 class="g-header__title" :class="{ 'sr-only': !title }">{{ title || __("Nadi") }}</h1>
 
 		<button
 			type="button"
@@ -77,6 +71,7 @@
 import { inject } from "vue"
 import GIconButton from "./GIconButton.vue"
 import GAvatar from "./GAvatar.vue"
+import GLogo from "./GLogo.vue"
 
 const __ = inject("$translate")
 // provided by GPage; false on tab roots
@@ -85,7 +80,6 @@ const showBack = inject("gShowBack", false)
 defineProps({
 	title: { type: String, default: "" },
 	unread: { type: Number, default: 0 },
-	kicker: { type: String, default: "" },
 	avatarUrl: { type: String, default: "" },
 	avatarLabel: { type: String, default: "" },
 })

@@ -8,20 +8,7 @@
 			<!-- Nadi mark: brand token colours (--g-brand / --g-on-brand), not the
 			     asset's literal hex — one source for "what is brand lime" across
 			     the whole glass surface system, not a second one per logo. -->
-			<svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="flex-none">
-				<rect width="32" height="32" rx="8" fill="var(--g-brand)" />
-				<text
-					x="16"
-					y="22"
-					text-anchor="middle"
-					font-family="Inter, system-ui, sans-serif"
-					font-weight="800"
-					font-size="18"
-					fill="var(--g-on-brand)"
-				>
-					n
-				</text>
-			</svg>
+			<GLogo :label="collapsed ? __('Nadi') : ''" />
 			<span
 				v-show="!collapsed"
 				class="font-extrabold text-button-label tracking-tight whitespace-nowrap text-inkbase"
@@ -143,6 +130,7 @@
 </template>
 
 <script setup>
+import GLogo from "@/components/glass/GLogo.vue"
 import { ExternalLink, Users } from "lucide-vue-next"
 import { ref, computed, inject } from "vue"
 import { useRoute } from "vue-router"
