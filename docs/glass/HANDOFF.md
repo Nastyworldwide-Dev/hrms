@@ -1,20 +1,24 @@
 # HANDOFF
-prompt:   2.0 revamp — phases A, B, C and D
+prompt:   the 23 September deploy — every defect in the owner's screenshots
 status:   done, ready to deploy
-commit:   cd8144e7c on nz-glass (20 commits, all pushed)
-files:    hrms/api/{announcements,needs_you,requests_summary,calendar,now}.py
-          hrms/hr/doctype/hr_announcement{,_read}/ (new)
-          hrms/patches/v16_0/install_announcement_doctypes.py
-          design/gates/{scale,motion}.mjs (new), lint/contrast/run extended
-          design/tokens.json — 4pt grid, 1.2 type ramp, icon + control scales
-          frontend/src/components/{NowBar,Announcements,DaySheet,RequestBalances}.vue
-          frontend/src/views/announcements/ (new)
+commit:   4fa619563 on nz-glass (5 commits since that deploy, all pushed)
+files:    design/tokens.json (tab-label 10px, and px rather than rem)
+          design/build-tokens.mjs, design/gates/{scale,tabbar-reservation}
+          frontend/src/theme/glass-components.css (reservation specificity)
+          frontend/src/components/{NowBar,Announcements,RequestBalances}.vue
+          frontend/src/views/attendance/Dashboard.vue (four lists removed)
+          frontend/src/views/kpi/Dashboard.vue
+          hrms/api/{kpi,now,announcements}.py
+          hrms/hr/doctype/hr_announcement/hr_announcement.js (HR's reach report)
 verify:   cd frontend && yarn test && yarn gates && yarn build
-flags:    763/763 tests green. 7 static gates green. a11y/visual/coherence still
-          SKIP — they need a served site with AUDIT_PW, as they have for six
-          releases; the board says so rather than reporting OK.
-          114 visual baselines still owed, and now 228 (light theme is real).
-next:     Deploy. On the phone: Home's top line states your shift and your
-          running hours; announcements appear once HR posts one; Calendar tiles
-          carry dots and a day opens a sheet; Requests shows your balances;
-          Score says when your cycle opens.
+flags:    789/789 tests green, 7 static gates green, ruff clean.
+          a11y/visual/coherence still SKIP — they need a served site with
+          AUDIT_PW, as they have for six releases. 228 baselines still owed.
+          Needs You will still be empty on your account, and that is correct:
+          four leave applications are pending on the site and you approve none
+          of them. The endpoint is right; the account is not an approver.
+next:     Deploy. On the phone: the tab bar reads HOME CALENDAR REQUESTS SCORE
+          MORE with gaps between them; Home's first line states your shift and
+          your state; the Calendar is a calendar and nothing sits cut off under
+          the bar; Requests shows four balances that say "of N"; Score names
+          who scores you.
