@@ -1,0 +1,493 @@
+<title>Nadi alpha.5 Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#F4F5F7; --card:#FFFFFF; --ink:#0B0C10; --ink2:#454A55; --ink3:#6B7180; --rule:#DDE0E6;
+  --lime:#5C7A00; --lime-bg:#EEF7CC; --warn:#A15C00; --warn-bg:#FFF1DB; --bad:#B42318; --bad-bg:#FDE8E6;
+  --ok:#0B7A66; --ok-bg:#DDF5EF; --info:#3C3CB0; --info-bg:#E8E8FB;
+  /* app mockup tokens (Nadi Glass, dark default) */
+  --a-ground:#0B0C10; --a-surface:#15171D; --a-surface2:#1C1F27; --a-ink:#FFFFFF; --a-ink2:#A9AEB9; --a-hair:rgba(255,255,255,.08);
+  --a-brand:#C8FF00; --a-on-brand:#0B0C10; --a-warn:#F59E0B; --a-ok:#00E5C0; --a-glass:rgba(30,32,40,.62); --a-rim:rgba(255,255,255,.14);
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace; --sans:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; --display:"Inter Tight",Inter,system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0E1014; --card:#171A20; --ink:#F2F3F5; --ink2:#B7BCC6; --ink3:#8990A0; --rule:#2A2E37;
+  --lime:#C8FF00; --lime-bg:#26300A; --warn:#FBBF24; --warn-bg:#35270C; --bad:#F87171; --bad-bg:#3A1717;
+  --ok:#2EE6C6; --ok-bg:#0E2E29; --info:#A5A5FF; --info-bg:#1E1E3D; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --paper:#0E1014; --card:#171A20; --ink:#F2F3F5; --ink2:#B7BCC6; --ink3:#8990A0; --rule:#2A2E37;
+  --lime:#C8FF00; --lime-bg:#26300A; --warn:#FBBF24; --warn-bg:#35270C; --bad:#F87171; --bad-bg:#3A1717;
+  --ok:#2EE6C6; --ok-bg:#0E2E29; --info:#A5A5FF; --info-bg:#1E1E3D; color-scheme:dark;}
+.mock-light{--a-ground:#F7F8FA; --a-surface:#FFFFFF; --a-surface2:#F0F1F4; --a-ink:#0B0C10; --a-ink2:#5A606C; --a-hair:rgba(16,22,34,.08);
+  --a-glass:rgba(255,255,255,.72); --a-rim:rgba(255,255,255,.9); --a-warn:#B45309; --a-ok:#047857;}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:15px/1.55 var(--sans);margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:28px 80px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(28px,5vw,42px);line-height:1.1}
+h2{font-size:24px;margin-top:56px;padding-top:20px;border-top:1px solid var(--rule)}
+h3{font-size:17px;margin-top:26px}
+p{margin:8px 0;max-width:70ch}
+.lede{font-size:17px;color:var(--ink2);max-width:62ch}
+.eyebrow{font:600 12px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+code,.mono{font:12.5px/1.4 var(--mono);color:var(--ink2);overflow-wrap:anywhere}
+a{color:inherit}
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);border-bottom:1px solid var(--rule);margin-inline:-20px;padding:10px 20px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+nav.toc a{flex:none;text-decoration:none;font:600 13px/1 var(--sans);color:var(--ink2);padding:8px 12px;border-radius:999px;border:1px solid var(--rule);background:var(--card)}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--ink);border-color:var(--ink3);outline:none}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:16px 18px}
+.card h3{margin:0 0 6px}
+.stat{font:800 34px/1 var(--display);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font:600 11.5px/1 var(--sans);padding:5px 8px;border-radius:999px;white-space:nowrap}
+.p-fix{background:var(--warn-bg);color:var(--warn)} .p-bug{background:var(--bad-bg);color:var(--bad)}
+.p-ok{background:var(--ok-bg);color:var(--ok)} .p-del{background:var(--bad-bg);color:var(--bad)}
+.p-merge{background:var(--info-bg);color:var(--info)} .p-new{background:var(--lime-bg);color:var(--lime)}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:12px;background:var(--card);margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--rule)}
+th{font:600 12px/1.3 var(--sans);color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;background:var(--paper);position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600}
+.min{min-width:780px}
+ul.tight{margin:6px 0;padding-left:20px} ul.tight li{margin:3px 0}
+.callout{border-left:3px solid var(--lime);background:var(--card);padding:12px 16px;border-radius:0 10px 10px 0;margin-top:14px}
+.callout.warn{border-color:var(--warn)}
+.bugs{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.bug b{display:block;font-family:var(--display);font-size:16px;margin-bottom:4px}
+.bug .k{font:600 12px/1 var(--sans);color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-top:10px}
+
+/* ---------- phone mockups ---------- */
+.mockbar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.mockbar button{font:600 13px/1 var(--sans);padding:9px 14px;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink);cursor:pointer}
+.mockbar button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.mockbar button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.phones{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:22px;margin-top:16px}
+figure{margin:0}
+figcaption{font-size:13.5px;color:var(--ink2);margin-top:10px}
+figcaption b{color:var(--ink);font-family:var(--display);font-size:15px;display:block;margin-bottom:2px}
+.ph{position:relative;width:100%;max-width:300px;aspect-ratio:300/620;border-radius:34px;background:var(--a-ground);color:var(--a-ink);
+  border:6px solid #1a1c22;overflow:hidden;font:13px/1.35 var(--sans);box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.ph .scr{position:absolute;inset:0;padding:40px 14px 96px;overflow:hidden}
+.ph .hd{display:flex;align-items:center;gap:10px;height:40px;margin-bottom:10px}
+.ph .hd .t{font:800 20px/1 var(--display);flex:1;letter-spacing:-.02em}
+.ph .hd .back{font-size:20px;color:var(--a-ink);width:20px}
+.ph .logo{width:28px;height:28px;border-radius:8px;background:var(--a-brand);color:var(--a-on-brand);display:grid;place-items:center;font:800 15px/1 var(--display)}
+.ph .ic{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:var(--a-ink2);font-size:14px}
+.ph .av{width:28px;height:28px;border-radius:8px;background:var(--a-surface2);display:grid;place-items:center;font:700 12px/1 var(--sans);color:var(--a-ink2)}
+.ph .eb{font:700 11.5px/1 var(--sans);color:var(--a-brand);margin:14px 2px 7px}
+.mock-light .ph .eb{color:#4A6300}
+.ph .panel{background:var(--a-surface);border-radius:16px;border:1px solid var(--a-hair)}
+.ph .row{display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:50px;border-bottom:1px solid var(--a-hair)}
+.ph .row:last-child{border-bottom:0}
+.ph .row .ri{width:26px;height:26px;border-radius:8px;background:var(--a-surface2);display:grid;place-items:center;font-size:12px;flex:none}
+.ph .row .tx{flex:1;min-width:0}
+.ph .row .l1{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph .row .l2{color:var(--a-ink2);font-size:11.5px;margin-top:1px}
+.ph .row .ch{color:var(--a-ink2)}
+.ph .tag{font:700 10.5px/1 var(--sans);padding:4px 7px;border-radius:999px;background:var(--a-surface2);color:var(--a-ink2);flex:none}
+.ph .tag.w{color:var(--a-warn);box-shadow:inset 0 0 0 1px var(--a-warn);background:transparent}
+.ph .tag.g{color:var(--a-ok);background:color-mix(in srgb,var(--a-ok) 16%,transparent)}
+.ph .dot{width:8px;height:8px;border-radius:50%;background:var(--a-brand);flex:none}
+.ph .btn{display:block;text-align:center;background:var(--a-brand);color:var(--a-on-brand);font:800 15px/1 var(--display);padding:14px;border-radius:14px;margin-top:12px}
+.ph .seg{display:flex;background:var(--a-surface2);border-radius:12px;padding:3px;gap:3px;margin-bottom:4px}
+.ph .seg span{flex:1;text-align:center;padding:8px;border-radius:9px;font:700 12.5px/1 var(--sans);color:var(--a-ink2)}
+.ph .seg span.on{background:var(--a-surface);color:var(--a-ink);box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.ph .more{text-align:center;color:var(--a-ink2);font-size:12px;padding:9px}
+/* chrome: the ONLY glass */
+.ph .tabs{position:absolute;left:10px;right:10px;bottom:14px;height:58px;border-radius:22px;background:var(--a-glass);
+  -webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);border:1px solid var(--a-rim);
+  display:flex;justify-content:space-around;align-items:center;font:700 9.5px/1 var(--sans);color:var(--a-ink2);z-index:3}
+.ph .tabs span{display:flex;flex-direction:column;align-items:center;gap:4px}
+.ph .tabs span.on{color:var(--a-ink)}
+.ph .tabs i{font-style:normal;font-size:15px}
+.ph .fade{position:absolute;left:0;right:0;bottom:0;height:110px;background:linear-gradient(to top,var(--a-ground) 45%,transparent);z-index:2;pointer-events:none}
+.ph .scrim{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:4}
+.ph .sheet{position:absolute;left:0;right:0;bottom:0;z-index:5;background:var(--a-glass);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+  border-top:1px solid var(--a-rim);border-radius:26px 26px 0 0;padding:8px 14px 22px}
+.ph .grab{width:36px;height:5px;border-radius:3px;background:var(--a-ink2);opacity:.5;margin:0 auto 8px}
+.ph .shd{display:flex;align-items:center;height:36px;margin-bottom:8px}
+.ph .shd .t{flex:1;text-align:center;font:800 15px/1 var(--display)}
+.ph .shd .x{width:28px;height:28px;border-radius:50%;background:var(--a-surface2);display:grid;place-items:center;font-size:12px;color:var(--a-ink2)}
+.ph .flat .row{padding-inline:2px}
+.ph .now{font:800 19px/1.1 var(--display);margin:6px 2px 2px}
+.ph .sub{color:var(--a-ink2);font-size:12px;margin:0 2px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:10px}
+.cal b{font:600 9.5px/1 var(--sans);color:var(--a-ink2);text-align:center;padding-bottom:4px}
+.cal span{aspect-ratio:1;border-radius:8px;display:grid;place-items:center;font:700 11.5px/1 var(--sans);position:relative;color:var(--a-ink2)}
+.cal .w{background:color-mix(in srgb,var(--a-brand) 26%,transparent);color:var(--a-ink)}
+.cal .r{background:var(--a-surface2)}
+.cal .lv{background:rgba(123,92,255,.4);color:var(--a-ink)}
+.cal .ip{background:color-mix(in srgb,var(--a-brand) 12%,transparent);box-shadow:inset 0 0 0 2px var(--a-ink);color:var(--a-ink)}
+.cal .f::after{content:"";position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:var(--a-warn)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 10px;padding:0 10px 10px;font-size:10.5px;color:var(--a-ink2)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:4px;vertical-align:middle}
+.fld{background:var(--a-surface2);border-radius:12px;padding:9px 12px;margin-top:6px}
+.fld .lb{font-size:10.5px;color:var(--a-ink2)}
+.fld .vl{font-weight:600;margin-top:2px}
+/* desktop mock */
+.dk{width:100%;aspect-ratio:16/9;max-width:760px;border-radius:14px;overflow:hidden;background:var(--a-ground);color:var(--a-ink);border:6px solid #1a1c22;display:flex;font:12px/1.35 var(--sans)}
+.dk .side{width:24%;background:var(--a-glass);border-right:1px solid var(--a-rim);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);padding:14px 10px;display:flex;flex-direction:column;gap:4px}
+.dk .side .it{padding:8px 10px;border-radius:9px;color:var(--a-ink2);font-weight:600}
+.dk .side .it.on{background:var(--a-surface2);color:var(--a-ink)}
+.dk .main{flex:1;padding:18px 28px}
+.dk .col{max-width:62%}
+.dk .hd{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.dk .hd .t{font:800 20px/1 var(--display);flex:1}
+.dk .panel{background:var(--a-surface);border-radius:12px;border:1px solid var(--a-hair)}
+.dk .row{display:flex;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--a-hair)}
+.dk .row:last-child{border:0}
+.dk .row .tx{flex:1}
+.dk .tag{font:700 10px/1 var(--sans);padding:4px 7px;border-radius:999px;background:color-mix(in srgb,var(--a-ok) 16%,transparent);color:var(--a-ok)}
+.dk .av{width:26px;height:26px;border-radius:8px;background:var(--a-surface2);display:grid;place-items:center;font-weight:700;color:var(--a-ink2)}
+@media (prefers-reduced-transparency:reduce){.ph .tabs,.ph .sheet,.dk .side{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--a-surface)}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+.before{font-size:12.5px;color:var(--ink3);margin-top:4px}
+</style>
+
+<div class="wrap">
+<p class="eyebrow">Nadi 2.0.0-alpha.5 · proposal · 23 Sep 2026 · nothing built yet</p>
+<h1>Nadi alpha.5: every screen, one design</h1>
+<p class="lede">You asked for all of it: every page, phone and desktop, every component, every detail, with the evidence and the reason for each change. This page is that. <b>Nothing is built yet.</b> Say “go” (or tell me what to change) and I build it in slices, then you deploy once.</p>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#short">Short version</a><a href="#bugs">Your bugs</a><a href="#causes">Root causes</a><a href="#sketches">Sketches</a>
+  <a href="#screens">Every screen</a><a href="#components">Every component</a><a href="#elements">Form elements</a><a href="#flows">Flows &amp; logic</a>
+  <a href="#rulings">Rulings</a><a href="#evidence">Evidence</a><a href="#build">Build order</a><a href="#ask">Your answers</a>
+</nav>
+
+<h2 id="short">The short version</h2>
+<div class="grid g3" style="margin-top:14px">
+  <div class="card"><div class="stat">42</div><p>screens (routes) checked, <b>phone 390px and desktop 1280px</b>, light and dark, as staff, approver and manager. 428 screenshots.</p></div>
+  <div class="card"><div class="stat">104</div><p>components checked one by one. <b>6 are dead</b>, <b>14 duplicate</b> another, and <b>15 put glass on content</b>, which is wrong.</p></div>
+  <div class="card"><div class="stat">45</div><p>problems in flows and logic: dead taps, false alarms, the same thing under 3 names, 9 date formats.</p></div>
+  <div class="card"><div class="stat">17</div><p>of your past rulings are <b>recorded but not built</b>. I list every one and include them in this release.</p></div>
+</div>
+<div class="callout"><b>What my first plan missed:</b> desktop, forms, form fields, sheets, empty/loading/error states, dates and times, naming, back buttons, dead links, and 17 of your rulings that were never built. All of that is now covered below.</div>
+
+<h2 id="bugs">Your bugs, answered</h2>
+<div class="grid bugs" style="margin-top:14px">
+  <div class="card bug"><b>“Today didn’t show as present”</b>
+    <span class="pill p-bug">Bug · display only</span>
+    <div class="k">What happened</div><p>Your check-in and check-out are <b>saved and safe</b>. The Calendar colours a day only after the attendance record exists, and that record is made later. Home already counts today, so the two screens disagree.</p>
+    <div class="k">Fix</div><p>Checked in and out = <b>Worked</b> right away. Still checked in = <b>In progress</b>. One shared rule for Home, Calendar and Requests.</p>
+    <p class="mono">AttendanceCalendar.vue:113 · api/__init__.py:362 · home.py:43</p></div>
+  <div class="card bug"><b>“1 day with no attendance: which date? what to fix?”</b>
+    <span class="pill p-bug">Bug · false alarm</span>
+    <div class="k">What happened</div><p>That “1 day” was <b>today</b>. The count includes today even before the day is processed. It never names the date, and tapping it opens a blank form.</p>
+    <div class="k">Fix</div><p>Never count today. Name the day: <b>“Tue 16 Sep has no attendance”</b>. Tapping it opens that day with a <b>Fix this day</b> button.</p>
+    <p class="mono">requests_summary.py:162 · calendar.py:283 · RequestBalances.vue:212</p></div>
+  <div class="card bug"><b>“in an hour” on a notification</b>
+    <span class="pill p-bug">Bug · wrong clock</span>
+    <div class="k">What happened</div><p>The app never gets the site’s time zone, so it assumes Dubai, 4 hours behind Malaysia. Only 3 screens use the site clock at all. The rest use the phone’s clock.</p>
+    <div class="k">Fix</div><p>Send the site time zone at startup, and read every server time through it.</p>
+    <p class="mono">hrms/www/hrms.py:24 · utils/siteTime.js:15 · NowBar.vue:77</p></div>
+</div>
+
+<h2 id="causes">Six root causes (the rest are symptoms)</h2>
+<div class="tbl"><table class="min">
+<thead><tr><th>#</th><th>Cause</th><th>What you see</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Screens outside the 5 tabs never got the new shell</td><td>“Old Frappe” look: a thin line under the header, no bell or profile. On desktop the side nav <b>disappears</b> (Notifications, Profile, Approvals, HR Contacts, Change password)</td><td>One shell (header + side nav) on every route</td></tr>
+<tr><td>2</td><td>Glass is on the <b>content</b>, not the <b>controls</b></td><td>Muddy rows under the bottom bar; a lighter card inside sheets (glass on glass); contrast that shifts as you scroll</td><td>Glass only on bars, sheets and toasts. Cards become solid. Add a soft fade under the floating bars</td></tr>
+<tr><td>3</td><td>The old Frappe form kit still draws forms, fields, buttons, spinners</td><td>New Leave form: grey boxes, “Select Leave Type”, “Dates &amp; Reason” headings, Title Case</td><td>Glass fields for every input type; remove frappe-ui from views</td></tr>
+<tr><td>4</td><td>Three screens count “worked” three ways</td><td>Today not green; false “no attendance”</td><td>One rule, shared</td></tr>
+<tr><td>5</td><td>No site time zone</td><td>“in an hour”; shift timer off</td><td>Boot sends it; one time helper</td></tr>
+<tr><td>6</td><td>Rows show system text</td><td>Raw IDs (HR-LAP-2026-02733), “by &lt;your own name&gt;”, seconds, doctype names, 3-line rows, 29 tickets in one list</td><td>2-line rows; 5 then “See all”; plain words</td></tr>
+</tbody></table></div>
+
+<h2 id="sketches">Sketches</h2>
+<p>These use the real Nadi colours. <b>Glass appears only on the bottom bar and on sheets.</b> Everything else is solid. Switch the theme to check both.</p>
+<div class="mockbar" role="group" aria-label="Sketch theme">
+  <button type="button" id="mk-dark" aria-pressed="true">Dark</button>
+  <button type="button" id="mk-light" aria-pressed="false">Light</button>
+</div>
+<div class="phones" id="phones">
+
+<figure><div class="ph"><div class="scr">
+  <div class="hd"><span class="back">‹</span><span class="t">Help</span><span class="ic">🔔</span><span class="av">M</span></div>
+  <div class="seg"><span class="on">HR</span><span>IT</span></div>
+  <div class="eb">Open · 2</div>
+  <div class="panel">
+    <div class="row"><div class="tx"><div class="l1">Superior cannot approve on duty</div><div class="l2">21 Sep · Waiting on you</div></div><span class="tag w">Open</span></div>
+    <div class="row"><div class="tx"><div class="l1">Laptop keyboard not working</div><div class="l2">19 Sep</div></div><span class="tag">In progress</span></div>
+  </div>
+  <div class="panel" style="margin-top:10px"><div class="row"><div class="tx"><div class="l1">Closed</div></div><span class="ch">27 ›</span></div>
+  <div class="row"><div class="tx"><div class="l1">Who to ask</div></div><span class="ch">›</span></div></div>
+  <span class="btn">New ticket</span>
+</div><div class="fade"></div><div class="tabs"><span><i>⌂</i>Home</span><span><i>▦</i>Calendar</span><span><i>▤</i>Requests</span><span><i>↗</i>Score</span><span class="on"><i>•••</i>More</span></div></div>
+<figcaption><b>Help</b>Open tickets first, then Closed as one row. One main button at the bottom. <span class="before">Removed: the 4 filter buttons, IDs, “by &lt;you&gt;”, the type, the “(29)” count. Evidence: E5, E6, E14.</span></figcaption></figure>
+
+<figure><div class="ph"><div class="scr">
+  <div class="hd"><span class="back">‹</span><span class="t">Notifications</span><span class="ic" style="width:auto;font:600 11px/1 var(--sans);color:var(--a-brand)">Mark all read</span></div>
+  <div class="sub" style="margin-bottom:4px">9 unread</div>
+  <div class="eb">Today</div>
+  <div class="panel">
+    <div class="row"><span class="dot"></span><div class="ri">🌴</div><div class="tx"><div class="l1">Leave approved</div><div class="l2">Hafiz Salim · 6:31 pm</div></div></div>
+  </div>
+  <div class="eb">Yesterday</div>
+  <div class="panel">
+    <div class="row"><span class="dot"></span><div class="ri">⏱</div><div class="tx"><div class="l1">Overtime approved</div><div class="l2">Hafiz Salim · 5:54 pm</div></div></div>
+    <div class="row"><span class="dot"></span><div class="ri">🌴</div><div class="tx"><div class="l1">Leave approved</div><div class="l2">Hafiz Salim · 5:54 pm</div></div></div>
+  </div>
+  <div class="eb">Earlier</div>
+  <div class="panel">
+    <div class="row"><span style="width:8px"></span><div class="ri">?</div><div class="tx"><div class="l1" style="font-weight:500">Issue completed</div><div class="l2">Mon 21 Sep</div></div></div>
+  </div>
+</div><div class="fade"></div></div>
+<figcaption><b>Notifications</b>Short line, who and when, grouped by day. Round unread dot. <span class="before">Before: “Your Leave Application HR-LAP-2026-02733 has been Approved by Hafiz Salim on 23-09-2026 18:31:03”. Evidence: E5, E15.</span></figcaption></figure>
+
+<figure><div class="ph"><div class="scr">
+  <div class="hd"><span class="back">‹</span><span class="t">Help</span><span class="ic">🔔</span><span class="av">M</span></div>
+  <div class="seg"><span class="on">HR</span><span>IT</span></div>
+  <div class="panel" style="margin-top:10px"><div class="row"><div class="tx"><div class="l1">Check-in problem</div><div class="l2">15 Sep</div></div><span class="tag g">Done</span></div></div>
+</div><div class="scrim"></div>
+<div class="sheet"><div class="grab"></div><div class="shd"><span style="width:28px"></span><span class="t">Who to ask</span><span class="x">✕</span></div>
+  <div class="eb" style="margin-top:0">Your manager</div>
+  <div class="panel"><div class="row"><span class="av">H</span><div class="tx"><div class="l1">Hafiz Salim</div><div class="l2">Operations Manager</div></div><span class="ch">📞 ✉</span></div></div>
+  <div class="eb">HR</div>
+  <div class="panel"><div class="row"><span class="av">A</span><div class="tx"><div class="l1">Aina Rahman</div><div class="l2">HR Executive</div></div><span class="ch">📞 ✉</span></div></div>
+</div></div>
+<figcaption><b>Who to ask (sheet)</b>Replaces the old HR Contacts page. Your manager first, then HR. Title in the sheet bar, grabber on top. <span class="before">Before: a separate old-style page with a refresh button and “Ask your administrator to assign the HR Manager role”. Evidence: E4, E7.</span></figcaption></figure>
+
+<figure><div class="ph"><div class="scr">
+  <div class="hd"><span class="logo">n</span><span class="t">More</span><span class="ic">🔔</span><span class="av">M</span></div>
+  <div class="panel"><div class="row"><div class="tx"><div class="l1">Help</div></div></div><div class="row"><div class="tx"><div class="l1">SOPs</div></div></div></div>
+</div><div class="scrim"></div>
+<div class="sheet"><div class="grab"></div><div class="shd"><span style="width:28px"></span><span class="t">Public holidays</span><span class="x">✕</span></div>
+  <div class="flat">
+    <div class="row"><div class="tx"><div class="l1">Deepavali</div><div class="l2">Mon 9 Nov</div></div><span class="tag g">Next</span></div>
+    <div class="row"><div class="tx"><div class="l1">Sultan of Selangor’s Birthday</div><div class="l2">Fri 11 Dec</div></div></div>
+    <div class="row"><div class="tx"><div class="l1">Christmas</div><div class="l2">Fri 25 Dec</div></div></div>
+  </div>
+</div></div>
+<figcaption><b>Public holidays (sheet)</b>Title next to the X, no empty gap, a flat list (no card inside the sheet), the next one marked. <span class="before">Evidence: E2 (no glass on glass), E4.</span></figcaption></figure>
+
+<figure><div class="ph"><div class="scr">
+  <div class="hd"><span class="logo">n</span><span class="t">Calendar</span><span class="ic">🔔</span><span class="av">M</span></div>
+  <div class="panel">
+    <div style="display:flex;padding:10px 10px 0;font:800 14px/1 var(--display)"><span style="flex:1">September 2026</span><span style="color:var(--a-ink2)">‹ ›</span></div>
+    <div class="cal"><b>S</b><b>M</b><b>T</b><b>W</b><b>T</b><b>F</b><b>S</b>
+      <span class="r">13</span><span class="w">14</span><span class="w f">15</span><span class="r">16</span><span class="w">17</span><span class="w">18</span><span class="r">19</span>
+      <span class="r">20</span><span class="w">21</span><span class="w">22</span><span class="ip">23</span><span>24</span><span>25</span><span class="r">26</span></div>
+    <div class="legend"><span><i style="background:color-mix(in srgb,var(--a-brand) 50%,transparent)"></i>Worked</span><span><i style="background:rgba(123,92,255,.6)"></i>Leave</span><span><i style="background:var(--a-surface2)"></i>Rest day</span><span><i style="background:var(--a-warn);border-radius:50%"></i>Fix</span></div>
+  </div>
+  <div class="panel" style="margin-top:10px">
+    <div class="row"><div class="ri" style="color:var(--a-warn)">!</div><div class="tx"><div class="l1">Tue 15 Sep needs a fix</div></div><span class="ch">›</span></div>
+    <div class="row"><div class="tx"><div class="l1">Check-ins</div></div><span class="ch">›</span></div>
+    <div class="row"><div class="tx"><div class="l1">Shifts</div></div><span class="ch">›</span></div>
+  </div>
+</div><div class="fade"></div><div class="tabs"><span><i>⌂</i>Home</span><span class="on"><i>▦</i>Calendar</span><span><i>▤</i>Requests</span><span><i>↗</i>Score</span><span><i>•••</i>More</span></div></div>
+<figcaption><b>Calendar</b>Today (23) shows as in progress. The orange “Fix” dot is in the legend and never lands on today. Underlined links become rows. <span class="before">Evidence: E9, rulings C2, C4, C10.</span></figcaption></figure>
+
+<figure><div class="ph"><div class="scr">
+  <div class="hd"><span class="back">‹</span><span class="t">Time off</span><span class="ic">🔔</span><span class="av">M</span></div>
+  <div class="fld"><div class="lb">Type</div><div class="vl">Annual leave · 6 days left</div></div>
+  <div style="display:flex;gap:6px"><div class="fld" style="flex:1"><div class="lb">From</div><div class="vl">Mon 28 Sep</div></div><div class="fld" style="flex:1"><div class="lb">To</div><div class="vl">Tue 29 Sep</div></div></div>
+  <div class="fld" style="display:flex;justify-content:space-between;align-items:center"><div class="vl" style="margin:0">Half day</div><span style="width:34px;height:20px;border-radius:10px;background:var(--a-surface);border:1px solid var(--a-hair)"></span></div>
+  <div class="fld" style="height:62px"><div class="lb">Reason (only your approver sees it)</div></div>
+  <div class="fld"><div class="lb">Goes to</div><div class="vl">Hafiz Salim</div></div>
+  <div class="sub" style="margin-top:8px">2 days · 4 left after this</div>
+</div><div style="position:absolute;left:14px;right:14px;bottom:18px;z-index:3"><span class="btn">Send request</span></div></div>
+<figcaption><b>Any form (Time off shown)</b>Glass fields and plain labels. Only 4 things to fill in. The result is shown before you send. One button at the bottom. <span class="before">Before: “New Leave Application”, “Select Leave Type”, grey old-kit fields, “Save”. Evidence: E10, E14, rulings L1, L4, AC1.</span></figcaption></figure>
+</div>
+
+<h3>Desktop</h3>
+<figure style="margin-top:12px"><div class="dk" id="dk">
+  <div class="side"><div style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><span class="av" style="background:var(--a-brand);color:var(--a-on-brand)">n</span><b>Nadi</b></div>
+    <div class="it">Home</div><div class="it">Calendar</div><div class="it">Requests</div><div class="it">Score</div><div class="it on">Notifications</div><div class="it">Help</div><div class="it">SOPs</div><div class="it">Public holidays</div></div>
+  <div class="main"><div class="col">
+    <div class="hd"><span class="t">Notifications</span><span style="color:var(--a-brand);font-weight:600">Mark all read</span><span class="av">N</span></div>
+    <div class="panel"><div class="row"><div class="tx"><b>Leave approved</b><div style="color:var(--a-ink2)">Hafiz Salim · 6:31 pm</div></div></div>
+    <div class="row"><div class="tx"><b>Overtime approved</b><div style="color:var(--a-ink2)">Yesterday · 5:54 pm</div></div></div></div>
+  </div></div>
+</div>
+<figcaption><b>Desktop shell on every page</b>The side nav stays on every page, including Notifications, Profile and Approvals. It now has Public holidays too. The content column is 720px wide and aligned left. The header shows no second logo (the side nav already has one). <span class="before">Today: these pages lose the side nav, the header repeats the logo, and the column is centred. Rulings N2, D7.</span></figcaption></figure>
+
+<h2 id="screens">Every screen: phone and desktop</h2>
+<p><span class="pill p-bug">Bug</span> wrong data or behaviour · <span class="pill p-fix">Fix</span> design or wording · <span class="pill p-ok">Keep</span> only the app-wide changes apply</p>
+<div class="tbl"><table class="min">
+<thead><tr><th>Screen</th><th>Phone</th><th>Desktop</th><th>Change</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Home</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>“Your week” reads “3 days worked this week / No overtime to claim”. Coming up: “Next: Deepavali / Mon 9 Nov · public holiday”. Now bar shows “We couldn’t load today” on error, not “No shift today”. Desktop: no second logo; the column aligns left.</td><td>E10; D6; N2</td></tr>
+<tr><td>Calendar</td><td><span class="pill p-bug">Bug</span></td><td><span class="pill p-fix">Fix</span></td><td>Today counts as worked or in progress; the Fix dot skips today; legend keys; links become rows; a “days need a fix” row; the day sheet gets its missing parts (status word, claim state, “Ask for this day off”, “Something wrong?”), and overtime is claimed inside the sheet with a reason</td><td>E9; C2, C4, C5, C6, C7, C10</td></tr>
+<tr><td>Day sheet</td><td><span class="pill p-bug">Bug</span></td><td><span class="pill p-bug">Bug</span></td><td>It offers “Claim” again after you already claimed. It must show “Claim waiting with Hafiz”</td><td>Stops duplicate claims</td></tr>
+<tr><td>Requests</td><td><span class="pill p-bug">Bug</span></td><td><span class="pill p-fix">Fix</span></td><td>“Needs attention” names the date and never counts today. “Fix a day” opens a date, then the form, and stays in the Requests tab. The last 5 show who they are waiting on (R1). Loading and error states added. New request moves down to the thumb zone</td><td>E9; R1; D6; AC1</td></tr>
+<tr><td>Requests: See all</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>“Answered by you” works on a second visit (the tap currently does nothing)</td><td>Dead tap</td></tr>
+<tr><td>Approvals</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-bug">Bug</span></td><td>Desktop: the side nav is missing, so the page moves into the shell. There are 2 doors (Home and Profile); remove the Profile door</td><td>N2; U3</td></tr>
+<tr><td>Score</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>The empty card loses its lime side stripe (nothing to act on). Spinners become skeletons. Add pull to refresh. The 720px column</td><td>§11.2; KPI fence untouched (S1–S7)</td></tr>
+<tr><td>More</td><td><span class="pill p-ok">Keep</span></td><td><span class="pill p-fix">Fix</span></td><td>Desktop side nav is missing Public holidays</td><td>Reachability</td></tr>
+<tr><td>Help (HR / IT)</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>Redesign as sketched: Open first, Closed as one row, 5 then See all, 20 per page</td><td>E5, E6, E8, E14</td></tr>
+<tr><td>HR Issue Board (HR)</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>Rows move onto the standard row, 20 per page instead of 500. The old-kit Button goes</td><td>E6</td></tr>
+<tr><td>Issue / ticket detail, new</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>Standard header, no ID as title, sentence case</td><td>E13; L1</td></tr>
+<tr><td>HR Contacts</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-bug">Bug</span></td><td>Becomes the “Who to ask” sheet. Correct empty text. <i>Empty only because no HR Contact records exist in Desk (your setup)</i></td><td>E4, E7</td></tr>
+<tr><td>Public holidays</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>As sketched</td><td>E2, E4</td></tr>
+<tr><td>Notifications</td><td><span class="pill p-bug">Bug</span></td><td><span class="pill p-bug">Bug</span></td><td>Redesign as sketched; right time zone; loading state; 20 per page. A tap on a remote check-in goes to Approvals, and so does a push. Time off in lieu and Replacement leave become tappable (today they are plain text)</td><td>E5, E15; D6</td></tr>
+<tr><td>Announcements list / detail</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>Dates use the site clock; same date format</td><td>E15</td></tr>
+<tr><td>SOPs list / detail / add</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>Detail and add sheet lose the old headers; standard rows; one switch component</td><td>RC1</td></tr>
+<tr><td>Team / Roster</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>Standard rows; spinner becomes skeleton; old-kit fields go</td><td>RC3</td></tr>
+<tr><td>Profile</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-bug">Bug</span></td><td>Shell; Glass switch; reminders switch waits for the server (it currently shows ON, then flips); logout error translated</td><td>Honest state</td></tr>
+<tr><td>Change password</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-bug">Bug</span></td><td>Shell; Back works when opened from a link</td><td>Dead Back</td></tr>
+<tr><td>Leave / Claims / Overtime / Shift / Shift requests / Check-ins / Attendance requests: lists</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>Old header and endless scroll go. Standard shell, chips, 20 per page. Remove the “Employee” and “Department” filters from your own history. Check-ins say In / Out, not IN / OUT. “18:31 pm” bug. Titles translated and named consistently</td><td>E6; C9; D7</td></tr>
+<tr><td>Leave / Claims / Overtime dashboards</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>Loading states for the balance and claim summary (they currently say “No leave allocated yet” while loading). Claims desktop: one column, not two</td><td>D6; N2</td></tr>
+<tr><td>All forms (7 kinds)</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>As sketched: Glass fields, plain labels, no system names or IDs in titles, confirms or toasts; date pre-filled from Calendar; Cancel is a red confirm, never the main button; Back works from a link</td><td>E10, E14; L4, C12</td></tr>
+<tr><td>Check-in panel</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>Toast “Checked in”, not “Check-in successful!”; hard-coded colours become tokens</td><td>L1</td></tr>
+<tr><td>Login / Forgot password</td><td><span class="pill p-fix">Fix</span></td><td><span class="pill p-fix">Fix</span></td><td>Logo well and provider button lose glass (they are content)</td><td>E1</td></tr>
+<tr><td>Not found / No employee</td><td><span class="pill p-ok">Keep</span></td><td><span class="pill p-ok">Keep</span></td><td>No change</td><td>—</td></tr>
+<tr><td>Design specimen (dev only)</td><td colspan="2"><span class="pill p-del">Delete</span></td><td>It is the only thing keeping 6 dead components alive</td><td>Dead code</td></tr>
+</tbody></table></div>
+
+<h2 id="components">Every component</h2>
+<p>104 in total. Components that need only the app-wide change are grouped together.</p>
+<div class="tbl"><table class="min">
+<thead><tr><th>Component(s)</th><th>Verdict</th><th>What changes</th><th>Evidence</th></tr></thead>
+<tbody>
+<tr><td>GListPanel, GBanner, GCalendar, GStatPanel, GMetaGrid, GBalanceGrid, GSelfiePanel, GLogoWell, GProviderButton</td><td><span class="pill p-fix">Fix</span></td><td>Remove glass (they are content). Keep the edge, corners and shadow</td><td>E1, E11</td></tr>
+<tr><td>GGhostButton, GConfirm</td><td><span class="pill p-fix">Fix</span></td><td>The secondary button becomes solid (it sits inside sheets, so it is glass on glass today)</td><td>E2</td></tr>
+<tr><td>GModal (19 sheets)</td><td><span class="pill p-fix">Fix</span></td><td>Pinned bar with the title centred and Close on the right, a grabber, a half-height stop, glass surface. 9 untitled sheets get titles; 8 raw sheets and CustomIonModal move onto it</td><td>E4</td></tr>
+<tr><td>GAppHeader</td><td><span class="pill p-fix">Fix</span></td><td>A slot for the screen’s own right action (e.g. “Mark all read”); glass with a fade when content scrolls under it; no second logo on desktop</td><td>E3, E13</td></tr>
+<tr><td>BottomTabs, SideNav</td><td><span class="pill p-fix">Fix</span></td><td>Soft fade under the bar. SideNav: focus ring on the collapse button, Reduce Motion, GAvatar, Public holidays, readable 13px labels</td><td>E3, E11, E12</td></tr>
+<tr><td>GListRow</td><td><span class="pill p-fix">Fix</span></td><td>56px rows (your ruling P5); the only row design in the app</td><td>P5</td></tr>
+<tr><td>ListItem + 8 request rows, ExpenseItems, ContactCard, RequestList row</td><td><span class="pill p-merge">Merge</span></td><td>Into GListRow (the 📍 emoji row goes too)</td><td>Consistency</td></tr>
+<tr><td>GBadge, FormattedField colours, FormView guessStatusColor</td><td><span class="pill p-merge">Merge</span></td><td>Into GStatusChip: <b>one</b> status colour map, where there are four today</td><td>Consistency</td></tr>
+<tr><td>WorkflowActionSheet, ListFiltersActionSheet, RequestActionSheet shell</td><td><span class="pill p-merge">Merge</span></td><td>Into GActionSheet</td><td>E4</td></tr>
+<tr><td>FileUploaderView, SopFormSheet hidden input</td><td><span class="pill p-merge">Merge</span></td><td>Into GFileUpload (3 uploaders become 1)</td><td>Consistency</td></tr>
+<tr><td>GLogoWell · Link + GLinkPicker · InstallPrompt popover · FormView cancel dialog</td><td><span class="pill p-merge">Merge</span></td><td>Into GLogo · one Glass picker · GModal · GConfirm</td><td>Consistency</td></tr>
+<tr><td>GEmptyState</td><td><span class="pill p-fix">Fix</span></td><td>Text up to at least 12px (currently 11px). HolidayList, HomeWeek and HomeComingUp use it too</td><td>AC2, E7</td></tr>
+<tr><td>ResourceError</td><td><span class="pill p-fix">Fix</span></td><td>The one error component, with Glass buttons</td><td>D6</td></tr>
+<tr><td>6 frappe-ui spinners, PdfInlineViewer loader</td><td><span class="pill p-fix">Fix</span></td><td>Become GSkeleton (your spec bans spinners)</td><td>§11.2</td></tr>
+<tr><td>toast</td><td><span class="pill p-fix">Fix</span></td><td>Its own Glass toast (currently a restyled Frappe toast)</td><td>E1</td></tr>
+<tr><td>GCalendar day number</td><td><span class="pill p-fix">Fix</span></td><td>From 10.5px to 12px</td><td>AC2</td></tr>
+<tr><td>CheckInPanel, FormView, FormField, expense tables, PushNotificationPrompt, InstallPrompt, PdfInlineViewer</td><td><span class="pill p-fix">Fix</span></td><td>Hard-coded colours become tokens</td><td>Themes</td></tr>
+<tr><td>RequestList rows, SideNav</td><td><span class="pill p-fix">Fix</span></td><td>Keyboard focus rings</td><td>WCAG 2.4.7</td></tr>
+<tr><td>Ionic sheet and page motion</td><td><span class="pill p-fix">Fix</span></td><td>Follows Reduce Motion; pressed states on rows, buttons and tabs</td><td>E12</td></tr>
+<tr><td>GGoalsPanel, GIssueCard, GKraPanel, GLinkPicker, GMapPanel, GScorePanel, CustomIonModal, FilePreviewModal</td><td><span class="pill p-del">Delete</span></td><td>Dead or replaced</td><td>Dead code</td></tr>
+<tr><td>GButton, GIconButton, GInput, GTextarea, GSegmented, GStatusChip, GSkeleton, GPullRefresh, GSearchBar, GAvatar, GProgressRing, GDataTable, GChatBubble, GClock, GStatTile, GBalanceCard, Home parts, Approvals parts, OfflineBanner, UpdatePrompt, LeaveBalance</td><td><span class="pill p-ok">Keep</span></td><td>Already right</td><td>—</td></tr>
+</tbody></table></div>
+
+<h2 id="elements">Form elements</h2>
+<div class="tbl"><table class="min">
+<thead><tr><th>Element</th><th>Today</th><th>alpha.5</th></tr></thead>
+<tbody>
+<tr><td>Text, number, time</td><td>Glass</td><td><span class="pill p-ok">Keep</span></td></tr>
+<tr><td>Long text</td><td>Glass</td><td><span class="pill p-ok">Keep</span></td></tr>
+<tr><td>Choose from a list</td><td>Old kit in forms, native elsewhere (mixed)</td><td><span class="pill p-new">New</span> GSelect: a list in a sheet on phone, a dropdown on desktop</td></tr>
+<tr><td>Pick a person / record</td><td>Old kit</td><td><span class="pill p-new">New</span> one Glass picker with search</td></tr>
+<tr><td>Date, date + time</td><td>Old kit, and native in Roster</td><td><span class="pill p-new">New</span> GDate / GDateTime on the phone’s own date wheel (native input, Glass skin)</td></tr>
+<tr><td>Tick box</td><td>Old kit</td><td><span class="pill p-new">New</span> GCheckbox</td></tr>
+<tr><td>On/off switch</td><td>Old kit, plus a hand-made one</td><td><span class="pill p-new">New</span> GSwitch</td></tr>
+<tr><td>Rich text</td><td>Old kit editor</td><td><span class="pill p-fix">Fix</span> Glass skin (the editor stays)</td></tr>
+<tr><td>Attachments</td><td>3 versions</td><td><span class="pill p-merge">Merge</span> GFileUpload</td></tr>
+<tr><td>Field error</td><td>2 versions</td><td><span class="pill p-merge">Merge</span> one error line under the field</td></tr>
+</tbody></table></div>
+
+<h2 id="flows">Flows and logic: everything illogical or missing</h2>
+<div class="tbl"><table class="min">
+<thead><tr><th>Area</th><th>Problem</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Overtime</td><td>Can be claimed from 4 places; only one fills in the date</td><td>Claim from the Calendar day and Requests only</td></tr>
+<tr><td>Back button</td><td>Does nothing when a page is opened from a link (Back, list, change password, after delete)</td><td>Go back, or go Home</td></tr>
+<tr><td>Dead ends</td><td>Leave and Claims dashboards, and the Attendance, Shift and Overtime request lists, can only be reached by typing the address</td><td>Link from Requests “See all” by type, or remove</td></tr>
+<tr><td>Names</td><td>One thing, 3 names: “Time off” / “leave request” / “Leave history”; “Fix a day” / “attendance request”; “Help” / “Helpdesk”</td><td>One word each, locked by a test</td></tr>
+<tr><td>Title Case</td><td>“New HR Issue”, “New IT Ticket”, “HR Issues”, “IT Helpdesk”, “9 Unread”</td><td>Sentence case (L1)</td></tr>
+<tr><td>Dates</td><td>9 formats, from “23 Sep” to “23-09-2026 18:31:03”</td><td>3 formats: “23 Sep” · “Wed 23 Sep” · “6:31 pm”</td></tr>
+<tr><td>Hours</td><td>“12.50 hours”, “8.03h”</td><td>“12h 30m” everywhere (C8)</td></tr>
+<tr><td>Four states</td><td>6 places show a false message while loading or after an error (e.g. “Nothing waiting on you” when the request failed)</td><td>Loading, empty, error and content on every data block (D6)</td></tr>
+<tr><td>Main action</td><td>At the top on Requests, Help and Leave; Cancel styled as the main button</td><td>Bottom third; destructive in red, behind a confirm (AC1, E14)</td></tr>
+<tr><td>Pull to refresh</td><td>Missing on Calendar, Score, Help, SOPs, Team, Notifications, Profile</td><td>On every screen that shows server data</td></tr>
+<tr><td>Permission</td><td>A remote check-in notification reads a list the approver may not be allowed to read, so it shows “Remote check-in update.”</td><td>The server sends the status with the notification</td></tr>
+</tbody></table></div>
+
+<h2 id="rulings">Your rulings: built vs not built</h2>
+<p>All of these are <b>recorded as in force but missing in the code</b>. alpha.5 builds every one.</p>
+<div class="tbl"><table class="min">
+<thead><tr><th>Ruling</th><th>What is missing</th></tr></thead>
+<tbody>
+<tr><td>D3 glass on controls only</td><td>15 content components are glass</td></tr>
+<tr><td>D6 four states</td><td>6 blocks missing states</td></tr>
+<tr><td>D7 one name everywhere</td><td>See Names above</td></tr>
+<tr><td>C2, C5, C6, C7 Calendar day sheet</td><td>Status word, claim state, inline claim with reason, future-day action, fix rows</td></tr>
+<tr><td>C4 two dot kinds</td><td>The server sends 7 kinds (see the conflict below)</td></tr>
+<tr><td>C8 hours as time</td><td>Decimals in 5 places</td></tr>
+<tr><td>C9 In / Out</td><td>Check-ins show IN / OUT</td></tr>
+<tr><td>R1 who and since when</td><td>Missing on the Requests main list</td></tr>
+<tr><td>L1 sentence case</td><td>5 places</td></tr>
+<tr><td>L4 no system names</td><td>Forms and notifications</td></tr>
+<tr><td>N2 desktop column left-aligned 720px</td><td>Centred; forms 672px; claims in 2 columns</td></tr>
+<tr><td>AC1 main action bottom third</td><td>Requests, Help, Leave</td></tr>
+<tr><td>AC2 text ≥ 12px</td><td>Empty state 11px, calendar 10.5px</td></tr>
+<tr><td>P5 56px rows</td><td>Rows are 44px</td></tr>
+<tr><td>U3 Approvals out of Profile</td><td>Still in Profile</td></tr>
+</tbody></table></div>
+<div class="callout warn"><b>Your records disagree in 4 places. You decide:</b>
+<ul class="tight">
+<li><b>H1 “no overtime on Home”</b> vs the Home you approved today, which shows “overtime to claim”. <i>I recommend keeping today’s Home; it is your latest word.</i></li>
+<li><b>H4 “date as the header title”</b> vs the Nadi mark in the header with the date under it. <i>I recommend keeping what you have now; you approved it today.</i></li>
+<li><b>C4 “two dot kinds only”</b> vs the Calendar showing Travel, Training and more. <i>I recommend fills for Leave, Travel, Training, Holiday and Rest, and dots only for Fix and Overtime.</i></li>
+<li><b>H3 “Approvals not in More”</b> vs a later page plan adding it. <i>I recommend keeping it out of More; Home already points to it.</i></li>
+</ul></div>
+
+<h2 id="evidence">Evidence</h2>
+<div class="tbl"><table class="min">
+<thead><tr><th>Key</th><th>Rule</th><th>Source</th></tr></thead>
+<tbody>
+<tr><td>E1</td><td>“Liquid Glass forms a distinct functional layer for controls and navigation… Don’t use Liquid Glass in the content layer.”</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/materials">Apple HIG · Materials</a></td></tr>
+<tr><td>E2</td><td>“Always avoid glass on glass.”</td><td><a href="https://developer.apple.com/videos/play/wwdc2025/219/">WWDC25 · Get to know the new design system</a></td></tr>
+<tr><td>E3</td><td>The tab bar floats above content. Use a scroll edge effect under floating bars, “one per view”. Stay inside the safe area.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/tab-bars">HIG Tab bars</a> · <a href="https://developer.apple.com/design/human-interface-guidelines/scroll-views">Scroll views</a> · <a href="https://developer.apple.com/design/human-interface-guidelines/layout">Layout</a></td></tr>
+<tr><td>E4</td><td>Sheets: medium and large heights, a grabber, the title in the top bar, Close at the trailing edge.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/sheets">HIG Sheets</a> · <a href="https://developer.apple.com/design/human-interface-guidelines/toolbars">Toolbars</a></td></tr>
+<tr><td>E5</td><td>“Prefer brief titles that people can read at a glance.” A feed item shows who and what, then the time. No raw IDs.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/notifications">HIG Notifications</a> · <a href="https://learn.microsoft.com/en-us/microsoftteams/platform/concepts/design/activity-feed-notifications">Microsoft Teams activity feed</a></td></tr>
+<tr><td>E6</td><td>Show a few first (progressive disclosure). Endless scroll hides the end.</td><td><a href="https://www.nngroup.com/articles/progressive-disclosure/">NN/g Progressive disclosure</a> · <a href="https://www.nngroup.com/articles/infinite-scrolling-tips/">NN/g Infinite scrolling</a></td></tr>
+<tr><td>E7</td><td>Empty states explain why, and what to do next.</td><td><a href="https://www.nngroup.com/articles/empty-state-interface-design/">NN/g Empty states</a></td></tr>
+<tr><td>E8</td><td>A segmented control has at most about 5 segments.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/segmented-controls">HIG Segmented controls</a></td></tr>
+<tr><td>E9</td><td>Always keep people informed about what is going on.</td><td><a href="https://www.nngroup.com/articles/visibility-system-status/">NN/g Visibility of system status</a></td></tr>
+<tr><td>E10</td><td>Plain language, lower mental effort, 50–75 characters per line.</td><td><a href="https://www.nngroup.com/articles/minimize-cognitive-load/">NN/g Cognitive load</a> · <a href="https://developer.apple.com/design/human-interface-guidelines/writing">HIG Writing</a> · <a href="https://baymard.com/blog/line-length-readability">Baymard</a></td></tr>
+<tr><td>E11</td><td>44×44 pt targets; 4.5:1 contrast; text over busy backgrounds fails.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/accessibility">HIG Accessibility</a> · <a href="https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html">WCAG 1.4.3</a> · <a href="https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html">2.5.8</a></td></tr>
+<tr><td>E12</td><td>Honour Reduce Transparency and Reduce Motion, with a solid fallback.</td><td><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-transparency">MDN</a></td></tr>
+<tr><td>E13</td><td>One navigation bar style; a large title; titles under 15 characters.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/toolbars">HIG Toolbars</a></td></tr>
+<tr><td>E14</td><td>“Keep the number of prominent buttons to one or two per view.” A destructive action is never the main button.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/buttons">HIG Buttons</a></td></tr>
+<tr><td>E15</td><td>Dates follow the region; relative time for recent items.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/inclusion">HIG Inclusion</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/RelativeTimeFormat">MDN Intl</a></td></tr>
+</tbody></table></div>
+<p style="color:var(--ink3);font-size:13px">Honest gaps: no official guideline requires grouping notifications into “Today / Yesterday / Earlier”; it is what iOS, Gmail and Teams all do. There is no official limit on filter chips. The Material 3 pages could only be read from search results.</p>
+
+<h2 id="build">Build order</h2>
+<p>Correctness first, so the bugs ship even if design gets cut. Each slice: failing test first, then the fix, then design gates, then phone and desktop checks, then review, then commit. <b>One deploy at the end.</b></p>
+<div class="tbl"><table class="min">
+<thead><tr><th>Slice</th><th>What</th><th>Locked by</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Site time zone plus one time helper; 3 date formats; hours as time</td><td>Test: no raw server time is parsed on the phone clock</td></tr>
+<tr><td>2</td><td>One “worked” rule: Calendar, Fix dot, Needs attention with dates, day sheet claim state</td><td>Test: today is never flagged; the 3 screens agree</td></tr>
+<tr><td>3</td><td>Glass on controls only; fades under bars; Reduce Transparency and Reduce Motion</td><td>Gate: blur allowed only on chrome</td></tr>
+<tr><td>4</td><td>One shell on every route, phone and desktop</td><td>Gate: every route has the shell; no old headers</td></tr>
+<tr><td>5</td><td>Sheets: title bar, grabber, half height; all 19 moved onto it</td><td>Gate: no raw sheet outside GModal</td></tr>
+<tr><td>6</td><td>Glass form fields; old kit removed from views</td><td>Gate: no frappe-ui field or button in views</td></tr>
+<tr><td>7</td><td>One row, one status map, one empty, error and loading state; delete dead code</td><td>Tests: 2-line rows; four states per block</td></tr>
+<tr><td>8</td><td>Notifications, Help, Who to ask, Holidays</td><td>Tests: no IDs; 5 then See all</td></tr>
+<tr><td>9</td><td>Calendar day sheet completion, Requests fixes, forms wording, names, sentence case, Back</td><td>Test: one name per thing</td></tr>
+<tr><td>10</td><td>Full walk: every route × staff / approver / HR × phone / desktop × light / dark</td><td>Screenshots saved; 0 page errors; 0 old headers</td></tr>
+</tbody></table></div>
+<p style="color:var(--ink3);font-size:13px">Not touched: Desk, schema, the Score/KPI fence, offline check-in, banked overtime, payroll, old stored data. Notification wording changes in the app only (your answer).</p>
+
+<h2 id="ask">What I need from you</h2>
+<div class="card" style="margin-top:12px">
+<ul class="tight">
+<li><b>“go”</b>: approve the sketches and this scope. Tell me anything you want changed.</li>
+<li><b>The 4 conflicts</b> above: say “as recommended”, or give your pick.</li>
+</ul></div>
+</div>
+
+<script>
+(() => {
+  const phones = document.getElementById("phones"), dk = document.getElementById("dk")
+  const dark = document.getElementById("mk-dark"), light = document.getElementById("mk-light")
+  function set(isLight) {
+    phones.classList.toggle("mock-light", isLight); dk.classList.toggle("mock-light", isLight)
+    light.setAttribute("aria-pressed", String(isLight)); dark.setAttribute("aria-pressed", String(!isLight))
+  }
+  dark.addEventListener("click", () => set(false)); light.addEventListener("click", () => set(true))
+})()
+</script>
