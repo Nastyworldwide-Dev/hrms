@@ -67,7 +67,7 @@
 								}}</span>
 							</button>
 						</h2>
-						<div v-if="otherOpen" id="approvals-other-teams" class="flex flex-col gap-3">
+						<div v-show="otherOpen" id="approvals-other-teams" class="flex flex-col gap-3">
 							<GListPanel v-for="team in groups.other.teams" :key="team.key">
 								<p class="g-approvals__kind text-caption text-ink-600">
 									{{

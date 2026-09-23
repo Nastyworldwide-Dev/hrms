@@ -1,3 +1,3 @@
-CLASS: the same fact said twice on one empty screen.
+CLASS: a pin that matched no real leave type; a disclosure pointing at a missing element.
 
-Call sites: kpi/Dashboard.vue nextCycleFacts cycle-less branch — same-root, fixed. Cycle branch Scored by — not-affected (a real fact beside dates, not repeated in the sentence).
+Call sites: RequestBalances PINNED — same-root, fixed (privilege/earned). Approvals Other teams v-if -> v-show — same-root, fixed.

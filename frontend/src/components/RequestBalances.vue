@@ -136,7 +136,8 @@ const leave = computed(() => data.value.leave || [])
 const LEAVE_SHOWN = 2
 //: Annual and Medical lead the strip (owner ruling R2), matched by name
 //: because every site names its leave types its own way.
-const PINNED = [/annual/i, /medical|sick/i]
+//: "Privilege" and "Earned" are ERPNext's usual names for annual leave.
+const PINNED = [/annual|privilege|earned/i, /medical|sick/i]
 const pin = (row) => {
 	const at = PINNED.findIndex((re) => re.test(row.leave_type || ""))
 	return at === -1 ? PINNED.length : at

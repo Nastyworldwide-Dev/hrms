@@ -166,7 +166,7 @@ test("owner ruling R2: Annual and Medical, then All balances; the full list is c
 
 test("Annual and Medical lead, whatever the site calls them", () => {
 	const ranked = component.slice(component.indexOf("const rankedLeave"))
-	assert.match(component, /const PINNED = \[\/annual\/i, \/medical\|sick\/i\]/)
+	assert.match(component, /const PINNED = \[\/annual\|privilege\|earned\/i, \/medical\|sick\/i\]/)
 	assert.match(ranked, /pin\(a\) - pin\(b\)/)
 })
 

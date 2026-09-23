@@ -44,5 +44,6 @@ test("Home counts only check-ins sent to you (Yours), from the same server answe
 
 test("Other teams is a heading too, with a wired disclosure (heading navigation finds it)", () => {
 	assert.match(template, /<h2 class="m-0">\s*<button[\s\S]*aria-controls="approvals-other-teams"/)
-	assert.match(template, /id="approvals-other-teams"/)
+	// v-show, not v-if: aria-controls must point at an element that exists
+	assert.match(template, /v-show="otherOpen" id="approvals-other-teams"/)
 })
