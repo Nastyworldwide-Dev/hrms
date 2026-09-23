@@ -1,3 +1,3 @@
-CLASS: the dim area behind a sheet lived inside the page the sheet makes inert, so a tap on it did nothing.
+CLASS: a sheet noted the page it belongs to too late (willPresent), after a quick Back had already landed.
 
-Call sites: frontend/src/components/glass/GModal.vue scrim — same-root, fixed (utils/sheetScrim places it before the presented ion-modal). GActionSheet and other sheets render through GModal — same-root. Back-while-opening race in sheetGuard/GModal — ticket P0-3b (pre-existing, reproduced on HEAD 3/5 runs), next commit.
+Call sites: frontend/src/components/glass/GModal.vue openedOn — same-root, fixed (noted when isOpen turns true; willPresent falls back for trigger-opened sheets; cleared on didDismiss). frontend/src/router/sheetGuard.js — not-affected (closes presented sheets; the mid-present case is GModal's by design).

@@ -54,14 +54,14 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, ref } from "vue"
+import { onBeforeUnmount, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { IonModal } from "@ionic/vue"
 
 import { holdPageInert, releasePageInert } from "@/utils/sheetInert"
 import { mountScrim } from "@/utils/sheetScrim"
 
-defineProps({
+const props = defineProps({
 	trigger: { type: String, required: false },
 	isOpen: { type: Boolean, required: false },
 	title: { type: String, default: "" },
@@ -74,7 +74,15 @@ const route = useRoute()
 //: before a navigation lands, but a sheet still animating in is not presented
 //: yet — Back pressed mid-animation let it finish opening over the next page
 //: (audit P0-3). A sheet that lands on a different page closes itself.
+//: Noted when the sheet is ASKED to open: by willPresent a quick Back has
+//: already landed, and the sheet noted the wrong page (alpha.4 P0-3).
 let openedOn = null
+watch(
+	() => props.isOpen,
+	(open) => {
+		if (open) openedOn = route.path
+	}
+)
 //: The dim area behind the sheet; tapping it closes the sheet. Built by
 //: utils/sheetScrim (Ionic's own backdrop is off for the focus-trap workaround).
 let scrim = null
@@ -94,7 +102,7 @@ function visiblePage() {
 }
 
 function onWillPresent() {
-	openedOn = route.path
+	openedOn ??= route.path
 	if (!scrim) scrim = mountScrim(modal.value?.$el, closeOwnSheet)
 	opener = document.activeElement
 	if (!frozenPage) frozenPage = holdPageInert(visiblePage)
@@ -123,6 +131,7 @@ function onWillDismiss(event) {
 }
 
 function onDidDismiss() {
+	openedOn = null
 	removeScrim()
 	release()
 	if (opener?.isConnected) opener.focus?.({ preventScroll: true })
