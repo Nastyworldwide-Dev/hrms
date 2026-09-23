@@ -89,6 +89,7 @@
 <script setup>
 import { countOf } from "@/utils/countWords"
 import { formatCurrency } from "@/utils/formatters"
+import { hoursAsTime } from "@/utils/daySheet"
 import { computed, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { CircleDollarSign, Receipt, UserCheck } from "lucide-vue-next"
@@ -180,7 +181,7 @@ const rows = computed(() => {
 			// The hours are what decides whether it is worth doing now; they sit
 			// on the right so the row stays one line (one-screen Requests).
 			amount: overtime.unclaimed_hours
-				? __("{0} hours", [Number(overtime.unclaimed_hours).toFixed(2)])
+				? hoursAsTime(overtime.unclaimed_hours)
 				: "",
 			go: () => router.push({ name: "OTRequestFormView" }),
 		})

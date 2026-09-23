@@ -2,7 +2,7 @@
 	<GPage>
 		<ListView
 			doctype="Shift Request"
-			pageTitle="Shift Request History"
+			:pageTitle="__('Your shift changes')"
 			:fields="SHIFT_REQUEST_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>

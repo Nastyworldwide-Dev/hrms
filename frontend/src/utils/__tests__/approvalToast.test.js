@@ -19,9 +19,9 @@ test("an applied repair names the new status and hours through a translated labe
 		spy
 	)
 	assert.equal(toast.title, "Approved")
-	assert.equal(toast.text, "Attendance updated to Present 9.5 hours.")
+	// Hours read as time (ruling C8): 9.5 -> "9h 30m".
+	assert.equal(toast.text, "Attendance updated to Present 9h 30m.")
 	assert.equal(toast.tone, "success")
-	assert.ok(seen.includes("{0} hours"), "the hours unit must be a translatable string")
 })
 
 // Group 1 review S3: a shift that is still today is not a failure — the hourly

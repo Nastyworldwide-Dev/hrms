@@ -12,7 +12,7 @@
 		</template>
 		<template #right>
 			<GBadge :variant="props.doc.log_type === 'IN' ? 'accent' : 'open'">
-				{{ __(props.doc.log_type, null, "Employee Checkin") }}
+				{{ __(tapWord(props.doc.log_type)) }}
 			</GBadge>
 		</template>
 	</ListItem>
@@ -20,6 +20,7 @@
 
 <script setup>
 import { siteTime } from "@/utils/siteTime"
+import { tapWord } from "@/utils/daySheet"
 import GBadge from "@/components/glass/GBadge.vue"
 import { computed, inject } from "vue"
 

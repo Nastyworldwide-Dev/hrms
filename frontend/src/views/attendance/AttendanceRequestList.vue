@@ -2,7 +2,7 @@
 	<GPage>
 		<ListView
 			doctype="Attendance Request"
-			:pageTitle="__('Your attendance requests')"
+			:pageTitle="__('Your day fixes')"
 			:fields="ATTENDANCE_REQUEST_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>

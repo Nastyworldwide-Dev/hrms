@@ -14,7 +14,7 @@
 					<span v-if="props.doc.hours_cost">
 						<span class="whitespace-pre"> &middot; </span>
 						<span class="whitespace-nowrap">{{
-							__("−{0}h", [formatHours(props.doc.hours_cost)])
+							__("−{0}", [hoursAsTime(props.doc.hours_cost)])
 						}}</span>
 					</span>
 				</div>
@@ -36,7 +36,7 @@ import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed, inject } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
-import { formatHours } from "@/utils/formatters"
+import { hoursAsTime } from "@/utils/daySheet"
 import { requestStatus } from "@/utils/requestStatus"
 import { waitingWith } from "@/utils/requestWaiting"
 import { countOf } from "@/utils/countWords"

@@ -1,6 +1,7 @@
 <!--
   GDateTimePicker — datetime field. Same decision as GDatePicker: a native
-  <input type="datetime-local"> in the Glass input skin, so phones show their
+  <input type="datetime-local"
+			step="1"> in the Glass input skin, so phones show their
   own date-and-time wheel (Apple HIG) instead of frappe-ui's grey popover.
 
   The only work here is the format: Frappe stores "YYYY-MM-DD HH:mm:ss", the

@@ -18,7 +18,7 @@
 					<span>{{ props.doc.ot_date_label || props.doc.ot_date }}</span>
 					<span class="whitespace-pre"> &middot; </span>
 					<span class="whitespace-nowrap">
-						{{ __("{0}h", [formatHours(props.doc.claimed_hours)]) }}
+						{{ hoursAsTime(props.doc.claimed_hours) }}
 					</span>
 				</div>
 				<!-- WHO it is with, and since when. A chip reading "Waiting"
@@ -39,7 +39,7 @@ import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed, inject } from "vue"
 
 import ListItem from "@/components/ListItem.vue"
-import { formatHours } from "@/utils/formatters"
+import { hoursAsTime } from "@/utils/daySheet"
 import { requestStatus } from "@/utils/requestStatus"
 import { waitingWith } from "@/utils/requestWaiting"
 
@@ -75,7 +75,7 @@ const OUTCOME = {
 const outcome = computed(() => {
 	const chosen = OUTCOME[props.doc.compensation]
 	if (chosen) return chosen()
-	return __("{0}h overtime", [formatHours(props.doc.claimed_hours)])
+	return __("{0} overtime", [hoursAsTime(props.doc.claimed_hours)])
 })
 
 const status = computed(() => {

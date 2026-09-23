@@ -55,13 +55,21 @@ test("formatHoursCap: rounds down to two decimals, exact values survive", () => 
 })
 
 // Every place an hours Float reaches the screen goes through the formatter.
+// Display rows read as time ("12h 30m", ruling C8) through hoursAsTime; the
+// OT form keeps decimals because its input field takes a decimal number.
+test("display rows render hours as time, not decimals (ruling C8)", () => {
+	for (const [path, pattern] of [
+		["../src/components/OTRequestItem.vue", /hoursAsTime\(props\.doc\.claimed_hours\)/],
+		["../src/components/ReplacementLeaveClaimItem.vue", /hoursAsTime\(props\.doc\.hours_cost\)/],
+		["../src/components/RequestBalances.vue", /hoursAsTime\(overtime\.unclaimed_hours\)/],
+	]) {
+		const source = read(path)
+		assert.match(source, pattern, path)
+		assert.doesNotMatch(source, /hours\)?\.toFixed\(/, path)
+	}
+})
+
 const sites = {
-	"../src/components/OTRequestItem.vue": [
-		/formatHours\(props\.doc\.claimed_hours\)/,
-	],
-	"../src/components/ReplacementLeaveClaimItem.vue": [
-		/formatHours\(props\.doc\.hours_cost\)/,
-	],
 	"../src/views/ot/OTRequestForm.vue": [
 		/formatHoursCap\(otSummary\.data\.punch_ot_hours\)/,
 		/formatHours: formatHoursCap/,

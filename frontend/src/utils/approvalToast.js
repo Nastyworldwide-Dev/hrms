@@ -1,3 +1,4 @@
+import { hoursAsTime } from "./daySheet.js"
 // What the approver is told after deciding a remote check-in.
 // A late check-out approval carries `attendance_repair` from the server: the day
 // is either rebuilt (status + hours) or not, with a plain reason. Raw reason
@@ -10,12 +11,11 @@ export function decisionToast(decision, repair, __) {
 		return { title: __("Approved"), text: __("The employee has been notified."), tone: "success" }
 	}
 	if (repair.repaired) {
-		const hours = Math.round(Number(repair.working_hours || 0) * 10) / 10
 		return {
 			title: __("Approved"),
 			text: __("Attendance updated to {0} {1}.", [
 				__(repair.status || ""),
-				__("{0} hours", [hours]),
+				hoursAsTime(repair.working_hours),
 			]),
 			tone: "success",
 		}
