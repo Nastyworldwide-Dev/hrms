@@ -76,17 +76,17 @@ test("the head is a pinned bar: grabber, centred title, Close X", () => {
 	assert.match(css, /\.g-sheet__title \{[^}]*text-align: center/)
 })
 
-test("medium detent opens at half height; large keeps [0, 1]", () => {
-	assert.match(modal, /detent: \{ type: String, default: "large"/)
-	assert.match(modal, /medium \? \[0, 0\.5, 1\] : \[0, 1\]/)
-	assert.match(modal, /medium \? 0\.5 : 1/)
-	// the focus-trap workaround: Ionic's backdrop stays off at every detent
+test("every sheet opens full height with the focus-trap breakpoints intact", () => {
+	// A medium detent was tried (alpha.5) and opened with only the bar on
+	// screen; the breakpoints are load-bearing for the focus-trap fix.
+	assert.match(modal, /:initial-breakpoint="1"/)
+	assert.match(modal, /:breakpoints="\[0, 1\]"/)
 	assert.match(modal, /:backdrop-breakpoint="1"/)
 })
 
-test("More's holiday sheet is titled and opens at medium", () => {
+test("More's holiday sheet is titled", () => {
 	const more = read(join(SRC, "views/More.vue"))
-	assert.match(more, /<GModal[^>]*:title="__\('Public holidays'\)"[^>]*detent="medium"/)
+	assert.match(more, /<GModal[^>]*:title="__\('Public holidays'\)"/)
 })
 
 test("the holiday list is flat and marks the next one", () => {

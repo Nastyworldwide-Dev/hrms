@@ -2,7 +2,7 @@
 	<div v-if="document?.doc" class="bg-ground w-full flex flex-col pb-5 max-h-sheet">
 		<!-- Header -->
 		<div
-			class="w-full flex flex-row gap-2 pt-6 pb-4 px-4 border-b border-divider justify-between items-center sticky top-0 z-overlay bg-ground"
+			class="w-full flex flex-row gap-2 pt-6 pb-4 px-4 border-b border-divider justify-between items-center"
 		>
 			<div class="flex flex-col gap-1">
 				<div class="g-eyebrow">{{ __("Request") }}</div>

@@ -17,15 +17,21 @@
 					@update:modelValue="selectTab"
 				/>
 			</div>
-			<!-- "Who to ask" lives with Help (audit-pages §4: HR contacts move
-			     from You to Help, one job per page). -->
-			<div class="px-4 pt-4 w-full lg:px-7 max-w-content-column-lg mx-auto">
-				<GListPanel>
-					<GListRow :label="whoToAsk" @click="router.push({ name: 'HRContacts' })" />
-				</GListPanel>
-			</div>
 			<IssuesTab v-if="tab === HR_TAB" />
 			<HelpdeskList v-else />
+			<!-- alpha.5: the lists, then "Who to ask" (a sheet, not a trip to
+			     another page), then ONE primary action at the bottom. -->
+			<div
+				class="flex flex-col gap-4 px-4 pt-4 pb-8 w-full lg:px-7 lg:pb-7 max-w-content-column-lg mx-auto"
+			>
+				<GListPanel>
+					<GListRow :label="whoToAsk" @click="whoOpen = true" />
+				</GListPanel>
+				<GButton :label="primary.label" @click="router.push({ name: primary.route })" />
+			</div>
+			<GModal :is-open="whoOpen" :title="__('Who to ask')" @did-dismiss="whoOpen = false">
+				<WhoToAsk />
+			</GModal>
 		</template>
 	</BaseLayout>
 </template>
@@ -35,11 +41,13 @@ import { computed, inject, onMounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import BaseLayout from "@/components/BaseLayout.vue"
+import WhoToAsk from "@/components/WhoToAsk.vue"
+import GButton from "@/components/glass/GButton.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
+import GModal from "@/components/glass/GModal.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
-import { helpdeskAvailable, myTickets } from "@/data/helpdesk"
-import { myIssuesForCount, openIssueCount, openTicketCount } from "@/data/supportCounts"
+import { helpdeskAvailable } from "@/data/helpdesk"
 import {
 	HR_TAB,
 	HUB_ROUTE_NAME,
@@ -54,8 +62,9 @@ import HelpdeskList from "./HelpdeskList.vue"
 const __ = inject("$translate")
 const route = useRoute()
 const router = useRouter()
-//: HR contacts, reached from Help (audit-pages §4).
+//: HR contacts, reached from Help (audit-pages §4) — a sheet since alpha.5.
 const whoToAsk = __("Who to ask")
+const whoOpen = ref(false)
 
 // storage is a convenience, never a dependency: private mode or a cleared
 // site throws on access and the page must still open
@@ -81,20 +90,12 @@ const remember = (value) => {
 // "no" clamped a cold ?tab=it to hr and rewrote the URL before the probe
 // could say yes (review of 8b38ddfc8), losing every IT deep link on reload.
 const itRefused = computed(() => helpdeskAvailable.data === false)
-//: YOUR open count, on the pill (revamp §7). The hub has had two pills since
-//: 15 Sep and neither said whether there was anything behind it, so somebody
-//: with an unanswered issue had to open the pill to find out — every time.
-//:
-//: In the LABEL rather than as a badge: GSegmented renders one string, and a
-//: count inside it is read aloud with the name, which a coloured badge beside
-//: it would not be (§14.1).
-const withCount = (label, count) => (count > 0 ? `${label} (${count})` : label)
-
+//: alpha.5 (23 Sep 2026): the pills say just "HR" and "IT". The open counts
+//: (revamp §7) went: the "Open" list right under the pill answers the same
+//: question, without a second fetch that could disagree with it.
 const tabButtons = computed(() => [
-	{ key: HR_TAB, label: withCount(__("HR Issues"), openIssueCount()) },
-	...(itRefused.value
-		? []
-		: [{ key: IT_TAB, label: withCount(__("IT Helpdesk"), openTicketCount()) }]),
+	{ key: HR_TAB, label: __("HR") },
+	...(itRefused.value ? [] : [{ key: IT_TAB, label: __("IT") }]),
 ])
 
 // Which pill a request asks for, clamped to what this site offers.
@@ -105,6 +106,13 @@ const clamp = (value) => (value === IT_TAB && itRefused.value ? HR_TAB : value)
 // down would throw "before initialization" and leave Ionic holding a view
 // with no element). Query wins, then the remembered pill, then HR Issues.
 const tab = ref(clamp(resolveTab(route.query.tab, remembered())))
+
+//: The one primary action, at the bottom, in the side's own words.
+const primary = computed(() =>
+	tab.value === IT_TAB
+		? { label: __("New ticket"), route: "HelpdeskTicketNew" }
+		: { label: __("Report an issue"), route: "EmployeeIssueFormView" }
+)
 
 // The URL always states the pill: a bare /support (sidebar, More) is rewritten
 // in place so a share, a reload or BACK from a ticket lands on the same view.
@@ -141,15 +149,6 @@ watch(
 onMounted(() => {
 	console.info("[HelpdeskHub] opened on pill:", tab.value)
 	syncQuery(tab.value)
-	// BOTH counts, whichever pill is showing: the point of a count on the
-	// pill you are NOT on is that it tells you to go there. Failures are
-	// swallowed — a pill that cannot count is a pill without a number, never
-	// a page that will not open.
-	// fetch() returns nothing when frappe-ui skips a request (already loading
-	// or cached), so the promise is optional too (live audit 23 Sep: a
-	// TypeError on every open).
-	myIssuesForCount.fetch?.()?.catch?.(() => {})
-	myTickets.fetch?.()?.catch?.(() => {})
 })
 
 // The availability probe can answer AFTER setup: a cached "it" pill on a site

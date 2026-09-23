@@ -13,13 +13,6 @@ const BUCKET = {
 	closed: "resolved",
 }
 
-export const CHIPS = [
-	{ key: "all", label: "All" },
-	{ key: "open", label: "Open" },
-	{ key: "replied", label: "Awaiting you" },
-	{ key: "resolved", label: "Resolved" },
-]
-
 export function filterTickets(list, chip) {
 	const rows = list || []
 	if (!chip || chip === "all") return rows
@@ -85,4 +78,29 @@ export function threadFromTicket(ticket, viewer) {
 	const thread = head ? [head, ...rest] : rest
 	console.info("[helpdesk] thread built:", thread.length, "message(s)")
 	return thread
+}
+
+// Help, one screen (alpha.5): still-open first, finished behind one row.
+// HR issues use their own words; both share one split so the two pills
+// behave alike. "Replied" (and nothing else) means the employee's turn.
+const DONE = new Set(["resolved", "closed", "completed", "rejected", "cancelled"])
+
+export function splitHelp(list) {
+	const open = []
+	const done = []
+	for (const row of list || []) {
+		;(DONE.has(String(row.status || "").toLowerCase()) ? done : open).push(row)
+	}
+	const yours = (r) => (String(r.status || "").toLowerCase() === "replied" ? 0 : 1)
+	open.sort((a, b) => yours(a) - yours(b))
+	return { open, done }
+}
+
+// The row's second line: the day it last moved, and "Waiting on you" when the
+// ball is in the employee's court. The id, the type and "by <you>" were three
+// lines of noise on every row (owner screenshot, 23 Sep 2026).
+export function helpRowMeta(row, { day, t = (s) => s }) {
+	const when = day(row.modified || row.creation)
+	const yours = String(row.status || "").toLowerCase() === "replied" ? t("Waiting on you") : ""
+	return [when, yours].filter(Boolean).join(" · ")
 }

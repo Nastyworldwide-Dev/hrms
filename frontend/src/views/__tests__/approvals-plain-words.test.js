@@ -61,7 +61,9 @@ test("the helpdesk pills name the two places, not the two apps", () => {
 	// pins them, because the consolidation that produced them (one page, two
 	// pills) is the kind of thing a later edit re-splits.
 	const hub = code(read("views/helpdesk/HelpdeskHub.vue"))
-	assert.match(hub, /__\("HR Issues"\)/, "the HR side")
-	assert.match(hub, /__\("IT Helpdesk"\)/, "and the IT side, when the app is installed")
+	// alpha.5 Help redesign: the pills are "HR" / "IT" (segmented control,
+	// Apple HIG: short segment labels); the page title already says Help.
+	assert.match(hub, /__\("HR"\)/, "the HR side")
+	assert.match(hub, /__\("IT"\)/, "and the IT side, when the app is installed")
 	assert.doesNotMatch(hub, /__\("Employee Issue"\)/, "that is the doctype")
 })

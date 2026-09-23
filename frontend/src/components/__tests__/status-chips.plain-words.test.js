@@ -49,6 +49,9 @@ test("every chip label goes through the translator", () => {
 			if (!label) continue
 			const bound = label[1].trim()
 			if (/__\(/.test(bound)) continue
+			// A label function passed in as a prop is translated by its caller
+			// (HelpSplitList's chipLabel: HelpdeskList/IssueList pass __()).
+			if (/^chipLabel\(/.test(bound)) continue
 			// A binding may name a computed that translates INSIDE the script —
 			// which is the better place for it once the word is derived rather
 			// than passed through. Follow the name; only an identifier that

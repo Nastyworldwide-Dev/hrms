@@ -83,8 +83,9 @@ test("opens on HR Issues by default, with both pills offered", () => {
 	assert.deepEqual(
 		vm.tabButtons.value.map((b) => [b.key, b.label]),
 		[
-			["hr", "HR Issues"],
-			["it", "IT Helpdesk"],
+			// alpha.5: plain "HR" / "IT", no counts in the label
+			["hr", "HR"],
+			["it", "IT"],
 		]
 	)
 	mount()

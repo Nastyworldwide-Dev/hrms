@@ -31,7 +31,7 @@ function walk(dir, out = []) {
 		const path = join(dir, entry)
 		if (statSync(path).isDirectory()) {
 			if (entry !== "__tests__") walk(path, out)
-		} else if (/\.vue$/.test(entry)) out.push(path)
+		} else if (entry.endsWith('.vue')) out.push(path)
 	}
 	return out
 }

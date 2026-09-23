@@ -11,11 +11,20 @@
 // Remote Checkin Requests never derive: notifications notify, deciding happens
 // on the Approvals page, where every check-in outside the area waits with the
 // rest (AUDIT-PLAN, Approvals row).
+//
+// Time off in lieu and replacement leave have no detail page at all; the
+// approver reaches them on Approvals too (alpha.5 review, 23 Sep 2026).
+const TO_APPROVALS = new Set([
+	"Remote Checkin Request",
+	"Compensatory Leave Request",
+	"Replacement Leave Claim",
+])
+
 export function notificationRoute(item, remoteStatus, hasRoute) {
 	const doctype = item?.reference_document_type
 	if (!doctype) return null
 
-	if (doctype === "Remote Checkin Request") {
+	if (TO_APPROVALS.has(doctype)) {
 		return { name: "Approvals" }
 	}
 

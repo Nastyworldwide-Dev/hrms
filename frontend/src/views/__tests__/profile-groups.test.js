@@ -57,8 +57,8 @@ test("nothing was lost in the You rework (audit-pages §4)", () => {
 	}
 	assert.match(
 		read("views/helpdesk/HelpdeskHub.vue"),
-		/name: 'HRContacts'/,
-		"HR contacts moved to Help"
+		/<WhoToAsk/,
+		"HR contacts moved to Help (a Who to ask sheet since alpha.5)"
 	)
 	assert.match(view, /const DETAILS = \[/, "the details sheet")
 })

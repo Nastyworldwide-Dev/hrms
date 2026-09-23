@@ -1,108 +1,73 @@
 <template>
 	<GPage>
-		<!-- The one header (alpha.5): it replaced a hand-drawn bar with a 2px
-		     hairline and no bell or avatar. -->
-		<ShellHeader :title="__('Notifications')" />
+		<!-- The one header (alpha.5). "Mark all read" is this screen's own action,
+		     in place of the bell and avatar (sketch: alpha5-review.html). -->
+		<ShellHeader :title="__('Notifications')">
+			<template #actions>
+				<button
+					v-if="unreadNotificationsCount.data"
+					type="button"
+					class="g-focusable g-touch px-2 text-sm font-semibold text-accent-ink bg-transparent border-none whitespace-nowrap"
+					:disabled="markAllAsRead.loading"
+					@click="markAllAsRead.submit()"
+				>
+					{{ __("Mark all read") }}
+				</button>
+			</template>
+		</ShellHeader>
 		<ion-content class="ion-padding g-page__content">
 			<div class="flex flex-col min-h-full w-full">
 				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
-					<div class="flex flex-col gap-4 mt-5 p-4">
-						<!-- flex-wrap + nowrap labels: the labels used to wrap INSIDE a
-						     fixed-height pill, so "Mark all as read" broke to two lines and
-						     spilled through the pill's top and bottom rim. The row wraps
-						     now; the pills never do. -->
-						<!-- Gated on unread: with the duplicate Settings pill removed, both
-						     remaining pieces (the count and Mark all as read) are unread-only,
-						     so when caught up the row disappears instead of leaving an empty
-						     band above the list. -->
-						<div
-							class="flex flex-row flex-wrap justify-between items-center gap-y-2"
-							v-if="unreadNotificationsCount.data"
-						>
-							<div
-								class="font-sans font-extrabold text-stat-number text-inkbase whitespace-nowrap"
-							>
-								{{ __("{0} Unread", [unreadNotificationsCount.data]) }}
-							</div>
-							<!-- The "Settings" pill here pushed to the generic app Settings
-							     route — the same destination as Profile -> Settings, and not
-							     notification-specific (notification preferences live in
-							     Settings -> Notifications). It was a duplicate entry point
-							     stranded on this page, so it is removed; "Mark all as read"
-							     is the notification-owned action that belongs here. -->
-							<div class="flex ml-auto gap-1 shrink-0">
-								<Button
-									v-if="unreadNotificationsCount.data"
-									variant="outline"
-									class="g-touch whitespace-nowrap"
-									@click="markAllAsRead.submit"
-									:loading="markAllAsRead.loading"
-								>
-									<template #prefix>
-										<CircleCheck class="w-4" />
-									</template>
-									{{ __("Mark all as read") }}
-								</Button>
-							</div>
-						</div>
+					<div class="flex flex-col gap-3 p-4">
+						<!-- A caption, not a headline: the old unread count in stat-number
+						     type was the loudest thing on the screen (owner, 23 Sep). -->
+						<span v-if="unreadNotificationsCount.data" class="text-caption text-ink-600">
+							{{ __("{0} unread", [unreadNotificationsCount.data]) }}
+						</span>
 
-						<div class="flex flex-col border-t-2 border-divider" v-if="notifications.data?.length">
-							<component
-								:is="isItemNavigable(item) ? 'router-link' : 'div'"
-								:class="[
-									'flex flex-row items-start p-4 justify-between border-b border-divider before:mt-2',
-									`before:content-[''] before:mr-2 before:shrink-0 before:w-1.5 before:h-1.5`,
-									item.read ? 'before:bg-transparent' : 'before:bg-accent-ink',
-								]"
-								v-for="item in notifications.data"
-								:key="item.name"
-								:to="isItemNavigable(item) ? getItemRoute(item) : null"
-								@click="markAsRead(item)"
-							>
-								<span class="grayscale shrink-0">
-									<!-- A system sender (Administrator, a background job) has no
-									     person to show: the Nadi mark, not a grey "?" (plan P1-6). -->
-									<GLogo v-if="!getEmployeeInfoByUserID(item.from_user)" :size="40" label="" />
-									<EmployeeAvatar v-else :userID="item.from_user" size="lg" />
-								</span>
-								<div class="flex flex-col gap-0.5 grow ml-3">
-									<div
-										v-if="item.message && stripHtml(item.message)"
-										:class="[
-											'text-sm leading-5',
-											item.read ? 'font-normal text-ink-700' : 'font-medium text-inkbase',
-										]"
-										v-html="safeHtml(item.message)"
-									></div>
-									<div v-else class="text-sm leading-5 font-normal text-ink-500">
-										{{ fallbackMessage(item) }}
-									</div>
-									<!-- data-visual-mask: a relative timestamp changes on its own,
-									     so a pixel baseline of it fails an hour later for no reason.
-									     The visual gate masks anything carrying this attribute. -->
-									<div class="text-xs font-normal text-ink-600" data-visual-mask>
-										{{ siteTime(item.creation).fromNow() }}
-									</div>
-								</div>
-							</component>
-						</div>
+						<GListPanel v-if="firstLoad" :loading="firstLoad" :rows="5" />
+
+						<!-- One panel per day group: at most three (Today, Yesterday,
+						     Earlier), so the screen stays inside the surface budget. -->
+						<!-- glass-surfaces: bounded — three day groups at most -->
+						<template v-for="group in groups" :key="group.key">
+							<span class="g-eyebrow mt-2">{{ group.label }}</span>
+							<GListPanel>
+								<GListRow
+									v-for="item in group.items"
+									:key="item.name"
+									:class="{ 'n-unread': !item.read }"
+									:label="item.line.title"
+									:sublabel="item.meta"
+									:chevron="item.navigable"
+									@click="open(item)"
+								>
+									<template #icon>
+										<component :is="kindIcon(item)" class="g-row-icon" />
+									</template>
+									<template #badge>
+										<span
+											v-if="!item.read"
+											class="flex-none w-2 h-2 rounded-full bg-accent"
+											:aria-label="__('Unread')"
+										/>
+									</template>
+								</GListRow>
+							</GListPanel>
+						</template>
+
 						<div v-if="notifications.data?.length && notifications.hasNextPage" class="flex">
 							<button
 								type="button"
 								class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
 								@click="loadMore"
 							>
-								{{ __("Load more") }}
+								{{ __("Show more") }}
 							</button>
 						</div>
-						<!-- Three states, each on its own condition. The empty state used
-						     to be chained (v-else-if) to the LOAD MORE div above and gated
-						     on !data — so a loaded-but-empty list ([]) rendered NOTHING:
-						     the list hidden by length, load-more hidden by length, and
-						     ![] is false. An operator screenshotted exactly that: a blank
-						     page with one floating Settings pill. Meanwhile "all caught
-						     up" showed during loading and on failure — the opposite of
-						     its meaning. -->
+						<!-- Three states, each on its own condition (a loaded-but-empty
+						     list once rendered NOTHING when the empty state was chained to
+						     the list's v-if). -->
 						<ResourceError :resource="notifications" what="your notifications" />
 						<GEmptyState
 							v-if="feedIsEmpty"
@@ -117,30 +82,39 @@
 </template>
 
 <script setup>
-import { safeHtml } from "@/utils/safeHtml"
-import { CircleCheck } from "lucide-vue-next"
+import dayjs from "dayjs"
+import {
+	Bell,
+	CalendarCheck,
+	CalendarClock,
+	Clock,
+	LifeBuoy,
+	MapPin,
+	Palmtree,
+	Receipt,
+} from "lucide-vue-next"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
 import ShellHeader from "@/components/ShellHeader.vue"
-import GLogo from "@/components/glass/GLogo.vue"
-import { getEmployeeInfoByUserID } from "@/data/employees"
 
 import { notificationRoute } from "@/utils/notifications"
-import { siteTime } from "@/utils/siteTime"
-import { createResource, Button } from "frappe-ui"
+import { dayGroup, notificationLine } from "@/utils/notificationLine"
+import { siteTime, siteTimeZone } from "@/utils/siteTime"
+import { createResource, frappeRequest } from "frappe-ui"
 
 import { computed, inject, onMounted, ref, watch } from "vue"
-import EmployeeAvatar from "@/components/EmployeeAvatar.vue"
 
 import { unreadNotificationsCount, notifications } from "@/data/notifications"
 
 const router = useRouter()
 const __ = inject("$translate")
 const currentStart = ref(0)
-const pageLength = 10
+const pageLength = 20
 // "All caught up" only when the feed's request has actually answered empty:
 // the list wrapper restores a cached (possibly empty) page before its request
 // runs, and the request's own loading/error live on `.list`, not the wrapper.
@@ -151,16 +125,20 @@ const feedIsEmpty = computed(
 		!notifications.list.error &&
 		!notifications.data?.length
 )
+// skeleton rows only while the FIRST page is on its way — a "Show more"
+// keeps the rows already on screen
+const firstLoad = computed(() => notifications.list.loading && !notifications.data?.length)
 
 // Status of each Remote Checkin Request referenced by a visible notification,
-// keyed by request docname. Decides where the tap lands (pending -> the
-// approvals queue, decided -> its History entry) and what the fallback
-// message says. The buttons themselves live on RemoteApprovals: notifications
-// notify, they do not act.
+// keyed by request docname. It only chooses the wording of the line.
 const remoteRequestStatus = ref({})
 
+// An approver may not READ Remote Checkin Request: a 403 here means "status
+// unknown", never a toast over the feed — so this one bypasses the loud
+// fetcher and the line falls back to the notification's own words.
 const remoteRequestStatusResource = createResource({
 	url: "frappe.client.get_list",
+	resourceFetcher: frappeRequest,
 	makeParams(values) {
 		return {
 			doctype: "Remote Checkin Request",
@@ -176,6 +154,9 @@ const remoteRequestStatusResource = createResource({
 		}
 		remoteRequestStatus.value = next
 	},
+	onError(error) {
+		console.info("[Notifications] remote check-in status unknown:", error?.exc_type || error)
+	},
 })
 
 function refreshRemoteStatuses() {
@@ -187,32 +168,57 @@ function refreshRemoteStatuses() {
 		remoteRequestStatus.value = {}
 		return
 	}
-	remoteRequestStatusResource.submit({ names })
+	console.info("[Notifications] reading", names.length, "remote check-in status(es)")
+	remoteRequestStatusResource.submit({ names })?.catch?.(() => {})
 }
 
 watch(() => notifications.data, refreshRemoteStatuses, { immediate: true })
 
-// Defensive: some legacy notification rows persisted with an empty
-// message field (rich-text sanitiser stripped plain text). Render a
-// derived label so the user at least sees what the row references.
-function stripHtml(html) {
-	if (!html) return ""
-	return String(html)
-		.replace(/<[^>]*>/g, "")
-		.trim()
+const KIND_ICON = {
+	"Leave Application": Palmtree,
+	"Compensatory Leave Request": Palmtree,
+	"Replacement Leave Claim": Palmtree,
+	"OT Request": Clock,
+	"Expense Claim": Receipt,
+	"Shift Request": CalendarClock,
+	"Attendance Request": CalendarCheck,
+	"Employee Issue": LifeBuoy,
+	"HD Ticket": LifeBuoy,
+	"Remote Checkin Request": MapPin,
 }
+const kindIcon = (item) => KIND_ICON[item.reference_document_type] || Bell
 
-function fallbackMessage(item) {
-	const docType = item.reference_document_type || __("Notification")
-	const status = remoteRequestStatus.value[item.reference_document_name]
-	if (item.reference_document_type === "Remote Checkin Request") {
-		if (status === "Pending") return __("Remote check-in awaiting your decision.")
-		if (status === "Approved") return __("Remote check-in approved.")
-		if (status === "Rejected") return __("Remote check-in rejected.")
-		return __("Remote check-in update.")
+// Today / Yesterday / Earlier on the SITE clock. Each row carries its short
+// line (utils/notificationLine.js) and "who · when"; the stored sentence is
+// never drawn.
+const GROUPS = { Today: "Today", Yesterday: "Yesterday", Earlier: "Earlier" }
+const groups = computed(() => {
+	const now = dayjs().tz(siteTimeZone())
+	const out = []
+	for (const item of notifications.data || []) {
+		const key = dayGroup(siteTime(item.creation), now)
+		const when = siteTime(item.creation)
+		let group = out.find((g) => g.key === key)
+		if (!group) {
+			group = { key, label: __(GROUPS[key]), items: [] }
+			out.push(group)
+		}
+		const line = notificationLine(item, {
+			t: __,
+			remoteStatus: remoteRequestStatus.value[item.reference_document_name],
+		})
+		const time = when.isValid() ? when.format(key === "Earlier" ? "ddd D MMM" : "h:mm a") : ""
+		group.items.push({
+			...item,
+			line,
+			meta: [line.who, time].filter(Boolean).join(" · "),
+			navigable: Boolean(getItemRoute(item)),
+			source: item,
+		})
 	}
-	return __("New {0}", [docType])
-}
+	console.info("[Notifications] grouped", notifications.data?.length || 0, "row(s) into", out.length)
+	return out
+})
 
 const markAllAsRead = createResource({
 	url: "hrms.api.mark_all_notifications_as_read",
@@ -251,13 +257,20 @@ function getItemRoute(item) {
 	)
 }
 
-// Anything unroutable renders as plain content rather than a link to nowhere.
-function isItemNavigable(item) {
-	return Boolean(getItemRoute(item))
+// A tap marks the row read and, when it refers to something reachable,
+// opens it. Anything unroutable is a plain row, not a link to nowhere.
+function open(row) {
+	const route = getItemRoute(row.source)
+	console.info("[Notifications] open", row.reference_document_type, route?.name || "(no route)")
+	markAsRead(row.source)
+	if (route) router.push(route)
 }
 
 onMounted(() => {
-	;(notifications.start = 0), (notifications.pageLength = 10), notifications.fetch()
+	currentStart.value = 0
+	notifications.start = 0
+	notifications.pageLength = pageLength
+	notifications.fetch()
 })
 
 function loadMore() {
@@ -267,3 +280,10 @@ function loadMore() {
 	notifications.list.fetch()
 }
 </script>
+
+<!-- A local class, not a theme one: unread rows carry a bolder label. -->
+<style scoped>
+.n-unread :deep(.g-row__label) {
+	font-weight: 600;
+}
+</style>

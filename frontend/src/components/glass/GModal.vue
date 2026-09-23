@@ -22,8 +22,9 @@
     isOpen   boolean — controlled open state
     title    string — the sheet's name, centred in the pinned bar. Every call
              site passes one (gate: sheet-one-kind.test.js)
-    detent   "large" (default, full height) | "medium" (opens at half
-             height, drags to full)
+    detent   accepted and ignored. A medium detent opened with only the
+             bar visible (alpha.5 check) and the breakpoints are load-bearing
+             for the focus-trap workaround above; every sheet is full height.
   The head is a pinned bar (HIG Sheets/Toolbars): a decorative grabber, then
   [spacer | centred title | Close X]. Ionic's own handle is off so there is
   one grabber, not two.
@@ -42,8 +43,8 @@
 		ref="modal"
 		class="g-modal"
 		:trigger="trigger"
-		:initial-breakpoint="medium ? 0.5 : 1"
-		:breakpoints="medium ? [0, 0.5, 1] : [0, 1]"
+		:initial-breakpoint="1"
+		:breakpoints="[0, 1]"
 		:backdrop-breakpoint="1"
 		:handle="false"
 		:is-open="isOpen"
@@ -70,7 +71,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from "vue"
+import { onBeforeUnmount, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { IonModal } from "@ionic/vue"
 import { X } from "lucide-vue-next"
@@ -86,10 +87,6 @@ const props = defineProps({
 	title: { type: String, default: "" },
 	detent: { type: String, default: "large" },
 })
-//: "medium" opens at half height and drags up to full (HIG Sheets: a medium
-//: detent for progressive disclosure). backdrop-breakpoint stays 1 at every
-//: detent, so Ionic's own backdrop never comes back (the focus-trap fix).
-const medium = computed(() => props.detent === "medium")
 const emit = defineEmits(["did-dismiss", "did-present", "will-dismiss"])
 
 const modal = ref(null)

@@ -30,7 +30,6 @@
 				<GModal
 					:is-open="holidaysOpen"
 					:title="__('Public holidays')"
-					detent="medium"
 					@did-dismiss="holidaysOpen = false"
 				>
 					<HolidayList v-if="holidaysOpen && employee.data" />

@@ -19,6 +19,23 @@ test("a remote check-in, pending or decided, lands on Approvals", () => {
 	}
 })
 
+test("time off in lieu and replacement leave land on Approvals — they have no detail page", () => {
+	// The derived CompensatoryLeaveRequestDetailView does not exist, so the
+	// row rendered as a dead card and the approver could not reach the request
+	// the notification was about (alpha.5 review, 23 Sep 2026).
+	for (const doctype of ["Compensatory Leave Request", "Replacement Leave Claim"]) {
+		assert.deepEqual(
+			notificationRoute(
+				{ reference_document_type: doctype, reference_document_name: "X-1" },
+				undefined,
+				() => false
+			),
+			{ name: "Approvals" },
+			doctype
+		)
+	}
+})
+
 test("remote check-ins never derive a DetailView, even if one were registered", () => {
 	const route = notificationRoute(remote(), "Approved", () => true)
 	assert.equal(route.name, "Approvals")
