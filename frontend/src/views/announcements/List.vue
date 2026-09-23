@@ -62,8 +62,10 @@
 						</GListPanel>
 					</template>
 
+					<!-- Not on error: ResourceError above already says what happened, and
+					     "nothing live" beside "could not load" is two opposite claims. -->
 					<GEmptyState
-						v-if="!rows.length"
+						v-if="!rows.length && !allAnnouncements.error"
 						:title="__('Nothing on the board')"
 						:body="__('Notices from HR appear here. There is nothing live at the moment.')"
 					/>
