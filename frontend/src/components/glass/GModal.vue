@@ -53,12 +53,11 @@
 	</ion-modal>
 
 	<!-- backdrop — hand-built because backdrop-breakpoint=1 disables Ionic's.
-	     Teleported to body: inside the page it was clipped to the page's own
-	     box, so on desktop the side nav stayed bright and clickable under an
-	     open sheet (audit APP-14). -->
-	<Teleport to="body">
-		<div v-if="showModalBackdrop" class="g-scrim" aria-hidden="true" @click="closeOwnSheet"></div>
-	</Teleport>
+	     Rendered in place, NOT teleported: in <body> it painted over the sheet
+	     and blocked every tap in it, check in and out included (hotfix 23 Sep,
+	     reverting 25479308e's teleport). The desktop side nav staying undimmed
+	     under a sheet (APP-14) is reopened for alpha.3. -->
+	<div v-if="showModalBackdrop" class="g-scrim" aria-hidden="true" @click="closeOwnSheet"></div>
 </template>
 
 <script setup>

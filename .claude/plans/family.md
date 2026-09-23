@@ -1,7 +1,11 @@
-CLASS: a section that renders nothing while loading, then pushes the page
-down (audit F-12 / APP-28, CWV-CLS limit 0.1). Measured 23 Sep at 390x844:
-Home 0.002 (already fixed), Requests 0.391.
+CLASS: a dimming layer painted ABOVE the sheet it belongs to. 25479308e moved
+GModal's scrim to <body>; ion-modal lives inside ion-app, so the scrim
+(z 10000 in body's context) sat over every sheet and swallowed every tap.
+Measured on fresh.local 23 Sep: elementFromPoint inside an open sheet
+returned .g-scrim, not the sheet.
 
-Surfaces and verdicts:
-frontend/src/components/RequestBalances.vue — same-root, fixed here: holds its place with skeletons (grid + two rows) on first load. Requests after: 0.058.
-frontend/src/views/Home.vue — not-affected: 0.002 measured.
+Callers of GModal (every sheet) — same-root, fixed here by rendering the scrim
+in place again (this morning's working version):
+CheckInPanel (check in / out), DaySheet, Approvals, CheckinDecisionSheet,
+RequestActionSheet, GConfirm, GActionSheet, HolidayList, You details.
+Desktop side nav undimmed under a sheet (APP-14) — reopened for alpha.3.

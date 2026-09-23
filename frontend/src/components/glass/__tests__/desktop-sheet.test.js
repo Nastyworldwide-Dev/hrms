@@ -9,8 +9,11 @@ import { fileURLToPath } from "node:url"
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8")
 
-test("the scrim is teleported to body, so it covers the side nav", () => {
-	assert.match(read("../GModal.vue"), /<Teleport to="body">\s*<div v-if="showModalBackdrop" class="g-scrim"/)
+test("the scrim is never teleported above the sheet", () => {
+	// Hotfix 23 Sep: teleported to <body>, the scrim painted over every sheet
+	// and nothing inside one could be tapped (check in / out included).
+	assert.doesNotMatch(read("../GModal.vue"), /<Teleport/)
+	assert.match(read("../GModal.vue"), /<div v-if="showModalBackdrop" class="g-scrim"/)
 })
 
 test("at lg the sheet is centred, not pinned to the bottom", () => {
