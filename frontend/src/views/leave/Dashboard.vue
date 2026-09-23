@@ -54,10 +54,6 @@
 							/>
 						</div>
 					</div>
-
-					<div>
-						<Holidays />
-					</div>
 				</div>
 			</div>
 		</template>
@@ -74,7 +70,6 @@ import LeaveBalance from "@/components/LeaveBalance.vue"
 import ReplacementLeaveCard from "@/components/ReplacementLeaveCard.vue"
 import RequestList from "@/components/RequestList.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
-import Holidays from "@/components/Holidays.vue"
 
 import { myLeaves } from "@/data/leaves"
 </script>

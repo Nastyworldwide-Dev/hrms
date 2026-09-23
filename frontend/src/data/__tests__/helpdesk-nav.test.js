@@ -16,9 +16,10 @@ test("helpdesk is no longer an app link-out", () => {
 	assert.ok(!APP_LINKS.some((l) => l.href.startsWith("/helpdesk")))
 })
 
-test("navItems has one ungated Helpdesk entry and the IT pill carries the availability gate", () => {
+test("navItems has one ungated Help entry and the IT pill carries the availability gate", () => {
 	const nav = read("../navItems.js")
-	assert.match(nav, /title: "Helpdesk",[\s\S]*?route: HUB_PATH/)
+	// Renamed "Help" 23 Sep 2026 (audit-pages §4, W-PLAIN): the person's word.
+	assert.match(nav, /title: "Help",[\s\S]*?route: HUB_PATH/)
 	assert.ok(!nav.includes("HELPDESK_ITEM"), "no separate gated entry any more")
 	for (const file of ["../../views/More.vue", "../../components/SideNav.vue"]) {
 		const src = read(file)

@@ -163,7 +163,9 @@ test("the expenses glyph is still a coin, not a receipt", () => {
 	// and this follows it to the two files that draw it now.
 	// Requests starts a request from a text list now (the type sheet), so it
 	// draws no glyph; the rule still holds wherever the expense glyph is drawn.
-	for (const file of ["data/navItems.js"]) {
+	// 23 Sep 2026: Expenses left More (audit-pages PAGE-4: it is a request),
+	// so navItems draws no expense glyph any more; RequestBalances does.
+	for (const file of ["components/RequestBalances.vue"]) {
 		const text = readFileSync(join(SRC, file), "utf8")
 		assert.match(text, /\bCircleDollarSign\b/, `${file} should draw the coin the app had`)
 		// `Receipt` may legitimately appear for a DIFFERENT link — Requests uses

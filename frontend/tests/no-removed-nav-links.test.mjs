@@ -61,18 +61,19 @@ test("the sidebar has exactly one Helpdesk entry, where Issues used to sit", () 
 	// definition of the nav, which is how a rename becomes a failure nobody
 	// reads.
 	assert.equal(
-		titles.filter((t) => t === "Helpdesk").length,
+		// "Help" since 23 Sep 2026 (audit-pages §4, W-PLAIN).
+		titles.filter((t) => t === "Help").length,
 		1,
-		"exactly one Helpdesk entry"
+		"exactly one Help entry"
 	)
 	assert.equal(titles[0], "Home", "Home is still first")
 	assert.equal(titles.at(-1), "More", "More is still last")
 	// The consolidation put Helpdesk in the slot Issues held: after SOPs' two
 	// neighbours, before More.
 	assert.ok(
-		titles.indexOf("Helpdesk") < titles.indexOf("SOPs"),
+		titles.indexOf("Help") < titles.indexOf("SOPs"),
 		"in the slot Issues held"
 	)
 	assert.ok(!titles.includes("Issues"))
-	assert.match(nav, /title: "Helpdesk",[\s\S]*?route: HUB_PATH/)
+	assert.match(nav, /title: "Help",[\s\S]*?route: HUB_PATH/)
 })

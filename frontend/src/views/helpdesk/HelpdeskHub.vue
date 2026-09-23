@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :pageTitle="__('Helpdesk')">
+	<BaseLayout :pageTitle="__('Help')">
 		<template #body>
 			<!-- ONE page, two pills (owner, 15 Sep 2026): HR Issues for everyone,
 			     IT Helpdesk where the Helpdesk app is installed. Each pill renders

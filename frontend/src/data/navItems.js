@@ -8,7 +8,6 @@ import {
 	House,
 	Kanban,
 	Megaphone,
-	CircleDollarSign,
 	FileText,
 } from "lucide-vue-next"
 import { markRaw } from "vue"
@@ -34,12 +33,6 @@ const NAV_ITEMS = [
 		route: "/dashboard/attendance",
 	},
 	{
-		icon: markRaw(CalendarDays),
-		title: "Leaves",
-		shortTitle: "Leaves",
-		route: "/dashboard/leaves",
-	},
-	{
 		// The one genuinely new destination (UX_PLAN §3.3). What it is for was
 		// spread across three places — starting a request in Home's quick
 		// links, watching one in Home's request panel, the per-type lists on
@@ -49,12 +42,6 @@ const NAV_ITEMS = [
 		title: "Requests",
 		shortTitle: "Requests",
 		route: "/requests",
-	},
-	{
-		icon: markRaw(CircleDollarSign),
-		title: "Expenses",
-		shortTitle: "Expenses",
-		route: "/dashboard/expense-claims",
 	},
 	{
 		// "Score", not "KPI" (UX_PLAN §3.6: "Score screen is a reroute"). Same
@@ -71,8 +58,9 @@ const NAV_ITEMS = [
 		// Issues held. HR Issues is for everyone, so the entry is never gated;
 		// the IT pill inside is what hides on sites without the Helpdesk app.
 		icon: markRaw(Headphones),
-		title: "Helpdesk",
-		shortTitle: "Helpdesk",
+		// "Help", the person's word (audit-pages §4, W-PLAIN).
+		title: "Help",
+		shortTitle: "Help",
 		route: HUB_PATH,
 	},
 	{
@@ -106,8 +94,8 @@ const NAV_ITEMS = [
 export const TAB_ITEMS = [
 	NAV_ITEMS[0], // Home
 	NAV_ITEMS[1], // Calendar — was Attendance
-	NAV_ITEMS[3], // Requests
-	NAV_ITEMS[5], // Score — was KPI
+	NAV_ITEMS[2], // Requests
+	NAV_ITEMS[3], // Score — was KPI
 	{
 		// More
 		icon: markRaw(Ellipsis),
