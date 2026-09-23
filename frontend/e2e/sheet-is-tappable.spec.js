@@ -9,7 +9,7 @@ for (const [w, h] of [[390, 844], [1280, 800]]) {
 		const ctx = await browser.newContext({ storageState: await login(browser), viewport: { width: w, height: h } })
 		const page = await ctx.newPage()
 		await page.goto(`${BASE}/hrms/more`)
-		await page.getByText("Public holidays").first().click()
+		await page.getByText("Public holidays").filter({ visible: true }).first().click()
 		await expect(page.locator("ion-modal.show-modal")).toHaveCount(1)
 		await page.waitForTimeout(700)
 		const inSheet = await page.evaluate(() => {

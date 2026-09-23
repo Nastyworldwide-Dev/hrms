@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test"
 import { BASE, login } from "./screens.mjs"
 
 async function openHolidays(page) {
-	await page.getByText("Public holidays").first().click()
+	await page.getByText("Public holidays").filter({ visible: true }).first().click()
 	await expect(page.locator("ion-modal.show-modal")).toHaveCount(1)
 	await page.waitForTimeout(700)
 }
