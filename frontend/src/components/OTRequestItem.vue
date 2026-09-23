@@ -16,10 +16,12 @@
 				</div>
 				<div class="text-xs text-ink-600">
 					<span>{{ props.doc.ot_date_label || props.doc.ot_date }}</span>
-					<span class="whitespace-pre"> &middot; </span>
-					<span class="whitespace-nowrap">
-						{{ hoursAsTime(props.doc.claimed_hours) }}
-					</span>
+					<template v-if="hoursAsTime(props.doc.claimed_hours)">
+						<span class="whitespace-pre"> &middot; </span>
+						<span class="whitespace-nowrap">
+							{{ hoursAsTime(props.doc.claimed_hours) }}
+						</span>
+					</template>
 				</div>
 				<!-- WHO it is with, and since when. A chip reading "Waiting"
 				     does not say on whom (mockup 4 gap #1). Renders nothing when
@@ -75,7 +77,8 @@ const OUTCOME = {
 const outcome = computed(() => {
 	const chosen = OUTCOME[props.doc.compensation]
 	if (chosen) return chosen()
-	return __("{0} overtime", [hoursAsTime(props.doc.claimed_hours)])
+	const hours = hoursAsTime(props.doc.claimed_hours)
+	return hours ? __("{0} overtime", [hours]) : __("Overtime")
 })
 
 const status = computed(() => {

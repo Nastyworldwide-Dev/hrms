@@ -93,3 +93,12 @@ test("the approver view builds its toast from the approve result", () => {
 	)
 	assert.match(source, /decisionToast\(\s*kind,\s*result\?\.attendance_repair/)
 })
+
+test("a repair to zero hours names the status alone, no dangling space", () => {
+	const toast = decisionToast(
+		"approve",
+		{ repaired: true, status: "Absent", working_hours: 0, reason_code: null },
+		__
+	)
+	assert.equal(toast.text, "Attendance updated to Absent.")
+})

@@ -11,12 +11,14 @@ export function decisionToast(decision, repair, __) {
 		return { title: __("Approved"), text: __("The employee has been notified."), tone: "success" }
 	}
 	if (repair.repaired) {
+		// Zero hours (a repair to Absent) names the status alone; an empty
+		// hours slot left "Absent ." (review of 7ceb369d6).
+		const hours = hoursAsTime(repair.working_hours)
 		return {
 			title: __("Approved"),
-			text: __("Attendance updated to {0} {1}.", [
-				__(repair.status || ""),
-				hoursAsTime(repair.working_hours),
-			]),
+			text: hours
+				? __("Attendance updated to {0} {1}.", [__(repair.status || ""), hours])
+				: __("Attendance updated to {0}.", [__(repair.status || "")]),
 			tone: "success",
 		}
 	}
