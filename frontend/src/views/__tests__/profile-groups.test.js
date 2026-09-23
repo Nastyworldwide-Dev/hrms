@@ -60,7 +60,7 @@ test("nothing was lost in the You rework (audit-pages §4)", () => {
 		/name: 'HRContacts'/,
 		"HR contacts moved to Help"
 	)
-	assert.match(view, /DETAIL_FIELDS/, "the details sheet")
+	assert.match(view, /const DETAILS = \[/, "the details sheet")
 })
 
 test("the role gate is still the server's verdict", () => {

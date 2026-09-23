@@ -112,16 +112,7 @@
 				:initial-breakpoint="1"
 				:breakpoints="[0, 1]"
 			>
-				<ProfileInfoModal
-					v-if="detailsOpen"
-					:title="__('Your details')"
-					:data="
-						DETAIL_FIELDS.map((field) => {
-							const [label, fieldtype] = getFieldInfo(field)
-							return { fieldname: field, value: getFieldValue(field), label, fieldtype }
-						})
-					"
-				/>
+				<ProfileInfoModal v-if="detailsOpen" :title="__('Your details')" :data="detailRows" />
 			</ion-modal>
 		</ion-content>
 	</GPage>
@@ -168,22 +159,27 @@ const router = useRouter()
 
 //: ONE sheet for the employee record (audit-pages §4: was three rows and
 //: three sheets). The manager is on the page itself, so not repeated here.
-const DETAIL_FIELDS = [
-	"employee_number",
-	"company",
-	"department",
-	"designation",
-	"branch",
-	"grade",
-	"employment_type",
-	"date_of_joining",
-	"cell_number",
-	"company_email",
-	"personal_email",
-	"preferred_email",
-	"date_of_birth",
-	"gender",
-	"blood_group",
+//: [field, plain label, how to show it]. Labels live here, not in
+//: the fillable-fields endpoint: that list is the fields a FORM can fill, and it leaves
+//: out links the employee cannot open (department, designation, branch,
+//: grade, employment type), which left five rows with no label (live audit
+//: 23 Sep). A read-only sheet names its own rows.
+const DETAILS = [
+	["employee_number", __("Employee number"), "Data"],
+	["company", __("Company"), "Data"],
+	["department", __("Department"), "Data"],
+	["designation", __("Job title"), "Data"],
+	["branch", __("Branch"), "Data"],
+	["grade", __("Grade"), "Data"],
+	["employment_type", __("Employment type"), "Data"],
+	["date_of_joining", __("Joined"), "Date"],
+	["cell_number", __("Mobile"), "Data"],
+	["company_email", __("Work email"), "Data"],
+	["personal_email", __("Personal email"), "Data"],
+	["preferred_email", __("Preferred email"), "Data"],
+	["date_of_birth", __("Date of birth"), "Date"],
+	["gender", __("Gender"), "Data"],
+	["blood_group", __("Blood group"), "Data"],
 ]
 const detailsOpen = ref(false)
 
@@ -313,20 +309,6 @@ watch(
 
 const managerName = computed(() => (employeeDoc.doc?.reports_to ? reportsToName.data : null))
 
-const employeeDocType = createResource({
-	url: "hrms.api.get_doctype_fields",
-	params: { doctype: DOCTYPE },
-	auto: true,
-})
-
-const getFieldInfo = (fieldname) => {
-	// Both resources load async; opening the detail sheet before they resolve
-	// used to run .find on null (and deref a null doc below), rendering an
-	// error instead of a sheet. Default to safe values until they arrive.
-	const field = (employeeDocType.data || []).find((field) => field.fieldname === fieldname)
-	return [__(field?.label, null, "Employee"), field?.fieldtype]
-}
-
 const getFieldValue = (fieldname) => {
 	const doc = employeeDoc.doc
 	if (!doc) return ""
@@ -335,6 +317,16 @@ const getFieldValue = (fieldname) => {
 	}
 	return doc[fieldname]
 }
+
+//: Only rows with a value: an empty field is left out, not shown as "-".
+const detailRows = computed(() =>
+	DETAILS.map(([fieldname, label, fieldtype]) => ({
+		fieldname,
+		label,
+		fieldtype,
+		value: getFieldValue(fieldname),
+	})).filter((row) => row.value !== null && row.value !== undefined && row.value !== "")
+)
 
 const logout = async () => {
 	try {

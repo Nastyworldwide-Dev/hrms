@@ -1,4 +1,5 @@
-CLASS: shift times formatted three ways (review of 30e6f96e0).
+CLASS: a read-only sheet taking its labels from the fillable-fields list (get_doctype_fields drops links the caller cannot open).
 
-frontend/src/components/NowBar.vue (Home) — same-root: now clockTime.
-frontend/src/utils/daySheet.js clockTime — guard: a non-clock value shows nothing.
+Call sites of getFieldInfo / get_doctype_fields for display:
+frontend/src/views/Profile.vue Your details — same-root, fixed (own labels, empty rows left out).
+Forms (FormView) — not-affected: they SHOULD use the fillable list; a field the employee cannot fill is correctly absent.
