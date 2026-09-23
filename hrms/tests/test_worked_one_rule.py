@@ -120,6 +120,28 @@ class TestOneHelper(unittest.TestCase):
 		self.assertEqual(open_days, {TODAY})
 
 
+	def test_a_night_shift_across_midnight_is_worked_on_the_day_it_started(self):
+		# IN 22:00, OUT 06:00 the next morning: one shift, worked on the day it
+		# began (review of 2564a835a). The OUT's own day is not "open" and not
+		# a second worked day.
+		from hrms.utils import worked_days
+
+		punches = [_punch(D(2026, 9, 20), 22, "IN"), _punch(D(2026, 9, 21), 6, "OUT")]
+		with patch.object(frappe, "get_all", side_effect=_site(punches), create=True):
+			paired, open_days = worked_days.punch_days("E1", D(2026, 9, 20), D(2026, 9, 20))
+		self.assertEqual(paired, {D(2026, 9, 20)}, "the OUT after the window end still closes the shift")
+		self.assertEqual(open_days, set())
+
+	def test_a_day_that_only_ends_a_night_shift_is_not_worked_twice(self):
+		from hrms.utils import worked_days
+
+		punches = [_punch(D(2026, 9, 20), 22, "IN"), _punch(D(2026, 9, 21), 6, "OUT")]
+		with patch.object(frappe, "get_all", side_effect=_site(punches), create=True):
+			paired, open_days = worked_days.punch_days("E1", D(2026, 9, 21), D(2026, 9, 21))
+		self.assertEqual(paired, set())
+		self.assertEqual(open_days, set())
+
+
 class TestMonthFlagsCarryWorkedDays(unittest.TestCase):
 	def test_paired_days_and_todays_open_in_reach_the_calendar(self):
 		punches = [_punch(YESTERDAY, 9, "IN"), _punch(YESTERDAY, 18, "OUT"), _punch(TODAY, 9, "IN")]

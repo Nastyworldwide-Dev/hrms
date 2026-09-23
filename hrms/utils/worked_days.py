@@ -10,6 +10,7 @@ Calendar until auto-attendance ran. Both now read the punches here.
 """
 
 import logging
+from datetime import timedelta
 
 import frappe
 from frappe.utils import getdate
@@ -20,29 +21,33 @@ logger = logging.getLogger(__name__)
 def punch_days(employee: str, start, end) -> tuple[set, set]:
 	"""(paired, open) dates in [start, end].
 
-	paired: an IN followed later that day by an OUT.
-	open:   the day's last punch is an IN — somebody is still at work, or forgot
-	        to check out. A lone OUT is neither.
+	paired: an IN followed by the next OUT, credited to the day the IN was on.
+	        A night shift (IN 22:00, OUT 06:00 next morning) is ONE worked day,
+	        the day it began — so the read runs one day past `end` to find the
+	        OUT that closes the last day's shift.
+	open:   the last punch is an IN with no OUT after it — somebody is still at
+	        work, or forgot to check out. A lone OUT is neither.
 	"""
 	punches = frappe.get_all(
 		"Employee Checkin",
 		filters={
 			"employee": employee,
-			"time": ("between", [f"{start} 00:00:00", f"{end} 23:59:59"]),
+			"time": ("between", [f"{start} 00:00:00", f"{getdate(end) + timedelta(days=1)} 23:59:59"]),
 		},
 		fields=["time", "log_type"],
 		order_by="time asc",
 		ignore_permissions=True,
 	)
-	open_in, paired, last = set(), set(), {}
+	paired, open_in = set(), None
 	for row in sorted(punches, key=lambda r: r.time):
-		day = getdate(row.time)
-		last[day] = row.log_type
 		if row.log_type == "IN":
-			open_in.add(day)
-		elif row.log_type == "OUT" and day in open_in:
-			paired.add(day)
-	open_days = {day for day, log_type in last.items() if log_type == "IN"}
+			open_in = getdate(row.time)
+		elif row.log_type == "OUT" and open_in is not None:
+			paired.add(open_in)
+			open_in = None
+	start, end = getdate(start), getdate(end)
+	paired = {day for day in paired if start <= day <= end}
+	open_days = {open_in} if open_in is not None and start <= open_in <= end else set()
 	logger.debug(
 		"[worked_days] employee=%s %s..%s punches=%d paired=%d open=%d",
 		employee,
@@ -54,7 +59,6 @@ def punch_days(employee: str, start, end) -> tuple[set, set]:
 	)
 	return paired, open_days
 
-
 def paired_days(employee: str, start, end) -> set:
-	"""Dates in [start, end] holding an IN followed later that day by an OUT."""
+	"""Dates in [start, end] whose shift (IN, then the next OUT) began that day."""
 	return punch_days(employee, start, end)[0]
