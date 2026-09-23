@@ -305,11 +305,13 @@ def _day_shift(employee: str, day, attendance) -> str | None:
 		"Employee Checkin",
 		filters={
 			"employee": employee,
-			"time": ("between", [f"{day} 00:00:00", f"{day} 23:59:59"]),
+			# By the shift's own start date, not the punch time: a night
+			# shift's 06:00 check-out belongs to the night before.
+			"shift_start": ("between", [f"{day} 00:00:00", f"{day} 23:59:59"]),
 			"shift": ("is", "set"),
 		},
 		pluck="shift",
-		order_by="time asc",
+		order_by="shift_start asc",
 		limit=1,
 		ignore_permissions=True,
 	)
