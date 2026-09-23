@@ -5,9 +5,11 @@ the Approvals page is that place (audit-flows 4B, AUDIT-PLAN P1-B). Home's
 Waiting on you gives counts; this gives the rows behind them, oldest first,
 each saying who, what, when and why, in the person's words.
 
-A row is listed only when `approval._is_routed_approver` admits it — the same
-check Home's count (`needs_you`) and `approval.decide` use — so the page can
-never show a request the approver cannot decide, or hide one Home counted.
+A row is listed only when the caller may READ it (`_request_read_allowed`) and
+it is routed to them (`_is_routed_approver`) — the two gates `approval.decide`
+applies, in its order. Routing alone is not enough: its HR branch admits
+System Manager, whom `approval_row_scope` deliberately denies read, so an
+admin-only login saw every team's requests and reasons (review of be4b81edf).
 Session-scoped: the caller is never a parameter.
 """
 
@@ -15,7 +17,7 @@ import logging
 
 import frappe
 
-from hrms.api.approval import DECIDE_THEN_SUBMIT, _is_routed_approver
+from hrms.api.approval import DECIDE_THEN_SUBMIT, _is_routed_approver, _request_read_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +124,7 @@ def get_waiting_for_me() -> dict:
 		capped = capped or len(names) > SCAN_CAP
 		for name in names[:SCAN_CAP]:
 			doc = frappe.get_doc(doctype, name)
-			if _is_routed_approver(doc):
+			if _request_read_allowed(doc) and _is_routed_approver(doc):
 				rows.append(_row(doc))
 	# Oldest first: the one waiting longest is the one to decide next.
 	rows.sort(key=lambda row: row["modified"])

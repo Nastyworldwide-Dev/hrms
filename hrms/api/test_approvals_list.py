@@ -22,18 +22,37 @@ from hrms.api import approvals_list
 
 DOCS = {
 	("Leave Application", "LA-1"): frappe._dict(
-		doctype="Leave Application", name="LA-1", employee="E1", employee_name="Aisyah",
-		leave_type="Annual Leave", from_date="2026-09-22", to_date="2026-09-23",
-		total_leave_days=2, description="Sister's wedding", modified="2026-09-20 10:00:00",
+		doctype="Leave Application",
+		name="LA-1",
+		employee="E1",
+		employee_name="Aisyah",
+		leave_type="Annual Leave",
+		from_date="2026-09-22",
+		to_date="2026-09-23",
+		total_leave_days=2,
+		description="Sister's wedding",
+		modified="2026-09-20 10:00:00",
 	),
 	("Leave Application", "LA-2"): frappe._dict(
-		doctype="Leave Application", name="LA-2", employee="E2", employee_name="Not mine",
-		leave_type="Annual Leave", from_date="2026-09-24", to_date="2026-09-24",
-		total_leave_days=1, description="", modified="2026-09-21 10:00:00",
+		doctype="Leave Application",
+		name="LA-2",
+		employee="E2",
+		employee_name="Not mine",
+		leave_type="Annual Leave",
+		from_date="2026-09-24",
+		to_date="2026-09-24",
+		total_leave_days=1,
+		description="",
+		modified="2026-09-21 10:00:00",
 	),
 	("OT Request", "OT-1"): frappe._dict(
-		doctype="OT Request", name="OT-1", employee="E3", employee_name="Ria",
-		ot_date="2026-09-05", claimed_hours=1.5, explanation="Stock count",
+		doctype="OT Request",
+		name="OT-1",
+		employee="E3",
+		employee_name="Ria",
+		ot_date="2026-09-05",
+		claimed_hours=1.5,
+		explanation="Stock count",
 		modified="2026-09-19 09:00:00",
 	),
 }
@@ -44,11 +63,12 @@ def fake_get_all(doctype, filters=None, pluck=None, **kw):
 
 
 class TestApprovalsList(unittest.TestCase):
-	def _list(self):
+	def _list(self, readable=lambda doc: True):
 		with (
 			patch.object(frappe, "get_all", side_effect=fake_get_all, create=True),
 			patch.object(frappe, "get_doc", side_effect=lambda dt, name: DOCS[(dt, name)]),
 			patch.object(approvals_list, "_is_routed_approver", side_effect=lambda doc: doc.name != "LA-2"),
+			patch.object(approvals_list, "_request_read_allowed", side_effect=readable, create=True),
 			patch.object(approvals_list, "_types_on_site", return_value=["Leave Application", "OT Request"]),
 		):
 			return approvals_list.get_waiting_for_me()
@@ -58,6 +78,15 @@ class TestApprovalsList(unittest.TestCase):
 		self.assertIn("LA-1", names)
 		self.assertIn("OT-1", names)
 		self.assertNotIn("LA-2", names)
+
+	def test_routing_alone_does_not_list_a_request_the_caller_may_not_read(self):
+		# Review of be4b81edf: _is_routed_approver's HR branch admits System
+		# Manager, which approval_row_scope deliberately denies read. decide()
+		# checks read first; this list skipped it, so an admin-only login saw
+		# every team's requests and their reasons. Same two gates as decide.
+		names = [row["name"] for row in self._list(readable=lambda doc: doc.name != "LA-1")["rows"]]
+		self.assertNotIn("LA-1", names)
+		self.assertIn("OT-1", names)
 
 	def test_oldest_first_and_each_row_says_who_what_when_why(self):
 		rows = self._list()["rows"]
@@ -82,3 +111,15 @@ class TestApprovalsList(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestHomeCountsWhatThePageLists(unittest.TestCase):
+	def test_home_count_uses_the_same_two_gates(self):
+		# Home's "N to approve" opens this page. If the count admits a row the
+		# list refuses, the approver is told of work they cannot find.
+		import inspect
+
+		from hrms.api import needs_you
+
+		source = inspect.getsource(needs_you._pending_for)
+		self.assertIn("_request_read_allowed(doc) and _is_routed_approver(doc)", source)

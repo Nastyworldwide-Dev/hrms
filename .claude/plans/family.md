@@ -1,58 +1,16 @@
-CLASS: a shift holding punches that do not belong to it — the stamp is written
-once at tap time from whatever the roster and the grace window allowed, and
-nothing re-reads it when either turns out to have been wrong. Every symptom the
-owner reported (wrong dates, wrong shifts, two Attendance rows on one day, a
-Fix dialog that refuses every road out) is downstream of that one stamp.
+CLASS: a list or count of requests gated on ROUTING alone. approval.decide checks
+read (_request_read_allowed) before routing (_is_routed_approver); routing's HR
+branch admits System Manager, whom approval_row_scope denies read. Any surface
+that skips the read gate shows an admin-only login every team's requests.
 
-INSTANCE: "7PM - 3.30AM" configured 19:30-07:00 with a 120-minute check-out
-grace accepted punches until 09:00, so a day worker's morning IN was stamped to
-the previous night's shift. Two people own that shift; everyone else's punches
-on it are wrong by definition.
+INSTANCE: approvals_list.get_waiting_for_me listed rows on routing alone
+(review of be4b81edf).
 
-Call sites of what changed (hrms.utils.restamp.restamp, remark_day_after_commit):
-
-hrms/utils/grace_restamp_repair.py:106 — not-affected. Calls restamp with
-  neither new flag, so its behaviour is byte-identical: mirrored punches still
-  excluded, the re-mark still unauthoritative. Its own test now pins that.
-hrms/utils/restamp.py:145 (preview) — not-affected. HR's dry run passes neither
-  flag; asserted by test_the_preview_never_carries_them.
-hrms/overrides/shift_assignment_hooks.py — not-affected. The roster-driven path
-  calls restamp without the flags; both default False.
-hrms/utils/attendance_day_audit.py:632 — not-affected. remark_day_after_commit
-  gained keyword-only parameters with False defaults; a positional call is
-  unchanged.
-hrms/utils/attendance_endgame.py:282 — not-affected, same reason.
-hrms/api/attendance_fix_day.py:1963 — not-affected, same reason. (Its `_tap`
-  has a parameter also named mirrored_ok; a different permission, over one
-  punch HR is looking at, not this grant. The "only one caller" test is scoped
-  to restamp() calls so it cannot confuse the two.)
-hrms/api/attendance_master_edit.py:472 — not-affected, same reason.
-hrms/overrides/day_remark_hooks.py:38 — not-affected, same reason.
-hrms/overrides/employee_checkin_override.py:166 — not-affected, same reason.
-hrms/overrides/remote_checkin_request_hooks.py:501 — not-affected, same reason.
-hrms/utils/day_remark.py:_enqueue — same-root, fixed here. The job id now
-  carries the authority, because deduplicating an authoritative re-mark into a
-  plain one already queued would answer the stronger question with the weaker
-  one. The plain id kept its old shape, so jobs queued before this deploy still
-  deduplicate against their successors.
-
-LOCKING THE CLASS: the regression is test_wrong_shift_repair's WHO tests (the
-instance). The invariant is TestThePowersAreOffEverywhereElse — a repo-wide
-scan asserting exactly ONE caller holds the owner's grant, so a future job
-cannot quietly inherit the power to rewrite mirrored punches or override HR.
-
-## DEBT — the row-icon literal (opened 22 Sep 2026, 2.0 slice 1.3)
-
-`h-[17px] w-[17px]` appears ELEVEN times across SEVEN files — CheckInPanel,
-SideNav, More, HelpdeskList, TicketNew, SopDetail, and until this slice
-NeedsYou. Every one is an arbitrary-value utility the lint gate counts, and
-every one is the same number saying the same thing: the glyph inside a list
-row's well.
-
-`.g-row-icon` is that name, added with NeedsYou. The other ten are NOT swept
-here: a sweep across seven files inside a Home restructure is two changes in
-one commit, and the second one would be reviewed as a detail of the first.
-
-TICKET: replace the ten remaining literals with `.g-row-icon` in one commit of
-its own. Cost: ten lines. Evidence it is done: `grep -rc 'h-\[17px\]' src`
-returns nothing, and the lint gate's `arbitrary` total falls by ten.
+Call sites of _is_routed_approver:
+hrms/api/approvals_list.py:get_waiting_for_me — same-root, fixed here (read first).
+hrms/api/needs_you.py:_pending_for — same-root, fixed here (Home's count must equal the page).
+hrms/api/approval.py:_decision_access — not-affected: _request_read_allowed runs first (line 214).
+hrms/utils/approved_request_guard.py:158 — not-affected: guards a WRITE on an already-loaded doc the caller is saving; it adds rights to own/routed, never lists.
+hrms/mixins/pwa_notifications.py:184 — not-affected: picks recipients of a notification, discloses nothing to the caller.
+hrms/hr/doctype/remote_checkin_request/remote_checkin_request.py:143 — not-affected: remote check-ins have their own company-fenced query (_pending_for_approver_query).
+hrms/tests/probes/lifecycle_probe.py — not-affected: test probe.

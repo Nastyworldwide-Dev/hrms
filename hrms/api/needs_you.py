@@ -23,7 +23,7 @@ import logging
 
 import frappe
 
-from hrms.api.approval import DECIDE_THEN_SUBMIT, _is_routed_approver
+from hrms.api.approval import DECIDE_THEN_SUBMIT, _is_routed_approver, _request_read_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,10 @@ def _pending_for(doctype: str, field: str, pending: str) -> int:
 		# The full document, because `_is_routed_approver` reads whichever of
 		# the approver field, the employee and the company THAT type has — and
 		# the point of calling it is that this module does not need to know.
-		if _is_routed_approver(frappe.get_doc(doctype, name)):
+		# Read first, as approval.decide does: routing's HR branch admits System
+		# Manager, whom approval_row_scope denies read (review of be4b81edf).
+		doc = frappe.get_doc(doctype, name)
+		if _request_read_allowed(doc) and _is_routed_approver(doc):
 			count += 1
 	return count
 
@@ -102,9 +105,7 @@ def get_needs_you() -> dict:
 	"""
 	rows = []
 	for doctype, (field, pending) in DECIDE_THEN_SUBMIT.items():
-		if not frappe.db.table_exists(doctype.replace(" ", "")) and not frappe.db.exists(
-			"DocType", doctype
-		):
+		if not frappe.db.table_exists(doctype.replace(" ", "")) and not frappe.db.exists("DocType", doctype):
 			# A site without the app that owns a type must not 500 Home.
 			continue
 		try:
@@ -134,7 +135,5 @@ def get_needs_you() -> dict:
 		)
 
 	total = sum(row["count"] for row in rows)
-	logger.info(
-		"[needs_you] user=%s kinds=%d total=%d", frappe.session.user, len(rows), total
-	)
+	logger.info("[needs_you] user=%s kinds=%d total=%d", frappe.session.user, len(rows), total)
 	return {"rows": rows, "total": total}
