@@ -29,13 +29,13 @@ const block = code(read("components/Announcements.vue"))
 const list = code(read("views/announcements/List.vue"))
 const detail = code(read("views/announcements/Detail.vue"))
 
-test("an empty board renders nothing at all on Home", () => {
-	// A permanent "no announcements yet" card is wrong most of the time and
-	// costs the fold every day. Absence is the empty state — the same rule
-	// NeedsYou already follows.
-	// `v-else-if` since the error branch went in above it — still conditional
-	// on having cards, which is the rule that matters.
-	assert.match(block, /v-else-if="cards\.length"/, "the whole block is conditional")
+test("an empty board says so in one line on Home", () => {
+	// SUPERSEDED 23 Sep (owner: "Home is broken top to bottom"; plan P1-1,
+	// NN/g empty states): a block that vanished left Home reading as broken.
+	// Once loaded, the block always shows, with "No news." when it is empty —
+	// one line, not a standing card.
+	assert.match(block, /v-else-if="homeAnnouncements\.data"/, "shown once loaded")
+	assert.match(block, /__\("No news\."\)/, "an empty board says so")
 	assert.doesNotMatch(block, /GEmptyState/, "no standing empty card on Home")
 	// The full board DOES have one, because arriving at a screen that renders
 	// nothing reads as broken.
@@ -134,7 +134,7 @@ test("a failed read is not an empty board", () => {
 	// not the right ERROR — the same class as the Now bar hiding itself.
 	assert.match(block, /v-if="homeAnnouncements\.error"/, "the error is its own branch")
 	assert.ok(
-		block.indexOf("homeAnnouncements.error") < block.indexOf('v-else-if="cards.length"'),
+		block.indexOf("homeAnnouncements.error") < block.indexOf('v-else-if="homeAnnouncements.data"'),
 		"and it is checked first"
 	)
 	assert.match(block, /could not be loaded/, "it says so")

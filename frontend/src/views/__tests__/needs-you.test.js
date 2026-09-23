@@ -102,10 +102,11 @@ test("a doctype is never shown to an employee", () => {
 	}
 })
 
-test("the block still renders nothing when nothing is waiting", () => {
-	// Absence is the empty state. A permanent "nothing needs you" row is wrong
-	// most of the time and costs the fold every day.
-	assert.match(component, /v-if="rows\.length"/)
+test("an approver's empty queue reads as done; others see nothing", () => {
+	// SUPERSEDED 23 Sep (owner; plan P1-1): for an approver the block always
+	// shows, "Nothing waiting on you." when clear. Staff who approve nothing
+	// still see it only when something waits.
+	assert.match(component, /v-if="rows\.length \|\| isApprover\.data"/)
 })
 
 test("a realtime event refreshes both counts", () => {

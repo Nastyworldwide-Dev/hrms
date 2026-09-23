@@ -28,9 +28,13 @@
 	<GBanner v-if="homeAnnouncements.error" variant="error">
 		{{ __("Announcements could not be loaded. Pull down to try again.") }}
 	</GBanner>
-	<div v-else-if="cards.length" class="w-full">
+	<!-- Always shown once loaded: an empty board says so in one line rather
+	     than vanishing, which left Home looking broken (owner, 23 Sep; NN/g
+	     empty states). While loading it waits, so nothing jumps. -->
+	<div v-else-if="homeAnnouncements.data" class="w-full">
 		<div class="g-eyebrow mb-4">{{ __("Announcements") }}</div>
-		<GListPanel>
+		<p v-if="!cards.length" class="text-caption text-ink-600">{{ __("No news.") }}</p>
+		<GListPanel v-else>
 			<GListRow
 				v-for="card in cards"
 				:key="card.name"

@@ -31,9 +31,15 @@
   "N more" — because a list that needs you is exactly the list that can spike.
 -->
 <template>
-	<div v-if="rows.length" class="w-full">
+	<!-- An approver always sees this block, "Nothing waiting on you." when it
+	     is clear, so an empty queue reads as done, not broken (owner, 23 Sep;
+	     NN/g empty states). Everyone else sees it only when something waits. -->
+	<div v-if="rows.length || isApprover.data" class="w-full">
 		<div class="g-eyebrow mb-4">{{ __("Needs you") }}</div>
-		<GListPanel>
+		<p v-if="!rows.length" class="text-caption text-ink-600">
+			{{ __("Nothing waiting on you.") }}
+		</p>
+		<GListPanel v-else>
 			<GListRow
 				v-for="row in shown"
 				:key="row.key"
@@ -82,6 +88,7 @@ import GListRow from "@/components/glass/GListRow.vue"
 
 import { pendingCountResource } from "@/data/remoteCheckin"
 import { needsYouResource } from "@/data/needsYou"
+import { isApprover } from "@/data/team"
 import { countOf } from "@/utils/countWords"
 
 const __ = inject("$translate")
