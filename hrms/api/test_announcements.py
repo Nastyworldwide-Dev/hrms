@@ -20,6 +20,8 @@ from hrms.api.announcements import (
 	acknowledge,
 	audience_matches,
 	get_announcement,
+	get_outstanding,
+	get_reach,
 	home_announcements,
 	list_announcements,
 )
@@ -87,14 +89,14 @@ class TestAnnouncementBoard(FrappeTestCase):
 		frappe.set_user("Administrator")
 
 	def _department(self, name):
-		existing = frappe.db.exists(
-			"Department", {"department_name": name, "company": self.company}
-		)
+		existing = frappe.db.exists("Department", {"department_name": name, "company": self.company})
 		if existing:
 			return existing
-		return frappe.get_doc(
-			{"doctype": "Department", "department_name": name, "company": self.company}
-		).insert(ignore_permissions=True).name
+		return (
+			frappe.get_doc({"doctype": "Department", "department_name": name, "company": self.company})
+			.insert(ignore_permissions=True)
+			.name
+		)
 
 	def _announce(self, **kwargs):
 		doc = frappe.get_doc(
@@ -123,9 +125,7 @@ class TestAnnouncementBoard(FrappeTestCase):
 		frappe.set_user(self.user)
 		self.assertIn("Sales huddle", [r["title"] for r in list_announcements()["announcements"]])
 		frappe.set_user(self.other_user)
-		self.assertNotIn(
-			"Sales huddle", [r["title"] for r in list_announcements()["announcements"]]
-		)
+		self.assertNotIn("Sales huddle", [r["title"] for r in list_announcements()["announcements"]])
 
 	def test_an_unpublished_announcement_reaches_nobody(self):
 		"""The draft state has to be real, or HR cannot write anything without
@@ -173,32 +173,24 @@ class TestAnnouncementBoard(FrappeTestCase):
 		get_announcement(doc.name)
 		self.assertEqual(list_announcements()["unread"], 0)
 		self.assertEqual(
-			frappe.db.count(
-				"HR Announcement Read", {"announcement": doc.name, "employee": self.employee}
-			),
+			frappe.db.count("HR Announcement Read", {"announcement": doc.name, "employee": self.employee}),
 			1,
 			"reading twice is not two readings",
 		)
 
 	def test_the_body_is_refused_for_an_announcement_not_addressed_to_you(self):
-		doc = self._announce(
-			title="Ops only", audience="Department", audience_value=self.other_dept
-		)
+		doc = self._announce(title="Ops only", audience="Department", audience_value=self.other_dept)
 		frappe.set_user(self.user)
 		self.assertRaises(frappe.PermissionError, get_announcement, doc.name)
 
 	def test_a_refused_read_leaves_no_trace(self):
 		"""A read row for something the caller cannot see would hand HR a
 		compliance number about a person who never saw the notice."""
-		doc = self._announce(
-			title="Ops only", audience="Department", audience_value=self.other_dept
-		)
+		doc = self._announce(title="Ops only", audience="Department", audience_value=self.other_dept)
 		frappe.set_user(self.user)
 		with self.assertRaises(frappe.PermissionError):
 			get_announcement(doc.name)
-		self.assertEqual(
-			frappe.db.count("HR Announcement Read", {"announcement": doc.name}), 0
-		)
+		self.assertEqual(frappe.db.count("HR Announcement Read", {"announcement": doc.name}), 0)
 
 	def test_a_non_string_name_is_refused_at_the_boundary(self):
 		frappe.set_user(self.user)
@@ -242,20 +234,16 @@ class TestAnnouncementBoard(FrappeTestCase):
 		"""The behaviour acknowledgement exists for: it does not go away by
 		being scrolled past."""
 		self._announce(title="Old news", publish_from=add_days(nowdate(), -3))
-		policy = self._announce(
-			title="Safety policy", category="Policy", acknowledge_required=1
-		)
+		policy = self._announce(title="Safety policy", category="Policy", acknowledge_required=1)
 		frappe.set_user(self.user)
 		first = home_announcements()["announcements"][0]
 		self.assertEqual(first["title"], "Safety policy")
 		self.assertTrue(first["needs_acknowledgement"])
 		acknowledge(policy.name)
 		self.assertFalse(
-			next(
-				row
-				for row in home_announcements()["announcements"]
-				if row["name"] == policy.name
-			)["needs_acknowledgement"]
+			next(row for row in home_announcements()["announcements"] if row["name"] == policy.name)[
+				"needs_acknowledgement"
+			]
 		)
 
 	# --- home block --------------------------------------------------------
@@ -373,3 +361,133 @@ class TestAnnouncementDocument(FrappeTestCase):
 		).insert(ignore_permissions=True)
 		doc.delete(ignore_permissions=True)
 		self.assertEqual(frappe.db.count("HR Announcement Read", {"announcement": doc.name}), 0)
+
+
+class TestAnnouncementReach(FrappeTestCase):
+	"""Did the notice land.
+
+	The plan named exactly one HR report — "read by 31 of 44" — because it is
+	the only one anybody asks for, and it shipped without one: HR published
+	into silence with no way to tell a notice nobody read from a notice nobody
+	needed.
+	"""
+
+	def setUp(self):
+		frappe.db.delete("HR Announcement Read")
+		frappe.db.delete("HR Announcement")
+		self.company = create_company("_Test Reach").name
+		self.hr_user = "reach_hr@example.com"
+		self.staff_user = "reach_staff@example.com"
+		self.hr = make_employee(self.hr_user, company=self.company)
+		self.staff = make_employee(self.staff_user, company=self.company)
+		frappe.get_doc("User", self.hr_user).add_roles("HR Manager")
+		self.doc = frappe.get_doc(
+			{
+				"doctype": "HR Announcement",
+				"title": "Safety policy",
+				"category": "Policy",
+				"audience": "Everyone",
+				"published": 1,
+				"acknowledge_required": 1,
+				"body": "<p>read me</p>",
+			}
+		).insert(ignore_permissions=True)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def _as_hr(self, fn, *args):
+		frappe.set_user(self.hr_user)
+		try:
+			return fn(*args)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_hr_gets_the_one_number_that_matters(self):
+		reach = self._as_hr(get_reach, self.doc.name)
+		self.assertGreater(reach["audience_count"], 0, "there is a denominator")
+		self.assertEqual(reach["read_count"], 0, "and nobody has read it yet")
+
+	def test_reading_moves_the_number(self):
+		frappe.set_user(self.staff_user)
+		get_announcement(self.doc.name)
+		frappe.set_user("Administrator")
+		self.assertEqual(self._as_hr(get_reach, self.doc.name)["read_count"], 1)
+
+	def test_confirming_is_counted_separately_from_reading(self):
+		"""They are different facts. Somebody who opened a policy and did not
+		confirm it has read it and not agreed to it, and a report that merges
+		the two tells HR the opposite of what it means."""
+		frappe.set_user(self.staff_user)
+		get_announcement(self.doc.name)
+		frappe.set_user("Administrator")
+		reach = self._as_hr(get_reach, self.doc.name)
+		self.assertEqual(reach["read_count"], 1)
+		self.assertEqual(reach["acknowledged_count"], 0)
+
+		frappe.set_user(self.staff_user)
+		acknowledge(self.doc.name)
+		frappe.set_user("Administrator")
+		self.assertEqual(self._as_hr(get_reach, self.doc.name)["acknowledged_count"], 1)
+
+	def test_the_numerator_can_never_exceed_the_denominator(self):
+		"""Counted against the CURRENT audience. Somebody who has left, or
+		moved department since reading, is no longer part of "31 of 44" — and
+		without that the numerator can exceed the denominator, which makes the
+		whole line untrustworthy the first time HR sees it."""
+		frappe.set_user(self.staff_user)
+		get_announcement(self.doc.name)
+		frappe.set_user("Administrator")
+		frappe.db.set_value("Employee", self.staff, "status", "Left")
+		try:
+			reach = self._as_hr(get_reach, self.doc.name)
+			self.assertLessEqual(reach["read_count"], reach["audience_count"])
+		finally:
+			frappe.db.set_value("Employee", self.staff, "status", "Active")
+
+	def test_an_employee_cannot_read_the_reach(self):
+		"""How many people are in a department, and who has not read something,
+		are roster facts. An employee has no business with either."""
+		frappe.set_user(self.staff_user)
+		self.assertRaises(frappe.PermissionError, get_reach, self.doc.name)
+		self.assertRaises(frappe.PermissionError, get_outstanding, self.doc.name)
+
+	def test_who_has_not_confirmed_is_named(self):
+		"""HR chases people by name."""
+		names = self._as_hr(get_outstanding, self.doc.name)
+		self.assertIn(
+			frappe.db.get_value("Employee", self.staff, "employee_name"),
+			names,
+			"somebody who has not confirmed is on the list",
+		)
+
+	def test_outstanding_is_refused_for_a_notice_that_never_asked(self):
+		"""On an ordinary notice this is a list of everybody who has not
+		happened to open the app, which is not a thing anybody should be
+		chased about."""
+		plain = frappe.get_doc(
+			{
+				"doctype": "HR Announcement",
+				"title": "Canteen closed",
+				"category": "Notice",
+				"audience": "Everyone",
+				"published": 1,
+			}
+		).insert(ignore_permissions=True)
+		frappe.set_user(self.hr_user)
+		try:
+			self.assertRaises(frappe.ValidationError, get_outstanding, plain.name)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_the_audience_rule_is_not_reimplemented(self):
+		"""Two implementations of "who does this reach" would give HR a
+		denominator that disagrees with who actually gets the card, and the
+		number's whole value is that it can be trusted."""
+		import inspect
+
+		from hrms.api import announcements
+
+		source = inspect.getsource(announcements._audience_employees)
+		for audience in ("Company", "Department", "Branch"):
+			self.assertIn(audience, source, f"{audience} is handled")

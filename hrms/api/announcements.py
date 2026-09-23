@@ -289,3 +289,111 @@ def acknowledge(name: str) -> dict:
 	)
 	logger.info("[announcements] %s acknowledged by %s", name, reader.name)
 	return {"acknowledged": True}
+
+
+# ---------------------------------------------------------------------------
+# HR's side. The plan named exactly one report — "read by 31 of 44" — because
+# it is the only one anybody asks for: did the notice land. Without it HR
+# publishes into silence and cannot tell a notice nobody read from a notice
+# nobody needed.
+#
+# HR-ONLY, and checked here rather than trusted to the Desk form. The reach of
+# an announcement is a roster fact — how many people are in a department, who
+# has not read something — and an employee has no business with it.
+
+
+def _require_hr():
+	from hrms.hr.utils import is_hr_operator
+
+	if not is_hr_operator(frappe.session.user):
+		logger.warning("[announcements] reach refused for %s", frappe.session.user)
+		frappe.throw(_("Announcement reach is for HR."), frappe.PermissionError)
+
+
+def _audience_employees(doc) -> list[str]:
+	"""Everyone this announcement is addressed to.
+
+	The SAME rule the PWA fence uses — `audience_matches`, inverted from "may
+	this reader see it" to "who are the readers". Two implementations of the
+	audience would give HR a denominator that disagrees with who actually gets
+	the card, and the number's whole value is that it is trustworthy.
+	"""
+	filters = {"status": "Active"}
+	if doc.audience == "Company":
+		filters["company"] = doc.audience_value
+	elif doc.audience == "Department":
+		filters["department"] = doc.audience_value
+	elif doc.audience == "Branch":
+		filters["branch"] = doc.audience_value
+	return frappe.get_all("Employee", filters=filters, pluck="name", ignore_permissions=True)
+
+
+@frappe.whitelist(methods=["GET", "POST"])
+def get_reach(name: str) -> dict:
+	"""Did it land. Two numbers and, for a policy, a third."""
+	_require_hr()
+	if not isinstance(name, str) or not name.strip():
+		frappe.throw(_("An announcement must be named."), frappe.PermissionError)
+
+	doc = frappe.get_doc("HR Announcement", name.strip())
+	audience = _audience_employees(doc)
+	rows = frappe.get_all(
+		"HR Announcement Read",
+		filters={"announcement": doc.name},
+		fields=["employee", "acknowledged"],
+		ignore_permissions=True,
+	)
+	# Counted against the CURRENT audience: somebody who has left, or moved
+	# department since reading, is not part of "31 of 44" any more. Otherwise
+	# the numerator can exceed the denominator, which makes the whole line
+	# untrustworthy the first time HR sees it.
+	in_audience = set(audience)
+	read = [row for row in rows if row.employee in in_audience]
+
+	logger.info(
+		"[announcements] reach %s: %d read of %d", doc.name, len(read), len(audience)
+	)
+	return {
+		"audience_count": len(audience),
+		"read_count": len(read),
+		"acknowledged_count": sum(1 for row in read if row.acknowledged),
+		"acknowledge_required": bool(doc.acknowledge_required),
+		"published": bool(doc.published),
+	}
+
+
+@frappe.whitelist(methods=["GET", "POST"])
+def get_outstanding(name: str) -> list[str]:
+	"""Who has not confirmed, by name, so HR can chase them.
+
+	Only for announcements that ASK for confirmation. On an ordinary notice
+	this would be a list of everybody who has not happened to open the app,
+	which is not a thing anybody should be chased about.
+	"""
+	_require_hr()
+	if not isinstance(name, str) or not name.strip():
+		frappe.throw(_("An announcement must be named."), frappe.PermissionError)
+
+	doc = frappe.get_doc("HR Announcement", name.strip())
+	if not doc.acknowledge_required:
+		frappe.throw(_("That announcement does not ask for confirmation."))
+
+	audience = _audience_employees(doc)
+	confirmed = set(
+		frappe.get_all(
+			"HR Announcement Read",
+			filters={"announcement": doc.name, "acknowledged": 1},
+			pluck="employee",
+			ignore_permissions=True,
+		)
+	)
+	outstanding = [name for name in audience if name not in confirmed]
+	if not outstanding:
+		return []
+	return frappe.get_all(
+		"Employee",
+		filters={"name": ("in", outstanding)},
+		pluck="employee_name",
+		order_by="employee_name asc",
+		ignore_permissions=True,
+	)

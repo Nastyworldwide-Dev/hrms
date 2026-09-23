@@ -254,3 +254,18 @@ NEXT: SOP search-first (the last D3 piece), then the deploy note.
 - 2026-09-23T00:45:55Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 4 extra test file(s) ⟂ec40e5b3a4bb
 - 2026-09-23T00:46:17Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 22 file(s) ⟂16efdd472c5b
 - 2026-09-23T00:46:17Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 4 extra test file(s) ⟂ec40e5b3a4bb
+- 2026-09-23T00:46:20Z COMMIT: 460c42e66 fix(pwa): six defects from the 23 September deploy → review+security+design dispatched
+- 2026-09-23T00:46:29Z PUSH: nz-glass @ 460c42e66
+
+EVIDENCE: rung 2 (correct) — announcement reach: 784/784 frontend tests green,
+  ruff clean across hrms/.
+EVIDENCE: rung 3 (works) — reach verified on spoke.localhost: a Policy with
+  acknowledge_required over 30 active employees read 0 of 30, then 2 of 30 after
+  two employees opened it, then 1 confirmed; "who has not confirmed" listed 29 by
+  name; an employee calling get_reach was refused (PermissionError).
+FINDING (not a defect): Needs You is empty on the owner's account because nothing
+  routes to it — 4 Leave Applications are pending on the site and that employee
+  approves none of them. The endpoint is correct.
+NEXT: verify the deployed screens against the plan one more time, then hand over.
+- 2026-09-23T00:49:24Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 19 file(s) ⟂7da499605f72
+- 2026-09-23T00:49:24Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
