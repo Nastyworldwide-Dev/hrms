@@ -1,9 +1,10 @@
-CLASS: a cap applied before asking whose the row is (review of 474d12d34).
-The site-wide oldest 50 pending of a type were read first and only then
-filtered to the caller, so an approver's own newer request fell past the cap.
-With the Requests Team tab cut, Approvals is the only door, so the row was lost.
+CLASS: a sheet presented as a phone sheet on a desktop (audit F-5 / APP-14).
+Measured 23 Sep at 1280x800: wrapper flush to the bottom (y=663); the scrim
+lived inside the page's content box, so it started at x=216 and the side nav
+stayed bright and clickable under an open sheet.
 
-Call sites and verdicts:
-hrms/api/approvals_list.py get_waiting_for_me — same-root, fixed here (_mine_of pages until SCAN_CAP of MY rows; SCAN_LIMIT 1000 bounds cost, capped=true past it).
-hrms/api/needs_you.py _pending_for — same-root, fixed here (reuses _mine_of, so Home counts what the page lists).
-hrms/api/remote_checkin.py list_pending_for_approver — not-affected: its query filters by the caller's routing in SQL before the limit.
+Surfaces and verdicts:
+frontend/src/components/glass/GModal.vue — same-root: scrim teleported to body (covers the side nav; tap there closes).
+frontend/src/theme/glass-components.css .g-modal at lg — same-root: ::part(content) centred (top 50%, translate -50%).
+GActionSheet / every GModal caller — same-root by inheritance (one component).
+Phone (<1024px) — not-affected: live at 390x844 still a bottom sheet (y=707).

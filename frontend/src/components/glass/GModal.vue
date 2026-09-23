@@ -52,8 +52,13 @@
 		</div>
 	</ion-modal>
 
-	<!-- backdrop — hand-built because backdrop-breakpoint=1 disables Ionic's -->
-	<div v-if="showModalBackdrop" class="g-scrim" aria-hidden="true" @click="closeOwnSheet"></div>
+	<!-- backdrop — hand-built because backdrop-breakpoint=1 disables Ionic's.
+	     Teleported to body: inside the page it was clipped to the page's own
+	     box, so on desktop the side nav stayed bright and clickable under an
+	     open sheet (audit APP-14). -->
+	<Teleport to="body">
+		<div v-if="showModalBackdrop" class="g-scrim" aria-hidden="true" @click="closeOwnSheet"></div>
+	</Teleport>
 </template>
 
 <script setup>

@@ -2128,6 +2128,15 @@ html[data-theme="dark"] .g-cal__day--present {
 		--height: auto;
 		--max-height: 80vh;
 	}
+	/* Centred, not flush to the bottom (audit APP-14; HIG-SHEET). The sheet
+	   presentation (kept for the focus-trap workaround) pins the wrapper with
+	   bottom: 0; on desktop it sits in the middle of the window instead. */
+	.g-modal::part(content) {
+		bottom: auto;
+		top: 50%;
+		translate: 0 -50%;
+		border-radius: var(--g-radius-panel);
+	}
 }
 .g-scrim {
 	position: fixed;
