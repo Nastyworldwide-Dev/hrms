@@ -22,7 +22,11 @@
 				class="g-lineitems__row flex flex-row py-3 px-3 items-center justify-between cursor-pointer"
 				v-for="(item, idx) in expenseClaim.taxes"
 				:key="item.name"
+				role="button"
+				tabindex="0"
 				@click="openModal(item, idx)"
+				@keydown.enter.prevent="openModal(item, idx)"
+				@keydown.space.prevent="openModal(item, idx)"
 			>
 				<div class="flex flex-col w-full justify-center gap-2.5">
 					<div class="flex flex-row items-center justify-between">

@@ -17,6 +17,7 @@
 	<div
 		v-if="showModalBackdrop"
 		class="fixed inset-0 z-scrim-backdrop !mt-0 bg-black opacity-30 cursor-pointer"
+		aria-hidden="true"
 		@click="() => modalController.dismiss()"
 	></div>
 </template>

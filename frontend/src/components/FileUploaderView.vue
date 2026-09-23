@@ -30,7 +30,14 @@
 					:key="file.file_name || file.name"
 				>
 					<div class="flex flex-row items-center justify-between text-inkbase text-sm">
-						<span class="grow" @click="showFilePreview(file)">
+						<span
+							class="grow g-focusable"
+							role="button"
+							tabindex="0"
+							@click="showFilePreview(file)"
+							@keydown.enter.prevent="showFilePreview(file)"
+							@keydown.space.prevent="showFilePreview(file)"
+						>
 							{{ file.file_name || file.name }}
 						</span>
 						<X

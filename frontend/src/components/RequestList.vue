@@ -5,7 +5,11 @@
 			class="flex flex-row py-3 items-center justify-between border-b border-divider cursor-pointer"
 			v-for="link in props.items"
 			:key="link.name"
+			role="button"
+			tabindex="0"
 			@click="openRequestModal(link)"
+			@keydown.enter.prevent="openRequestModal(link)"
+			@keydown.space.prevent="openRequestModal(link)"
 		>
 			<component
 				:is="props.component || link.component"

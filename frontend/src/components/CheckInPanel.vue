@@ -27,11 +27,11 @@
 			     it properly; what stays here is the way into the full history,
 			     because that was the only other thing this line offered. -->
 			<div class="text-card-title text-ink-600" v-if="lastLog">
-				<router-link :to="{ name: 'EmployeeCheckinListView' }" v-slot="{ navigate }">
-					<span @click="navigate" class="g-seclink underline underline-offset-link text-ink-800">{{
-						__("View your check-ins")
-					}}</span>
-				</router-link>
+				<router-link
+					:to="{ name: 'EmployeeCheckinListView' }"
+					class="g-focusable g-seclink underline underline-offset-link text-ink-800"
+					>{{ __("View your check-ins") }}</router-link
+				>
 			</div>
 
 			<!-- Forgot-to-check-out banner: open IN past 6 AM cutoff OR tagged abandoned by nightly sweeper -->

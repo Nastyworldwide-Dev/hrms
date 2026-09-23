@@ -55,13 +55,14 @@
 
 				<!-- cards -->
 				<div class="flex flex-col gap-2.5 w-full p-4">
-					<div
+					<button
 						v-for="issue in visibleIssues"
 						:key="issue.name"
-						class="bg-surface border border-divider p-3 cursor-pointer"
+						type="button"
+						class="g-focusable block w-full text-left bg-surface border border-divider p-3 cursor-pointer"
 						@click="openIssue(issue.name)"
 					>
-						<div class="flex justify-between items-center mb-1.5">
+						<span class="flex justify-between items-center mb-1.5">
 							<span class="text-caption font-extrabold tracking-wide text-ink-600">
 								{{ issue.name }} · {{ dayjs(issue.creation).format("D MMM, HH:mm") }}
 							</span>
@@ -71,15 +72,15 @@
 							>
 								{{ __(issue.urgency) }}
 							</span>
-						</div>
-						<div class="text-card-title font-extrabold text-inkbase mb-0.5">
+						</span>
+						<span class="block text-card-title font-extrabold text-inkbase mb-0.5">
 							{{ issue.employee_name }}
 							<span class="text-ink-600 font-semibold">· {{ issue.department || "—" }}</span>
-						</div>
-						<div class="text-kra-label text-ink-600 truncate">
+						</span>
+						<span class="block text-kra-label text-ink-600 truncate">
 							<b>{{ __(TYPE_SHORT[issue.issue_type]) }}</b> — {{ issue.details }}
-						</div>
-					</div>
+						</span>
+					</button>
 
 					<ResourceError v-if="issues.error" :resource="issues" :what="__('the issue board')" />
 					<GEmptyState

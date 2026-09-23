@@ -33,13 +33,11 @@
 					<div>
 						<div class="flex flex-row items-baseline justify-between mb-2.5">
 							<span class="g-eyebrow">{{ __("Recent Leaves") }}</span>
-							<router-link :to="{ name: 'LeaveApplicationListView' }" v-slot="{ navigate }">
-								<span
-									@click="navigate"
-									class="g-seclink text-kra-label text-accent-ink underline underline-offset-link cursor-pointer"
-								>
-									{{ __("View List") }}
-								</span>
+							<router-link
+								:to="{ name: 'LeaveApplicationListView' }"
+								class="g-focusable g-seclink text-kra-label text-accent-ink underline underline-offset-link"
+							>
+								{{ __("View List") }}
 							</router-link>
 						</div>
 						<div class="border-t-2 border-divider">

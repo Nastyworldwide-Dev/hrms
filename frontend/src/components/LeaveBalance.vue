@@ -3,16 +3,11 @@
 		<div class="flex flex-row items-baseline justify-between mb-3">
 			<span class="g-eyebrow">{{ __("Leave Balance") }}</span>
 			<router-link
-				:to="{ name: 'LeaveApplicationListView' }"
-				v-slot="{ navigate }"
 				v-if="leaveBalance.data"
+				:to="{ name: 'LeaveApplicationListView' }"
+				class="g-focusable text-kra-label text-accent-ink underline underline-offset-link"
 			>
-				<span
-					@click="navigate"
-					class="text-kra-label text-accent-ink underline underline-offset-link cursor-pointer"
-				>
-					{{ __("View Leave History") }}
-				</span>
+				{{ __("View Leave History") }}
 			</router-link>
 		</div>
 

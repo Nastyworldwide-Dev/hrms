@@ -100,8 +100,13 @@
 						<div
 							v-for="member in group.members"
 							:key="member.employee"
-							class="flex flex-col bg-surface border-b border-divider p-3 cursor-pointer"
+							class="g-focusable flex flex-col bg-surface border-b border-divider p-3 cursor-pointer"
+							role="button"
+							tabindex="0"
+							:aria-expanded="String(expandedRow === member.employee)"
 							@click="toggleRow(member.employee)"
+							@keydown.enter.prevent="toggleRow(member.employee)"
+							@keydown.space.prevent="toggleRow(member.employee)"
 						>
 							<div class="flex flex-row items-center justify-between gap-2">
 								<div class="flex flex-col min-w-0">
