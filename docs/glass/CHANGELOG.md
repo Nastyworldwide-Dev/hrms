@@ -31,12 +31,35 @@ selfie releases).
 - **Every tappable row opens from a keyboard** (HR issues, team rows, expense
   lines and more).
 - **No page scrolls sideways** on a small phone with large text.
+- **An admin login no longer sees other teams' requests** on Approvals.
+- **Your request can no longer hide behind older ones for other people** on
+  Approvals and in Home's count.
+- **A refused check-in outside the area says why**, in the app and in Desk.
+- **The Calendar no longer fails for everyone** when announcements are missing.
+- **Today stands out on every coloured day** of the calendar.
+- **On desktop, sheets open in the middle** and dim the whole window.
+- **Requests no longer jumps** when your balances load.
 
 ### Changed
+- **One Approvals page** (Home → "N to approve"): every request type and
+  check-ins outside the area, oldest first. Approve in one tap; "Not approve"
+  asks why. "Requests you've already answered" and "Check-ins you've already
+  answered" are one tap away. The Remote approvals page is gone.
+- **Requests:** one "New request" button; tabs are "My requests" and, for
+  approvers, "Answered by you".
+- **Calendar day sheet:** managers and team leads get one line about their
+  own team ("Your team · 5 of 6 worked · 1 on leave"); it opens Team on that
+  day. The Team page starts with the names.
+- **More:** Help, SOPs, Announcements, Public holidays (Team for managers,
+  Apps when offered). Leaves and Expenses live on Requests.
+- **You:** your manager and shift on the page, one "Your details" sheet,
+  theme and notifications right there. The Settings page is gone.
+- **No block capitals** anywhere; labels read as written.
+- **No banked overtime** screens (HR policy).
 - **The background colour blobs are gone.** Pages sit on a plain ground.
 - **Installed on a phone, the app stays upright** (portrait). Tablets and
   desktop still rotate.
-- **You → About this app shows the version.**
+- **You shows the version** at the bottom.
 
 ## [2.0.0-alpha.1] — 2026-09-23
 
