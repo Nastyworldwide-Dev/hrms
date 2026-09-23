@@ -1,5 +1,4 @@
-CLASS: `.fetch()/.reload()/.submit()` then `.catch` on a result that may be undefined (follow-up to 1344b7cb7).
+CLASS: shift times formatted three ways (review of 30e6f96e0).
 
-The guard now covers reload/submit and multi-line chains; it found two:
-frontend/src/components/AttendanceCalendar.vue (.reload() / .catch on two lines) — same-root, fixed.
-frontend/src/views/ot/OTRequestForm.vue (.fetch() / .catch on two lines) — same-root, fixed.
+frontend/src/components/NowBar.vue (Home) — same-root: now clockTime.
+frontend/src/utils/daySheet.js clockTime — guard: a non-clock value shows nothing.
