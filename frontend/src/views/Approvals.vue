@@ -35,14 +35,9 @@
 				<!-- Ruling 2 (23 Sep): what you already answered stays reachable,
 				     worded for what is behind it. Check-ins only: other requests
 				     keep their decision on the request itself. -->
-				<button
-					v-if="isApprover.data"
-					type="button"
-					class="self-start text-caption text-ink-600 underline underline-offset-2 py-2"
-					@click="openAnswered"
-				>
-					{{ __("Check-ins you've already answered") }} ›
-				</button>
+				<GListPanel v-if="isApprover.data">
+					<GListRow :label="answeredLabel" @click="openAnswered" />
+				</GListPanel>
 			</div>
 
 			<GModal :is-open="answeredOpen" @did-dismiss="answeredOpen = false">
@@ -117,6 +112,7 @@ function rowLine(row) {
 }
 
 const decided = decidedForApproverResource
+const answeredLabel = __("Check-ins you've already answered")
 const answeredOpen = ref(false)
 function openAnswered() {
 	console.info("[Approvals] opening answered check-ins")

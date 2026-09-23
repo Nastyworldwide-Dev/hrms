@@ -40,3 +40,16 @@ test("check-ins already answered stay reachable from Approvals (ruling 2)", () =
 	assert.match(page, /__\("Check-ins you've already answered"\)/)
 	assert.match(page, /decidedForApproverResource/)
 })
+
+test("the check-in time is shown as the server wrote it, never re-parsed", () => {
+	// Review of 52cc288ef: the server sends "Fri 18 Sep, 8:05 am"; running it
+	// through dayjs again rendered "Invalid Date" on the one line the approver
+	// judges the punch by.
+	assert.match(sheet, /\{\{ row\.when \}\}/)
+	assert.doesNotMatch(sheet, /\$dayjs\(props\.row\.when\)/)
+})
+
+test("the answered link is a full-size row, not a small text button (44px target)", () => {
+	assert.doesNotMatch(page, /<button[^>]*openAnswered|@click="openAnswered"[^>]*text-caption/)
+	assert.match(page, /<GListRow :label="answeredLabel" @click="openAnswered"/)
+})

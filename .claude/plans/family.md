@@ -1,10 +1,9 @@
-CLASS: More listing what another page owns (audit-pages §4 "Final More").
-Leaves and Expenses are requests (PAGE-4); the More eyebrow repeated the
-title (PAGE-10); public holidays had no door but the Leaves dashboard (PAGE-20).
+CLASS: a server-formatted string parsed again on the client. approvals_list
+sends dates in the person's words; any client formatter that re-parses them
+gets "Invalid Date".
 
-Readers of NAV_ITEMS / MORE_ITEMS:
-frontend/src/data/navItems.js TAB_ITEMS — same-root: indexes into NAV_ITEMS shifted with the removals; re-pointed (Requests 2, Score 3), pinned by tab-bar-2.0.test.js.
-frontend/src/views/More.vue — same-root: rows follow MORE_ITEMS; Public holidays row + sheet added; eyebrow removed.
-frontend/src/components/SideNav.vue — same-root by data: shows NAV_ITEMS, so Leaves/Expenses leave the desktop side nav too (both still reached from Requests' balances).
-frontend/src/data/navItems.js More `routes` — not-affected: /dashboard/leaves and /dashboard/expense-claims stay listed so the bar still lights More when standing on them.
-frontend/src/views/leave/Dashboard.vue — same-root: its second holiday list removed (one list, the sheet).
+Readers of approvals_list row fields:
+frontend/src/components/CheckinDecisionSheet.vue whenLine — same-root, fixed here (renders row.when).
+frontend/src/views/Approvals.vue rowLine — not-affected: joins row.when as text, never parses it.
+frontend/src/views/Approvals.vue summary — not-affected: parses row.modified, which stays ISO (sort key).
+frontend/src/views/Approvals.vue answeredLine — not-affected: parses checkin_time from list_decided_for_approver, raw ISO.

@@ -9,7 +9,9 @@
 	<div class="flex flex-col gap-4 px-4 pt-6 pb-8">
 		<div class="flex flex-col gap-1">
 			<h2 class="text-card-title text-ink">{{ row.who }}</h2>
-			<p class="text-caption text-ink-600">{{ whenLine }}</p>
+			<!-- Already in the person's words from the server ("Fri 18 Sep,
+			     8:05 am"); parsing it again gave "Invalid Date" (review of 52cc288ef). -->
+			<p class="text-caption text-ink-600">{{ row.when }}</p>
 			<p class="text-caption text-ink-600">{{ row.detail }}</p>
 		</div>
 
@@ -28,7 +30,7 @@
 			/>
 		</a>
 
-		<p class="text-body text-ink">
+		<p class="text-card-title font-normal text-ink">
 			{{ row.reason || __("No reason given.") }}
 		</p>
 
@@ -57,7 +59,7 @@
 </template>
 
 <script setup>
-import { computed, inject, ref } from "vue"
+import { inject, ref } from "vue"
 import { toast } from "frappe-ui"
 
 import GButton from "@/components/glass/GButton.vue"
@@ -74,9 +76,6 @@ const props = defineProps({
 const emit = defineEmits(["decided"])
 
 const __ = inject("$translate")
-const $dayjs = inject("$dayjs")
-
-const whenLine = computed(() => $dayjs(props.row.when).format("ddd D MMM, h:mm a"))
 
 const reason = ref("")
 const askingWhy = ref(false)
