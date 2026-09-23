@@ -526,10 +526,11 @@ const nextCycleFacts = computed(() => {
 	if (!next) return []
 
 	// With no cycle there are no dates and no status — a grid of four "Not
-	// set" cells is worse than no grid. Who scores you is still a fact, and
-	// the one the sentence above just used.
+	// set" cells is worse than no grid. Who scores you is already IN the
+	// sentence above, so a "Scored by" card said it twice (owner ruling R3,
+	// 23 Sep: one line, no repetition).
 	if (!hasCycle.value) {
-		return next.appraiser ? [{ k: __("Scored by"), v: next.appraiser }] : []
+		return []
 	}
 
 	return [

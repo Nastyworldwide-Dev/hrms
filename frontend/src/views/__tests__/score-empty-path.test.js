@@ -178,3 +178,15 @@ test("no appraisal scheduled is still an answer", () => {
 	assert.match(view, /No review scheduled/, "it is named")
 	assert.match(view, /nothing for you to do yet/i, "and the worry is answered")
 })
+
+// Owner ruling R3 (23 Sep 2026): no review → one line, no repetition. The
+// sentence already names who scores you, so a "Scored by" card under it said
+// the same name twice.
+test("R3: no review is one line — the name is not repeated in a second card", () => {
+	const view = code(read("views/kpi/Dashboard.vue"))
+	const facts = view.slice(view.indexOf("const nextCycleFacts"))
+	const start = facts.indexOf("if (!hasCycle.value)")
+	const cycleLess = facts.slice(start, facts.indexOf("}", start) + 1)
+	assert.match(cycleLess, /return \[\]/)
+	assert.doesNotMatch(cycleLess, /Scored by/)
+})

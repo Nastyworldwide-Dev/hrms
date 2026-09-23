@@ -1,3 +1,3 @@
-CLASS: a key that changed month to month.
+CLASS: the same fact said twice on one empty screen.
 
-Call sites: utils/calendarLegend.legendFor — same-root, fixed (full key). AttendanceCalendar.vue — same-root via legendFor. Team calendar legend — not-affected (own fixed list).
+Call sites: kpi/Dashboard.vue nextCycleFacts cycle-less branch — same-root, fixed. Cycle branch Scored by — not-affected (a real fact beside dates, not repeated in the sentence).
