@@ -291,9 +291,6 @@ def decide(
 			_("{0} is not a decision. Use {1}.").format(status, " or ".join(DECISIONS)),
 			frappe.ValidationError,
 		)
-	reason = (reason or "").strip()
-	if status == "Rejected" and not reason:
-		frappe.throw(_("Say why this is not approved."), frappe.ValidationError)
 
 	if not frappe.db.exists(doctype, name):
 		frappe.throw(_("{0} {1} not found.").format(_(doctype), name), frappe.DoesNotExistError)
@@ -346,6 +343,11 @@ def decide(
 	if current != DECIDE_THEN_SUBMIT[doctype][1]:
 		frappe.throw(_("This request is no longer awaiting a decision."), frappe.ValidationError)
 	_check_review_revision(doc, expected_modified)
+	# After every access and state check, so an unauthorised caller still gets
+	# PermissionError and a settled request still says so (review of da51cd501).
+	reason = (reason or "").strip()
+	if status == "Rejected" and not reason:
+		frappe.throw(_("Say why this is not approved."), frappe.ValidationError)
 
 	doc.set(fieldname, status)
 	# ONE save cycle: validate -> before_submit (mirrored-employee guard) ->
@@ -378,15 +380,7 @@ def _record_rejection_reason(doc, reason: str) -> None:
 	A Comment, not a field: every request doctype already carries its comment
 	timeline, so this needs no schema change on seven doctypes.
 	"""
-	frappe.get_doc(
-		{
-			"doctype": "Comment",
-			"comment_type": "Comment",
-			"reference_doctype": doc.doctype,
-			"reference_name": doc.name,
-			"content": REJECTION_PREFIX + reason,
-		}
-	).insert(ignore_permissions=True)
+	doc.add_comment("Comment", REJECTION_PREFIX + reason)
 	logger.info("[approval] rejection reason recorded for %s %s", doc.doctype, doc.name)
 
 

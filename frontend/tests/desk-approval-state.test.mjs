@@ -47,6 +47,13 @@ function desk(doctype = "OT Request") {
 			call(options) {
 				calls.push(options)
 			},
+			// A rejection asks why (audit P0-10). Queued like confirm, so a test can
+			// change the form between the click and the answer.
+			prompt(field, callback) {
+				confirms.push(() =>
+					callback({ [field.fieldname]: "Cover is short that week" })
+				)
+			},
 			confirm(text, callback) {
 				confirms.push(callback)
 			},

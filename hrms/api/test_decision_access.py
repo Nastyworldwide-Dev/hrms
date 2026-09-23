@@ -293,7 +293,7 @@ class TestDecisionAccess(unittest.TestCase):
 		self.users[STAFF]["roles"] = ["Employee", "HR Manager"]
 		self.set_doctype("Leave Application")
 		self.assertFalse(self.can_decide())
-		result = approval.decide(self.doc.doctype, self.doc.name, "Rejected")
+		result = approval.decide(self.doc.doctype, self.doc.name, "Rejected", reason="Withdrawn by me")
 		self.assertEqual(result["status"], "Rejected")
 		self.assertEqual(result["docstatus"], 1)
 

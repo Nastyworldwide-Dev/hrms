@@ -47,11 +47,31 @@ hrms.approval.decide = function (frm, status, review = frm._hrms_review) {
 		frm._hrms_deciding
 	)
 		return;
-	frappe.confirm(__("{0} this {1}?", [__(status), __(review.doctype)]), () => {
+	// A rejection must say why (audit P0-10): approval.decide refuses one
+	// without, and the employee reads it on their request. Approve and Submit
+	// keep the plain confirm.
+	const ask = (next) =>
+		status === "Rejected"
+			? frappe.prompt(
+					{
+						fieldname: "reason",
+						fieldtype: "Small Text",
+						label: __("Why not?"),
+						reqd: 1,
+					},
+					(values) => next((values.reason || "").trim()),
+					__("Reject this {0}", [__(review.doctype)]),
+					__("Reject")
+			  )
+			: frappe.confirm(__("{0} this {1}?", [__(status), __(review.doctype)]), () =>
+					next("")
+			  );
+	ask((reason) => {
 		if (
 			!hrms.approval.is_current(frm, review) ||
 			!review.actions?.includes(status) ||
-			frm._hrms_deciding
+			frm._hrms_deciding ||
+			(status === "Rejected" && !reason)
 		)
 			return;
 		frm._hrms_deciding = true;
@@ -64,6 +84,7 @@ hrms.approval.decide = function (frm, status, review = frm._hrms_review) {
 				name: review.name,
 				expected_modified: review.expected_modified,
 				...(status === "Submit" ? { docstatus: 1 } : { status }),
+				...(status === "Rejected" ? { reason } : {}),
 			},
 			freeze: true,
 			freeze_message: __("Recording decision…"),

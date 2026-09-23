@@ -622,11 +622,15 @@ class TestRejectionCarriesAReason(unittest.TestCase):
 		doc.set = lambda key, value: doc.__setitem__(key, value)
 		doc.submit = lambda: doc.update(docstatus=1)
 		inserted = []
-
-		def new_doc(values):
-			record = frappe._dict(values)
-			record.insert = lambda ignore_permissions=False: inserted.append(dict(values))
-			return record
+		doc.add_comment = lambda comment_type, text: inserted.append(
+			{
+				"doctype": "Comment",
+				"comment_type": comment_type,
+				"reference_doctype": doc.doctype,
+				"reference_name": doc.name,
+				"content": text,
+			}
+		)
 
 		db = self.MagicMock()
 		db.exists.return_value = True
@@ -634,11 +638,7 @@ class TestRejectionCarriesAReason(unittest.TestCase):
 		patch = self.patch
 		with (
 			patch.object(frappe, "db", db),
-			patch.object(
-				frappe,
-				"get_doc",
-				side_effect=lambda *a, **k: new_doc(a[0]) if a and isinstance(a[0], dict) else doc,
-			),
+			patch.object(frappe, "get_doc", return_value=doc),
 			patch.object(frappe, "session", frappe._dict(user=self.APPROVER)),
 			patch.object(approval, "_decision_access", return_value="routed"),
 		):

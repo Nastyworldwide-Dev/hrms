@@ -160,6 +160,9 @@ class TestTheApproverDecidesLikeALeaveApplication(unittest.TestCase):
 		doc.check_permission = lambda ptype: None
 		doc.set = lambda field, value: doc.update({field: value})
 		doc.submit = lambda: doc.update(docstatus=1, flags_at_submit=dict(doc.flags))
+		# A rejection keeps its reason as a comment on the request (audit P0-10).
+		doc.comments = []
+		doc.add_comment = lambda comment_type, text: doc.comments.append((comment_type, text))
 		return doc
 
 	def _run(self, user, fn, routed=True, native=False):
@@ -181,9 +184,12 @@ class TestTheApproverDecidesLikeALeaveApplication(unittest.TestCase):
 		self.assertEqual(answer["actions"], ["Approved", "Rejected"])
 
 	def test_the_routed_approver_rejects_elevated_and_nothing_else_changes(self):
-		doc, state = self._run(MANAGER_USER, lambda dt, n: approval.decide(dt, n, "Rejected"))
+		doc, state = self._run(
+			MANAGER_USER, lambda dt, n: approval.decide(dt, n, "Rejected", reason="Cover is short that week")
+		)
 		self.assertEqual((doc.status, doc.docstatus), ("Rejected", 1))
 		self.assertEqual(state["status"], "Rejected")
+		self.assertEqual(doc.comments, [("Comment", "Not approved: Cover is short that week")])
 		self.assertIs(doc.flags_at_submit.get("ignore_permissions"), True)
 
 	def test_the_routed_approver_approves(self):
@@ -202,7 +208,11 @@ class TestTheApproverDecidesLikeALeaveApplication(unittest.TestCase):
 			self._run("stranger@example.com", lambda dt, n: approval.decide(dt, n, "Rejected"), routed=False)
 
 	def test_a_holder_of_submit_permission_is_not_elevated(self):
-		doc, _ = self._run("hr@example.com", lambda dt, n: approval.decide(dt, n, "Rejected"), native=True)
+		doc, _ = self._run(
+			"hr@example.com",
+			lambda dt, n: approval.decide(dt, n, "Rejected", reason="Cover is short that week"),
+			native=True,
+		)
 		self.assertEqual(doc.docstatus, 1)
 		self.assertFalse(doc.flags_at_submit.get("ignore_permissions"))
 

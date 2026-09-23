@@ -51,6 +51,10 @@ function desk() {
 			call(options) {
 				calls.push(options);
 			},
+			// A rejection asks why (audit P0-10); the stub answers like a person.
+			prompt(field, callback) {
+				callback({ [field.fieldname]: "Cover is short that week" });
+			},
 			confirm(text, callback) {
 				callback();
 			},
@@ -81,4 +85,13 @@ test("the approver sees Approve and Reject, and Reject sends a rejection", () =>
 	const decision = calls.find((c) => c.method === "hrms.api.approval.decide");
 	assert.equal(decision?.args?.status, "Rejected");
 	assert.equal(decision?.args?.doctype, DOCTYPE);
+});
+
+// Audit P0-10 (review of da51cd501): approval.decide now refuses a rejection
+// without a reason, and Desk's Reject sent none — every Desk Reject would have
+// failed. Desk asks "Why not?" (required) and sends the answer.
+test("Desk's Reject asks why and sends the reason with the decision", () => {
+	const decide = source.slice(source.indexOf("hrms.approval.decide = function"));
+	assert.match(decide, /frappe\.prompt\([\s\S]*fieldname: "reason"[\s\S]*reqd: 1/);
+	assert.match(decide, /status === "Rejected" \? \{ reason \} : \{\}/);
 });
