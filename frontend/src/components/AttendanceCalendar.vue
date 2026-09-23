@@ -5,7 +5,7 @@
 			:days="days"
 			:leading-blanks="firstOfMonth.get('d')"
 			:weekdays="DAYS"
-			:legend="LEGEND"
+			:legend="monthLegend"
 			@select="openDay"
 		>
 			<template #action>
@@ -40,18 +40,6 @@
 		<!-- The words. One tap from the grid, so the tiles never have to carry
 		     a sentence (revamp §4). -->
 		<DaySheet :open="sheetOpen" :date="sheetDate" @close="sheetOpen = false" />
-
-		<!-- The month summary. §12's Attendance anatomy says a 3-up stat panel;
-		     this screen summarises FOUR statuses, so GStatPanel takes columns=4
-		     (v1.5: the app governs scope). -->
-		<GStatPanel :columns="4">
-			<GStatTile
-				v-for="status in summaryStatuses"
-				:key="status"
-				:value="summary[status] || 0"
-				:label="__(status)"
-			/>
-		</GStatPanel>
 	</div>
 
 	<!-- Without this the component rendered NOTHING when its request failed:
@@ -73,12 +61,11 @@
 import { personalCacheKey } from "@/utils/personalCache"
 import GBanner from "@/components/glass/GBanner.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
-import GStatTile from "@/components/glass/GStatTile.vue"
-import GStatPanel from "@/components/glass/GStatPanel.vue"
 import GCalendar from "@/components/glass/GCalendar.vue"
 import DaySheet from "@/components/DaySheet.vue"
 
 import { monthFlags } from "@/data/calendar"
+import { legendFor } from "@/utils/calendarLegend"
 import { computed, inject, ref, watch } from "vue"
 import { createResource } from "frappe-ui"
 import { useListUpdate } from "@/composables/realtime"
@@ -100,12 +87,15 @@ const STATE = {
 	Holiday: "rest",
 }
 
+//: The legend words of the approved Calendar plan (§3): the person's words,
+//: not the attendance statuses. "Rest day" covers weekly offs and public
+//: holidays alike; the day sheet names the holiday.
 const LEGEND = [
-	{ state: "present", label: __("Present") },
+	{ state: "present", label: __("Worked") },
 	{ state: "half", label: __("Half day") },
+	{ state: "leave", label: __("Leave") },
+	{ state: "rest", label: __("Rest day") },
 	{ state: "absent", label: __("Absent") },
-	{ state: "leave", label: __("On leave") },
-	{ state: "rest", label: __("Holiday") },
 ]
 
 const days = computed(() =>
@@ -120,9 +110,15 @@ const days = computed(() =>
 			day,
 			state: STATE[getEventOnDate(day)] ?? "none",
 			flags: monthFlags.data?.flags?.[iso] || [],
+			// Where am I? (approved Calendar plan, D6; Nielsen 1)
+			today: iso === dayjs().format("YYYY-MM-DD"),
 		}
 	})
 )
+
+//: Only the states this month has (approved Calendar plan, C6).
+const monthLegend = computed(() => legendFor(LEGEND, days.value))
+
 
 // Day-cell and legend colour-coding for present/absent/leave/holiday now
 // lives in GCalendar itself (state-driven, not inline style strings) — these
@@ -130,7 +126,6 @@ const days = computed(() =>
 // anything once the template below switched to `<GCalendar :days :legend>`.
 
 // __("Present"), __("Half day"), __("Absent"), __("On leave"), __("Work from home")
-const summaryStatuses = ["Present", "Half Day", "Absent", "On Leave"]
 
 //: The day sheet. Opened by tapping a tile, closed by the sheet itself — a
 //: swipe and a backdrop tap dismiss it too, and a parent that only listens to
@@ -199,21 +194,6 @@ function monthResource(firstDay) {
 	return months.get(key)
 }
 const calendarEvents = computed(() => monthResource(firstOfMonth.value))
-
-const summary = computed(() => {
-	const summary = {}
-
-	for (const status of Object.values(calendarEvents.value.data || {})) {
-		let updatedStatus = status === "Work From Home" ? "Present" : status
-		if (updatedStatus in summary) {
-			summary[updatedStatus] += 1
-		} else {
-			summary[updatedStatus] = 1
-		}
-	}
-
-	return summary
-})
 
 // A processed day never reached a calendar that was already open: the hourly
 // job's Attendance appeared only after a full reload. Reload the month on

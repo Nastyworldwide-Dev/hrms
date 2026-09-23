@@ -137,7 +137,8 @@ test("an Attendance change reloads the month on show", async () => {
 	assert.deepEqual(s.requests(), ["2026-09-01", "2026-09-01"])
 	s.calls[1].resolve({ "2026-09-02": "Present", "2026-09-07": "Present" })
 	await tick()
-	assert.equal(s.run("summary.value.Present"), 2)
+	// The reloaded month reaches the grid (the count strip that read it is gone).
+	assert.equal(s.run("days.value.filter((d) => d.state === 'present').length"), 2)
 	s.stop()
 })
 
@@ -153,6 +154,6 @@ test("refresh reloads the shown month, which is what view re-entry and Try again
 	s.calls[1].resolve({ "2026-09-03": "Half Day" })
 	await tick()
 	assert.equal(s.run("calendarEvents.value.error"), null)
-	assert.equal(s.run("summary.value['Half Day']"), 1)
+	assert.equal(s.run("days.value.filter((d) => d.state === 'half').length"), 1)
 	s.stop()
 })

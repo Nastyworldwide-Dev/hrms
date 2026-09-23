@@ -61,7 +61,8 @@
 				:key="d.day"
 				type="button"
 				class="g-cal__day g-focusable"
-				:class="`g-cal__day--${d.state}`"
+				:class="[`g-cal__day--${d.state}`, { 'g-cal__day--today': d.today }]"
+				:aria-current="d.today ? 'date' : undefined"
 				:aria-label="dayLabel(d)"
 				@click="$emit('select', d.day)"
 			>

@@ -1730,6 +1730,13 @@ html[data-theme="dark"] .g-cal__day--present {
    cell — so the Sunday column read as a row of selected or focused days, using
    a marker that appears nowhere in the legend. A quiet fill recedes, which is
    what a non-working day should do. */
+/* Absent (approved Calendar plan, D1): it had a legend swatch and no day
+   style, so an absent day looked blank. A danger tint with the danger ink,
+   the same tint-plus-ink pattern as leave. */
+.g-cal__day--absent {
+	background: rgba(var(--g-danger-rgb) / 0.2);
+	color: var(--g-danger-ink);
+}
 .g-cal__day--rest {
 	background: var(--g-icon-bg);
 }

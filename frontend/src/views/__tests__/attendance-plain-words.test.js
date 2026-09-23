@@ -29,7 +29,7 @@ function walk(dir, out = []) {
 	for (const entry of readdirSync(dir)) {
 		const path = join(dir, entry)
 		if (statSync(path).isDirectory()) walk(path, out)
-		else if (/\.vue$/.test(entry) && !path.includes("__tests__")) out.push(path)
+		else if (entry.endsWith('.vue') && !path.includes("__tests__")) out.push(path)
 	}
 	return out
 }
@@ -91,14 +91,9 @@ test("no attendance screen translates a raw server value", () => {
 	assert.deepEqual(offenders, [], "map the wire value explicitly; do not translate it")
 })
 
-test("the claim prompt says which of the two it is", () => {
-	// "Overtime Pay" or "Replacement Leave" — the same two values the OT row
-	// maps. The dashboard's prompt is the moment an employee decides whether
-	// to tap, so it has to say what tapping gets them.
-	const dash = code(read("views/attendance/Dashboard.vue"))
-	assert.match(dash, /Overtime Pay/, "the wire value is named, so the mapping is legible")
-	assert.match(dash, /Overtime pay|day off/i, "and the employee's words are what render")
-})
+// (The Calendar's claim prompt is gone: the approved Calendar plan moved the
+// claim list to Requests. The Overtime Pay / Replacement Leave wording rule
+// is still pinned where it renders — the OT row and form tests.)
 
 test("the shifts list is named for shifts", () => {
 	const list = code(read("views/attendance/ShiftAssignmentList.vue"))

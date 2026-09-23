@@ -81,9 +81,6 @@ const sites = {
 		/formatHours\(cost\)/,
 		/formatHours\(available\)/,
 	],
-	"../src/views/attendance/Dashboard.vue": [
-		/formatHours\(claimableOt\.data\.claimable_hours\)/,
-	],
 }
 
 test("every hours render goes through formatHours", () => {
