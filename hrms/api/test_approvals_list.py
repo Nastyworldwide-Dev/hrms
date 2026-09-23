@@ -124,7 +124,8 @@ class TestHomeCountsWhatThePageLists(unittest.TestCase):
 		# One scan for both since review of 474d12d34: Home counts what the
 		# page lists, by the page's own function.
 		self.assertIn(
-			"_mine_of(doctype, field, pending, cap=SCAN_CAP)", inspect.getsource(needs_you._pending_for)
+			"_mine_of(doctype, field, pending, cap=SCAN_CAP, yours_only=True)",
+			inspect.getsource(needs_you._pending_for),
 		)
 		self.assertIn(
 			"_request_read_allowed(doc) and _is_routed_approver(doc)",
@@ -283,3 +284,232 @@ class TestGivingUpIsNotMore(unittest.TestCase):
 			mine, more = approvals_list._mine_of("Leave Application", "status", "Open", cap=20)
 		self.assertEqual(len(mine), 3)
 		self.assertFalse(more, "gave up scanning, did not find more than the cap")
+
+
+# --- Grouped approvals (owner-approved design, 23 Sep 2026) ------------------
+#
+# The page splits into YOURS (sent to you: the request's own approver field, the
+# approver named on the employee's record, or they report to you) and OTHER
+# TEAMS (everything else you already receive because you are higher up the
+# chain, or HR). Access does not change: the same rows, the same two gates. Each
+# row only gains where it belongs: section, department, whose team it is.
+
+CALLER = "boss@example.com"
+CALLER_EMPLOYEE = "EMP-BOSS"
+
+EMPLOYEES = {
+	# Sent to the caller by the employee's own record (leave_approver), with
+	# the case and spacing drift a mirror leaves behind.
+	"E-LEAVE": frappe._dict(
+		department="Production - NSTY",
+		leave_approver="Boss@Example.com ",
+		shift_request_approver=None,
+		reports_to="EMP-OTHER",
+	),
+	# Reports to the caller's own employee.
+	"E-REPORT": frappe._dict(
+		department="Production - NSTY",
+		leave_approver=None,
+		shift_request_approver=None,
+		reports_to=CALLER_EMPLOYEE,
+	),
+	# Someone else's team: the caller receives it only from higher up.
+	"E-QC": frappe._dict(
+		department="QC - NSTY",
+		leave_approver="ahmad@example.com",
+		shift_request_approver=None,
+		reports_to="EMP-SITI",
+	),
+	# Someone else's team with no named approver: the manager's name.
+	"E-LOG": frappe._dict(
+		department="Logistics - NSTY",
+		leave_approver=None,
+		shift_request_approver=None,
+		reports_to="EMP-SITI",
+	),
+	# Check-ins outside the area are sent by the shift approver.
+	"E-REMOTE": frappe._dict(
+		department=None,
+		leave_approver="ahmad@example.com",
+		shift_request_approver="boss@example.com",
+		reports_to="EMP-SITI",
+	),
+}
+
+
+def fake_get_value(doctype, name, fields=None, as_dict=False, **kw):
+	if doctype == "Employee" and isinstance(fields, list):
+		return EMPLOYEES.get(name)
+	if doctype == "Employee" and fields == "employee_name":
+		return {"EMP-SITI": "Siti Aminah"}.get(name)
+	if doctype == "User" and fields == "full_name":
+		return {"ahmad@example.com": "Ahmad Faiz"}.get(name)
+	raise AssertionError(f"unexpected get_value {doctype} {name} {fields}")
+
+
+GROUPED_DOCS = {
+	("Leave Application", "LA-MINE"): frappe._dict(
+		doctype="Leave Application",
+		name="LA-MINE",
+		employee="E-QC",
+		employee_name="Farid",
+		leave_approver="boss@example.com",
+		modified="2026-09-10 10:00:00",
+	),
+	("OT Request", "OT-REPORT"): frappe._dict(
+		doctype="OT Request",
+		name="OT-REPORT",
+		employee="E-REPORT",
+		employee_name="Mohd Shazwan",
+		claimed_hours=2.5,
+		modified="2026-09-11 10:00:00",
+	),
+	("Attendance Request", "AR-LEAVE"): frappe._dict(
+		doctype="Attendance Request",
+		name="AR-LEAVE",
+		employee="E-LEAVE",
+		employee_name="Aisyah",
+		modified="2026-09-12 10:00:00",
+	),
+	("OT Request", "OT-QC"): frappe._dict(
+		doctype="OT Request",
+		name="OT-QC",
+		employee="E-QC",
+		employee_name="Farid",
+		claimed_hours=1,
+		modified="2026-09-13 10:00:00",
+	),
+	("Attendance Request", "AR-LOG"): frappe._dict(
+		doctype="Attendance Request",
+		name="AR-LOG",
+		employee="E-LOG",
+		employee_name="Rosli",
+		modified="2026-09-14 10:00:00",
+	),
+}
+
+REMOTE_ROWS = (
+	frappe._dict(name="RCR-SHIFT", employee="E-REMOTE", employee_name="Hafiz", approver="hr@example.com"),
+	frappe._dict(name="RCR-STAMPED", employee="E-LOG", employee_name="Rosli", approver="boss@example.com"),
+	frappe._dict(name="RCR-OTHER", employee="E-QC", employee_name="Farid", approver="ahmad@example.com"),
+)
+
+
+def grouped_get_all(doctype, filters=None, pluck=None, **kw):
+	return [name for (dt, name) in GROUPED_DOCS if dt == doctype]
+
+
+def grouped_patches(user=CALLER, own=(CALLER_EMPLOYEE,), routed=lambda doc: True):
+	return [
+		patch.object(frappe, "get_all", side_effect=grouped_get_all, create=True),
+		patch.object(frappe, "get_doc", side_effect=lambda dt, name: GROUPED_DOCS[(dt, name)]),
+		patch.object(frappe, "session", frappe._dict(user=user)),
+		patch.object(frappe.db, "get_value", side_effect=fake_get_value),
+		patch.object(frappe.db, "table_exists", return_value=True),
+		patch.object(approvals_list, "own_employees", return_value=list(own)),
+		patch.object(approvals_list, "_is_routed_approver", side_effect=routed),
+		patch.object(approvals_list, "_request_read_allowed", side_effect=lambda doc: True),
+		patch.object(
+			approvals_list,
+			"_types_on_site",
+			return_value=["Leave Application", "OT Request", "Attendance Request"],
+		),
+		patch.object(approvals_list, "_remote_checkins", return_value=list(REMOTE_ROWS)),
+	]
+
+
+class _Patched:
+	def __init__(self, patches):
+		self._patches = patches
+
+	def __enter__(self):
+		for p in self._patches:
+			p.start()
+
+	def __exit__(self, *exc):
+		for p in reversed(self._patches):
+			p.stop()
+		return False
+
+
+class TestGroupedApprovals(unittest.TestCase):
+	def _list(self, **kw):
+		with _Patched(grouped_patches(**kw)):
+			return {row["name"]: row for row in approvals_list.get_waiting_for_me()["rows"]}
+
+	def test_a_request_naming_me_as_its_approver_is_mine(self):
+		self.assertEqual(self._list()["LA-MINE"]["section"], "yours")
+
+	def test_a_request_from_someone_who_reports_to_me_is_mine(self):
+		self.assertEqual(self._list()["OT-REPORT"]["section"], "yours")
+
+	def test_a_request_from_someone_whose_record_names_me_is_mine(self):
+		# The login on the record drifted in case and spacing; still me.
+		self.assertEqual(self._list()["AR-LEAVE"]["section"], "yours")
+
+	def test_a_request_sent_to_someone_below_me_is_another_teams(self):
+		rows = self._list()
+		self.assertEqual(rows["OT-QC"]["section"], "other")
+		self.assertEqual(rows["AR-LOG"]["section"], "other")
+
+	def test_another_team_is_named_by_its_direct_approver(self):
+		rows = self._list()
+		# The employee's leave approver, by full name ...
+		self.assertEqual(rows["OT-QC"]["approver_name"], "Ahmad Faiz")
+		# ... else the manager they report to.
+		self.assertEqual(rows["AR-LOG"]["approver_name"], "Siti Aminah")
+
+	def test_the_department_is_its_plain_name(self):
+		rows = self._list()
+		self.assertEqual(rows["OT-REPORT"]["department"], "Production")
+		self.assertEqual(rows["OT-QC"]["department"], "QC")
+		self.assertEqual(rows["RCR-SHIFT"]["department"], "")
+
+	def test_overtime_rows_carry_their_hours_and_every_row_its_employee(self):
+		rows = self._list()
+		self.assertEqual(rows["OT-REPORT"]["hours"], 2.5)
+		self.assertEqual(rows["AR-LEAVE"]["hours"], 0)
+		self.assertEqual(rows["OT-REPORT"]["employee"], "E-REPORT")
+		self.assertEqual(rows["RCR-SHIFT"]["employee"], "E-REMOTE")
+
+	def test_a_check_in_goes_by_the_shift_approver_or_the_name_stamped_on_it(self):
+		rows = self._list()
+		self.assertEqual(rows["RCR-SHIFT"]["section"], "yours")
+		self.assertEqual(rows["RCR-STAMPED"]["section"], "yours")
+		self.assertEqual(rows["RCR-OTHER"]["section"], "other")
+
+	def test_grouping_never_changes_which_rows_are_listed(self):
+		# Access is the two gates, unchanged: a row they refuse stays out.
+		names = set(self._list(routed=lambda doc: doc.name != "OT-QC"))
+		self.assertEqual(
+			names,
+			{"LA-MINE", "OT-REPORT", "AR-LEAVE", "AR-LOG", "RCR-SHIFT", "RCR-STAMPED", "RCR-OTHER"},
+		)
+
+	def test_an_hr_operator_sees_every_team_but_nothing_is_theirs_unless_sent(self):
+		# HR is routed everything; what was not sent to them is another team's.
+		rows = self._list(user="hr@example.com", own=())
+		self.assertEqual(sorted(n for n, r in rows.items() if r["section"] == "yours"), ["RCR-SHIFT"])
+		self.assertEqual(len(rows), 8)
+
+
+class TestHomeCountsYoursOnly(unittest.TestCase):
+	"""Rule 7: Home's "waiting on you" counts what was sent to you, not the
+	other teams you can also see."""
+
+	def _needs_you(self):
+		from hrms.api import needs_you
+
+		with _Patched(grouped_patches()):
+			return needs_you.get_needs_you()
+
+	def test_home_counts_only_what_was_sent_to_me(self):
+		out = self._needs_you()
+		counts = {row["doctype"]: row["count"] for row in out["rows"]}
+		# LA-MINE, OT-REPORT, AR-LEAVE are mine; OT-QC and AR-LOG are other teams'.
+		self.assertEqual(counts, {"Leave Application": 1, "OT Request": 1, "Attendance Request": 1})
+		self.assertEqual(out["total"], 3)
+
+	def test_home_counts_only_my_check_ins(self):
+		# RCR-SHIFT (my shift approvee) and RCR-STAMPED (stamped to me); not RCR-OTHER.
+		self.assertEqual(self._needs_you()["checkins"], 2)

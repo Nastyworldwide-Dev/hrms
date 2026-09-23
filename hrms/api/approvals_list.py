@@ -14,11 +14,13 @@ Session-scoped: the caller is never a parameter.
 """
 
 import logging
+import re
 from datetime import date, datetime
 
 import frappe
 
-from hrms.api.approval import DECIDE_THEN_SUBMIT, _is_routed_approver, _request_read_allowed
+from hrms.api.approval import APPROVER_FIELD, DECIDE_THEN_SUBMIT, _is_routed_approver, _request_read_allowed
+from hrms.utils.identity import normalize_login, own_employees
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +58,87 @@ def _days(n) -> str:
 	return f"{text} day" if n == 1 else f"{text} days"
 
 
-def _row(doc) -> dict:
+#: Where a row sits on the page (owner-approved design, 23 Sep 2026). YOURS =
+#: sent to the caller; OTHER = they receive it only because they are higher up
+#: the chain, or HR. Presentation only: the two gates in `_mine_of` decide
+#: which rows exist; this never admits or drops one.
+YOURS, OTHER = "yours", "other"
+
+#: The Employee-record field naming who a request type is sent to. Remote
+#: check-ins are a shift matter; everything else goes to the leave approver.
+RECORD_APPROVER_FIELD = {"Remote Checkin Request": "shift_request_approver"}
+
+#: "Production - NSTY" -> "Production": ERPNext suffixes each department with
+#: its company abbreviation, which is noise on a phone.
+_COMPANY_SUFFIX = re.compile(r"\s+-\s+[^-]+$")
+
+
+def _me() -> dict:
+	"""The caller, as the two things "sent to me" compares against."""
+	user = frappe.session.user
+	mine = own_employees(user)
+	return {"login": normalize_login(user), "employee": mine[0] if mine else None}
+
+
+def _employee_facts(employee, cache: dict) -> dict:
+	"""The routing and department fields of one employee, read once per call."""
+	if not employee:
+		return {}
+	if employee not in cache:
+		facts = frappe.db.get_value(
+			"Employee",
+			employee,
+			["department", "leave_approver", "shift_request_approver", "reports_to"],
+			as_dict=True,
+		)
+		if not isinstance(facts, dict):
+			logger.warning("[approvals_list] no Employee record for %s; grouped as unknown", employee)
+			facts = {}
+		cache[employee] = facts
+	return cache[employee]
+
+
+def _sent_to_me(doctype: str, doc, facts: dict, me: dict) -> bool:
+	"""Is this request addressed to the caller, rather than merely visible?
+
+	The request's own approver field, the approver named on the employee's
+	record, or the employee reports to the caller's own employee.
+	"""
+	if not me["login"]:
+		return False
+	field = APPROVER_FIELD.get(doctype) or ("approver" if doctype == "Remote Checkin Request" else None)
+	if field and normalize_login(doc.get(field)) == me["login"]:
+		return True
+	if normalize_login(facts.get(RECORD_APPROVER_FIELD.get(doctype, "leave_approver"))) == me["login"]:
+		return True
+	return bool(me["employee"]) and facts.get("reports_to") == me["employee"]
+
+
+def _team_approver_name(facts: dict) -> str:
+	"""Whose team: the leave approver's full name, else the manager's name."""
+	name = ""
+	if login := facts.get("leave_approver"):
+		name = frappe.db.get_value("User", login, "full_name") or login
+	elif manager := facts.get("reports_to"):
+		name = frappe.db.get_value("Employee", manager, "employee_name") or manager
+	logger.debug("[approvals_list] team approver resolved: %s", "named" if name else "none")
+	return name
+
+
+def _placement(doctype: str, doc, me: dict, cache: dict) -> dict:
+	"""`section`, `department` and `approver_name` for one row."""
+	facts = _employee_facts(doc.get("employee"), cache)
+	mine = _sent_to_me(doctype, doc, facts, me)
+	department = facts.get("department")
+	logger.debug("[approvals_list] %s %s -> %s", doctype, doc.get("name"), YOURS if mine else OTHER)
+	return {
+		"section": YOURS if mine else OTHER,
+		"department": _COMPANY_SUFFIX.sub("", department) if isinstance(department, str) else "",
+		"approver_name": "" if mine else _team_approver_name(facts),
+	}
+
+
+def _row(doc, me: dict | None = None, cache: dict | None = None) -> dict:
 	"""What an approver needs to decide, in plain words. No raw field names."""
 	kind = KIND.get(doc.doctype, doc.doctype)
 	when, detail, reason = "", "", ""
@@ -90,11 +172,15 @@ def _row(doc) -> dict:
 		"doctype": doc.doctype,
 		"name": doc.name,
 		"kind": kind,
+		"employee": doc.get("employee"),
 		"who": doc.get("employee_name") or doc.get("employee"),
 		"when": when,
 		"detail": detail,
 		"reason": reason,
+		# Summed per person on the page ("5 days · 14h 30m"); overtime only.
+		"hours": float(doc.get("claimed_hours") or 0) if doc.doctype == "OT Request" else 0,
 		"modified": str(doc.get("modified") or ""),
+		**_placement(doc.doctype, doc, me or _me(), {} if cache is None else cache),
 	}
 
 
@@ -114,17 +200,36 @@ def _remote_checkins() -> list[dict]:
 	return list_pending_for_approver()
 
 
-def _remote_row(req) -> dict:
+def yours_checkin_count() -> int:
+	"""Check-ins outside the area SENT to the caller (Home counts YOURS only).
+
+	The same fenced list the page reads, narrowed by the page's own rule, so
+	Home's number is always the page's YOURS section.
+	"""
+	me, cache = _me(), {}
+	count = sum(
+		_sent_to_me("Remote Checkin Request", req, _employee_facts(req.get("employee"), cache), me)
+		for req in _remote_checkins()
+	)
+	logger.info("[approvals_list] user=%s yours check-ins=%d", frappe.session.user, count)
+	return count
+
+
+def _remote_row(req, me: dict | None = None, cache: dict | None = None) -> dict:
+	logger.debug("[approvals_list] remote check-in row %s", req.get("name"))
 	return {
 		"doctype": "Remote Checkin Request",
 		"name": req.get("name"),
 		"kind": "Check-in outside the area",
+		"employee": req.get("employee"),
 		"who": req.get("employee_name") or req.get("employee"),
 		"when": _moment(req.get("checkin_time")),
 		"detail": f"{'In' if req.get('log_type') == 'IN' else 'Out'} · {_distance(req.get('distance_m'))}",
 		"reason": req.get("employee_remarks") or "",
 		"selfie_image": req.get("selfie_image"),
+		"hours": 0,
 		"modified": str(req.get("checkin_time") or ""),
+		**_placement("Remote Checkin Request", req, me or _me(), {} if cache is None else cache),
 	}
 
 
@@ -162,12 +267,16 @@ PAGE = 100
 SCAN_LIMIT = 1000
 
 
-def _mine_of(doctype: str, field: str, pending: str, cap: int = SCAN_CAP) -> tuple[list, bool]:
+def _mine_of(
+	doctype: str, field: str, pending: str, cap: int = SCAN_CAP, yours_only: bool = False
+) -> tuple[list, bool]:
 	"""Pending `doctype` rows routed to the caller, oldest first, up to `cap`.
 
 	Stops as soon as it has cap + 1, so Home (cap 20) reads no more than it
-	needs to say "20+".
+	needs to say "20+". `yours_only` (Home) further keeps only what was SENT to
+	the caller: it narrows what the two gates admit, never widens it.
 	"""
+	me, facts = (_me(), {}) if yours_only else (None, None)
 	mine, start = [], 0
 	while start < SCAN_LIMIT:
 		names = frappe.get_all(
@@ -182,6 +291,8 @@ def _mine_of(doctype: str, field: str, pending: str, cap: int = SCAN_CAP) -> tup
 		for name in names:
 			doc = frappe.get_doc(doctype, name)
 			if _request_read_allowed(doc) and _is_routed_approver(doc):
+				if me and not _sent_to_me(doctype, doc, _employee_facts(doc.get("employee"), facts), me):
+					continue
 				mine.append(doc)
 				if len(mine) > cap:
 					return mine[:cap], True
@@ -198,6 +309,7 @@ def _mine_of(doctype: str, field: str, pending: str, cap: int = SCAN_CAP) -> tup
 @frappe.whitelist(methods=["GET", "POST"])
 def get_waiting_for_me() -> dict:
 	rows, capped = [], False
+	me, cache = _me(), {}
 	for doctype in _types_on_site():
 		field, pending = DECIDE_THEN_SUBMIT[doctype]
 		try:
@@ -208,12 +320,15 @@ def get_waiting_for_me() -> dict:
 			logger.exception("[approvals_list] %s failed; skipped", doctype)
 			continue
 		capped = capped or hit_cap
-		rows.extend(_row(doc) for doc in mine)
+		rows.extend(_row(doc, me, cache) for doc in mine)
 	try:
-		rows.extend(_remote_row(req) for req in _remote_checkins())
+		rows.extend(_remote_row(req, me, cache) for req in _remote_checkins())
 	except Exception:
 		logger.exception("[approvals_list] remote check-ins failed; skipped")
 	# Oldest first: the one waiting longest is the one to decide next.
 	rows.sort(key=lambda row: row["modified"])
-	logger.info("[approvals_list] user=%s rows=%d capped=%s", frappe.session.user, len(rows), capped)
+	yours = sum(row["section"] == YOURS for row in rows)
+	logger.info(
+		"[approvals_list] user=%s rows=%d yours=%d capped=%s", frappe.session.user, len(rows), yours, capped
+	)
 	return {"rows": rows, "capped": capped}

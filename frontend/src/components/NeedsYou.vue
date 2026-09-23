@@ -94,7 +94,10 @@ const socket = inject("$socket")
 const HOME_ROWS = 3
 const showAll = ref(false)
 
-const approvals = computed(() => Number(pendingCountResource.data) || 0)
+//: Check-ins outside the area SENT TO YOU (owner-approved grouped Approvals,
+//: 23 Sep): the server counts them in the same answer as every other row. The
+//: remote badge count also holds other teams' check-ins you may act for.
+const approvals = computed(() => Number(needsYouResource.data?.checkins) || 0)
 
 //: One icon per kind. The server sends a noun and a route, not a glyph — an
 //: icon is a presentation decision and belongs on this side.

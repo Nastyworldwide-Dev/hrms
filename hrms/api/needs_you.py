@@ -77,7 +77,9 @@ def _pending_for(doctype: str, field: str, pending: str) -> int:
 	"""
 	from hrms.api.approvals_list import _mine_of
 
-	mine, more = _mine_of(doctype, field, pending, cap=SCAN_CAP)
+	# YOURS only (owner-approved grouped Approvals, 23 Sep 2026): Home says
+	# what was SENT to you; other teams you can also see wait on the page.
+	mine, more = _mine_of(doctype, field, pending, cap=SCAN_CAP, yours_only=True)
 	return SCAN_CAP + 1 if more else len(mine)
 
 
@@ -122,5 +124,16 @@ def get_needs_you() -> dict:
 		)
 
 	total = sum(row["count"] for row in rows)
-	logger.info("[needs_you] user=%s kinds=%d total=%d", frappe.session.user, len(rows), total)
-	return {"rows": rows, "total": total}
+	# Check-ins outside the area sent to you — Home's own row reads this, not
+	# the remote badge count, which also holds other teams' check-ins.
+	try:
+		from hrms.api.approvals_list import yours_checkin_count
+
+		checkins = yours_checkin_count()
+	except Exception:
+		logger.exception("[needs_you] check-ins failed; reported as zero")
+		checkins = 0
+	logger.info(
+		"[needs_you] user=%s kinds=%d total=%d checkins=%d", frappe.session.user, len(rows), total, checkins
+	)
+	return {"rows": rows, "total": total, "checkins": checkins}

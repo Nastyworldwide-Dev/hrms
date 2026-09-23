@@ -1,10 +1,13 @@
 <template>
 	<BaseLayout :pageTitle="__('Approvals')">
 		<template #body>
-			<!-- Everything waiting on YOUR decision, oldest first (audit-flows 4B;
-			     owner ruling 23 Sep: approvals appear only where they can be done).
-			     Every row opens the same request sheet that decides it, so there is
-			     one way to approve and one way to say no (with a reason). -->
+			<!-- Everything waiting on YOUR decision (audit-flows 4B; owner ruling
+			     23 Sep: approvals appear only where they can be done), GROUPED so a
+			     long queue reads at a glance (owner-approved design, 23 Sep): Yours
+			     first, then Other teams you may act for; department, then kind; one
+			     line per person; five lines, then "See all"; never an endless list
+			     (NN/g infinite scrolling; Baymard "load more"). Every request still
+			     opens the same sheet that decides it. -->
 			<GPullRefresh @refresh="refresh" />
 			<div
 				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
@@ -17,16 +20,77 @@
 					<p v-if="rows.length" class="text-card-title text-ink-600">
 						{{ summary }}
 					</p>
-					<GListPanel v-if="rows.length">
-						<GListRow
-							v-for="row in rows"
-							:key="`${row.doctype}:${row.name}`"
-							:label="`${__(row.kind)} · ${row.who}`"
-							:sublabel="rowLine(row)"
-							@click="open(row)"
-						/>
-					</GListPanel>
 					<p v-else class="text-card-title text-ink-600">{{ __("Nothing is waiting on you.") }}</p>
+
+					<!-- YOURS: sent to you to decide -->
+					<section v-if="groups.yours.count" class="flex flex-col gap-3">
+						<h2 class="g-eyebrow">{{ __("Yours") }} · {{ groups.yours.count }}</h2>
+						<template v-for="dept in groups.yours.departments" :key="dept.key">
+							<p class="text-caption text-ink-600">
+								{{ dept.name || __("No department") }} · {{ dept.count }}
+							</p>
+							<GListPanel v-for="kind in dept.kinds" :key="`${dept.key}:${kind.key}`">
+								<p class="g-approvals__kind text-caption text-ink-600">
+									{{ __(kind.kind) }} · {{ kind.count }}
+								</p>
+								<GListRow
+									v-for="person in shown(`${dept.key}:${kind.key}`, kind.people).rows"
+									:key="person.key"
+									:label="personLine(person, __)"
+									:sublabel="personWhen(person)"
+									@click="openPerson(person)"
+								/>
+								<GroupMore
+									:page="shown(`${dept.key}:${kind.key}`, kind.people)"
+									@all="expand(`${dept.key}:${kind.key}`)"
+									@more="more(`${dept.key}:${kind.key}`)"
+								/>
+							</GListPanel>
+						</template>
+					</section>
+
+					<!-- OTHER TEAMS: someone else approves; you may step in -->
+					<section v-if="groups.other.count" class="flex flex-col gap-3">
+						<button
+							type="button"
+							class="g-focusable g-approvals__toggle"
+							:aria-expanded="String(otherOpen)"
+							@click="otherOpen = !otherOpen"
+						>
+							<span class="g-eyebrow">{{ __("Other teams") }} · {{ groups.other.count }}</span>
+							<span class="text-caption text-ink-600">{{
+								otherOpen ? __("Hide") : __("Show")
+							}}</span>
+						</button>
+						<template v-if="otherOpen">
+							<GListPanel v-for="team in groups.other.teams" :key="team.key">
+								<p class="g-approvals__kind text-caption text-ink-600">
+									{{
+										[
+											team.name || __("No department"),
+											team.approverName ? __("{0}'s team", [team.approverName]) : "",
+											team.count,
+										]
+											.filter(Boolean)
+											.join(" · ")
+									}}
+								</p>
+								<GListRow
+									v-for="person in shown(team.key, team.people).rows"
+									:key="person.key"
+									:label="personLine(person, __)"
+									:sublabel="`${__(person.kind)} · ${personWhen(person)}`"
+									@click="openPerson(person)"
+								/>
+								<GroupMore
+									:page="shown(team.key, team.people)"
+									@all="expand(team.key)"
+									@more="more(team.key)"
+								/>
+							</GListPanel>
+						</template>
+					</section>
+
 					<p v-if="waiting.data?.capped" class="text-caption text-ink-600">
 						{{ __("Showing the oldest first. More are waiting.") }}
 					</p>
@@ -40,6 +104,19 @@
 					<GListRow :label="answeredLabel" @click="openAnswered" />
 				</GListPanel>
 			</div>
+
+			<!-- One person's requests of one kind: each opens the deciding sheet. -->
+			<GModal :is-open="!!personOpen" :title="personOpen?.who" @did-dismiss="personOpen = null">
+				<GListPanel v-if="personOpen">
+					<GListRow
+						v-for="row in personOpen.rows"
+						:key="`${row.doctype}:${row.name}`"
+						:label="`${__(row.kind)} · ${row.who}`"
+						:sublabel="rowLine(row)"
+						@click="open(row)"
+					/>
+				</GListPanel>
+			</GModal>
 
 			<GModal :is-open="answeredOpen" @did-dismiss="answeredOpen = false">
 				<div class="flex flex-col gap-3 px-4 pt-6 pb-8">
@@ -75,7 +152,7 @@
 </template>
 
 <script setup>
-import { computed, inject, ref } from "vue"
+import { computed, h, inject, reactive, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 import { createResource } from "frappe-ui"
 
@@ -90,25 +167,75 @@ import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
 import { decidedForApproverResource } from "@/data/remoteCheckin"
 import { isApprover } from "@/data/team"
+import { groupApprovals, pageOf, personLine } from "@/utils/approvalGroups"
 
 const __ = inject("$translate")
 const router = useRouter()
 const $dayjs = inject("$dayjs")
 
-// The server decides who sees what: only requests routed to the caller, by the
-// same check approval.decide uses (hrms/api/approvals_list.py).
+// The server decides who sees what, and which section each row is in: only
+// requests routed to the caller, by the same check approval.decide uses
+// (hrms/api/approvals_list.py). This page only groups them.
 const waiting = createResource({
 	url: "hrms.api.approvals_list.get_waiting_for_me",
 	auto: true,
 })
 const rows = computed(() => waiting.data?.rows || [])
+const groups = computed(() => groupApprovals(rows.value))
 
 //: "3 waiting · oldest since 20 Sep" (mockup 4's summary line).
 const summary = computed(() => {
-	const oldest = rows.value[0]?.modified
+	const oldest = [...rows.value].sort((a, b) => (a.modified < b.modified ? -1 : 1))[0]?.modified
 	const count = __("{0} waiting", [rows.value.length])
 	return oldest ? `${count} · ${__("oldest since {0}", [$dayjs(oldest).format("D MMM")])}` : count
 })
+
+// Other teams starts folded when it is long, so your own work stays on top.
+const otherOpen = ref(true)
+watch(
+	() => groups.value.other.startCollapsed,
+	(collapsed) => (otherOpen.value = !collapsed),
+	{ immediate: true }
+)
+
+// Per group: five lines, then "See all"; expanded, twenty per page.
+const expanded = reactive({})
+function shown(key, lines) {
+	return pageOf(lines, { expanded: Boolean(expanded[key]), pages: expanded[key] || 1 })
+}
+function expand(key) {
+	console.info("[Approvals] see all", key)
+	expanded[key] = 1
+}
+function more(key) {
+	expanded[key] = (expanded[key] || 1) + 1
+}
+
+//: The "See all" / "Show more (N left)" button under a group.
+const GroupMore = (props, { emit }) => {
+	const page = props.page
+	if (page.seeAll) {
+		return h(
+			"button",
+			{ type: "button", class: "g-focusable g-list-more", onClick: () => emit("all") },
+			__("See all")
+		)
+	}
+	if (page.left > 0) {
+		return h(
+			"button",
+			{ type: "button", class: "g-focusable g-list-more", onClick: () => emit("more") },
+			__("Show more ({0} left)", [page.left])
+		)
+	}
+	return null
+}
+GroupMore.props = ["page"]
+GroupMore.emits = ["all", "more"]
+
+function personWhen(person) {
+	return person.oldest ? __("since {0}", [$dayjs(person.oldest).format("D MMM")]) : ""
+}
 
 function rowLine(row) {
 	return [row.when, row.detail].filter(Boolean).join(" · ")
@@ -133,9 +260,18 @@ function answeredLine(req) {
 	return [when, req.approver_remarks].filter(Boolean).join(" · ")
 }
 
+// A person line opens their requests of that kind; one request opens straight away.
+const personOpen = ref(null)
+function openPerson(person) {
+	console.info("[Approvals] opening person", person.doctype, person.count)
+	if (person.rows.length === 1) return open(person.rows[0])
+	personOpen.value = person
+}
+
 const selected = ref(null)
 function open(row) {
 	console.info("[Approvals] opening", row.doctype)
+	personOpen.value = null
 	// A check-in carries its photo and reason on the row; the request sheet
 	// loads its own document.
 	selected.value = { doctype: row.doctype, name: row.name, row }
@@ -152,3 +288,19 @@ async function refresh(event) {
 	event.target?.complete?.()
 }
 </script>
+
+<style scoped>
+.g-approvals__kind {
+	padding: 10px 14px 0;
+}
+.g-approvals__toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: var(--g-touch-target-min);
+	background: transparent;
+	border: 0;
+	padding: 0;
+	cursor: pointer;
+}
+</style>
