@@ -4,7 +4,8 @@
 // and a route added anywhere else is caught by none of them.
 
 export const BASE = process.env.HRMS_E2E_URL || "http://localhost:8080"
-export const USER = process.env.HRMS_E2E_USER || "nurul.aisyah@nastyworldwide.com"
+export const USER =
+	process.env.HRMS_E2E_USER || "nurul.aisyah@nastyworldwide.com"
 export const PW = process.env.AUDIT_PW || process.env.HRMS_E2E_PW || ""
 
 /** Log in over the API and return a storageState for reuse across contexts. */
@@ -26,8 +27,9 @@ export async function login(browser) {
 async function firstId(request, doctype) {
 	try {
 		const r = await request.get(
-			`${BASE}/api/method/frappe.client.get_list?doctype=${encodeURIComponent(doctype)}` +
-				`&limit_page_length=1&order_by=modified%20desc`
+			`${BASE}/api/method/frappe.client.get_list?doctype=${encodeURIComponent(
+				doctype
+			)}` + `&limit_page_length=1&order_by=modified%20desc`
 		)
 		return (await r.json())?.message?.[0]?.name ?? null
 	} catch {
@@ -50,7 +52,6 @@ export async function screens(request) {
 		claim: await firstId(request, "Expense Claim"),
 		issue: await firstId(request, "Employee Issue"),
 		ot: await firstId(request, "OT Request"),
-		rlc: await firstId(request, "Replacement Leave Claim"),
 		sop: await firstId(request, "SOP Document"),
 	}
 	const S = (slug, path, anon = false) => ({ slug, path, anon })
@@ -82,25 +83,31 @@ export async function screens(request) {
 		S("invalid-employee", "/invalid-employee"),
 		S("attendance-requests", "/attendance-requests"),
 		S("attendance-requests-new", "/attendance-requests/new"),
-		S("attendance-requests-detail", id.attReq && `/attendance-requests/${id.attReq}`),
+		S(
+			"attendance-requests-detail",
+			id.attReq && `/attendance-requests/${id.attReq}`
+		),
 		S("shift-requests", "/shift-requests"),
 		S("shift-requests-new", "/shift-requests/new"),
 		S("shift-requests-detail", id.shiftReq && `/shift-requests/${id.shiftReq}`),
 		S("shift-assignments", "/shift-assignments"),
-		S("shift-assignments-detail", id.shiftAssign && `/shift-assignments/${id.shiftAssign}`),
+		S(
+			"shift-assignments-detail",
+			id.shiftAssign && `/shift-assignments/${id.shiftAssign}`
+		),
 		S("employee-checkins", "/employee-checkins"),
 		S("expense-claims", "/expense-claims"),
 		S("expense-claims-new", "/expense-claims/new"),
 		S("expense-claims-detail", id.claim && `/expense-claims/${id.claim}`),
 		S("leave-applications", "/leave-applications"),
 		S("leave-applications-new", "/leave-applications/new"),
-		S("leave-applications-detail", id.leave && `/leave-applications/${id.leave}`),
+		S(
+			"leave-applications-detail",
+			id.leave && `/leave-applications/${id.leave}`
+		),
 		S("ot-requests", "/ot-requests"),
 		S("ot-requests-new", "/ot-requests/new"),
 		S("ot-requests-detail", id.ot && `/ot-requests/${id.ot}`),
-		S("replacement-leave", "/replacement-leave"),
-		S("replacement-leave-new", "/replacement-leave/claims/new"),
-		S("replacement-leave-detail", id.rlc && `/replacement-leave/claims/${id.rlc}`),
 	].filter((s) => s.path)
 }
 
@@ -123,9 +130,13 @@ export async function settle(page) {
 			const faces = new Set()
 			for (const el of document.querySelectorAll("*")) {
 				const cs = getComputedStyle(el)
-				faces.add(`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`)
+				faces.add(
+					`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+				)
 			}
-			await Promise.all([...faces].map((f) => document.fonts.load(f).catch(() => {})))
+			await Promise.all(
+				[...faces].map((f) => document.fonts.load(f).catch(() => {}))
+			)
 			await document.fonts.ready
 		})
 		.catch(() => {})
@@ -150,21 +161,36 @@ export async function settle(page) {
  */
 export async function undersizedTargets(page, min = 44) {
 	return page.evaluate((MIN) => {
-		const SEL = "button, a[href], [role=button], [role=tab], input, select, textarea, ion-tab-button"
+		const SEL =
+			"button, a[href], [role=button], [role=tab], input, select, textarea, ion-tab-button"
 		const out = []
 		for (const el of document.querySelectorAll(SEL)) {
 			const r = el.getBoundingClientRect()
 			if (r.width < 2 || r.height < 2) continue
 			const cs = getComputedStyle(el)
-			if (cs.visibility === "hidden" || cs.display === "none" || cs.pointerEvents === "none") continue
+			if (
+				cs.visibility === "hidden" ||
+				cs.display === "none" ||
+				cs.pointerEvents === "none"
+			)
+				continue
 			// only judge what is actually on screen
-			if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue
+			if (
+				r.bottom < 0 ||
+				r.top > innerHeight ||
+				r.right < 0 ||
+				r.left > innerWidth
+			)
+				continue
 
 			const cx = r.x + r.width / 2
 			const cy = r.y + r.height / 2
 			const reach = MIN / 2 - 1
-            // vertical always; horizontal only when the visual is itself narrow
-			const points = [[cx, cy - reach], [cx, cy + reach]]
+			// vertical always; horizontal only when the visual is itself narrow
+			const points = [
+				[cx, cy - reach],
+				[cx, cy + reach],
+			]
 			if (r.width < MIN) points.push([cx - reach, cy], [cx + reach, cy])
 
 			// An overlay that covers content AT REST by design — scrolling
@@ -215,7 +241,9 @@ export async function undersizedTargets(page, min = 44) {
 			}
 			if (missed.length) {
 				out.push({
-					label: (el.getAttribute("aria-label") || el.textContent || el.tagName).trim().slice(0, 40),
+					label: (el.getAttribute("aria-label") || el.textContent || el.tagName)
+						.trim()
+						.slice(0, 40),
 					tag: el.tagName.toLowerCase(),
 					box: [Math.round(r.width), Math.round(r.height)],
 					missed,
