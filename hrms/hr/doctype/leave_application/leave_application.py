@@ -467,8 +467,6 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			frappe.throw(_("You are not authorized to approve leaves on Block Dates"), LeaveDayBlockedError)
 
 	def validate_balance_leaves(self):
-		precision = cint(frappe.db.get_single_value("System Settings", "float_precision")) or 2
-
 		if self.from_date and self.to_date:
 			self.total_leave_days = get_number_of_leave_days(
 				self.employee,
@@ -487,16 +485,9 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				)
 
 			if not is_lwp(self.leave_type):
-				leave_balance = get_leave_balance_on(
-					self.employee,
-					self.leave_type,
-					self.from_date,
-					self.to_date,
-					consider_all_leaves_in_the_allocation_period=True,
-					for_consumption=True,
-				)
-				leave_balance_for_consumption = flt(
-					leave_balance.get("leave_balance_for_consumption"), precision
+				validate_leave_access(self.employee)
+				leave_balance_for_consumption = get_consumable_leave_balance(
+					self.employee, self.leave_type, self.from_date, self.to_date
 				)
 				if self.status != "Rejected" and (
 					leave_balance_for_consumption < self.total_leave_days or not leave_balance_for_consumption
@@ -523,7 +514,9 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			frappe.msgprint(msg, title=_("Warning"), indicator="orange")
 		else:
 			frappe.throw(
-				_("Insufficient leave balance for Leave Type {0}").format(frappe.bold(self.leave_type)),
+				_("Not enough {0} left for these dates: {1} day(s) left, {2} requested.").format(
+					frappe.bold(self.leave_type), leave_balance_for_consumption, self.total_leave_days
+				),
 				exc=InsufficientLeaveBalanceError,
 				title=_("Insufficient Balance"),
 			)
@@ -1148,7 +1141,39 @@ def get_leave_balance_on(
 	        else, returns leave_balance (in this case 10)
 	"""
 	validate_leave_access(employee)
+	return _leave_balance_on(
+		employee, leave_type, date, to_date, consider_all_leaves_in_the_allocation_period, for_consumption
+	)
 
+
+def get_consumable_leave_balance(employee: str, leave_type: str, from_date, to_date) -> float:
+	"""The balance an approve of these dates is judged by — validate_balance_leaves and
+	the approver's sheet (hrms.api.approval.get_decision_actions) both read it here, so
+	the number shown and the number enforced cannot drift. No access check: each caller
+	has already fenced its user."""
+	precision = cint(frappe.db.get_single_value("System Settings", "float_precision")) or 2
+	balance = _leave_balance_on(
+		employee,
+		leave_type,
+		from_date,
+		to_date,
+		consider_all_leaves_in_the_allocation_period=True,
+		for_consumption=True,
+	)
+	consumable = flt(balance.get("leave_balance_for_consumption"), precision)
+	logger.debug("[leave_application] consumable %s balance for %s: %s", leave_type, employee, consumable)
+	return consumable
+
+
+def _leave_balance_on(
+	employee,
+	leave_type,
+	date,
+	to_date=None,
+	consider_all_leaves_in_the_allocation_period=False,
+	for_consumption=False,
+):
+	"""get_leave_balance_on without the caller access check."""
 	if not to_date:
 		to_date = nowdate()
 

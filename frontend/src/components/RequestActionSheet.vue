@@ -121,45 +121,52 @@
 
 		<div
 			v-else-if="isPending && hasPermission('approval')"
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
+			class="flex w-full flex-col gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
-			<Button
-				v-if="hasPermission('reject')"
-				@click="
-					confirmDecision(
-						{ status: 'Rejected' },
-						{
-							title: __('Reject this request?'),
-							body: __('The employee sees your reason. This cannot be undone.'),
-							confirmLabel: __('Reject'),
-						}
-					)
-				"
-				:loading="submitting"
-				:disabled="submitting"
-				class="w-full py-5 !bg-transparent !border !border-danger-ink !text-danger-ink"
-				variant="subtle"
-				theme="red"
-			>
-				<template #prefix>
-					<X class="w-4" />
-				</template>
-				{{ __("Reject") }}
-			</Button>
+			<!-- The live balance cannot cover these dates. Approve stays: the server
+			     decides, and some leave types may go negative. -->
+			<p v-if="leaveShortNotice" class="text-sm text-danger-ink" role="status">
+				{{ leaveShortNotice }}
+			</p>
+			<div class="flex w-full flex-row items-center justify-between gap-3">
+				<Button
+					v-if="hasPermission('reject')"
+					@click="
+						confirmDecision(
+							{ status: 'Rejected' },
+							{
+								title: __('Reject this request?'),
+								body: __('The employee sees your reason. This cannot be undone.'),
+								confirmLabel: __('Reject'),
+							}
+						)
+					"
+					:loading="submitting"
+					:disabled="submitting"
+					class="w-full py-5 !bg-transparent !border !border-danger-ink !text-danger-ink"
+					variant="subtle"
+					theme="red"
+				>
+					<template #prefix>
+						<X class="w-4" />
+					</template>
+					{{ __("Reject") }}
+				</Button>
 
-			<Button
-				v-if="hasPermission('approve')"
-				@click="updateDocumentStatus({ status: 'Approved' })"
-				:loading="submitting"
-				:disabled="submitting"
-				class="w-full py-5 !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
-				variant="solid"
-			>
-				<template #prefix>
-					<Check class="w-4" />
-				</template>
-				{{ __("Approve") }}
-			</Button>
+				<Button
+					v-if="hasPermission('approve')"
+					@click="updateDocumentStatus({ status: 'Approved' })"
+					:loading="submitting"
+					:disabled="submitting"
+					class="w-full py-5 !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
+					variant="solid"
+				>
+					<template #prefix>
+						<Check class="w-4" />
+					</template>
+					{{ __("Approve") }}
+				</Button>
+			</div>
 		</div>
 
 		<div
@@ -271,6 +278,7 @@ import { canOfferCancel } from "@/utils/cancelRule"
 import { formatCurrency, formatHours } from "@/utils/formatters"
 import { requestStatus } from "@/utils/requestStatus"
 import { firstMessage } from "@/utils/loudRequest"
+import { shownLeaveBalance, shortLeaveNotice } from "@/utils/liveLeaveBalance"
 
 const __ = inject("$translate")
 
@@ -484,7 +492,11 @@ const fieldsWithValues = computed(() => {
 					import(`../components/${field.componentName}.vue`)
 				)
 			}
-			const raw = document?.doc?.[field.fieldname] || props.modelValue[field.fieldname]
+			// Leave Balance: the number the approve is judged by, not the filing snapshot.
+			const raw =
+				field.fieldname === "leave_balance" && props.modelValue.doctype === "Leave Application"
+					? shownLeaveBalance(document?.doc, decisionCapability.leaveBalanceNow.value)
+					: document?.doc?.[field.fieldname] || props.modelValue[field.fieldname]
 			// punch-derived hours Floats (claimed_hours, hours_cost…) read 5.67, not 5.669444444
 			const isHours = field.fieldtype === "Float" && field.fieldname.includes("hours")
 			field.value = isHours && raw ? formatHours(raw) : raw
@@ -493,6 +505,12 @@ const fieldsWithValues = computed(() => {
 		return field.value
 	})
 })
+
+const leaveShortNotice = computed(() =>
+	props.modelValue.doctype === "Leave Application"
+		? shortLeaveNotice(document?.doc, decisionCapability.leaveBalanceNow.value, __)
+		: ""
+)
 
 const approvalField = computed(() => {
 	return props.modelValue.doctype === "Expense Claim" ? "approval_status" : "status"

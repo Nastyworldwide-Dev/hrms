@@ -138,7 +138,7 @@ class TestLeaveWithZeroBalance(unittest.TestCase):
 	"""(c) zero balance — a rejection needs none."""
 
 	def _run(self, status):
-		fn, frappe = _lift(
+		fn, _frappe = _lift(
 			LEAVE,
 			"LeaveApplication",
 			"validate_balance_leaves",
@@ -146,9 +146,9 @@ class TestLeaveWithZeroBalance(unittest.TestCase):
 			flt=lambda v, precision=None: float(v),
 			get_number_of_leave_days=lambda *a, **k: 2.0,
 			is_lwp=lambda lt: False,
-			get_leave_balance_on=lambda *a, **k: {"leave_balance_for_consumption": 0},
+			validate_leave_access=lambda employee: None,
+			get_consumable_leave_balance=lambda *a, **k: 0.0,
 		)
-		frappe.db.get_single_value.return_value = 2
 		doc = _leave(status)
 		doc.half_day = 0
 		doc.half_day_date = None

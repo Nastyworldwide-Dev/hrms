@@ -448,7 +448,30 @@ def get_decision_actions(doctype: str, name: str) -> dict:
 			actions = [status for status in DECISIONS if _decision_access(doc, status)]
 		elif doc.get(field) in DECISIONS and _decision_access(doc, doc.get(field)):
 			actions = ["Submit"]
-	return {"actions": actions, "modified": doc.get("modified") if actions else None}
+	answer = {"actions": actions, "modified": doc.get("modified") if actions else None}
+	if doctype == "Leave Application" and actions:
+		answer["leave_balance_now"] = _leave_balance_now(doc)
+	return answer
+
+
+def _leave_balance_now(doc) -> float | None:
+	"""The balance approving this leave will be judged by, for a caller who may decide it.
+
+	The stored leave_balance is a snapshot from filing; showing it let an approver read
+	"1 left" and be refused on approve (23 Sep 2026). None when there is no number to
+	show (leave without pay, missing dates) or the lookup fails — never an error here.
+	"""
+	from hrms.hr.doctype.leave_application import leave_application as la
+
+	if not (doc.get("from_date") and doc.get("to_date")) or la.is_lwp(doc.get("leave_type")):
+		return None
+	try:
+		return la.get_consumable_leave_balance(
+			doc.get("employee"), doc.get("leave_type"), doc.get("from_date"), doc.get("to_date")
+		)
+	except Exception:
+		logger.warning("[approval] live leave balance unavailable for %s", doc.name, exc_info=True)
+		return None
 
 
 @frappe.whitelist(methods=["GET", "POST"])

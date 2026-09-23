@@ -63,7 +63,8 @@ export default function useDecisionCapability(getResource, getIdentity, onStale)
 		},
 		{ immediate: true, flush: "sync" }
 	)
-	const actions = computed(() => {
+	// The answer for the revision on screen, or null while stale/loading/failed.
+	const fresh = computed(() => {
 		const current = latest.value
 		const result = current?.resource.data
 		if (
@@ -73,8 +74,12 @@ export default function useDecisionCapability(getResource, getIdentity, onStale)
 			result?.modified !== target.value?.expected_modified ||
 			!Array.isArray(result?.actions)
 		)
-			return []
-		return result.actions
+			return null
+		return result
 	})
-	return { actions }
+	const actions = computed(() => fresh.value?.actions || [])
+	// Leave Application only: the balance approve is judged by (leave_balance_now),
+	// from this same response — the stored leave_balance is a filing-time snapshot.
+	const leaveBalanceNow = computed(() => fresh.value?.leave_balance_now ?? null)
+	return { actions, leaveBalanceNow }
 }
