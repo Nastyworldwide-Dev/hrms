@@ -2170,8 +2170,23 @@ html[data-theme="dark"] .g-cal__day--present {
 	   of the two happens to be larger. */
 	padding-bottom: calc(var(--g-sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
 }
+/* Title on the left, Close in the top corner (NN/g bottom sheets: a visible
+   close; the drag and the scrim are not the only ways out). The Close keeps
+   its 44px target; the negative margin pulls it into the sheet's padding so
+   it does not push the content down. */
+.g-sheet__head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 8px;
+	margin: -8px -8px 0 0;
+}
+.g-sheet__close {
+	flex: none;
+	margin-left: auto;
+}
 .g-sheet__title {
-	padding: 0 2px 8px;
+	padding: 8px 2px 8px;
 	font-family: var(--g-type-panel-title-family);
 	font-size: var(--g-type-panel-title-size);
 	font-weight: var(--g-type-panel-title-weight);

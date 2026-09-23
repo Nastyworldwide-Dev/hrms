@@ -46,7 +46,12 @@
 		@didDismiss="onDidDismiss"
 	>
 		<div class="g-sheet" role="dialog" aria-modal="true" :aria-label="title || undefined">
-			<p v-if="title" class="g-sheet__title">{{ title }}</p>
+			<div class="g-sheet__head">
+				<p v-if="title" class="g-sheet__title">{{ title }}</p>
+				<GIconButton class="g-sheet__close" :label="__('Close')" @click="closeOwnSheet">
+					<X class="h-5 w-5" aria-hidden="true" />
+				</GIconButton>
+			</div>
 			<slot name="actionSheet" />
 			<slot />
 		</div>
@@ -57,6 +62,9 @@
 import { onBeforeUnmount, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { IonModal } from "@ionic/vue"
+import { X } from "lucide-vue-next"
+
+import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { holdPageInert, releasePageInert } from "@/utils/sheetInert"
 import { mountScrim } from "@/utils/sheetScrim"
@@ -144,11 +152,11 @@ function release() {
 	frozenPage = null
 }
 
-//: The scrim closes ITS sheet. `modalController.dismiss()` closed whichever
+//: The scrim and the Close button close ITS sheet. `modalController.dismiss()` closed whichever
 //: overlay was on top — another sheet, or nothing while this one was still
 //: animating in (audit APP-2).
 function closeOwnSheet() {
-	console.info("[GModal] scrim tapped, closing this sheet")
+	console.info("[GModal] closing this sheet")
 	modal.value?.$el?.dismiss?.()
 }
 

@@ -1,0 +1,26 @@
+// Closing a sheet needed a pull-down (owner, 23 Sep). A sheet shows a visible
+// Close at the top (NN/g bottom sheets: an explicit close; M3: a sheet can be
+// dismissed without the drag gesture). One GModal, so every sheet gets it.
+import { test } from "node:test"
+import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+
+const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8")
+const modal = read("../GModal.vue")
+
+test("every sheet has a Close button with a name, that closes that sheet", () => {
+	assert.match(
+		modal,
+		/<GIconButton\s+class="g-sheet__close"\s+:label="__\('Close'\)"\s+@click="closeOwnSheet"/
+	)
+})
+
+test("a sheet with a title shows it beside the Close button", () => {
+	assert.match(modal, /<div class="g-sheet__head">[\s\S]*g-sheet__title[\s\S]*g-sheet__close/)
+})
+
+test("the head keeps Close in the top corner", () => {
+	const css = read("../../../theme/glass-components.css")
+	assert.match(css, /\.g-sheet__head \{[^}]*display: flex[^}]*justify-content: space-between/)
+})

@@ -1,3 +1,3 @@
-CLASS: a sheet noted the page it belongs to too late (willPresent), after a quick Back had already landed.
+CLASS: a sheet with no visible way to close it except the drag.
 
-Call sites: frontend/src/components/glass/GModal.vue openedOn — same-root, fixed (noted when isOpen turns true; willPresent falls back for trigger-opened sheets; cleared on didDismiss). frontend/src/router/sheetGuard.js — not-affected (closes presented sheets; the mid-present case is GModal's by design).
+Call sites: frontend/src/components/glass/GModal.vue — same-root, fixed (Close in the head). All 16 GModal users (DaySheet, GActionSheet, GConfirm, CheckInPanel, RemoteCheckinDialog, StrictRejectionDialog, LateCheckoutDialog, PushNotificationPrompt, InstallPrompt, InvalidEmployee, Login, ListView, More, TeamRoster, Approvals, DesignSpecimen) render through it — same-root.
