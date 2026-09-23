@@ -19,7 +19,7 @@ import { userResource } from "@/data/user"
 import { employeeResource } from "@/data/employee"
 
 import dayjs from "@/utils/dayjs"
-import { isSessionLost } from "@/utils/sessionLost"
+import { decideNavigation } from "@/router/navigationGate"
 import getIonicConfig from "@/utils/ionicConfig"
 import { employeeGate } from "@/utils/identity"
 
@@ -145,42 +145,8 @@ router.isReady().then(async () => {
 	app.mount("#app")
 })
 
-router.beforeEach(async (to, _, next) => {
-	let isLoggedIn = session.isLoggedIn
-
-	try {
-		if (isLoggedIn) await userResource.reload()
-	} catch (error) {
-		// Only the server can end a session. Offline, this read fails with a
-		// network error, and treating that as a logout sent people to Login for
-		// changing page without signal (audit P0-6). See utils/sessionLost.js.
-		if (isSessionLost(error)) {
-			isLoggedIn = false
-		} else {
-			console.warn("[router] could not re-check the session; keeping it", error?.message)
-		}
-	}
-
-	if (!isLoggedIn) {
-		// password reset page is outside the PWA scope
-		if (to.path === "/update-password") {
-			return next(false)
-		} else if (!["Login"].includes(to.name)) {
-			return next({ name: "Login" })
-		}
-	}
-
-	if (isLoggedIn) {
-		await employeeResource.promise
-		// user should be an employee to access the app since all views are
-		// employee specific — and a valid employee is never kept on the failure
-		// page. The decision (logins compared normalized) is utils/identity.js.
-		const redirect = employeeGate({
-			to: to.name,
-			employee: employeeResource?.data,
-			user: userResource.data,
-		})
-		return redirect ? next(redirect) : next()
-	}
-	next()
-})
+// Who may go where. The decision lives in router/navigationGate.js, where it
+// is tested; only the server can end a session or reject an identity.
+router.beforeEach(async (to) =>
+	decideNavigation({ to, session, userResource, employeeResource, employeeGate })
+)
