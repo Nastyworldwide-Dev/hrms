@@ -55,7 +55,9 @@ test("a past day with people nobody marked says so", () => {
 		TODAY,
 		__
 	)
-	assert.equal(line, "Your team · 3 of 6 worked · 1 absent · 2 not marked")
+	// Review of 391ccefbb: the line said "not marked" while the Team page
+	// showed that person as Absent. One word for one person on one day.
+	assert.equal(line, "Your team · 3 of 6 worked · 3 absent")
 })
 
 test("no team, no line", () => {
