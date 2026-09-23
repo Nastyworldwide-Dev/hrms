@@ -47,6 +47,31 @@ runs before any push that touches a sheet, the dimming layer, or the page shell.
 | B6 | Score mostly empty | no review → one card + a "Scored by" card, then nothing | P1 redesign |
 | B7 | Other pages "same pass" | see §4 | P1 |
 
+### Live audit, 23 Sep (fresh.local, 390×844, dark, every page)
+
+Measured by a browser run; screenshots in `/tmp/audit-*.png`. Added to the plan:
+
+| # | Defect | Where | P |
+|---|---|---|---|
+| A1 | **Help throws a JS error on every open** (`.catch` on undefined) | `HelpdeskHub.vue:149` | P0 |
+| A2 | **Your details: 5 rows with blank labels** ("-" values) | `Profile.vue getFieldInfo` | P0 |
+| A3 | **Money shows "INR"** (Help shows "RM") | Requests unpaid-claims row | P0 |
+| A4 | **Stray colon in shift time** "9:00:–18:00" | Day sheet | P0 |
+| A5 | **"Check in" shown on a day with no shift** (manager) | Home | P0 |
+| A6 | **"Waiting 42" but only 4 rows**, no way to the rest | Requests | P0 |
+| A7 | White camera box in the dark check-in sheet | Check-in sheet | P1 |
+| A8 | Approval sheet shows system words ("Leave Application", "ID", "Open") | Approvals sheet | P1 |
+| A9 | Notifications: every avatar "?", IDs break mid-word, raw system sentences | Notifications | P1 |
+| A10 | Pages mostly empty: Home 65%, Score, More, Approvals ~60% | several | P1 (redesigns) |
+| A11 | Team highlights "More" in the tab bar; scrolls 34 px for nothing | Team | P2 |
+| A12 | Past days with no record look like future days; key covers "Rest day" only | Calendar | P1 (B4) |
+| A13 | "1 leave request(s)" plural hack; an issue titled just "Issue" | Home, Help | P2 |
+| A14 | Filter chips wrap to 2 lines; leave grid uneven 2+1 | Requests | P1 (redesign) |
+| A15 | No tab bar on Notifications, Approvals, You | shell | P2 |
+
+Not a defect: the test build showed "alpha.2" because it was built before the
+version bump; Frappe Cloud builds from source on deploy.
+
 ## 3. Priorities
 
 - **P0**: broken or blocks work. Must ship in alpha.4.
