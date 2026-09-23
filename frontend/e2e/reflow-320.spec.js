@@ -15,7 +15,7 @@ for (const path of ["/home", "/dashboard/attendance", "/requests", "/dashboard/k
 			return [...document.querySelectorAll(".ion-page:not(.ion-page-hidden) *")]
 				.filter((el) => {
 					const r = el.getBoundingClientRect()
-					return r.width > 0 && r.right > view + 1 && !el.closest(".g-toast, ion-toast, .overflow-x-auto, .hide-scrollbar, .g-lightfield")
+					return r.width > 0 && r.right > view + 1 && !el.closest(".g-toast, ion-toast, .overflow-x-auto, .hide-scrollbar")
 				})
 				.slice(0, 5)
 				.map((el) => `${el.tagName.toLowerCase()}.${[...el.classList].join(".")} right=${Math.round(el.getBoundingClientRect().right)}`)
