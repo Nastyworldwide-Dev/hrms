@@ -1479,7 +1479,9 @@ onBeforeUnmount(() => {
 	position: relative;
 	width: 100%;
 	aspect-ratio: 4 / 3;
-	background: var(--g-ink);
+	/* A viewfinder is dark in BOTH themes. --g-ink is the text colour, so in
+	   dark mode it turned this into a white slab (owner screenshot, 23 Sep). */
+	background: var(--g-media-frame);
 }
 .checkin-sheet__video {
 	width: 100%;
@@ -1497,7 +1499,8 @@ onBeforeUnmount(() => {
 	text-align: center;
 	font-family: var(--g-type-caption-family);
 	font-size: var(--g-type-caption-size);
-	color: var(--g-bg);
+	/* light on the always-dark frame, in both themes */
+	color: var(--g-on-media-frame);
 }
 
 /* Live "you are here" pin — solid blue dot with a pulsing outer ring. */

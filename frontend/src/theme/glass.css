@@ -11,10 +11,14 @@
 	--g-danger-rgb: 248 113 113;
 	--g-leave: #7B5CFF;
 	--g-leave-rgb: 123 92 255;
+	--g-media-frame: #111318;
+	--g-media-frame-rgb: 17 19 24;
 	--g-neutral-dot: #8A929E;
 	--g-neutral-dot-rgb: 138 146 158;
 	--g-on-brand: #0A0C05;
 	--g-on-brand-rgb: 10 12 5;
+	--g-on-media-frame: #F5F6F8;
+	--g-on-media-frame-rgb: 245 246 248;
 	--g-rest: #B6BDC9;
 	--g-rest-rgb: 182 189 201;
 	--g-success: #00E5C0;

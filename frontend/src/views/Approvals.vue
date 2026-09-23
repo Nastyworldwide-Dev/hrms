@@ -25,28 +25,33 @@
 					<!-- YOURS: sent to you to decide -->
 					<section v-if="groups.yours.count" class="flex flex-col gap-3">
 						<h2 class="g-eyebrow">{{ __("Yours") }} · {{ groups.yours.count }}</h2>
-						<template v-for="dept in groups.yours.departments" :key="dept.key">
-							<p class="text-caption text-ink-600">
-								{{ dept.name || __("No department") }} · {{ dept.count }}
-							</p>
-							<GListPanel v-for="kind in dept.kinds" :key="`${dept.key}:${kind.key}`">
-								<p class="g-approvals__kind text-caption text-ink-600">
-									{{ __(kind.kind) }} · {{ kind.count }}
+						<!-- ONE panel for the section, groups separated by captions (§15.2:
+						     a grouped list is flattened into one surface, as the balance
+						     grid and issue list are). -->
+						<GListPanel>
+							<template v-for="dept in groups.yours.departments" :key="dept.key">
+								<p class="g-approvals__dept text-caption text-ink-600">
+									{{ dept.name || __("No department") }} · {{ dept.count }}
 								</p>
-								<GListRow
-									v-for="person in shown(`${dept.key}:${kind.key}`, kind.people).rows"
-									:key="person.key"
-									:label="personLine(person, __)"
-									:sublabel="personWhen(person)"
-									@click="openPerson(person)"
-								/>
-								<GroupMore
-									:page="shown(`${dept.key}:${kind.key}`, kind.people)"
-									@all="expand(`${dept.key}:${kind.key}`)"
-									@more="more(`${dept.key}:${kind.key}`)"
-								/>
-							</GListPanel>
-						</template>
+								<template v-for="kind in dept.kinds" :key="`${dept.key}:${kind.key}`">
+									<p class="g-approvals__kind text-caption text-ink-600">
+										{{ __(kind.kind) }} · {{ kind.count }}
+									</p>
+									<GListRow
+										v-for="person in shown(`${dept.key}:${kind.key}`, kind.people).rows"
+										:key="person.key"
+										:label="personLine(person, __)"
+										:sublabel="personWhen(person)"
+										@click="openPerson(person)"
+									/>
+									<GroupMore
+										:page="shown(`${dept.key}:${kind.key}`, kind.people)"
+										@all="expand(`${dept.key}:${kind.key}`)"
+										@more="more(`${dept.key}:${kind.key}`)"
+									/>
+								</template>
+							</template>
+						</GListPanel>
 					</section>
 
 					<!-- OTHER TEAMS: someone else approves; you may step in -->
@@ -68,30 +73,32 @@
 							</button>
 						</h2>
 						<div v-show="otherOpen" id="approvals-other-teams" class="flex flex-col gap-3">
-							<GListPanel v-for="team in groups.other.teams" :key="team.key">
-								<p class="g-approvals__kind text-caption text-ink-600">
-									{{
-										[
-											team.name || __("No department"),
-											team.approverName ? __("{0}'s team", [team.approverName]) : "",
-											team.count,
-										]
-											.filter(Boolean)
-											.join(" · ")
-									}}
-								</p>
-								<GListRow
-									v-for="person in shown(team.key, team.people).rows"
-									:key="person.key"
-									:label="personLine(person, __)"
-									:sublabel="`${__(person.kind)} · ${personWhen(person)}`"
-									@click="openPerson(person)"
-								/>
-								<GroupMore
-									:page="shown(team.key, team.people)"
-									@all="expand(team.key)"
-									@more="more(team.key)"
-								/>
+							<GListPanel>
+								<template v-for="team in groups.other.teams" :key="team.key">
+									<p class="g-approvals__kind text-caption text-ink-600">
+										{{
+											[
+												team.name || __("No department"),
+												team.approverName ? __("{0}'s team", [team.approverName]) : "",
+												team.count,
+											]
+												.filter(Boolean)
+												.join(" · ")
+										}}
+									</p>
+									<GListRow
+										v-for="person in shown(team.key, team.people).rows"
+										:key="person.key"
+										:label="personLine(person, __)"
+										:sublabel="`${__(person.kind)} · ${personWhen(person)}`"
+										@click="openPerson(person)"
+									/>
+									<GroupMore
+										:page="shown(team.key, team.people)"
+										@all="expand(team.key)"
+										@more="more(team.key)"
+									/>
+								</template>
 							</GListPanel>
 						</div>
 					</section>
@@ -295,8 +302,12 @@ async function refresh(event) {
 </script>
 
 <style scoped>
-.g-approvals__kind {
+.g-approvals__dept {
 	padding: 12px 16px 0;
+	font-weight: 600;
+}
+.g-approvals__kind {
+	padding: 8px 16px 0;
 }
 .g-approvals__toggle {
 	display: flex;
