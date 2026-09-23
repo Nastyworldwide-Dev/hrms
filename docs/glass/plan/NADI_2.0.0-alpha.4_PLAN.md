@@ -1,221 +1,155 @@
 # Nadi 2.0.0-alpha.4 — the plan
 
-Status: **DRAFT for owner approval** (23 Sep 2026). No code until approved.
-Follows: v2.0.0-alpha.3 (hotfix: sheets tappable, Reload works, refresh text hidden).
-Basis: `docs/glass/audit/2026-09-23-basis.md` (every change cites a rule) plus the
-owner's report on alpha.2 screenshots, 23 Sep.
+Status: **APPROVED IN PRINCIPLE, owner rulings in (23 Sep 2026).** Code starts on
+the owner's go. **One release, one deploy** at the end.
+Follows: v2.0.0-alpha.3 (hotfix, deployed 23 Sep: sheets tappable, Reload works).
+Basis: `docs/glass/audit/2026-09-23-basis.md` (every change cites a rule), the
+owner's screenshots and report, and a live audit of every page (23 Sep).
 
-## 0. The goal in one line
+## Goal
 
 **Every page does one job, fits one screen where it can, and nothing is broken,
-hidden wrong, or repeated.** Then an access matrix so "who sees what" is written
-down, approved, and tested.
+hidden wrong, or repeated.** Plus an approved access matrix.
 
-## 1. Rules this release follows (the bar)
+## Owner rulings (23 Sep)
 
-| Rule | Source |
-|---|---|
-| Summary first, detail one tap away (progressive disclosure) | NN/g NG-PD (basis) |
-| Compact: the page's main job fits the first screen at 390×844 | owner, 23 Sep; basis H8 |
-| One primary action per screen | basis S-ONE |
-| Plain words, sentence case, no block capitals | basis W-PLAIN, W-CASE |
-| 44 px touch targets, visible focus, 4.5:1 text contrast | WCAG 2.2 AA 2.5.8, 2.4.7, 1.4.3 |
-| No layout jump over 0.1 | Core Web Vitals CLS |
-| Least privilege, need-to-know, deny by default | NIST AC-6, ISO 27001 A.5.15, OWASP A01 |
-| A bug report is a symptom: fix the class, test the class | house rule (CLAUDE.md) |
-
-**How we work (unchanged from alpha.2):** one cause per commit, red test first,
-reviewed after each commit, live check on fresh.local at 390×844 in **dark and
-light**, then one deploy at the end.
-
-**New gate, because alpha.2 shipped a sheet nobody could tap:** a browser
-test that opens **every** sheet and taps inside it, on phone and desktop,
-runs before any push that touches a sheet, the dimming layer, or the page shell.
-
-## 2. What's broken, and where it came from
-
-| # | Symptom (owner, 23 Sep) | Cause | Status |
-|---|---|---|---|
-| H1 | Overlay over sheets, nothing tappable | dimming layer moved above sheets (25479308e) | **fixed in alpha.3** |
-| H2 | "A new version is ready" → Reload does nothing | reload waited for an event that never came | **fixed in alpha.3** |
-| H3 | "Refreshing…" over the page | pull strip visible at rest | **fixed in alpha.3** |
-| B1 | Home "broken top to bottom" | **not yet diagnosed.** Screenshot shows status + Check out, then empty to the tab bar | P0 in this release |
-| B2 | Calendar "entire calendar is like bug" | the sheet part was H1; rest to diagnose (below) | P0 |
-| B3 | Day sheet says "No shift" on a worked day | `_my_day` reads Shift Assignment only; the shift is on the Attendance/Checkin | P0 |
-| B4 | Calendar key shows only Worked / Leave / Rest day | key built from days present; Absent and Half day missing when none that month | check, P1 |
-| B5 | Requests too long, needs scrolling | four big leave cards + two rows + button + tabs + chips | P0 redesign |
-| B6 | Score mostly empty | no review → one card + a "Scored by" card, then nothing | P1 redesign |
-| B7 | Other pages "same pass" | see §4 | P1 |
-
-### Live audit, 23 Sep (fresh.local, 390×844, dark, every page)
-
-Measured by a browser run; screenshots in `/tmp/audit-*.png`. Added to the plan:
-
-| # | Defect | Where | P |
-|---|---|---|---|
-| A1 | **Help throws a JS error on every open** (`.catch` on undefined) | `HelpdeskHub.vue:149` | P0 |
-| A2 | **Your details: 5 rows with blank labels** ("-" values) | `Profile.vue getFieldInfo` | P0 |
-| A3 | **Money shows "INR"** (Help shows "RM") | Requests unpaid-claims row | P0 |
-| A4 | **Stray colon in shift time** "9:00:–18:00" | Day sheet | P0 |
-| A5 | **"Check in" shown on a day with no shift** (manager) | Home | P0 |
-| A6 | **"Waiting 42" but only 4 rows**, no way to the rest | Requests | P0 |
-| A7 | White camera box in the dark check-in sheet | Check-in sheet | P1 |
-| A8 | Approval sheet shows system words ("Leave Application", "ID", "Open") | Approvals sheet | P1 |
-| A9 | Notifications: every avatar "?", IDs break mid-word, raw system sentences | Notifications | P1 |
-| A10 | Pages mostly empty: Home 65%, Score, More, Approvals ~60% | several | P1 (redesigns) |
-| A11 | Team highlights "More" in the tab bar; scrolls 34 px for nothing | Team | P2 |
-| A12 | Past days with no record look like future days; key covers "Rest day" only | Calendar | P1 (B4) |
-| A13 | "1 leave request(s)" plural hack; an issue titled just "Issue" | Home, Help | P2 |
-| A14 | Filter chips wrap to 2 lines; leave grid uneven 2+1 | Requests | P1 (redesign) |
-| A15 | No tab bar on Notifications, Approvals, You | shell | P2 |
-
-Not a defect: the test build showed "alpha.2" because it was built before the
-version bump; Frappe Cloud builds from source on deploy.
-
-## 3. Priorities
-
-- **P0**: broken or blocks work. Must ship in alpha.4.
-- **P1**: the page redesigns you asked for. Ships in alpha.4.
-- **P2**: correctness and polish we already know about. Ships if time allows,
-  otherwise alpha.5.
-- **P3**: needs your ruling first. Only drafted here, no code.
-
-## 4. Page by page
-
-### Home — P0 (B1) then redesign
-**First, diagnose (read-only):** open Home on the live site as you and as the
-test personas, dark and light, and record what renders, what fails to load, and
-what errors. Then fix the cause, not the look.
-**Target layout (one screen, no scroll for the common case):**
-1. Date title.
-2. **Today card:** shift, time in, **Check in / Check out** (the one primary action).
-3. **Waiting on you** (approvers only): counts that open Approvals.
-4. **One announcement** (pinned or newest), "See all ›".
-5. Nothing else. Personal request list stays on Requests.
-**Done when:** fits 390×844 without scrolling for an employee with no approvals;
-no empty band taller than one block; every block has a loading skeleton and an
-error line; zero console errors.
-
-### Calendar — P0 (B2, B3) then P1
-- **B3 shift on the day sheet:** read the shift from the day's Attendance, then
-  the check-ins, and only then the roster. Red test: a worked day with no
-  Shift Assignment shows its shift.
-- **B4 key:** always show the five kinds (Worked, Half day, Leave, Rest day,
-  Absent) or only those present, as you prefer (ask). Today it silently drops some.
-- **Day sheet:** one action, hours as time, team line (managers). Re-check with
-  the new tap test.
-- **Grid:** check every state in dark and light. Today's ring is readable on
-  every colour. Future days are plain.
-- **Links under the grid** ("All check-ins", "Your shifts"): keep, but as
-  quiet rows, not bare underlined text.
-
-### Requests — P1 full redesign (B5): compact, no scroll
-**Job:** "ask for something, and see where my asks are."
-**Target (one screen at 390×844):**
-1. **New request**: the one primary button, at the top.
-2. **Balances strip:** one compact row, e.g. "Annual 6 · Medical 13 · +3 ›".
-   Tap opens all balances in a sheet. It replaces the four big cards.
-3. **Needs attention:** one line each, only when non-zero ("1 day of overtime
-   to claim ›", "1 day with no attendance ›").
-4. **Your requests:** the last 5, each on one line ("Compassionate · 28 Aug ·
-   Waiting"), "See all ›" opens the full list with filters.
-5. Filter chips move into "See all", off the main page.
-**Done when:** the page fits without scrolling for a typical employee (≤5
-requests shown, ≤2 attention lines); no chip wraps to a second line.
-
-### Approvals — P2
-- Apply the new tap test to both sheets.
-- An empty queue is one line, plus the answered links.
-- Leave rows show the type, never the reason, to anyone but the approver.
-
-### Team — P2
-- Check the new "opens on the day" flow on the live site.
-- Status words match the Calendar team line (done in alpha.2); keep a test.
-
-### Score — P1 redesign (B6)
-**Job:** "how am I doing, and who judges it?"
-- **No review open:** one compact card, "No review yet. Hafiz scores you when
-  HR opens one." Then last cycle's result if there is one. No second card
-  repeating the name.
-- **Review open:** the score ring, goals as short rows, "A figure looks wrong ›"
-  (opens an HR issue, audit PAGE-15).
-- Managers and CEO: team list stays, server-scoped (unchanged rule, protected).
-
-### More — P2
-- Keep: Help, SOPs, Announcements, Public holidays, Team, Apps.
-- Rows compact. Apps only when the server offers them (done).
-
-### You — P2
-- Details sheet check on the live site; manager and shift lines.
-- The segmented theme control: check dark mode contrast.
-
-### Help — P2
-- "Who to ask" row (done); empty states in one line.
-
-### Notifications — P2
-- Every tap lands on a real page (check-ins now land on Approvals).
-- Mark as read works for staff (fixed 7 Sep; re-test).
-
-### Announcements (Desk) — P2
-- Put **HR Announcement** on the HR workspace so HR can find it without search.
-- Test an image in an announcement on the live site (S3 storage).
-
-## 5. Cross-cutting
-
-| ID | Item | P |
+| # | Question | Ruling |
 |---|---|---|
-| X1 | **Sheet tap gate:** browser test opens and taps inside every sheet, phone + desktop | P0 |
-| X2 | Desktop: side menu dims under a sheet, **without** covering the sheet (APP-14, reopened by the hotfix) | P2 |
-| X3 | Every page: skeleton while loading, one error line if it fails, never blank | P1 |
-| X4 | Dark and light checked on every page before push | P1 |
-| X5 | Refresh text: announce to screen readers on real pulls only | P2 |
-| X6 | Update prompt: clear the fallback timer on success (review note) | P2 |
-| X7 | Zero-balance skeleton collapse on Requests (review note) | P2 |
-| X8 | Per-list "Team Requests" tabs (Shift list etc.) removed; Approvals owns them | P2 |
-| X9 | Approvals scan: keyset paging instead of offset (ceiling marker) | P3, only if a missed row is reported |
+| R1 | Calendar key | **Always show every kind.** Add three new kinds: **Travel**, **Training**, and **Open request** (approvers and managers only: a day with a request waiting on them). |
+| R2 | Requests balances | **Annual and Medical + "All balances ›".** The full list, when opened, is **compact too** (same rows), not big cards. |
+| R3 | Score with no review | One line, plus the last result when there is one. **No repetition** (no second card with the same name). |
+| R4 | Access matrix | **Draft now**, alongside the pages. Docs only; no access change without a yes per line. |
 
-## 6. Access matrix — P3 (drafted, needs your approval)
+## How we work
 
-**Deliverable:** `docs/glass/ACCESS-MATRIX.md`, one page:
+- One cause per commit, **red test first**, review after each commit.
+- Live check on fresh.local at **390×844, dark and light**, before the push.
+- **Sheet gate (new):** a browser test opens every sheet and taps inside it,
+  and closes it by the scrim and by Back, on phone and desktop. It runs
+  before any push that touches a sheet, the scrim, or the page shell.
+- **Seed data first:** the test user has no attendance, so worked days,
+  leave, travel, training and absence are seeded on fresh.local (synthetic,
+  named, removed after).
+- One deploy: `2.0.0-alpha.4`, tagged.
+
+---
+
+## P0: broken, blocks work
+
+| # | Problem | Where | Cause (found) or next step |
+|---|---|---|---|
+| P0-1 | **"Refreshing…" stays after you pull** (owner, after alpha.3) | every page with pull-to-refresh | `GPullRefresh` waits for an `ionRefreshComplete` event that Ionic 7 never sends, so the text never resets. Reset it when the pull finishes. |
+| P0-2 | **With a sheet open, taps go through to the page behind** (owner, after alpha.3) | every sheet | The dimming layer now sits in the page, below the sheet but not over the rest; the page stays tappable. Make the page behind the sheet inert and the scrim cover it, while the sheet stays on top. The sheet gate proves both. |
+| P0-3 | **Closing a sheet needs a pull-down; the motion is rough** (owner) | every sheet | A tap on the dim area and Back must close the sheet; the open and close motion uses the app's timing, not Ionic's default. |
+| P0-4 | Help throws an error on every open | `HelpdeskHub.vue:149` | `.catch` on an undefined value. |
+| P0-5 | "Your details" shows 5 rows with no label | `Profile.vue` | Field labels are looked up in a list that lacks them. |
+| P0-6 | Money shows "INR" (should be "RM") | Requests, unpaid claims row | Currency read from the wrong place. |
+| P0-7 | Shift time shows a stray colon "9:00:–18:00" | day sheet | time trimmed wrongly. |
+| P0-8 | Day sheet says "No shift" on a worked day | `calendar._my_day` | Reads the roster only. Read the day's attendance, then its check-ins, then the roster. |
+| P0-9 | "Check in" shown on a day with no shift | Home | Show the button only when a check-in is possible. |
+| P0-10 | "Waiting 42" but only 4 rows | Requests | The group has no "see all". Fixed by the Requests redesign (P1-2). |
+| P0-11 | Home "broken top to bottom" | Home | Measured: 65% empty below one button. Fixed by the Home redesign (P1-1). |
+
+## P1: the redesigns (sketch first → owner yes → code)
+
+### P1-1 Home: one screen, always useful
+1. Date title.
+2. **Today:** shift, hours, **Check in / Check out** (only when possible).
+3. **This week:** "4 days worked · 1h 30m overtime to claim ›".
+4. **Coming up:** next leave, travel, training or public holiday.
+5. **Waiting on you** (approvers) and **one announcement**, only when there are any.
+Done when: fits 390×844 for an employee without scrolling; no empty band taller
+than one block; each block has a skeleton and an error line.
+
+### P1-2 Requests: compact, no scroll
+1. **New request** on top.
+2. **Balances line:** `Annual 6 · Medical 13 · All balances ›`. The full list
+   opens in a sheet as the same compact rows (R2).
+3. **Needs attention:** one line each, only when non-zero.
+4. **Your last 5 requests**, one line each, and **See all ›**. Filters live in See all.
+5. Approvers: "Answered by you" stays reachable from Approvals.
+Done when: fits one screen for a typical employee; no chip wraps.
+
+### P1-3 Calendar: every kind, readable
+- **Key always shows all kinds (R1):** Worked · Half day · Leave · Travel ·
+  Training · Rest day · Absent, and **Open request** for approvers and managers.
+- **New day kinds from the server:** Travel (approved Travel Request dates, or
+  an On Duty attendance request with a travel reason), Training (Training Event
+  dates the employee attends), Open request (a request waiting on the caller
+  that covers the day). Each is a new colour or outline, contrast-checked in
+  both themes.
+- Past days with no record look different from future days.
+- Links under the grid become quiet rows.
+- Day sheet: one action, hours as time, the team line for managers.
+**Needs a source check first:** which of Travel Request / Training Event this
+site actually uses. If a kind has no data source, it shows in the key only when
+there is a source (reported back before coding).
+
+### P1-4 Score: no empty tab
+- No review: one line ("No review yet. Hafiz scores you when HR opens one."),
+  plus "Last review: Q2 2026 · 82% ›" when there is one. The "Scored by" card
+  is dropped (it repeated the name) (R3).
+- Review open: the score, goals as short rows, "A figure looks wrong ›".
+- Visibility rules unchanged (protected).
+
+### P1-5 Sheets look and read right
+- Approval sheet: plain words ("Time off", "Waiting"), not "Leave Application",
+  "ID", "Open"; the reason reads left-aligned.
+- Check-in sheet: no white camera box in dark mode.
+- Every sheet: the same width and padding.
+
+### P1-6 Notifications
+- A real picture or initial instead of "?".
+- Plain sentences ("Your leave on 22 Sep wasn't approved. See why ›"), no
+  record numbers breaking mid-word.
+- "Load more" styled like every other button.
+
+### P1-7 Every page: never blank, both themes
+- Skeleton while loading, one error line if it fails.
+- Checked in dark and light before push.
+
+## P2: smaller known issues
+
+| # | Item |
+|---|---|
+| P2-1 | Desktop: side menu dims under a sheet (APP-14, done safely with P0-2) |
+| P2-2 | Team: tab bar highlights "More"; page scrolls 34 px for nothing; raw group code "NW0A" |
+| P2-3 | "1 leave request(s)" → proper plural; an issue titled just "Issue" |
+| P2-4 | No tab bar on Notifications, Approvals, You (decide: back button only, or tab bar) |
+| P2-5 | The last per-list "Team Requests" tabs removed (Approvals owns them) |
+| P2-6 | HR Announcement on the HR workspace in Desk; test an image on the live site (S3) |
+| P2-7 | Update prompt: clear the fallback timer on success (review note) |
+| P2-8 | Requests: no-balances skeleton collapse (review note) |
+| P2-9 | More: rows compact; Apps only when offered (done) |
+
+## P3: access matrix (docs now, changes need a yes per line)
+
+Deliverable: `docs/glass/ACCESS-MATRIX.md`.
 - Rows: every page and record kind (own request, team request, attendance,
   leave reason, pay, score, IC number, contact, announcements).
-- Columns: Employee · Team lead/manager · Approver · HR · HR Manager · CEO ·
-  System Manager.
-- Each cell: **see / act / hidden fields**, and the rule that grants it
-  (ownership, reports-to, routed, role).
-**Checks before any change:**
-1. Does Desk show a manager the **leave reason** of a direct report? (App never does.)
-2. Which Employee fields can each person see on a colleague's record?
-3. HR with no company assigned sees all companies ("open by default"). Keep or change?
-**Then:** one automatic test per matrix line. **No access change ships without
-your yes on that exact line.**
+- Columns: Employee · Team lead/manager · Approver · HR User · HR Manager ·
+  CEO · System Manager.
+- Each cell: see / act / hidden fields, and the rule that grants it.
+- Checks: does Desk show a manager the leave reason? Which colleague fields
+  are visible? HR with no company assigned sees all companies: keep or change?
+- One automatic test per approved line.
 
-## 7. Order of work (slices)
+---
 
-1. Diagnose Home and Calendar live (read-only). Record the findings.
-2. X1 sheet tap gate (test only).
-3. P0 fixes: B1 Home cause, B3 shift, B2 remaining Calendar causes.
-4. P1: Requests redesign → Score redesign → Home layout → X3/X4.
-5. P2 list, in the order above.
-6. Access matrix draft (docs only) for your review.
-7. Full suite, gates, live check of every page in dark and light, CHANGELOG,
-   version `2.0.0-alpha.4`, tag, push. One deploy.
+## Order of work (one release)
 
-## 8. Design work before code
+1. **Seed data + sheet gate** (tests only).
+2. **P0-1 to P0-9** (one commit per cause).
+3. **Access matrix draft** (docs), in parallel.
+4. **Sketches** for Home, Requests, Calendar key, Score → owner yes.
+5. **P1-1 to P1-7** after the yes.
+6. **P2** list.
+7. Full suite, gates, sheet gate, live check of every page in both themes,
+   CHANGELOG, version `2.0.0-alpha.4`, tag, push. **One deploy.**
 
-Requests, Score and Home get a **sketch first** (like the alpha.2 tour page),
-for your yes/no, before any code. Rule: owner signs off on layout changes
-(house rule "mockup before UI code").
+## Sources
 
-## 9. Needs your answer (only these)
-
-1. **Calendar key:** always show all five kinds, or only the kinds in that month?
-2. **Requests balances:** strip with the top 3 leave types, or only the two you use most (Annual, Medical)?
-3. **Score with no review:** show last cycle's result, or nothing but the one line?
-4. **Access matrix:** start drafting now (docs only), or after the pages?
-
-## 10. Evidence still missing
-
-- **Home on your phone:** what's broken. The page check running now will
-  capture Home on the test site; your own account may differ (real data).
-  Tell me what you see.
+- NN/g progressive disclosure; WCAG 2.2 AA (2.5.8 target size, 2.4.7 focus,
+  1.4.3 / 1.4.11 contrast); Core Web Vitals CLS.
+- NIST SP 800-53 AC-6, AC-5; NIST RBAC; NIST SP 800-162 (relationship rules);
+  ISO/IEC 27001:2022 A.5.15; OWASP Top 10 A01; Malaysia PDPA 2010.
