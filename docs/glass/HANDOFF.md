@@ -1,14 +1,13 @@
 # HANDOFF
-prompt:   alpha.4 complete — all steps, Home + Requests one screen, reminders
+prompt:   alpha.5 — whole app, one design, no residue ("go till finish")
 status:   done (deploy only)
-commit:   v2.0.0-alpha.4 on nz-glass (re-tagged on the final commit)
-files:    frontend/src/views/Home.vue + HomeWeek/HomeComingUp + hrms/api/home.py
-          frontend/src/components/RequestPanel.vue, RequestBalances.vue
-          hrms/utils/shift_reminders.py (+ patch add_shift_reminders_field)
-          frontend/src/views/Approvals.vue (grouped: Yours / Other teams)
-          hrms/hr/doctype/employee_checkin/employee_checkin.py (rest-day OT)
-          hrms/api/approval.py + leave_application.py (live leave balance)
-          docs/glass/CHANGELOG.md, docs/glass/ACCESS-MATRIX.md
-verify:   cd frontend && yarn test ; after deploy: Desk > Staff Without A Shift
-flags:    Deploy runs 1 patch (Employee on/off field for reminders, default ON). Reminders start on the next 5-min tick. Rest-day punch now gets a shift, so the check-in area rule applies on rest days. HR sees all companies (ruled). 3 old test files still red (pre-existing, not app bugs).
-next:     deploy 2.0.0-alpha.4; give staff in "Staff Without A Shift" a shift
+commit:   v2.0.0-alpha.5 (07bb1249d) on nz-glass
+files:    frontend/src/components/glass/GModal.vue, ShellHeader.vue, FormField.vue
+          frontend/src/views/Notifications.vue, helpdesk/HelpdeskHub.vue, HelpSplitList.vue
+          frontend/src/theme/glass-components.css (glass on chrome only)
+          hrms/utils/worked_days.py + hrms/api/{calendar,requests_summary,home}.py
+          hrms/www/hrms.py (site time zone in the PWA boot)
+          docs/glass/CHANGELOG.md, docs/glass/plan/alpha5-review.html
+verify:   cd frontend && yarn test ; after deploy: open Notifications (times right), Calendar (today green)
+flags:    No patch, no schema change. Taken as recommended (owner delegated): H1 keep Home, H4 keep mark+date, C4 fills + Fix/OT dots, H3 Approvals not in More. Half-height sheets dropped (focus-trap). Tickets: FormView menu, worked-days table, approval toast, non-English issue text.
+next:     deploy 2.0.0-alpha.5
