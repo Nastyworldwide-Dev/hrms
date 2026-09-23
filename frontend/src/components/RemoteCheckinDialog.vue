@@ -58,11 +58,15 @@
 				<button
 					class="flex-1 bg-brand text-on-brand border-none px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-brand disabled:opacity-60"
 					@click="submit"
-					:disabled="submitting || !remarks.trim()"
+					:disabled="submitting || !remarks.trim() || !online"
 				>
 					{{ submitting ? __("Submitting…") : __("Submit Request") }}
 				</button>
 			</div>
+			<!-- Owner ruling: never an offline check-in (audit P0-7). -->
+			<p v-if="!online" class="text-caption text-ink-600 mt-2" role="status">
+				{{ __("You need signal to check in.") }}
+			</p>
 		</div>
 	</GModal>
 </template>
@@ -70,6 +74,7 @@
 <script setup>
 import { isReadingCoarse } from "@/utils/geolocation"
 import GModal from "@/components/glass/GModal.vue"
+import { useOnline } from "@/composables/useOnline"
 import { computed, inject, ref, watch } from "vue"
 import { toast } from "frappe-ui"
 
@@ -130,7 +135,15 @@ watch(
 	}
 )
 
+//: Owner ruling (22 Sep): never an offline check-in. This dialog sends a punch,
+//: so it is blocked offline like the panel that opens it (audit P0-7).
+const online = useOnline()
+
 const submit = async () => {
+	if (!online.value) {
+		console.warn("[RemoteCheckinDialog] refused a submit while offline")
+		return
+	}
 	if (!props.requestName) {
 		toast({
 			title: __("Error"),
