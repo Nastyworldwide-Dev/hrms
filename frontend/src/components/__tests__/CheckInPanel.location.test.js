@@ -115,6 +115,7 @@ function panel({ employee = "EMP", storage = new Map(), start = 1_800_000_000_00
 			}[name]),
 		onBeforeUnmount: (fn) => unmount.push(fn),
 		useListUpdate: () => {},
+		useOnline: () => ({ value: true }),
 		modalController: {
 			dismiss: async () => {
 				counters.dismiss += 1

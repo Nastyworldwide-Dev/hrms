@@ -86,12 +86,18 @@
 				id="open-checkin-modal"
 				class="mt-5"
 				:label="nextAction.label"
+				:disabled="!online"
 				@click="handleEmployeeCheckin"
 			>
 				<template #trailing>
 					<ArrowRight class="w-icon-md h-icon-md" />
 				</template>
 			</GButton>
+			<!-- Owner ruling: never an offline check-in. The reason sits at the
+			     action, not only in the top banner (audit P0-7). -->
+			<p v-if="!online" class="text-caption text-ink-600 mt-2" role="status">
+				{{ __("You need signal to check in.") }}
+			</p>
 		</template>
 
 		<div v-else class="text-card-title text-ink-600 mt-1">
@@ -167,7 +173,7 @@
 
 			<GButton
 				:label="__('Confirm {0}', [nextAction.label])"
-				:disabled="cameraStatus === 'starting'"
+				:disabled="cameraStatus === 'starting' || !online"
 				:pending="submitting || punchCheckin.loading || cameraStatus === 'submitting'"
 				@click="submitLog(nextAction.action)"
 			>
@@ -223,6 +229,7 @@ import GClock from "@/components/glass/GClock.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GBanner from "@/components/glass/GBanner.vue"
+import { useOnline } from "@/composables/useOnline"
 import GButton from "@/components/glass/GButton.vue"
 import { createResource, createListResource, toast } from "frappe-ui"
 import { computed, inject, nextTick, ref, shallowRef, watch, onBeforeUnmount } from "vue"
@@ -932,6 +939,10 @@ const locationVerdict = computed(() => {
 	}
 })
 
+//: Owner ruling (22 Sep): never an offline check-in. Nothing is queued, and
+//: the buttons are disabled offline with the reason beside them (audit P0-7).
+const online = useOnline()
+
 const handleEmployeeCheckin = async () => {
 	sheetSession += 1
 	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
@@ -1018,6 +1029,10 @@ function clearPendingTap() {
 }
 
 const submitLog = async (logType) => {
+	if (!online.value) {
+		console.warn("[CheckInPanel] refused a check-in while offline")
+		return
+	}
 	if (submitting.value) {
 		console.info("[CheckInPanel] punch already in flight, ignoring tap")
 		return
