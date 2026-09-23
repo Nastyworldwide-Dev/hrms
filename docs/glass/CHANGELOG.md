@@ -10,6 +10,46 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `nadi-v<version>` (the plain `v2.x` names belong to older
 selfie releases).
 
+## [2.0.0-alpha.4] — 2026-09-23
+
+### Added
+- **Approvals, grouped.** "Yours" (sent to you) first, then "Other teams"
+  (someone else approves; you may step in), by department and type, one line
+  per person. Five lines then "See all"; "Show more (N left)" — never an
+  endless list. Home counts only yours.
+- **Calendar: Travel, Training and Open request.** The key always shows every
+  kind; Open request (a day with a request waiting on you) for approvers.
+- **The Nadi logo in the header** of every tab page; today's date moved into
+  Home's Today card.
+- **Requests: Annual and Medical first**, every balance one tap away in the
+  same compact rows.
+- **Desk report "Staff Without A Shift"** — who cannot earn rest-day or
+  holiday overtime until HR sets a shift.
+- **Every sheet has a Close (X).**
+
+### Fixed
+- **Rest days and public holidays count as overtime** even when you punch
+  outside your shift hours (they counted nothing).
+- **An approver saw a leave balance the approval then refused.** The sheet
+  now shows the balance approval checks, and says when it is not enough.
+- **Tapping the dim area closes a sheet**; the tab bar and header behind it
+  are dimmed and blocked. Back right after opening a sheet no longer leaves
+  it over the next page.
+- **"Refreshing…" no longer sticks** after a pull.
+- **Home no longer looks empty**: blocks say "Nothing waiting on you." and
+  "No news." instead of vanishing.
+- **Plain words**: the approval sheet says "Time off", not "Leave
+  Application", no record id, "Waiting" not "Open"; counts say "1 day", not
+  "1 day(s)"; departments read "Production", not "Production - NW0A".
+- **The check-in camera box is dark in dark mode** (it was a white slab).
+- **A system notification no longer shows "?"** as its sender.
+- Help no longer throws on open; money shows "RM"; shift times read
+  "9:00–18:00"; "Your details" labels every row and shows Preferred email;
+  the day sheet shows the shift you actually worked, night shifts included.
+- Score with no review says it once. Announcement and leave-expiry dates use
+  your own day, not the server's.
+- Lists no longer have a second "Team" tab; Approvals owns team requests.
+
 ## [2.0.0-alpha.3] — 2026-09-23 (hotfix)
 
 ### Fixed
