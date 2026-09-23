@@ -1,9 +1,6 @@
 <template>
 	<div class="flex flex-col w-full">
-		<!-- data-visual-mask: today's date, rots at midnight. -->
-		<div class="g-eyebrow" data-visual-mask>
-			{{ dayjs().format("dddd, D MMMM YYYY").toUpperCase() }}
-		</div>
+		<!-- The date is Home's header title now, said once (approved Home plan, H2). -->
 		<!-- A failed settings read hides check-in entirely, and the employee standing
 		     at the door has no way to tell that from the feature being switched off
 		     for them. Of everything in this app that renders nothing on error, this
@@ -11,18 +8,7 @@
 		<ResourceError :resource="settings" what="your check-in settings" />
 
 		<template v-if="settings.data?.allow_employee_checkin_from_mobile_app">
-			<!-- The STATE moved to the Now bar above (revamp §2). This line used
-			     to read "Last check-out was at 08:17 pm", which is true and made
-			     the reader work out everything that matters from it. The bar says
-			     it properly; what stays here is the way into the full history,
-			     because that was the only other thing this line offered. -->
-			<div class="text-card-title text-ink-600" v-if="lastLog">
-				<router-link
-					:to="{ name: 'EmployeeCheckinListView' }"
-					class="g-focusable g-seclink underline underline-offset-link text-ink-800"
-					>{{ __("View your check-ins") }}</router-link
-				>
-			</div>
+			<!-- The check-in history lives on Calendar (approved Home plan, H6). -->
 
 			<!-- Forgot-to-check-out banner: open IN past 6 AM cutoff OR tagged abandoned by nightly sweeper -->
 			<!-- 8.5 — was a hand-rolled div carrying Modernist utilities:
@@ -207,6 +193,8 @@
 			}
 		"
 	/>
+	<!-- After a successful check-in only (approved Home plan, H7). -->
+	<PushNotificationPrompt v-if="askForNotifications" />
 </template>
 
 <script setup>
@@ -217,6 +205,7 @@ import GModal from "@/components/glass/GModal.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import { useOnline } from "@/composables/useOnline"
+import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { createResource, createListResource, toast } from "frappe-ui"
 import { computed, inject, nextTick, ref, shallowRef, watch, onBeforeUnmount } from "vue"
@@ -926,6 +915,8 @@ const locationVerdict = computed(() => {
 	}
 })
 
+const askForNotifications = ref(false)
+
 //: Owner ruling (22 Sep): never an offline check-in. Nothing is queued, and
 //: the buttons are disabled offline with the reason beside them (audit P0-7).
 const online = useOnline()
@@ -1040,6 +1031,10 @@ const submitLog = async (logType) => {
 		// fence refused still locked the user out of retrying for 60s.
 		const ok = await runSubmitLog(logType)
 		if (ok) lastSubmit.value = { action: logType, at: Date.now() }
+		// Ask for notifications in context, after something the person did,
+		// never on load (web.dev permission UX; approved Home plan, H7). The
+		// prompt itself decides whether asking still makes sense.
+		if (ok) askForNotifications.value = true
 		if (!ok && generation === geoGeneration && cameraStatus.value === "submitting") {
 			cameraStatus.value = "idle"
 			startCamera()

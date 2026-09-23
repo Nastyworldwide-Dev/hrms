@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout>
+	<BaseLayout :page-title="todayTitle">
 		<template #body>
 			<!-- §20.3: ONE content column, 720px, left-aligned against the side nav.
 			     Until the 7.3 ruling this split into lg:grid-cols-2 — measured 550px
@@ -36,20 +36,18 @@
 				<NowBar />
 				<CheckInPanel />
 				<NeedsYou />
-				<!-- Fourth, under what needs you and above what you asked for.
-				     An announcement is something to KNOW; the two blocks above it
-				     are things to DO, and Home's order is the argument (§2). The
-				     block renders nothing when the board is empty, so on a quiet
-				     week Home is exactly what it was. -->
+				<!-- Last: something to KNOW, under the things to DO. Renders nothing
+				     when the board is empty. What you asked for lives on Requests,
+				     not here (approved Home plan, H1). -->
 				<Announcements />
-				<RequestPanel />
 			</div>
-			<PushNotificationPrompt />
 		</template>
 	</BaseLayout>
 </template>
 
 <script setup>
+import { computed, inject } from "vue"
+
 import { reloadRequestLists } from "@/data/requestLists"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
@@ -57,9 +55,12 @@ import NowBar from "@/components/NowBar.vue"
 import NeedsYou from "@/components/NeedsYou.vue"
 import Announcements from "@/components/Announcements.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
-import RequestPanel from "@/components/RequestPanel.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
-import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
+
+const $dayjs = inject("$dayjs")
+//: The date is the header title, said once and in plain case (approved Home
+//: plan, H2/H3): "Wed 23 Sep". A fixed length, so it never crowds the bell.
+const todayTitle = computed(() => $dayjs().format("ddd D MMM"))
 
 async function refreshRequests(event) {
 	console.info("[Home] pull-to-refresh")

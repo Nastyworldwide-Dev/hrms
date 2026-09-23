@@ -36,11 +36,10 @@ function template(file) {
 }
 
 test("Home reads in the plan's order", () => {
-	// §3.1: check-in, then what needs you, then your requests. The order is the
-	// screen's argument — what is happening now, what is waiting on you, what
-	// you already asked for.
+	// Approved Home plan (23 Sep): what is true now, what is waiting on you,
+	// then what HR wants you to know. Your own requests live on Requests.
 	const body = template("views/Home.vue")
-	const order = ["CheckInPanel", "NeedsYou", "RequestPanel"]
+	const order = ["NowBar", "CheckInPanel", "NeedsYou", "Announcements"]
 	const at = order.map((name) => body.indexOf(`<${name}`))
 	for (const [i, name] of order.entries()) {
 		assert.ok(at[i] > 0, `${name} should be on Home`)
