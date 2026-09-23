@@ -239,3 +239,5 @@ NEXT: Approvals page (audit-flows 4B) = biggest remaining P1; then More/You per 
 EVIDENCE: 3 frontend 955/955 (yarn test), backend touched files green (approvals_list 16, app_links 5, request_counts 4, calendar soft 2, team 3, remote reject 6, remote request 10), design gates green (lint 119), live fresh.local checks: approvals list=Home per persona, team line -> /team?date, desktop sheet centred, Requests CLS 0.391 -> 0.058.
 DEAD END: bench run-tests still broken (py3.14/orjson); verified per-file with stubs + live read-only probes.
 NEXT: Nabil deploys nz-glass to Frappe Cloud; then F-13 tab-label ruling, OT form "Replacement Leave" option ruling (no banked OT policy), desktop drag-to-dismiss on centred sheets, per-list Team tabs cut.
+- 2026-09-23T07:34:10Z COMMIT: 76240e245 docs(handoff): 2.0.0-alpha.2 ready to deploy → review dispatched
+NEXT: push nz-glass after the CLS review (111402a6d) returns clean; Nabil deploys 2.0.0-alpha.2 on Frappe Cloud.
