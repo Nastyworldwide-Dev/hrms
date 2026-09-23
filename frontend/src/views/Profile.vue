@@ -174,11 +174,13 @@ const DETAIL_FIELDS = [
 	"department",
 	"designation",
 	"branch",
+	"grade",
 	"employment_type",
 	"date_of_joining",
 	"cell_number",
 	"company_email",
 	"personal_email",
+	"preferred_email",
 	"date_of_birth",
 	"gender",
 	"blood_group",
@@ -254,6 +256,13 @@ async function togglePush(on) {
 		} else {
 			await window.frappePushNotification.disableNotification()
 			pushOn.value = false
+			// Parity with the Settings page this replaced (review of 518a541e7).
+			toast({
+				title: __("Notifications are off"),
+				text: __("This phone won't be sent any."),
+				icon: "check-circle",
+				position: "bottom-center",
+			})
 		}
 		console.info("[You] notifications", pushOn.value ? "on" : "off")
 	} catch (error) {
@@ -323,9 +332,6 @@ const getFieldValue = (fieldname) => {
 	if (!doc) return ""
 	if (fieldname === "employee_number" && !doc[fieldname]) {
 		return doc["name"]
-	}
-	if (fieldname === "reports_to") {
-		return reportsToName.data || doc[fieldname]
 	}
 	return doc[fieldname]
 }

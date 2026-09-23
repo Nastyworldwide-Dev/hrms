@@ -47,3 +47,13 @@ test("the version is a line, not a button", () => {
 test("no group eyebrows", () => {
 	assert.doesNotMatch(template, /g-eyebrow/)
 })
+
+test("nothing the old sheets showed was lost (review of 518a541e7)", () => {
+	for (const field of ["grade", "preferred_email", "company_email", "department"]) {
+		assert.match(view, new RegExp(`"${field}"`), `${field} is still in Your details`)
+	}
+})
+
+test("turning notifications off says so, as Settings did", () => {
+	assert.match(view, /__\("Notifications are off"\)/)
+})
