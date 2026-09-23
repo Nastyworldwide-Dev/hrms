@@ -19,7 +19,10 @@ import { BASE, PW, login } from "./screens.mjs"
 // Needs a signed-in session: AUDIT_PW or HRMS_E2E_PW. Skips otherwise.
 const ITER = Number(process.env.BACK_RACE_ITER || 7)
 const DELAYS = (process.env.BACK_RACE_DELAYS || "0,50,100,200,400,600").split(",").map(Number)
-const WAYS = ["router.back", "history.back", "in-app back button"]
+// The in-app back button went with 41dab817e (in alpha.3): a tab page has no
+// Back, a section switch replaces history like a tab bar. The two browser
+// Backs are what a person still has on a tab page.
+const WAYS = ["router.back", "history.back"]
 // The guard's userResource.reload round trip, as a phone sees it (100-600 ms).
 // A local bench answers in ~15 ms, which closes the window and hides the race.
 const LATENCY_MS = Number(process.env.BACK_RACE_LATENCY_MS ?? 300)
@@ -126,11 +129,13 @@ test.describe("BACK then navigate before the Back lands", () => {
 					await settle(page)
 					const s = await page.evaluate(OUTLET_STATE)
 					runs++
+					// Titles as they are now: Helpdesk is "Help"; Home's header is the
+					// Nadi mark ("n") with a hidden "Nadi" h1 (d83acb1b1).
 					const expected = s.route.startsWith("/support")
-						? /Helpdesk/
+						? /Help/
 						: s.route === "/home"
-						? /Nadi/
-						: /KPI/
+						? /^n$|Nadi/
+						: /Score/
 					const ok =
 						s.url === s.route && s.invisible.length === 0 && s.top !== null && expected.test(s.top)
 					if (!ok) stuck.push({ way, delay, run: i, ...s })
