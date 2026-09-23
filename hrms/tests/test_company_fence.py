@@ -80,13 +80,19 @@ def _fake_db():
 	db.escape.side_effect = _escape
 
 	def get_value(doctype, filters, fieldname=None, **kwargs):
-		if doctype != "Employee" or not isinstance(filters, dict):
+		if doctype != "Employee":
 			return None
-		row = EMPLOYEES.get(filters.get("user_id"))
+		if isinstance(filters, str):
+			# by-name read: the scopes resolve identity first (470ca323f), then read the row
+			row = next((r for r in EMPLOYEES.values() if r[0] == filters), None)
+		elif isinstance(filters, dict):
+			row = EMPLOYEES.get(filters.get("user_id"))
+		else:
+			return None
 		if not row:
 			return None
 		name, department, company, status = row
-		if filters.get("status") and filters["status"] != status:
+		if isinstance(filters, dict) and filters.get("status") and filters["status"] != status:
 			return None
 		values = {"name": name, "department": department, "company": company, "status": status}
 		if kwargs.get("as_dict"):
@@ -95,6 +101,12 @@ def _fake_db():
 
 	db.get_value.side_effect = get_value
 	return db
+
+
+def _own_employees(user):
+	"""Stand-in for hrms.utils.identity.own_employees: the one Active claimant, or []."""
+	row = EMPLOYEES.get(user)
+	return [row[0]] if row and row[3] == "Active" else []
 
 
 class _Ctx:
@@ -129,6 +141,9 @@ class _Ctx:
 				side_effect=lambda user: ["HR Manager", "Employee"] if user in HR_USERS else ["Employee"],
 			),
 			patch.object(employee_issue_row_scope, "get_shared", return_value=[]),
+			# 470ca323f routed both scopes through canonical identity; model it from the fixture
+			patch.object(employee_issue_row_scope, "own_employees", side_effect=_own_employees),
+			patch.object(sop_scope, "own_employees", side_effect=_own_employees),
 		]
 		for p in self.patches:
 			p.start()
@@ -210,24 +225,18 @@ class TestEmployeeIssueCompanyFence(unittest.TestCase):
 			self.assertFalse(employee_issue_row_scope.has_permission(self._issue(VRFC), "read", COMPANY_HR))
 			self.assertTrue(employee_issue_row_scope.has_permission(self._issue(WWSB), "read", COMPANY_HR))
 
+	# Since 470ca323f the own-employee lookup is identity.own_employees + a company
+	# filter, not a get_all with a company term, so these pin the RESULT, not the query.
 	def test_own_employee_lookup_is_company_filtered(self):
-		"""The audited hole: get_all("Employee", {"user_id": user}) unfenced."""
-		with _Ctx(COMPANY_HR), patch.object(frappe, "get_all") as get_all:
-			get_all.side_effect = _Ctx(COMPANY_HR)._get_all
-			employee_issue_row_scope._own_employees(COMPANY_HR)
-			employee_filters = [
-				call.kwargs.get("filters") for call in get_all.call_args_list if call.args[0] == "Employee"
-			]
-		self.assertEqual(employee_filters, [{"user_id": COMPANY_HR, "company": ("in", [WWSB])}])
+		"""The audited hole: the own-employee lookup ignored the company fence."""
+		with _Ctx(COMPANY_HR):
+			self.assertEqual(employee_issue_row_scope._own_employees(COMPANY_HR), ["HR-EMP-003"])
+			with patch.dict(COMPANY_PERMISSIONS, {COMPANY_HR: [VRFC]}):
+				self.assertEqual(employee_issue_row_scope._own_employees(COMPANY_HR), [])
 
 	def test_unfenced_own_employee_lookup_is_unchanged(self):
-		with _Ctx(STAFF_WWSB), patch.object(frappe, "get_all") as get_all:
-			get_all.side_effect = _Ctx(STAFF_WWSB)._get_all
-			employee_issue_row_scope._own_employees(STAFF_WWSB)
-			employee_filters = [
-				call.kwargs.get("filters") for call in get_all.call_args_list if call.args[0] == "Employee"
-			]
-		self.assertEqual(employee_filters, [{"user_id": STAFF_WWSB}])
+		with _Ctx(STAFF_WWSB):
+			self.assertEqual(employee_issue_row_scope._own_employees(STAFF_WWSB), ["HR-EMP-001"])
 
 	def test_staff_scope_is_unchanged_for_unfenced_users(self):
 		with _Ctx(STAFF_WWSB):

@@ -65,7 +65,10 @@ def _load_module():
 	frappe_utils.getdate = _getdate
 	frappe_utils.get_first_day = lambda d: _getdate(d).replace(day=1)
 	frappe_utils.add_days = lambda d, days: _getdate(d) + datetime.timedelta(days=days)
-	sys.modules["frappe.model.document"].Document = type("Document", (), {})
+	# The pytest stub (conftest.py, fdd0d42bb) creates frappe.* submodules lazily, so import it, never index sys.modules.
+	document_module = importlib.import_module("frappe.model.document")
+	if not isinstance(getattr(document_module, "Document", None), type):
+		document_module.Document = type("Document", (), {})
 
 	spec = importlib.util.spec_from_file_location("_attendance_allowance_under_test", MODULE_PATH)
 	module = importlib.util.module_from_spec(spec)
