@@ -37,3 +37,11 @@ test("empty values are left out, not shown as a dash", () => {
 		/\.filter\(\(row\) => row\.value !== null && row\.value !== undefined && row\.value !== ""\)/
 	)
 })
+
+// The Employee field is spelt "prefered_email" (ERPNext's own spelling, the
+// one every server reader in hrms uses). "preferred_email" reads undefined,
+// and the empty-row filter above then hides the row without a trace.
+test("the preferred email row reads the field Employee really has", () => {
+	assert.match(view, /\["prefered_email", __\("Preferred email"\)/)
+	assert.doesNotMatch(view, /"preferred_email"/)
+})

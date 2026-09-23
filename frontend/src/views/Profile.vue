@@ -176,7 +176,7 @@ const DETAILS = [
 	["cell_number", __("Mobile"), "Data"],
 	["company_email", __("Work email"), "Data"],
 	["personal_email", __("Personal email"), "Data"],
-	["preferred_email", __("Preferred email"), "Data"],
+	["prefered_email", __("Preferred email"), "Data"],
 	["date_of_birth", __("Date of birth"), "Date"],
 	["gender", __("Gender"), "Data"],
 	["blood_group", __("Blood group"), "Data"],

@@ -1,3 +1,3 @@
-CLASS: a night shift matched by punch time (follow-up to 5c3d2bcd8).
+CLASS: a display list naming a field the doctype does not have (read undefined, silently filtered).
 
-Call sites: hrms/api/calendar.py _day_shift check-in leg — same-root, fixed (shift_start, not time).
+Call sites: frontend/src/views/Profile.vue DETAILS preferred_email — same-root, fixed (prefered_email). Other DETAILS fieldnames checked against live Employee meta on fresh.local — not-affected.
