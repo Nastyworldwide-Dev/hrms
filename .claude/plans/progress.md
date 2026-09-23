@@ -291,3 +291,15 @@ FINDING: swept every component for the self-hiding class that produced the Now-b
   calendar, the forms, the avatars — are correct: each has its four states or is
   deliberately absent.
 - 2026-09-23T00:55:23Z EVIDENCE: 2 correct — mapped tests green (bun ) for 20 file(s) ⟂9f33a174e0f9
+- 2026-09-23T00:55:29Z PUSH: nz-glass @ 4fa619563
+- 2026-09-23T00:55:29Z COMMIT: 4fa619563 fix(home): a broken read looked exactly like having nothing → review+design dispatched
+- 2026-09-23T00:56:07Z PUSH: nz-glass @ 1843005e4
+- 2026-09-23T00:56:07Z COMMIT: 1843005e4 docs(glass): the handoff described the deploy that was just criticised → review dispatched
+- 2026-09-23T01:42:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 19 file(s) ⟂145f4e2461a4
+
+EVIDENCE: rung 2 (correct) — update prompt: 802/802 tests green. Three mutants
+  killed, including the shipped bug itself (dismissal not remembered).
+DEAD END: a time-based cooldown for the update prompt. An update is a SPECIFIC
+  build — it stops mattering when a newer one lands, so a 30-day silence would
+  hide an urgent fix. Keyed on the worker's __WB_REVISION__ instead.
+NEXT: audit the shipped screens against mockup 4 and write the gap list.

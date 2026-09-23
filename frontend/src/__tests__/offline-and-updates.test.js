@@ -127,6 +127,59 @@ test("the prompt to reload is offered, not forced", () => {
 	assert.match(app, /UpdatePrompt|needRefresh/, "the shell offers the reload")
 })
 
+test("putting the offer away is remembered", () => {
+	// REPORTED 23 September 2026: "the new version is still popping every
+	// time". `dismiss()` flipped a ref and nothing else, so the waiting worker
+	// stayed waiting, the next load registered it, onNeedRefresh fired, and the
+	// bar came back — on every reload, until the employee gave in and tapped
+	// Reload. A dismissal the app forgets is a delay, not a choice.
+	const prompt = read("components/UpdatePrompt.vue")
+	assert.match(prompt, /remember\(waitingId\)/, "the dismissal names the build it dismissed")
+	assert.match(prompt, /shouldOfferUpdate\(waitingId, remembered\(\)\)/, "and is consulted")
+	assert.match(prompt, /onRegisteredSW/, "the build id comes from the registration")
+})
+
+test("the memory is per build, never a cooldown", () => {
+	// An update is a SPECIFIC build. It stops mattering the moment a newer one
+	// lands, so a timed silence — the shape the install prompt correctly uses —
+	// would hide a genuinely urgent fix for as long as the window lasted.
+	// Comments BLANKED before counting: the module explains at length why it is
+	// not a cooldown, and the first version of this assertion tripped on its own
+	// documentation. Seventh instance of that class in this repo.
+	const memory = read("utils/updatePromptMemory.js")
+		.replace(/\/\*[\s\S]*?\*\//g, (b) => b.replace(/[^\n]/g, " "))
+		.replace(/(^|[^:])\/\/[^\n]*/g, (l, lead) => lead + " ".repeat(l.length - lead.length))
+	assert.match(memory, /__WB_REVISION__/, "keyed on the build's own revision")
+	assert.doesNotMatch(memory, /COOLDOWN|Date\.now\(\)/, "not on a clock")
+	const prompt = read("components/UpdatePrompt.vue")
+	assert.doesNotMatch(
+		prompt,
+		/isWithinCooldown/,
+		"that is the install prompt's rule, not this one"
+	)
+})
+
+test("agreeing to reload clears the memory", () => {
+	// The dismissed key belongs to a build that is about to become the current
+	// one. Left in storage it is a coincidence waiting to suppress a future
+	// offer whose revision happens to match.
+	const prompt = read("components/UpdatePrompt.vue")
+	const reload = prompt.slice(prompt.indexOf("function reload"))
+	assert.match(reload, /removeItem\(UPDATE_DISMISS_KEY\)/)
+})
+
+test("storage failing does not silence the offer", () => {
+	// Private mode and cleared site data both throw on access. An unreadable
+	// memory must mean "not dismissed" — the other direction strands somebody
+	// on a broken build with no way forward.
+	const prompt = read("components/UpdatePrompt.vue")
+	const readFn = prompt.slice(
+		prompt.indexOf("function remembered"),
+		prompt.indexOf("function remember(")
+	)
+	assert.match(readFn, /catch \{[\s\S]*?return null/, "an unreadable memory is no memory")
+})
+
 // The offline bar must not COVER the screen it is warning about. `.g-header`
 // is transparent and sits in NORMAL FLOW at the top of every page — the
 // comment on it says so in as many words, and the back control is its first
