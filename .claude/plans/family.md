@@ -1,10 +1,9 @@
-CLASS: the today ring on a filled day. The quiet ring (--g-ink3) is under 3:1
-against any fill; only an unfilled cell carries it legibly.
+CLASS: a "not approved" decision that can be saved with no reason (P0-10).
+approval.decide requires one since the P0-10 fix; remote check-ins decide
+through their own endpoint and still took an empty remark.
 
-INSTANCE: half, leave and rest days (review of f0d953b41), after the worked-day
-case in f0d953b41.
-
-Call sites of .g-cal__day--today:
-frontend/src/theme/glass-components.css (present/half/leave/rest + today) — same-root, fixed here.
-frontend/src/components/glass/GCalendar.vue (absent + today, unfilled) — not-affected: 3.07/3.71 light/dark, passes.
-Team page picker (unfilled day, selected is ink) — not-affected: quiet ring kept so today and selected stay distinct.
+Call sites of remote_checkin._decide:
+hrms/api/remote_checkin.py:reject — same-root, fixed here (reason required, trimmed).
+hrms/api/remote_checkin.py:approve — not-affected: approving needs no reason (pinned by test).
+frontend/src/views/RemoteApprovals.vue submitDecision — not-affected by the server rule's shape; it sent an optional remark and is replaced by the Approvals page sheet in the next commit, which requires one.
+hrms/tests/probes/nadi_api_matrix.py — not-affected: probe calls with an unknown request, refused before the reason check.

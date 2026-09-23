@@ -382,10 +382,16 @@ def _decide(request: str, decision: str, approver_remarks: str) -> dict:
 	row = _ensure_approver(request)
 	if row.status != "Pending":
 		frappe.throw(_("This request has already been decided."))
+	# The one decision rule (audit P0-10, as approval.decide): "Not approved"
+	# says why, so the employee has something to act on. After the access and
+	# state checks, so those still answer first.
+	approver_remarks = (approver_remarks or "").strip()
+	if decision == "Rejected" and not approver_remarks:
+		frappe.throw(_("Say why this is not approved."), frappe.ValidationError)
 
 	doc = frappe.get_doc("Remote Checkin Request", request)
 	doc.status = decision
-	doc.approver_remarks = approver_remarks or ""
+	doc.approver_remarks = approver_remarks
 	# Audit stamp — when the approval happened on this system, not attendance
 	# wall clock. Stays on the system clock (see hrms/utils/timezone.py).
 	doc.approved_at = now_datetime()
