@@ -10,6 +10,48 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.5] — 2026-09-24
+
+One design across the whole app. Plan with evidence:
+`docs/glass/plan/alpha5-review.html`.
+
+### Fixed
+- **Today now shows as worked** on the Calendar once you check in and out
+  (it waited for the attendance record before). Still checked in: "In
+  progress". A night shift counts on the day it began.
+- **"1 day with no attendance" no longer counts today** — it was a false
+  alarm every morning. It now names the day ("Wed 16 Sep has no
+  attendance") and opens it, with a Fix this day button.
+- **Notification times were 4 hours off** ("in an hour"): the app now uses
+  the site's own time zone everywhere.
+- **The Calendar no longer offers "Claim" twice.** A claimed day says
+  "Claim waiting with <approver>" or "Overtime claimed".
+- "Answered by you" works on a second visit; "Fix a day" stays in Requests.
+- Screens said "nothing" while still loading or after an error (Now bar,
+  Waiting on you, your last 5, balances). They now show loading, then either
+  the answer or a plain "couldn't load" line.
+
+### Changed
+- **Every screen wears the same header** — back, title, bell, you — and on
+  desktop the side menu stays on every page (it vanished on Notifications,
+  You, Approvals). Public holidays is in the side menu too.
+- **Glass only on the bars and sheets** (Apple's rule); cards are solid, so
+  text reads cleanly. A soft fade sits under the bottom bar.
+- **Forms use the new Glass fields** — the phone's own date wheel, plain
+  labels, no "Select …" placeholders, no table names or ids.
+- **Every sheet has one top bar**: grabber, title in the middle, close on
+  the right. The holiday sheet has no gap and no card inside it.
+- **Notifications are one short line each** ("Time off approved · Hafiz
+  Salim · 6:31 pm"), grouped Today / Yesterday / Earlier.
+- **Help shows what is still open first** (5, then See all), finished items
+  behind one row, then Who to ask, then one button. No filter chips, no ids.
+- **Who to ask** is a sheet: your manager first, then HR.
+- Hours read as time ("9h 30m"); check-ins say In / Out; one name per
+  request type; list rows are taller and easier to tap.
+
+### Not changed
+- Desk, email wording, the Score/KPI rules, payroll, stored data.
+
 ## [2.0.0-alpha.4] — 2026-09-23
 
 ### Added
