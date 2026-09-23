@@ -19,6 +19,7 @@ import { userResource } from "@/data/user"
 import { employeeResource } from "@/data/employee"
 
 import dayjs from "@/utils/dayjs"
+import { lockPortraitOnPhones } from "@/utils/orientationLock"
 import { decideNavigation } from "@/router/navigationGate"
 import getIonicConfig from "@/utils/ionicConfig"
 import { employeeGate } from "@/utils/identity"
@@ -142,6 +143,8 @@ router.isReady().then(async () => {
 	applyProductName(app.config.globalProperties.__)
 
 	registerServiceWorker()
+	// Phones portrait, larger screens free (owner ruling; utils/orientationLock.js).
+	lockPortraitOnPhones()
 	app.mount("#app")
 })
 
