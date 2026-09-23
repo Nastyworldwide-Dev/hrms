@@ -50,7 +50,7 @@ test("the panel caps what it renders, and the cap is five", () => {
 	)
 	assert.match(
 		panel(),
-		/\.slice\(0,\s*HOME_ROWS\)/,
+		/\.slice\(0,\s*HOME_ROWS \+ PAGE \* pages\.value\)/,
 		"the list passed to RequestList is the capped one, not the whole set"
 	)
 })
@@ -70,7 +70,7 @@ test("the control says how many, and how many is the truth", () => {
 	// "Show 4 more", not "Show more": a count the person can check against
 	// what appears is the difference between a control and a promise.
 	assert.match(text, /hidden(Count)?/, "the number of hidden rows is computed")
-	assert.match(text, /__\(\s*["']Show \{0\} more["']/, "the label carries the count")
+	assert.match(text, /__\(\s*["']Show more \(\{0\} left\)["']/, "the label carries the count")
 })
 
 test("the count is what is hidden, not what exists", () => {
@@ -256,4 +256,12 @@ test("counting a chip does not mutate the filter", () => {
 	)
 	assert.doesNotMatch(counts, /filter\.value =/, "counting is pure")
 	assert.match(counts, /matches\(request, key\)/, "the key is passed, not read from the ref")
+})
+
+// No endless list (owner, 23 Sep; NN/g infinite scrolling; Baymard
+// load-more): "Show more" adds twenty at a time, not every request at once.
+test("Show more reveals twenty at a time, never the whole history", () => {
+	const text = panel()
+	assert.match(text, /const PAGE = 20\b/)
+	assert.match(text, /\.slice\(0,\s*HOME_ROWS \+ PAGE \* pages\.value\)/)
 })

@@ -79,7 +79,7 @@
 			aria-controls="request-panel-list"
 			@click="expand"
 		>
-			{{ __("Show {0} more", [hidden]) }}
+			{{ __("Show more ({0} left)", [hidden]) }}
 		</button>
 	</div>
 </template>
@@ -141,7 +141,11 @@ const activeTab = ref(route.query.tab === "answered" ? "answered" : "mine")
 // combined list route, so "See all (9)" could only point at one type's screen
 // and answer a tap about nine requests with a page showing three.
 const HOME_ROWS = 5
+//: "Show more" adds this many at a time — never the whole history at once
+//: (owner, 23 Sep: no endless scrolling; NN/g, Baymard "load more").
+const PAGE = 20
 const showAll = ref(false)
+const pages = ref(0)
 const listRegion = ref(null)
 const revealed = ref("")
 
@@ -152,8 +156,9 @@ const revealed = ref("")
 // a polite live region says what happened; the control's own disappearance is
 // the one thing that cannot announce it (design review of 70bffe660).
 async function expand() {
-	const count = hidden.value
+	const count = Math.min(hidden.value, PAGE)
 	showAll.value = true
+	pages.value += 1
 	revealed.value = __("{0} more requests shown", [count])
 	await nextTick()
 	listRegion.value?.focus()
@@ -272,9 +277,7 @@ const activeRequests = computed(() =>
 	unfiltered.value.filter((request) => matches(request, filter.value))
 )
 
-const shown = computed(() =>
-	showAll.value ? activeRequests.value : activeRequests.value.slice(0, HOME_ROWS)
-)
+const shown = computed(() => activeRequests.value.slice(0, HOME_ROWS + PAGE * pages.value))
 
 //: TWO PILES, not one list (mockup 4 gap #2). "Waiting on someone" is work in
 //: flight and "Finished" is a record — different jobs, and mixing them makes
@@ -301,13 +304,14 @@ const finishedGroup = computed(() =>
 // What is HIDDEN, not what exists: a person with seven requests told "Show 7
 // more" taps it and finds two new rows.
 const hidden = computed(() =>
-	showAll.value ? 0 : Math.max(0, activeRequests.value.length - HOME_ROWS)
+	Math.max(0, activeRequests.value.length - HOME_ROWS - PAGE * pages.value)
 )
 
 // The tab strip swaps the list under the control. A stale `showAll` would open
 // the next tab already expanded, which is the opposite of what the cap is for.
 watch(activeTab, () => {
 	showAll.value = false
+	pages.value = 0
 	revealed.value = ""
 	// The filter belongs to the list it narrowed. Carrying "Not approved" into
 	// the Team tab opens it on an empty list that looks broken.

@@ -1,3 +1,3 @@
-CLASS: a balance strip that grew into a wall of cards.
+CLASS: a Show more that revealed the whole history at once (an endless list).
 
-Call sites: RequestBalances.vue — same-root, fixed (2 pinned cards + All balances sheet in compact rows). GBalanceGrid — not-affected (renders whatever count it is given).
+Call sites: RequestPanel.vue — same-root, fixed (20 per tap). NeedsYou Show more — not-affected (bounded kinds, at most 8). Announcements See more — not-affected (routes to the board). Approvals — already paged (b12fd210f).
