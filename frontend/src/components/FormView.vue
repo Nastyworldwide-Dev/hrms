@@ -517,7 +517,7 @@ const cancelViewer = computed(() => ({
 }))
 
 // Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
-const dateKicker = computed(() => $dayjs().format("dddd, D MMMM YYYY").toUpperCase())
+const dateKicker = computed(() => $dayjs().format("dddd, D MMMM YYYY"))
 
 let activeTab = ref(props.tabs?.[0].name)
 let fileAttachments = ref([])

@@ -66,7 +66,7 @@ module.exports = {
 	fontSize: {
 		badge: ["0.75rem", {
 			fontWeight: "700",
-			letterSpacing: "0.09em",
+			letterSpacing: "0.01em",
 			lineHeight: "1.2",
 		}],
 		"button-label": ["1rem", {
@@ -101,12 +101,12 @@ module.exports = {
 		}],
 		eyebrow: ["0.75rem", {
 			fontWeight: "600",
-			letterSpacing: "0.13em",
+			letterSpacing: "0.01em",
 			lineHeight: "1.3",
 		}],
 		"field-label": ["0.75rem", {
 			fontWeight: "600",
-			letterSpacing: "0.14em",
+			letterSpacing: "0.01em",
 			lineHeight: "1.3",
 		}],
 		"kra-label": ["0.875rem", {
@@ -116,7 +116,7 @@ module.exports = {
 		}],
 		"micro-label": ["0.75rem", {
 			fontWeight: "600",
-			letterSpacing: "0.13em",
+			letterSpacing: "0.01em",
 			lineHeight: "1.3",
 		}],
 		"panel-title": ["1rem", {

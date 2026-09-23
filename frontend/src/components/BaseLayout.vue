@@ -39,7 +39,7 @@ const $dayjs = inject("$dayjs")
 const __ = inject("$translate")
 
 // Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
-const dateKicker = computed(() => $dayjs().format("dddd, D MMMM YYYY").toUpperCase())
+const dateKicker = computed(() => $dayjs().format("dddd, D MMMM YYYY"))
 
 const props = defineProps({
 	pageTitle: {

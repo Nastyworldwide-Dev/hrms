@@ -34,7 +34,7 @@
 					</div>
 				</div>
 
-				<label class="text-xs uppercase text-ink-700 tracking-wide">
+				<label class="text-xs text-ink-700 tracking-wide">
 					{{ __("Reason for remote {0}", [logType === "IN" ? "check-in" : "check-out"]) }}
 				</label>
 				<textarea

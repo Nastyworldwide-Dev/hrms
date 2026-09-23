@@ -125,7 +125,7 @@
 				</div>
 
 				<div class="px-4 mt-4">
-					<label class="text-xs uppercase text-ink-700 tracking-wide font-extrabold">
+					<label class="text-xs text-ink-700 tracking-wide font-extrabold">
 						{{ __("Status") }}
 					</label>
 					<div class="flex gap-1.5 mt-1.5">
@@ -145,7 +145,7 @@
 						</button>
 					</div>
 
-					<label class="block text-xs uppercase text-ink-700 tracking-wide font-extrabold mt-4">
+					<label class="block text-xs text-ink-700 tracking-wide font-extrabold mt-4">
 						{{ __("Internal HR notes") }}
 						<span class="text-ink-500 normal-case font-semibold">
 							({{ __("never shown to the employee") }})

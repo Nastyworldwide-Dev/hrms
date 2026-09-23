@@ -181,7 +181,6 @@ const attachmentKind = computed(() => {
 .sop-prose :deep(h5),
 .sop-prose :deep(h6) {
 	font-size: 13.5px;
-	text-transform: uppercase;
 	letter-spacing: 0.04em;
 }
 .sop-prose :deep(h1:first-child),
@@ -247,7 +246,6 @@ const attachmentKind = computed(() => {
 	font-family: var(--g-font-display);
 	font-weight: 800;
 	font-size: 11px;
-	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	text-align: left;
 	color: var(--g-ink);

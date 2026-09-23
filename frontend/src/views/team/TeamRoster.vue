@@ -64,7 +64,7 @@
 								class="flex flex-col items-center justify-center flex-none w-11 py-1.5 rounded-well border border-divider"
 								:class="shiftOn(member, day) ? 'bg-surface' : ''"
 							>
-								<span class="text-caption text-ink-600 uppercase">{{ day.dow }}</span>
+								<span class="text-caption text-ink-600">{{ day.dow }}</span>
 								<span
 									class="text-button-label font-semibold"
 									:class="shiftOn(member, day) ? 'text-inkbase' : 'text-ink-500'"

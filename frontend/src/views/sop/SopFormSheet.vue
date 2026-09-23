@@ -178,14 +178,14 @@
 			>
 				<button
 					type="button"
-					class="flex-1 py-3 border border-accent-ink text-accent-ink text-card-title font-extrabold uppercase"
+					class="flex-1 py-3 border border-accent-ink text-accent-ink text-card-title font-extrabold"
 					@click="close"
 				>
 					{{ __("Cancel") }}
 				</button>
 				<button
 					type="button"
-					class="flex-1 py-3 border border-accent-ink bg-accent-ink text-ground text-card-title font-extrabold uppercase disabled:opacity-60"
+					class="flex-1 py-3 border border-accent-ink bg-accent-ink text-ground text-card-title font-extrabold disabled:opacity-60"
 					:disabled="saving"
 					@click="save"
 				>
@@ -452,12 +452,11 @@ const save = async () => {
 </script>
 
 <style scoped>
-/* mockup field styling — 10px uppercase label over a surface-filled square
+/* mockup field styling — 10px label over a surface-filled square
    input; scoped so it cannot leak into other forms */
 .m-field-label {
 	font-size: 10px;
 	font-weight: 800;
-	text-transform: uppercase;
 	letter-spacing: 0.07em;
 	color: rgb(var(--g-ink2));
 	font-family: var(--g-font-display);

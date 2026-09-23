@@ -42,7 +42,7 @@
 					<span aria-hidden="true">→</span>
 				</button>
 				<button
-					class="w-full bg-transparent text-ink-700 px-3.5 py-2.5 font-sans font-extrabold text-xs uppercase tracking-wide cursor-pointer hover:text-ink disabled:opacity-60"
+					class="w-full bg-transparent text-ink-700 px-3.5 py-2.5 font-sans font-extrabold text-xs tracking-wide cursor-pointer hover:text-ink disabled:opacity-60"
 					@click="decline"
 					:disabled="enabling"
 				>

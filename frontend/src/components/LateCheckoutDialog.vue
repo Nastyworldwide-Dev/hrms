@@ -23,7 +23,7 @@
 					</div>
 				</div>
 
-				<label class="text-xs uppercase text-ink-700 tracking-wide">
+				<label class="text-xs text-ink-700 tracking-wide">
 					{{ __("Time you left") }}
 				</label>
 				<input
@@ -37,7 +37,7 @@
 					{{ checkoutError }}
 				</div>
 
-				<label class="text-xs uppercase text-ink-700 tracking-wide mt-2">
+				<label class="text-xs text-ink-700 tracking-wide mt-2">
 					{{ __("Why didn't you check out at the time?") }}
 				</label>
 				<textarea

@@ -214,7 +214,7 @@ const calendarDays = computed(() =>
 	)
 )
 
-const getDayAbbr = (s) => s.trim().slice(0, 3).toUpperCase()
+const getDayAbbr = (s) => s.trim().slice(0, 3)
 const DAYS = [
 	getDayAbbr(__("Sunday")),
 	getDayAbbr(__("Monday")),

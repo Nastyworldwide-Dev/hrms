@@ -186,7 +186,6 @@ ion-tab-button.g-tabbar__btn {
 	font-weight: var(--g-type-tab-label-weight);
 	letter-spacing: var(--g-type-tab-label-tracking);
 	line-height: var(--g-type-tab-label-line-height);
-	text-transform: uppercase;
 }
 /* Selection carried by the item itself (no container): the active label is
    bolder and full-opacity while its colour lifts to --g-ink via the button's
@@ -237,7 +236,6 @@ html[data-transparency="reduce"] .g-sidenav {
 	font-size: var(--g-type-tab-label-size);
 	font-weight: var(--g-type-tab-label-weight);
 	letter-spacing: var(--g-type-tab-label-tracking);
-	text-transform: uppercase;
 	color: var(--g-ink2);
 	cursor: pointer;
 	transition: background var(--g-motion-row-tap-duration) var(--g-motion-row-tap-easing);
@@ -434,7 +432,6 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	font-weight: var(--g-type-eyebrow-weight);
 	letter-spacing: var(--g-type-eyebrow-tracking);
 	line-height: var(--g-type-eyebrow-line-height);
-	text-transform: uppercase;
 }
 .g-eyebrow {
 	color: var(--g-accent-ink);
@@ -666,7 +663,6 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	font-weight: var(--g-type-badge-weight);
 	letter-spacing: var(--g-type-badge-tracking);
 	line-height: var(--g-type-badge-line-height);
-	text-transform: uppercase;
 }
 .g-badge--open {
 	background: var(--g-brand);
@@ -1021,7 +1017,6 @@ html[data-theme="dark"] .g-badge--open {
 	font-weight: var(--g-type-field-label-weight);
 	letter-spacing: var(--g-type-field-label-tracking);
 	line-height: var(--g-type-field-label-line-height);
-	text-transform: uppercase;
 	color: var(--g-ink2);
 }
 .g-input {
@@ -1325,7 +1320,6 @@ html[data-theme="dark"] .g-badge--open {
 	font-weight: var(--g-type-micro-label-weight);
 	letter-spacing: var(--g-type-micro-label-tracking);
 	line-height: var(--g-type-micro-label-line-height);
-	text-transform: uppercase;
 	color: var(--g-ink2);
 }
 .g-balance__note {
@@ -1388,7 +1382,6 @@ html[data-theme="dark"] .g-badge--open {
 	font-weight: 800;
 	letter-spacing: var(--g-type-card-title-tracking);
 	line-height: var(--g-type-card-title-line-height);
-	text-transform: uppercase;
 	color: var(--g-ink);
 }
 
@@ -1399,7 +1392,6 @@ html[data-theme="dark"] .g-badge--open {
 	font-weight: var(--g-type-micro-label-weight);
 	letter-spacing: var(--g-type-micro-label-tracking);
 	line-height: var(--g-type-micro-label-line-height);
-	text-transform: uppercase;
 	color: var(--g-ink2);
 }
 
@@ -1578,7 +1570,6 @@ svg.lucide {
 	font-size: var(--g-type-micro-label-size);
 	font-weight: var(--g-type-micro-label-weight);
 	letter-spacing: var(--g-type-micro-label-tracking);
-	text-transform: uppercase;
 	color: var(--g-ink3);
 }
 /* every day cell is a 44px touch target (§5) without moving the 10.5px numeral */
@@ -1743,7 +1734,6 @@ html[data-theme="dark"] .g-cal__day--present {
 	font-size: var(--g-type-eyebrow-size);
 	font-weight: var(--g-type-eyebrow-weight);
 	letter-spacing: var(--g-type-eyebrow-tracking);
-	text-transform: uppercase;
 	font-variant-numeric: tabular-nums;
 	color: var(--g-ink2);
 }
@@ -2021,7 +2011,6 @@ html[data-theme="dark"] .g-cal__day--present {
 	font-size: var(--g-type-micro-label-size);
 	font-weight: var(--g-type-micro-label-weight);
 	letter-spacing: var(--g-type-micro-label-tracking);
-	text-transform: uppercase;
 	font-variant-numeric: tabular-nums;
 	color: var(--g-ink2);
 }
@@ -2103,7 +2092,6 @@ html[data-theme="dark"] .g-cal__day--present {
 	font-size: var(--g-type-badge-size);
 	font-weight: var(--g-type-badge-weight);
 	letter-spacing: var(--g-type-badge-tracking);
-	text-transform: uppercase;
 	color: var(--g-ink2);
 	cursor: pointer;
 	transition: background var(--g-motion-row-tap-duration) var(--g-motion-row-tap-easing);
@@ -2386,7 +2374,6 @@ textarea {
 	font-size: var(--g-type-field-label-size);
 	font-weight: var(--g-type-field-label-weight);
 	letter-spacing: var(--g-type-field-label-tracking);
-	text-transform: uppercase;
 	color: var(--g-ink2);
 }
 .g-table td {
@@ -2486,7 +2473,6 @@ textarea {
 	font-size: var(--g-type-micro-label-size);
 	font-weight: var(--g-type-micro-label-weight);
 	letter-spacing: var(--g-type-micro-label-tracking);
-	text-transform: uppercase;
 	text-decoration: none;
 }
 .g-pdf__pagecount {

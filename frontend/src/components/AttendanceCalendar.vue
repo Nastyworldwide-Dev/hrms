@@ -119,7 +119,6 @@ const days = computed(() =>
 //: Only the states this month has (approved Calendar plan, C6).
 const monthLegend = computed(() => legendFor(LEGEND, days.value))
 
-
 // Day-cell and legend colour-coding for present/absent/leave/holiday now
 // lives in GCalendar itself (state-driven, not inline style strings) — these
 // two maps were the pre-GCalendar implementation and stopped being read by
@@ -157,7 +156,7 @@ const getEventOnDate = (date) => {
 	return (calendarEvents.value.data || {})[firstOfMonth.value.date(date).format("YYYY-MM-DD")]
 }
 
-const getDayAbbr = (s) => s.trim().slice(0, 3).toUpperCase() // Unicode-safe enough for labels
+const getDayAbbr = (s) => s.trim().slice(0, 3)
 
 const DAYS = [
 	getDayAbbr(__("Sunday")),

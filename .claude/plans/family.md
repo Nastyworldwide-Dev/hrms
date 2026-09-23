@@ -1,10 +1,10 @@
-CLASS: You doing another page's job, or one thing behind several doors
-(audit-pages §4 "You"; owner ruling 3: show the shift pattern).
+CLASS: block capitals forced by style (basis NG-CAPS, W-CASE, W-DYS;
+audit-pages PAGE-10). Labels are written in sentence case; CSS and a few
+templates turned them into capitals, with letter-spacing sized for capitals.
 
-Doors and verdicts:
-frontend/src/views/Profile.vue — same-root: title You; department · branch line; manager + shift on the page; ONE details row/sheet; theme + notifications inline; version line; no eyebrows.
-frontend/src/views/AppSettings.vue — same-root, deleted; /settings redirects to /profile.
-frontend/src/components/ContactInfoSheet.vue — same-root, deleted (the manager showed in two sheets, PAGE-23).
-frontend/src/views/helpdesk/HelpdeskHub.vue — same-root: "Who to ask" row (HR contacts moved from You to Help).
-frontend/src/data/hrContacts.js reportingManagerResource — same-root, removed (its only reader was the contact sheet).
-frontend/src/components/PushNotificationPrompt.vue — not-affected: shares data/notifications.js enable path, unchanged.
+Sources and verdicts:
+frontend/src/theme/glass-components.css (14 selectors: tab bar, side nav, eyebrow, badge, field label, balance/stat/dow labels, score pill, header kicker, segmented option, table head, pdf retry) — same-root, text-transform removed.
+design/tokens.json tracking for eyebrow, field-label, micro-label, badge — same-root, 0.09–0.14em -> 0.01em (the spacing was for capitals).
+Templates with the `uppercase` utility (RemoteCheckinDialog, LateCheckoutDialog, PushNotificationPrompt, SopFormSheet, HRIssueBoard, TeamRoster) and scoped CSS (SopDetail, SopFormSheet) — same-root, removed.
+JS .toUpperCase() on dates/weekday names (BaseLayout, FormView, AttendanceCalendar, TeamDashboard) — same-root, removed.
+Initials (GAvatar, ContactCard, TeamRoster shift code) — not-affected: a name's initial is a capital by spelling, not style.
