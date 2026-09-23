@@ -32,7 +32,7 @@ class TestNeedsYouCopy(FrappeTestCase):
 	def test_no_row_says_a_doctype_name(self):
 		""""Attendance Request" is a table. "attendance fix" is what somebody is
 		actually waiting for."""
-		for doctype, (noun, _route) in ROW_COPY.items():
+		for doctype, (noun, _nouns, _route) in ROW_COPY.items():
 			self.assertNotEqual(noun, doctype.lower())
 			self.assertNotIn("request" if doctype.endswith("Request") else "@@", noun.title())
 

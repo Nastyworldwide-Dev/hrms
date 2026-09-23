@@ -28,3 +28,9 @@ test("no screen text says (s) any more", () => {
 		assert.equal(screen.filter((l) => /\w\(s\)|\(es\)/.test(l)).length, 0, file)
 	}
 })
+
+test("Home uses the plural the server sends, not noun + s (\"attendance fixes\")", () => {
+	const src = readFileSync(fileURLToPath(new URL("../../components/NeedsYou.vue", import.meta.url)), "utf8")
+	assert.match(src, /countOf\(row\.count, row\.noun, row\.nouns\)/)
+	assert.doesNotMatch(src, /\{1\}s to approve/)
+})

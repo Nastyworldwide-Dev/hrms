@@ -37,7 +37,8 @@ logger = logging.getLogger(__name__)
 #: queue, open it).
 SCAN_CAP = 20
 
-#: The employee's word for each type, and where tapping the row goes. The
+#: The employee's word for each type, one and many, and where tapping the row
+#: goes. Both forms, because English plurals are not "+s" ("attendance fixes"). The
 #: doctype name never reaches a screen — "Attendance Request" is a table;
 #: "attendance fixes" is what somebody is waiting for.
 #: The route names are the PWA's own, and a name that does not exist throws at
@@ -45,19 +46,23 @@ SCAN_CAP = 20
 #: pinned by frontend/src/views/__tests__/needs-you.test.js, which resolves
 #: every one of them against the router.
 ROW_COPY = {
-	"Leave Application": ("leave request", "LeaveApplicationListView"),
-	"Expense Claim": ("expense claim", "ExpenseClaimListView"),
-	"Shift Request": ("shift request", "ShiftRequestListView"),
-	"OT Request": ("overtime claim", "OTRequestListView"),
-	"Attendance Request": ("attendance fix", "AttendanceRequestListView"),
+	"Leave Application": ("leave request", "leave requests", "LeaveApplicationListView"),
+	"Expense Claim": ("expense claim", "expense claims", "ExpenseClaimListView"),
+	"Shift Request": ("shift request", "shift requests", "ShiftRequestListView"),
+	"OT Request": ("overtime claim", "overtime claims", "OTRequestListView"),
+	"Attendance Request": ("attendance fix", "attendance fixes", "AttendanceRequestListView"),
 	# HR policy, 23 Sep 2026: no banked overtime, so the PWA has no
 	# replacement-leave screen. An approver decides any claim still open on
 	# the Approvals page, where every row count here leads anyway.
-	"Replacement Leave Claim": ("replacement leave claim", "Approvals"),
+	"Replacement Leave Claim": ("replacement leave claim", "replacement leave claims", "Approvals"),
 	# No list of its own in the PWA — comp leave surfaces with leave. Sending
 	# somebody to a screen that does not show the thing they tapped is worse
 	# than sending them to the nearest one that does.
-	"Compensatory Leave Request": ("compensatory leave request", "LeaveApplicationListView"),
+	"Compensatory Leave Request": (
+		"compensatory leave request",
+		"compensatory leave requests",
+		"LeaveApplicationListView",
+	),
 }
 
 
@@ -103,7 +108,7 @@ def get_needs_you() -> dict:
 			continue
 		if not count:
 			continue
-		noun, route = ROW_COPY.get(doctype, (doctype.lower(), None))
+		noun, nouns, route = ROW_COPY.get(doctype, (doctype.lower(), f"{doctype.lower()}s", None))
 		rows.append(
 			{
 				"key": doctype,
@@ -111,6 +116,7 @@ def get_needs_you() -> dict:
 				"count": min(count, SCAN_CAP),
 				"capped": count > SCAN_CAP,
 				"noun": noun,
+				"nouns": nouns,
 				"route": route,
 			}
 		)

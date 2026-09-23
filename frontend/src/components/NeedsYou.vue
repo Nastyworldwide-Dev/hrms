@@ -143,8 +143,8 @@ const rows = computed(() => {
 			// "20+" when the scan capped: an approver reading that makes the
 			// same decision either way — this is a big queue, open it.
 			label: row.capped
-				? __("{0}+ {1}s to approve", [row.count, row.noun])
-				: __("{0} to approve", [countOf(row.count, row.noun)]),
+				? __("{0}+ {1} to approve", [row.count, row.nouns || `${row.noun}s`])
+				: __("{0} to approve", [countOf(row.count, row.noun, row.nouns)]),
 			sublabel: null,
 			// Every request to approve opens the Approvals page, where it can be
 			// decided (owner ruling 23 Sep: approvals only where they can be done).

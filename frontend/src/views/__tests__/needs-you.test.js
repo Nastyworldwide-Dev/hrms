@@ -56,7 +56,7 @@ test("every route the server sends exists in the router", () => {
 	// The failure this prevents is silent until a tap: a row renders, reads
 	// correctly, and does nothing — or throws — when somebody acts on it.
 	const names = routerNames()
-	const routes = [...py(api).matchAll(/\(\s*"[^"]+",\s*"(\w+)"\s*\)/g)].map((m) => m[1])
+	const routes = [...py(api).matchAll(/\(\s*"[^"]+",\s*"[^"]+",\s*"(\w+)",?\s*\)/g)].map((m) => m[1])
 	assert.ok(routes.length >= 7, `expected a route per request type, found ${routes.length}`)
 	const missing = routes.filter((name) => !names.has(name))
 	assert.deepEqual(missing, [], "a route name that does not exist throws when tapped")
@@ -122,7 +122,7 @@ test("a capped count says so rather than lying", () => {
 	// per-document permission checks. Past the cap it says "20+", which is the
 	// same decision an approver makes anyway.
 	assert.match(component, /row\.capped/)
-	assert.match(component, /\{0\}\+ \{1\}s to approve/)
+	assert.match(component, /\{0\}\+ \{1\} to approve/)
 	assert.match(py(api), /"capped": count > SCAN_CAP/)
 })
 
