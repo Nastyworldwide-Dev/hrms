@@ -54,3 +54,11 @@ test("D1: the absent legend key matches the day (an outline, not a fill)", () =>
 	assert.match(key, /inset 0 0 0 1\.5px var\(--g-danger-ink\)/)
 	assert.match(key, /background:\s*transparent/)
 })
+
+test("D1: an absent TODAY keeps its danger outline (the today ring must not hide it)", () => {
+	// Equal specificity: .g-cal__day--today came later in the file and took the
+	// border, leaving colour alone to say "absent" on the one day it matters
+	// most (WCAG 1.4.1; design review of 8f16f87ed).
+	const css = read("../../theme/glass-components.css")
+	assert.match(css, /\.g-cal__day--absent\.g-cal__day--today\s*\{[^}]*border-color:\s*var\(--g-danger-ink\)/)
+})

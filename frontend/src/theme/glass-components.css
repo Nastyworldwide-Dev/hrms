@@ -1657,6 +1657,13 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-cal__day--today {
 	border-color: var(--g-ink3);
 }
+/* An absent day that is also today keeps its danger outline: the today ring
+   is declared above with equal specificity and would otherwise win, leaving
+   colour alone to carry "absent" (WCAG 1.4.1; review of 8f16f87ed). A
+   selected day keeps its heavier numeral, so that pair stays distinguishable. */
+.g-cal__day--absent.g-cal__day--today {
+	border-color: var(--g-danger-ink);
+}
 .g-cal__swatch--selected {
 	background: transparent;
 	box-shadow: inset 0 0 0 1.5px var(--g-ink);
