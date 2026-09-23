@@ -35,9 +35,10 @@ class BootTimeZone(unittest.TestCase):
 		boot = self._boot("Asia/Kuala_Lumpur")
 		self.assertEqual(boot["sysdefaults"]["time_zone"], "Asia/Kuala_Lumpur")
 
-	def test_no_zone_configured_sends_none_so_the_client_keeps_its_fallback(self):
-		boot = self._boot(None)
-		self.assertIsNone(boot["sysdefaults"]["time_zone"])
+	def test_the_zone_is_whatever_system_settings_says(self):
+		# get_system_timezone never returns None (Frappe defaults it), so the
+		# client's Dubai fallback is now only for a boot that predates this.
+		self.assertEqual(self._boot("Europe/Rome")["sysdefaults"]["time_zone"], "Europe/Rome")
 
 
 if __name__ == "__main__":
