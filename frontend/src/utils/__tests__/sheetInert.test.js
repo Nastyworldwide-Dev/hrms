@@ -14,35 +14,48 @@ function fakePage() {
 test("an open sheet makes the page behind it inert, and closing it frees the page", () => {
 	_resetForTest()
 	const page = fakePage()
-	holdPageInert(() => page)
+	const held = holdPageInert(() => page)
 	assert.equal(page.inert, true)
-	releasePageInert(() => page)
+	releasePageInert(held)
 	assert.equal(page.inert, false)
 })
 
 test("with two sheets open, the page stays inert until both close", () => {
 	_resetForTest()
 	const page = fakePage()
-	holdPageInert(() => page)
-	holdPageInert(() => page)
-	releasePageInert(() => page)
+	const a = holdPageInert(() => page)
+	const b = holdPageInert(() => page)
+	releasePageInert(a)
 	assert.equal(page.inert, true)
-	releasePageInert(() => page)
+	releasePageInert(b)
 	assert.equal(page.inert, false)
 })
 
 test("an extra release never leaves the count negative", () => {
 	_resetForTest()
 	const page = fakePage()
-	releasePageInert(() => page)
-	holdPageInert(() => page)
+	releasePageInert(page)
+	const held = holdPageInert(() => page)
 	assert.equal(page.inert, true)
-	releasePageInert(() => page)
+	releasePageInert(held)
 	assert.equal(page.inert, false)
 })
 
 test("no page mounted: nothing throws", () => {
 	_resetForTest()
-	holdPageInert(() => null)
-	releasePageInert(() => null)
+	releasePageInert(holdPageInert(() => null))
+})
+
+test("the page that was frozen is the page that is freed, even after the route changed", () => {
+	// Back pressed while a sheet was still opening: the sheet froze Calendar,
+	// the route moved to Home, then the sheet closed. Re-finding "the visible
+	// page" at release freed Home (never frozen) and left Calendar inert —
+	// untappable the next time anyone went back to it.
+	_resetForTest()
+	const calendar = fakePage()
+	const home = fakePage()
+	const held = holdPageInert(() => calendar)
+	releasePageInert(held)
+	assert.equal(calendar.inert, false)
+	assert.equal(home.inert, false)
 })

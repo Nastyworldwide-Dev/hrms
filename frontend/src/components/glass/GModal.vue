@@ -78,10 +78,14 @@ const route = useRoute()
 //: (audit P0-3). A sheet that lands on a different page closes itself.
 let openedOn = null
 const showModalBackdrop = ref(false)
-//: Whether THIS sheet currently holds the page inert. A sheet can be torn down
-//: (route change, v-if) without Ionic's dismiss events, and the page must not
-//: stay frozen behind a sheet that no longer exists.
-let holding = false
+//: The page THIS sheet froze — the node itself, so release frees that page even
+//: after the route moved on. A sheet can be torn down (route change, v-if)
+//: without Ionic's dismiss events, and no page may stay frozen behind a sheet
+//: that no longer exists.
+let frozenPage = null
+//: The control that opened the sheet, so focus returns to it on close
+//: (WAI-ARIA dialog pattern: focus moves in, stays in, and comes back).
+let opener = null
 
 //: The page the user is looking at — the one the sheet covers. Ionic marks the
 //: others .ion-page-hidden, and the sheet itself lives at the app root.
@@ -92,10 +96,8 @@ function visiblePage() {
 function onWillPresent() {
 	openedOn = route.path
 	showModalBackdrop.value = true
-	if (!holding) {
-		holding = true
-		holdPageInert(visiblePage)
-	}
+	opener = document.activeElement
+	if (!frozenPage) frozenPage = holdPageInert(visiblePage)
 }
 
 function onDidPresent() {
@@ -104,7 +106,15 @@ function onDidPresent() {
 		closeOwnSheet()
 		return
 	}
+	moveFocusIn()
 	emit("did-present")
+}
+
+function moveFocusIn() {
+	const sheet = modal.value?.$el?.querySelector(".g-sheet")
+	if (!sheet || sheet.contains(document.activeElement)) return
+	sheet.setAttribute("tabindex", "-1")
+	sheet.focus({ preventScroll: true })
 }
 
 function onWillDismiss(event) {
@@ -115,13 +125,14 @@ function onWillDismiss(event) {
 function onDidDismiss() {
 	showModalBackdrop.value = false
 	release()
+	if (opener?.isConnected) opener.focus?.({ preventScroll: true })
+	opener = null
 	emit("did-dismiss")
 }
 
 function release() {
-	if (!holding) return
-	holding = false
-	releasePageInert(visiblePage)
+	releasePageInert(frozenPage)
+	frozenPage = null
 }
 
 //: The scrim closes ITS sheet. `modalController.dismiss()` closed whichever
