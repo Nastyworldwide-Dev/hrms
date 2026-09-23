@@ -47,9 +47,21 @@ hidden wrong, or repeated.** Plus an approved access matrix.
 | P0-6 | Money shows "INR" (should be "RM") | Requests, unpaid claims row | Currency read from the wrong place. |
 | P0-7 | Shift time shows a stray colon "9:00:–18:00" | day sheet | time trimmed wrongly. |
 | P0-8 | Day sheet says "No shift" on a worked day | `calendar._my_day` | Reads the roster only. Read the day's attendance, then its check-ins, then the roster. |
-| P0-9 | "Check in" shown on a day with no shift | Home | Show the button only when a check-in is possible. |
+| P0-9 | "Check in" shown on a day with no shift | Home | **Ruled 23 Sep: keep Check in as normal** (owner: "Check in as normal"). No button change. Counting that time as OT: see "Open: off-shift OT" below. |
 | P0-10 | "Waiting 42" but only 4 rows | Requests | The group has no "see all". Fixed by the Requests redesign (P1-2). |
 | P0-11 | Home "broken top to bottom" | Home | Measured: 65% empty below one button. Fixed by the Home redesign (P1-1). |
+
+## Open: off-shift OT (owner asked 23 Sep: "ensure it will counted as OT")
+
+Found (code, 23 Sep):
+- Rest day **with** a shift assignment: the punch links to that shift, the
+  day reads as rest/off from the holiday list, and the **whole session** is
+  overtime at the rest-day rate (`ot_calculation._session_ot_slices`), as
+  long as the shift has overtime switched on and the punch falls in its hours.
+- **No** shift (no assignment, no default shift) or a punch **outside** the
+  shift's hours: the check-in is stored with no shift (`offshift=1`) and is
+  **never counted** (`_per_day_contributions` skips a session with no shift).
+- Needs a ruling before code (pay rule): which rates price shift-less work.
 
 ## P1: the redesigns (sketch first → owner yes → code)
 
