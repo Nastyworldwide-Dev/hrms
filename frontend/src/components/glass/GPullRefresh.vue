@@ -26,6 +26,7 @@
 		pulling-icon="none"
 		:refreshing-spinner="null"
 		@ionRefresh="onRefresh"
+		@ionStart="onStart"
 	>
 		<ion-refresher-content>
 			<div class="g-refresh" role="status">
@@ -39,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue"
+import { onBeforeUnmount, ref } from "vue"
 import { IonRefresher, IonRefresherContent } from "@ionic/vue"
 
 defineProps({
@@ -49,14 +50,24 @@ defineProps({
 const emit = defineEmits(["refresh"])
 
 const refreshing = ref(false)
+// A page completes the pull after its reload; if that reload rejects or hangs,
+// nothing would ever close the refresher. Ionic's own close is idempotent.
+const COMPLETE_CAP_MS = 10000
+let capTimer = null
+
+// Ionic 7 sends no event when a refresh completes (only ionRefresh, ionPull,
+// ionStart), so the label resets when the next pull starts instead.
+function onStart() {
+	refreshing.value = false
+}
 
 function onRefresh(event) {
 	refreshing.value = true
 	console.info("[GPullRefresh] refresh started")
-	// the caller completes the gesture; reset once Ionic reports it done
-	event.target?.addEventListener?.("ionRefreshComplete", () => (refreshing.value = false), {
-		once: true,
-	})
+	clearTimeout(capTimer)
+	capTimer = setTimeout(() => event.target?.complete?.(), COMPLETE_CAP_MS)
 	emit("refresh", event)
 }
+
+onBeforeUnmount(() => clearTimeout(capTimer))
 </script>
