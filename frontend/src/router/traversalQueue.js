@@ -1,3 +1,4 @@
+import { markBrowserTraversal } from "../utils/browserTraversal.js"
 // Hold push/replace while a Back/Forward (a history traversal) is still in flight.
 //
 // Every navigation here waits on main.js's guard (a userResource.reload round
@@ -34,6 +35,9 @@ export function queueBehindTraversal(router) {
 	}
 
 	router.options.history.listen((to) => {
+		// The browser drove this one (swipe, system back, Back button): it has
+		// already animated it, so Ionic must not slide on top (audit F-4).
+		markBrowserTraversal(true)
 		if (!ready) return
 		target = router.resolve(to).fullPath
 		if (!pending) pending = new Promise((resolve) => (release = resolve))
@@ -49,6 +53,10 @@ export function queueBehindTraversal(router) {
 	for (const method of ["push", "replace"]) {
 		const navigate = router[method].bind(router)
 		router[method] = (to) => {
+			// An in-app navigation: the page transition is ours to animate. (The
+			// flag stays set for the whole browser Back, however late Ionic
+			// starts its transition after the new page mounts.)
+			markBrowserTraversal(false)
 			if (!pending) return navigate(to)
 			console.info(`[router] ${method} held until the Back/Forward to ${target} lands`)
 			return pending.then(() => navigate(to))

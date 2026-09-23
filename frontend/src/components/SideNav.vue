@@ -57,46 +57,38 @@
 				<span v-show="!collapsed" class="whitespace-nowrap">{{ __("Collapse") }}</span>
 			</button>
 
-			<router-link
+			<!-- A section switch, like a tab: no page slide (audit F-4, Apple HIG
+			     tab bars, Material 3 navigation). -->
+			<button
 				v-for="item in directItems"
 				:key="item.route"
-				:to="item.route"
-				custom
-				v-slot="{ navigate }"
+				type="button"
+				class="g-sidenav__item g-focusable"
+				:class="{ 'g-sidenav__item--active': isActive(item.route) }"
+				:aria-current="isActive(item.route) ? 'page' : undefined"
+				@click="switchSection(item.route)"
 			>
-				<button
-					type="button"
-					class="g-sidenav__item g-focusable"
-					:class="{ 'g-sidenav__item--active': isActive(item.route) }"
-					@click="navigate"
-				>
-					<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
-					<span v-show="!collapsed" class="whitespace-nowrap">{{ item.title }}</span>
-				</button>
-			</router-link>
+				<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
+				<span v-show="!collapsed" class="whitespace-nowrap">{{ item.title }}</span>
+			</button>
 
 			<!-- §20.2: below a divider, the contents of More as a FLAT list. More
 			     is a container, not a destination — at lg: it dissolves. No
 			     nested menus. -->
 			<hr class="g-sidenav__divider" />
 
-			<router-link
+			<button
 				v-for="item in moreItems"
 				:key="item.route"
-				:to="item.route"
-				custom
-				v-slot="{ navigate }"
+				type="button"
+				class="g-sidenav__item g-focusable"
+				:class="{ 'g-sidenav__item--active': isActive(item.route) }"
+				:aria-current="isActive(item.route) ? 'page' : undefined"
+				@click="switchSection(item.route)"
 			>
-				<button
-					type="button"
-					class="g-sidenav__item g-focusable"
-					:class="{ 'g-sidenav__item--active': isActive(item.route) }"
-					@click="navigate"
-				>
-					<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
-					<span v-show="!collapsed" class="whitespace-nowrap">{{ item.title }}</span>
-				</button>
-			</router-link>
+				<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
+				<span v-show="!collapsed" class="whitespace-nowrap">{{ item.title }}</span>
+			</button>
 			<!-- Sibling apps, same group as More on the phone. Plain anchors: each
 			     target is its own SPA outside vue-router's base, so a real
 			     navigation is the only thing that reaches it. New tab on desktop so
@@ -154,6 +146,8 @@
 import { ExternalLink, Users } from "lucide-vue-next"
 import { ref, computed, inject } from "vue"
 import { useRoute } from "vue-router"
+import { useIonRouter } from "@ionic/vue"
+import { createAnimation } from "@ionic/core"
 
 import { markRaw } from "vue"
 
@@ -207,6 +201,16 @@ const appItems = computed(() =>
 )
 
 const isActive = (path) => route.path === path
+
+//: Switch section without a transition: "root" replaces the stack like a tab
+//: does, and the no-op animation keeps desktop from sliding on every click.
+const ionRouter = useIonRouter()
+const noAnimation = () => createAnimation()
+function switchSection(path) {
+	if (isActive(path)) return
+	console.info("[SideNav] switching section", path)
+	ionRouter.navigate(path, "root", "replace", noAnimation)
+}
 
 const employeeImage = computed(() => user?.data?.user_image || "")
 const employeeName = computed(() => employee?.data?.employee_name || "")
