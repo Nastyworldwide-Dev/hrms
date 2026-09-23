@@ -58,3 +58,16 @@ test("the sheet, now focused when it opens, uses the app's focus ring, not the b
 	assert.match(decls(".g-sheet:focus-visible")["box-shadow"] || "", /--g-shadow-focus-ring-inset/)
 	assert.equal(decls(".g-sheet:focus:not(:focus-visible)").outline, "none")
 })
+
+test("no grid column refuses to shrink below its content (reflow at 320px / 200% text)", () => {
+	// `1fr` is `minmax(auto, 1fr)`: a column never narrower than its widest
+	// content. At 320px with text at 200% the calendar's weekday row and the
+	// balance cells pushed the page sideways and cut numbers in half (audit
+	// P0-13, WCAG 1.4.10). minmax(0, 1fr) lets the column shrink; the content
+	// wraps or scales instead.
+	const bad = []
+	root.walkDecls("grid-template-columns", (d) => {
+		if (/repeat\([^,]+,\s*1fr\)/.test(d.value)) bad.push(`${d.parent.selector}: ${d.value}`)
+	})
+	assert.deepEqual(bad, [])
+})

@@ -1276,12 +1276,12 @@ html[data-theme="dark"] .g-badge--open {
 	overflow: hidden;
 }
 .g-cellgrid--balance {
-	grid-template-columns: repeat(2, 1fr);
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 /* GMetaGrid: 2-up read-only facts. Same one-surface-with-hair-dividers rule as
    the balance and stat grids (§15.2) — the cells are cells, not surfaces. */
 .g-cellgrid--meta {
-	grid-template-columns: repeat(2, 1fr);
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .g-cell--meta {
 	display: flex;
@@ -1339,10 +1339,10 @@ html[data-theme="dark"] .g-badge--open {
 	overflow-wrap: break-word;
 }
 .g-cellgrid--stat-3 {
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .g-cellgrid--stat-4 {
-	grid-template-columns: repeat(4, 1fr);
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .g-cell {
 	padding: var(--g-pad-panel);
@@ -1384,7 +1384,7 @@ html[data-theme="dark"] .g-badge--open {
    .g-glass .g-cellgrid, so the panel spends 1 of the §15 budget of 6 rather
    than one per tile. Dividers are drawn as cell borders for the same reason. */
 .g-cellgrid--quick {
-	grid-template-columns: repeat(4, 1fr);
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .g-cell--quick {
 	display: flex;
@@ -1479,7 +1479,7 @@ html[data-theme="dark"] .g-badge--open {
 	   three types fill a row of three and five fill five — never four-with-a-hole.
 	   Falls back to four when a caller does not pass a count. */
 	.g-cellgrid--balance {
-		grid-template-columns: repeat(var(--bcols, 4), 1fr);
+		grid-template-columns: repeat(var(--bcols, 4), minmax(0, 1fr));
 	}
 	.g-cellgrid--balance > .g-cell:nth-child(n + 3) {
 		border-top: 0;
@@ -1752,7 +1752,7 @@ svg.lucide {
 }
 .g-cal__grid {
 	display: grid;
-	grid-template-columns: repeat(7, 1fr);
+	grid-template-columns: repeat(7, minmax(0, 1fr));
 	gap: 4px;
 }
 .g-cal__dow {
