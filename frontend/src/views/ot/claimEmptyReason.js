@@ -11,6 +11,7 @@
 // overtime".
 //
 // Kept free of Vue imports so it can be unit-tested under node.
+import { countOf } from "../../utils/countWords.js"
 
 /** Whole half-day blocks a day's hours earn (4h = ½, 8h = 1 at the default). */
 export function rlDaysFor(hours, hoursPerDay = 8) {
@@ -43,7 +44,11 @@ export function claimDayRows(summary, opts = {}) {
 		: days
 				.map((d) => ({ ...d, leaveDays: rlDaysFor(d.hours, rlHoursPerDay) }))
 				.filter((d) => d.leaveDays > 0)
-				.map((d) => ({ ...d, disabled: false, label: __("{0} day(s) off", [d.leaveDays]) }))
+				.map((d) => ({
+					...d,
+					disabled: false,
+					label: __("{0} off", [countOf(d.leaveDays, __("day"))]),
+				}))
 	const claimed = claimedRows.map((d) => ({
 		...d,
 		claimed: true,
@@ -87,8 +92,8 @@ export function emptyClaimReason(summary, { isRL = false, rlHoursPerDay = 8, tra
 		if (earning.length) return ""
 		if (days.length)
 			return __(
-				"You have overtime on {0} day(s), but replacement leave is earned in whole blocks — {1} h in a single day earns half a day off. None of these reach it.",
-				[days.length, half]
+				"You have overtime on {0}, but replacement leave is earned in whole blocks — {1} h in a single day earns half a day off. None of these reach it.",
+				[countOf(days.length, __("day")), half]
 			)
 	} else if (days.length) {
 		return ""
@@ -98,20 +103,19 @@ export function emptyClaimReason(summary, { isRL = false, rlHoursPerDay = 8, tra
 	// overtime recorded", which would read as "the system lost it".
 	if (incomplete.length && !summary.days_already_claimed)
 		return __(
-			"Nothing to claim yet — {0} day(s) in this period have incomplete attendance records. HR can see these; you don't need to do anything.",
-			[incomplete.length]
+			"Nothing to claim yet — {0} in this period have incomplete attendance records. HR can see these; you don't need to do anything.",
+			[countOf(incomplete.length, __("day"))]
 		)
 
 	if (summary.days_already_claimed && !summary.days_with_overtime)
 		return __("Every overtime day in this period has already been claimed.")
 	if (summary.days_already_claimed)
-		return __("Nothing left to claim — {0} day(s) in this period already have a request.", [
-			summary.days_already_claimed,
+		return __("Nothing left to claim — {0} in this period already have a request.", [
+			countOf(summary.days_already_claimed, __("day")),
 		])
 	if (!summary.days_with_overtime)
 		return __("No overtime recorded in this period, so there is nothing to claim yet.")
-	return __(
-		"You worked overtime on {0} day(s) in this period, but none of it is claimable right now.",
-		[summary.days_with_overtime]
-	)
+	return __("You worked overtime on {0} in this period, but none of it is claimable right now.", [
+		countOf(summary.days_with_overtime, __("day")),
+	])
 }

@@ -117,6 +117,7 @@ import FormView from "@/components/FormView.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { settings } from "@/data/settings"
 import { formatHoursCap } from "@/utils/formatters"
+import { countOf } from "@/utils/countWords"
 import { requestStatusChip } from "@/utils/requestStatus"
 import { claimDayRows, emptyClaimReason, inlineClaimError } from "./claimEmptyReason.js"
 
@@ -230,7 +231,7 @@ const expectation = computed(() => {
 	if (leaveDays <= 0) {
 		return __("Under {0}h in a day earns no replacement leave ({0}h = ½ day).", [half])
 	}
-	return __("This gives you {0} day(s) off.", [leaveDays])
+	return __("This gives you {0} off.", [countOf(leaveDays, __("day"))])
 })
 
 const props = defineProps({

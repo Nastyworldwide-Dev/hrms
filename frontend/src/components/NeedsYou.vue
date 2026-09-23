@@ -82,6 +82,7 @@ import GListRow from "@/components/glass/GListRow.vue"
 
 import { pendingCountResource } from "@/data/remoteCheckin"
 import { needsYouResource } from "@/data/needsYou"
+import { countOf } from "@/utils/countWords"
 
 const __ = inject("$translate")
 const router = useRouter()
@@ -121,7 +122,13 @@ const rows = computed(() => {
 			// goes to RemoteApprovals only, so a bare "check-ins to approve"
 			// could be read as EVERY pending approval and an approver would
 			// stop looking. A qualifier that makes a count true is information.
-			label: __("{0} check-in(s) outside the area to approve", [approvals.value]),
+			label: __("{0} to approve", [
+				countOf(
+					approvals.value,
+					__("check-in outside the area"),
+					__("check-ins outside the area")
+				),
+			]),
 			sublabel: null,
 			go: () => router.push({ name: "Approvals" }),
 		})
@@ -137,7 +144,7 @@ const rows = computed(() => {
 			// same decision either way — this is a big queue, open it.
 			label: row.capped
 				? __("{0}+ {1}s to approve", [row.count, row.noun])
-				: __("{0} {1}(s) to approve", [row.count, row.noun]),
+				: __("{0} to approve", [countOf(row.count, row.noun)]),
 			sublabel: null,
 			// Every request to approve opens the Approvals page, where it can be
 			// decided (owner ruling 23 Sep: approvals only where they can be done).
@@ -152,7 +159,11 @@ const shown = computed(() => (showAll.value ? rows.value : rows.value.slice(0, H
 const hidden = computed(() => (showAll.value ? 0 : Math.max(0, rows.value.length - HOME_ROWS)))
 
 const announcement = computed(() =>
-	rows.value.length ? __("{0} thing(s) need you", [rows.value.length]) : ""
+	rows.value.length
+		? rows.value.length === 1
+			? __("1 thing needs you")
+			: __("{0} things need you", [rows.value.length])
+		: ""
 )
 
 const onRealtime = () => {

@@ -37,9 +37,9 @@
 					     second ticket for the same problem. -->
 					<GBanner v-if="ticketName && failedFiles.length" variant="error">
 						{{
-							__("Ticket {0} is raised, but {1} file(s) did not upload:", [
+							__("Ticket {0} is raised, but {1} did not upload:", [
 								ticketName,
-								failedFiles.length,
+								countOf(failedFiles.length, __("file")),
 							])
 						}}
 						<ul class="mt-1 list-disc pl-5">
@@ -134,6 +134,7 @@ import { useRouter } from "vue-router"
 import { FileAttachment } from "@/composables"
 import { helpdeskAvailable, myTickets, newTicket, ticketOptions } from "@/data/helpdesk"
 import { goBackOrHome } from "@/utils/navigation"
+import { countOf } from "@/utils/countWords"
 
 const router = useRouter()
 const __ = inject("$translate")

@@ -79,7 +79,7 @@
 			{{
 				showAllLeave
 					? __("Show fewer leave types")
-					: __("Show {0} more leave type(s)", [hiddenLeave.length])
+					: __("Show {0} more", [countOf(hiddenLeave.length, __("leave type"))])
 			}}
 		</button>
 
@@ -100,6 +100,7 @@
 </template>
 
 <script setup>
+import { countOf } from "@/utils/countWords"
 import { formatCurrency } from "@/utils/formatters"
 import { computed, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
@@ -177,7 +178,7 @@ const rows = computed(() => {
 		out.push({
 			key: "ot-unclaimed",
 			icon: Receipt,
-			label: __("{0} day(s) of overtime to claim", [overtime.unclaimed_days]),
+			label: __("{0} of overtime to claim", [countOf(overtime.unclaimed_days, __("day"))]),
 			// The hours are what decides whether it is worth doing now.
 			sublabel: overtime.unclaimed_hours
 				? __("{0} hours", [Number(overtime.unclaimed_hours).toFixed(2)])
@@ -208,7 +209,7 @@ const rows = computed(() => {
 			// The single most common cause of a wrong payslip, and invisible
 			// until payroll — by which time the window to fix it has usually
 			// closed.
-			label: __("{0} day(s) with no attendance", [attendance.days]),
+			label: __("{0} with no attendance", [countOf(attendance.days, __("day"))]),
 			sublabel: __("Fix these before payroll"),
 			go: () => router.push({ name: "AttendanceRequestFormView" }),
 		})

@@ -159,7 +159,7 @@ test("the strip is bounded, and says what it is hiding", () => {
 	// is hidden is stated, so nobody has to tap to find out whether it is worth
 	// tapping.
 	assert.match(component, /const LEAVE_SHOWN = 4/)
-	assert.match(component, /__\("Show \{0\} more leave type\(s\)", \[hiddenLeave\.length\]\)/)
+	assert.match(component, /__\("Show \{0\} more", \[countOf\(hiddenLeave\.length, __\("leave type"\)\)\]\)/)
 	assert.match(component, /__\("Show fewer leave types"\)/, "and it folds back")
 })
 

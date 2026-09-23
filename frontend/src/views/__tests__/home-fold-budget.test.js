@@ -85,7 +85,7 @@ test("the approvals row does not tell the user to tap what is already a button",
 test("the approvals row names the scope of the count it shows", () => {
 	assert.match(
 		src("../../components/NeedsYou.vue"),
-		/__\("\{0\} check-in\(s\) outside the area/,
+		/__\("check-ins? outside the area"\)/,
 		"the count is check-ins outside the area only (remote_checkin.get_pending_count); say so"
 	)
 })

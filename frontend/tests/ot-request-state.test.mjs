@@ -35,10 +35,12 @@ const formatHoursSource = (() => {
 })()
 // claimEmptyReason.js is plain ESM; the form's <script setup> calls its helpers
 // from computeds the tests evaluate, so it runs in the sandbox next to formatHours.
-const claimHelpersSource = read("../src/views/ot/claimEmptyReason.js").replace(
-	/^export /gm,
-	""
-)
+const claimHelpersSource =
+	read("../src/utils/countWords.js").replace(/^export /gm, "") +
+	"\n" +
+	read("../src/views/ot/claimEmptyReason.js")
+		.replace(/^import\s+[\s\S]*?from\s+["'][^"']+["']\s*\n/gm, "")
+		.replace(/^export /gm, "")
 const script = (path) =>
 	read(path).split("<script setup>")[1].split("</script>")[0]
 const executable = (text) =>

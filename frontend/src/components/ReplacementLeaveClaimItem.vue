@@ -7,7 +7,7 @@
 		<template #left>
 			<div class="flex flex-col items-start gap-1">
 				<div class="text-button-label font-semibold text-inkbase">
-					{{ __("{0} replacement day(s)", [props.doc.claimed_days ?? 0]) }}
+					{{ countOf(props.doc.claimed_days ?? 0, __("replacement day")) }}
 				</div>
 				<div class="text-xs text-ink-600">
 					<span>{{ props.doc.bank_month_label || props.doc.bank_month }}</span>
@@ -38,6 +38,7 @@ import ListItem from "@/components/ListItem.vue"
 import { formatHours } from "@/utils/formatters"
 import { requestStatus } from "@/utils/requestStatus"
 import { waitingWith } from "@/utils/requestWaiting"
+import { countOf } from "@/utils/countWords"
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
