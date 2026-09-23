@@ -115,7 +115,16 @@ def send_due_reminders() -> int:
 			continue
 		if c.kind == "out" and not (own and own[-1].log_type == "IN"):
 			continue
-		_notify(c.user, message)
+		# One person's failure must not sink the rest: an unhandled error rolled
+		# back the whole tick, and the 5-minute window means nobody is retried.
+		# Each reminder is committed on its own (review of 50403096f).
+		try:
+			_notify(c.user, message)
+			frappe.db.commit()
+		except Exception:
+			frappe.db.rollback()
+			logger.exception("[shift_reminders] could not remind %s (%s); skipped", c.employee, c.kind)
+			continue
 		already.setdefault((c.user, message), []).append(c.start)
 		sent += 1
 	logger.info(

@@ -50,6 +50,7 @@ def _run(
 	sent=(),
 	shift_types=None,
 	day_kind="normal",
+	fail_for=(),
 ):
 	people = people if people is not None else [frappe._dict(name="E1", user_id="ann@x", default_shift="Day")]
 	shift_types = shift_types or {"Day": DAY_SHIFT, "Night": NIGHT_SHIFT}
@@ -73,10 +74,20 @@ def _run(
 
 	def get_doc(values):
 		doc = MagicMock()
-		doc.insert.side_effect = lambda **kw: inserted.append(values)
+
+		def insert(**kw):
+			if values.get("to_user") in fail_for:
+				raise RuntimeError("synthetic insert failure")
+			inserted.append(values)
+
+		doc.insert.side_effect = insert
 		return doc
 
 	db = MagicMock()
+	db.commits = 0
+	db.rollbacks = 0
+	db.commit.side_effect = lambda: setattr(db, "commits", db.commits + 1)
+	db.rollback.side_effect = lambda *a, **kw: setattr(db, "rollbacks", db.rollbacks + 1)
 	db.get_value.side_effect = lambda doctype, name, *a, **kw: shift_types.get(name)
 	ot = sys.modules.get("hrms.utils.ot_calculation")
 	with (
@@ -90,6 +101,21 @@ def _run(
 		count = sr.send_due_reminders()
 	del ot
 	return count, inserted, calls
+
+
+class TestOneFailureDoesNotSinkTheRest(unittest.TestCase):
+	"""Review of 50403096f: an unhandled error on one person rolled back the
+	whole tick, and the 5-minute window meant nobody's reminder was retried.
+	Each reminder is committed on its own; a failure is logged and skipped."""
+
+	def test_a_failing_person_does_not_stop_the_next(self):
+		people = [
+			frappe._dict(name="E1", user_id="ann@x", default_shift="Day"),
+			frappe._dict(name="E2", user_id="bob@x", default_shift="Day"),
+		]
+		count, inserted, _ = _run(DT(2026, 9, 23, 9, 16), people=people, fail_for={"ann@x"})
+		self.assertEqual([v["to_user"] for v in inserted], ["bob@x"])
+		self.assertEqual(count, 1)
 
 
 class TestDueWindow(unittest.TestCase):
