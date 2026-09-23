@@ -1,10 +1,11 @@
-CLASS: glass (backdrop-filter) on the content layer instead of chrome
-frontend/src/theme/glass-components.css:.g-glass same-root (solid fallback fill)
-frontend/src/theme/glass-components.css:.g-glass-ghost same-root
-frontend/src/theme/glass-components.css:.g-modal same-root (sheet becomes glass)
-frontend/src/theme/glass-components.css:toast same-root
-frontend/src/theme/glass-components.css:ion-tab-bar.g-tabbar not-affected — chrome, already correct
-frontend/src/theme/glass-components.css:.g-sidenav not-affected — chrome, already correct
-frontend/src/theme/glass-components.css:.g-header not-affected — nothing scrolls under it (ion-header outside a non-fullscreen ion-content)
-frontend/src/components/BottomTabs.vue same-root (scroll-edge fade)
-design/gates surfaces counter ticket alpha5-gate-surfaces — counts .g-glass class, not blur; still passes
+CLASS: three readers counted "worked" three ways; today counted as missing attendance
+hrms/utils/worked_days.py:punch_days same-root (the one rule)
+hrms/api/home.py:get_home_week same-root (uses paired_days; behaviour unchanged, test_home 12/12)
+hrms/api/calendar.py:_needs_you_days same-root (excludes today+)
+hrms/api/calendar.py:get_month_flags same-root (paired, open_today)
+hrms/api/requests_summary.py:_unmarked same-root (window ends yesterday; returns dates)
+frontend/src/components/AttendanceCalendar.vue same-root (dayState fills paired / in progress; legend Fix, In progress; ?date=)
+frontend/src/components/RequestBalances.vue same-root (names the day; taps to it)
+frontend/src/utils/daySheet.js same-root (past unmarked day gets Fix this day)
+hrms/api/__init__.py:get_attendance_calendar_events not-affected — still Attendance-only by design; the fill comes from month flags
+hrms/api/needs_you.py not-affected — approver queue counts, no worked-day logic

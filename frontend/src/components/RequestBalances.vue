@@ -100,6 +100,7 @@ import GModal from "@/components/glass/GModal.vue"
 
 import { requestsSummary } from "@/data/requestsSummary"
 import { balancesLine, trimNumber as trim } from "@/utils/requestsPage"
+import { unmarkedLabel, unmarkedRoute } from "@/utils/unmarkedLabel"
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
@@ -209,11 +210,11 @@ const rows = computed(() => {
 			// closed.
 			// "before payroll" is why it matters; kept on the one line (design
 			// review of ca6a6b9d9: the urgency was dropped with the sublabel).
-			label: __("{0} with no attendance — fix before payroll", [
-				countOf(attendance.days, __("day")),
-			]),
+			// Names the day (owner bug, 23 Sep 2026) and opens it on the
+			// Calendar, where the day sheet offers the fix.
+			label: unmarkedLabel(attendance, __),
 			amount: "",
-			go: () => router.push({ name: "AttendanceRequestFormView" }),
+			go: () => router.push(unmarkedRoute(attendance)),
 		})
 	}
 

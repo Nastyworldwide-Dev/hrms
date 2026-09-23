@@ -24,6 +24,9 @@ export function dayAction(day, today) {
 	}
 	if (day.status === "Absent") return { kind: "fix", label: "Fix this day" }
 	if (OFF.has(day.status)) return { kind: "none", note: "" }
+	// Punches and no attendance row: Requests counts it as a day with no
+	// attendance, so the sheet must not say "Nothing to do." (owner, 23 Sep).
+	if (!day.status && taps.length > 0) return { kind: "fix", label: "Fix this day" }
 	return { kind: "none", note: "Nothing to do." }
 }
 

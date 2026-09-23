@@ -67,7 +67,10 @@ import DaySheet from "@/components/DaySheet.vue"
 import { monthFlags } from "@/data/calendar"
 import { isApprover } from "@/data/team"
 import { legendFor } from "@/utils/calendarLegend"
+import { dayState } from "@/utils/calendarDayState"
+import { dateFromRoute } from "@/utils/dateFromRoute"
 import { computed, inject, ref, watch } from "vue"
+import { useRoute } from "vue-router"
 import { createResource } from "frappe-ui"
 import { useListUpdate } from "@/composables/realtime"
 
@@ -102,6 +105,10 @@ const LEGEND = [
 	{ state: "travel", label: __("Travel") },
 	{ state: "training", label: __("Training") },
 	{ state: "open", label: __("Open request") },
+	// Owner bug, 23 Sep 2026: the warn dot had no key, and a day still being
+	// worked had no look. Today's ring needs no key (it is today).
+	{ state: "needs_you", label: __("Fix") },
+	{ state: "progress", label: __("In progress") },
 ]
 
 const days = computed(() =>
@@ -114,7 +121,9 @@ const days = computed(() =>
 		const iso = firstOfMonth.value.date(day).format("YYYY-MM-DD")
 		return {
 			day,
-			state: STATE[getEventOnDate(day)] ?? "none",
+			// ONE rule for "worked" (utils/calendarDayState.js): attendance
+			// first, then an IN followed by an OUT, then today's open IN.
+			state: dayState(STATE[getEventOnDate(day)] ?? "none", iso, monthFlags.data),
 			flags: monthFlags.data?.flags?.[iso] || [],
 			// Where am I? (approved Calendar plan, D6; Nielsen 1)
 			today: iso === dayjs().format("YYYY-MM-DD"),
@@ -144,6 +153,23 @@ function openDay(day) {
 	sheetDate.value = firstOfMonth.value.date(day).format("YYYY-MM-DD")
 	sheetOpen.value = true
 }
+
+//: ?date=YYYY-MM-DD opens that day (the Requests "no attendance" row sends
+//: it). Watched, not read once: the view stays mounted in the Ionic stack, so
+//: a second tap from Requests arrives as a new query on the same component.
+const route = useRoute()
+watch(
+	() => route.query?.date,
+	() => {
+		const asked = dateFromRoute(route.query)
+		if (!asked) return
+		console.info("[AttendanceCalendar] opening the asked day", asked)
+		firstOfMonth.value = dayjs(asked).date(1).startOf("D")
+		sheetDate.value = asked
+		sheetOpen.value = true
+	},
+	{ immediate: true }
+)
 
 //: Flags follow the month being LOOKED AT, not the month it was mounted in.
 //: Watched rather than fetched once, or stepping to October would draw
@@ -216,3 +242,21 @@ function refresh() {
 useListUpdate(socket, "Attendance", refresh)
 defineExpose({ refresh })
 </script>
+
+<style>
+/* Owner bug, 23 Sep 2026. Unscoped because the tiles and keys are GCalendar's.
+   The Fix key matches the needs_you dot; In progress is a dashed accent
+   outline: a day not finished yet, so not the worked day's fill. */
+.g-cal__swatch--needs_you {
+	background: var(--g-warn);
+	border-radius: 50%;
+}
+.g-cal__day--progress {
+	border: 1px dashed var(--g-accent-ink);
+	color: var(--g-accent-ink);
+}
+.g-cal__swatch--progress {
+	background: transparent;
+	box-shadow: inset 0 0 0 1.5px var(--g-accent-ink);
+}
+</style>

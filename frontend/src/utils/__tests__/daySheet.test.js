@@ -46,6 +46,14 @@ test("leave and rest days need nothing", () => {
 	assert.equal(dayAction(day({ status: "Holiday", punches: [] }), TODAY).kind, "none")
 })
 
+test("a past day with punches and no attendance offers the fix", () => {
+	// Owner bug, 23 Sep 2026: IN and OUT but no row read "Nothing to do." while
+	// Requests said the same day had no attendance.
+	const a = dayAction(day({ status: null, worked_hours: 0 }), TODAY)
+	assert.equal(a.kind, "fix")
+	assert.equal(a.label, "Fix this day")
+})
+
 test("today and future days are not asked to be fixed", () => {
 	assert.equal(
 		dayAction(day({ date: TODAY, status: null, punches: [{ log_type: "IN" }] }), TODAY).kind,

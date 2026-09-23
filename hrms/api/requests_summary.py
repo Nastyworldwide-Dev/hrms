@@ -20,6 +20,7 @@ Session-scoped by construction: no endpoint takes an employee.
 """
 
 import logging
+from datetime import timedelta
 
 import frappe
 from frappe.utils import flt, getdate, nowdate
@@ -158,10 +159,14 @@ def _unmarked() -> dict:
 
 	employee = get_current_employee()
 	if not employee:
-		return {"days": 0}
+		return {"days": 0, "dates": []}
 
-	to_date = employee_now(employee).date()
-	from_date = earliest_filable_date(to_date)
+	today = employee_now(employee).date()
+	from_date = earliest_filable_date(today)
+	# The window ends YESTERDAY. Today's attendance is written later by
+	# auto-attendance, so counting today put "1 day with no attendance" on the
+	# screen every morning for everybody who had checked in (owner, 23 Sep).
+	to_date = today - timedelta(days=1)
 	marked = set(
 		frappe.get_all(
 			"Attendance",
@@ -197,7 +202,13 @@ def _unmarked() -> dict:
 		to_date,
 		len(gaps),
 	)
-	return {"days": len(gaps), "from_date": str(from_date), "to_date": str(to_date)}
+	return {
+		"days": len(gaps),
+		# Named, so the screen can say WHICH day and open it (owner, 23 Sep).
+		"dates": [str(day) for day in gaps],
+		"from_date": str(from_date),
+		"to_date": str(to_date),
+	}
 
 
 @frappe.whitelist(methods=["GET", "POST"])

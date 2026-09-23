@@ -64,6 +64,12 @@ function fixture() {
 		useListUpdate: (socket, doctype, callback) =>
 			listeners.push({ doctype, callback }),
 		defineExpose: () => {},
+		// ?date= deep link (alpha.5): no query in these tests.
+		useRoute: () => ({ query: {} }),
+		dateFromRoute: () => null,
+		// Colour picking is pinned by calendar-worked.test.js; here the
+		// attendance state passes straight through.
+		dayState: (state) => state,
 		inject: (key) =>
 			key === "$dayjs"
 				? dayjs

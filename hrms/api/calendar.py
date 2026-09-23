@@ -26,6 +26,9 @@ from datetime import timedelta
 import frappe
 from frappe.utils import add_days, date_diff, flt, getdate
 
+from hrms.utils.timezone import employee_now
+from hrms.utils.worked_days import punch_days
+
 logger = logging.getLogger(__name__)
 
 #: How many dots a tile can hold before it stops being legible. Three is not a
@@ -278,7 +281,11 @@ def _needs_you_days(employee: str, start, end, worked: dict, marked: set) -> set
 	Not "a day with a problem HR should look at" — this dot is on the
 	employee's own calendar and every one of them is an action they can take.
 	"""
-	days = {day for day in worked if day not in marked}
+	# Never today or later, on the employee's own clock (owner bug, 23 Sep):
+	# today's attendance is written later by auto-attendance, so a day still
+	# being worked is not a day with a missing row.
+	today = employee_now(employee).date()
+	days = {day for day in worked if day not in marked and day < today}
 
 	# OT Request ONLY. Replacement Leave Claim has no per-day date at all — it
 	# is banked against a MONTH (`bank_month`) and its `claimed_days` is a
@@ -357,6 +364,13 @@ def get_month_flags(from_date: str, to_date: str) -> dict:
 		if value:
 			worked[getdate(value)] = True
 
+	# ONE rule for "worked" (hrms/utils/worked_days.py): an IN followed by an
+	# OUT is a worked day even before auto-attendance writes its row, and
+	# today with an open IN is "in progress". The grid fills them; the
+	# attendance calendar alone left a finished day blank until the job ran.
+	paired, open_days = punch_days(employee, start, end)
+	today = employee_now(employee).date()
+
 	buckets = {
 		"leave": _leave_days(employee, start, end),
 		"travel": _travel_days(employee, start, end),
@@ -379,8 +393,21 @@ def get_month_flags(from_date: str, to_date: str) -> dict:
 			if len(entry) < MAX_DOTS:
 				entry.append(name)
 
-	logger.info("[calendar] flags employee=%s %s..%s days=%d", employee, start, end, len(flags))
-	return {"flags": flags, "legend": list(FLAG_ORDER)}
+	logger.info(
+		"[calendar] flags employee=%s %s..%s days=%d paired=%d open_today=%s",
+		employee,
+		start,
+		end,
+		len(flags),
+		len(paired),
+		today in open_days,
+	)
+	return {
+		"flags": flags,
+		"legend": list(FLAG_ORDER),
+		"paired": sorted(str(day) for day in paired if start <= day <= end),
+		"open_today": str(today) if today in open_days and start <= today <= end else None,
+	}
 
 
 # ---------------------------------------------------------------------------

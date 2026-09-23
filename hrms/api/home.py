@@ -23,6 +23,7 @@ import frappe
 from frappe.utils import flt, getdate
 
 from hrms.utils.timezone import employee_now
+from hrms.utils.worked_days import paired_days
 
 logger = logging.getLogger(__name__)
 
@@ -39,28 +40,6 @@ def _employee() -> str:
 def _today(employee: str):
 	"""Today on the EMPLOYEE's clock, not the server's."""
 	return employee_now(employee).date()
-
-
-def _paired_days(employee: str, start, end) -> set:
-	"""Dates in [start, end] holding an IN followed later that day by an OUT."""
-	punches = frappe.get_all(
-		"Employee Checkin",
-		filters={
-			"employee": employee,
-			"time": ("between", [f"{start} 00:00:00", f"{end} 23:59:59"]),
-		},
-		fields=["time", "log_type"],
-		order_by="time asc",
-		ignore_permissions=True,
-	)
-	open_in, days = set(), set()
-	for row in sorted(punches, key=lambda r: r.time):
-		day = getdate(row.time)
-		if row.log_type == "IN":
-			open_in.add(day)
-		elif row.log_type == "OUT" and day in open_in:
-			days.add(day)
-	return days
 
 
 @frappe.whitelist(methods=["GET", "POST"])
@@ -85,7 +64,7 @@ def get_home_week() -> dict:
 			ignore_permissions=True,
 		)
 	}
-	worked |= _paired_days(employee, monday, today)
+	worked |= paired_days(employee, monday, today)
 	overtime = flt((_overtime() or {}).get("unclaimed_hours"))
 	logger.info(
 		"[home] week employee=%s from=%s to=%s days=%d ot=%.2f",
