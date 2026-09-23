@@ -495,7 +495,7 @@ html[data-transparency="reduce"] .g-glass-ghost {
 	font-weight: var(--g-type-button-label-weight);
 	letter-spacing: var(--g-type-button-label-tracking);
 	line-height: var(--g-type-button-label-line-height);
-	box-shadow: inset 0 1px 0 rgba(255 255 255 / 0.6), inset 0 -2px 0 rgba(0 0 0 / 0.14);
+	box-shadow: inset 0 1px 0 var(--g-rim-hi), inset 0 -1px 0 var(--g-rim-lo);
 	cursor: pointer;
 	overflow: hidden;
 	transition: transform var(--g-motion-button-press-duration) var(--g-motion-button-press-easing),

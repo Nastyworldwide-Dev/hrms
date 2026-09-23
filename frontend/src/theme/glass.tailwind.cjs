@@ -20,7 +20,6 @@ module.exports = {
 		well: "var(--g-radius-well)",
 	},
 	boxShadow: {
-		action: "var(--g-shadow-action)",
 		"focus-ring": "var(--g-shadow-focus-ring)",
 		"focus-ring-inset": "var(--g-shadow-focus-ring-inset)",
 		lift: "var(--g-lift)",
