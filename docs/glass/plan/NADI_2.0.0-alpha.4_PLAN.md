@@ -38,9 +38,9 @@ hidden wrong, or repeated.** Plus an approved access matrix.
 
 | # | Problem | Where | Cause (found) or next step |
 |---|---|---|---|
-| P0-1 | **"Refreshing…" stays after you pull** (owner, after alpha.3) | every page with pull-to-refresh | `GPullRefresh` waits for an `ionRefreshComplete` event that Ionic 7 never sends, so the text never resets. Reset it when the pull finishes. |
-| P0-2 | **With a sheet open, taps go through to the page behind** (owner, after alpha.3) | every sheet | The dimming layer now sits in the page, below the sheet but not over the rest; the page stays tappable. Make the page behind the sheet inert and the scrim cover it, while the sheet stays on top. The sheet gate proves both. |
-| P0-3 | **Closing a sheet needs a pull-down; the motion is rough** (owner) | every sheet | A tap on the dim area and Back must close the sheet; the open and close motion uses the app's timing, not Ionic's default. |
+| P0-1 | **"Refreshing…" stays after you pull** (owner, after alpha.3) | every page with pull-to-refresh | Found: `GPullRefresh` waits for an `ionRefreshComplete` event that Ionic 7 does not send (Ionic docs: the refresher emits ionRefresh / ionPull / ionStart; the state ends when `complete()` is called), so our "Refreshing…" flag never resets. Fix: reset it when the pull finishes (ionPullEnd or our own completion). |
+| P0-2 | **With a sheet open, taps go through to what's behind** (owner, after alpha.3) | every sheet | Found: the page is made inert, but the **tab bar and header sit outside the page**, so they stay tappable. Rule: a modal blocks everything behind it (Material 3 modal bottom sheet; WCAG 2.4.3 / WAI-ARIA dialog: content outside is inert). Fix: make the whole app shell behind the sheet inert and covered, sheet on top. |
+| P0-3 | **Closing needs a pull-down; the motion is rough** (owner) | every sheet | Found: no Close button; tap-outside and Back are unreliable. Rules: NN/g bottom sheets — a visible **Close (X)** at the top, **Back closes**, **tap on the dim area closes**; Material 3 — tapping the scrim dismisses. Fix: add Close to every sheet, make both the others work, smooth motion in the app's timing. |
 | P0-4 | Help throws an error on every open | `HelpdeskHub.vue:149` | `.catch` on an undefined value. |
 | P0-5 | "Your details" shows 5 rows with no label | `Profile.vue` | Field labels are looked up in a list that lacks them. |
 | P0-6 | Money shows "INR" (should be "RM") | Requests, unpaid claims row | Currency read from the wrong place. |
@@ -52,14 +52,25 @@ hidden wrong, or repeated.** Plus an approved access matrix.
 
 ## P1: the redesigns (sketch first → owner yes → code)
 
-### P1-1 Home: one screen, always useful
-1. Date title.
-2. **Today:** shift, hours, **Check in / Check out** (only when possible).
-3. **This week:** "4 days worked · 1h 30m overtime to claim ›".
-4. **Coming up:** next leave, travel, training or public holiday.
-5. **Waiting on you** (approvers) and **one announcement**, only when there are any.
-Done when: fits 390×844 for an employee without scrolling; no empty band taller
-than one block; each block has a skeleton and an error line.
+### P1-1 Home: one screen, never empty
+**Rule:** a screen that shows nothing reads as broken (NN/g, empty states:
+"explain, suggest, guide"; Carbon: say why there is no data and what to do).
+So every Home block **always** renders, and says something useful when there is
+nothing to act on. Nothing disappears.
+
+1. **Date title.**
+2. **Today** (always): shift and hours, and **Check in / Check out** when a
+   check-in is possible. No shift today → "No shift today. Enjoy your day off."
+3. **This week** (always): "4 days worked · 1h 30m overtime to claim ›", or
+   "Nothing to claim this week."
+4. **Coming up** (always): next leave, travel, training or public holiday, or
+   "Nothing booked. Next public holiday: Deepavali · Tue 20 Oct."
+5. **Waiting on you** (approvers and managers, always for them): counts, or
+   "Nothing waiting on you."
+6. **Latest announcement** (always): the pinned or newest one, or "No news."
+
+Done when: fits 390×844 without scrolling; **no block ever disappears**;
+no empty band taller than one row; each block has a skeleton and an error line.
 
 ### P1-2 Requests: compact, no scroll
 1. **New request** on top.
@@ -136,6 +147,21 @@ Deliverable: `docs/glass/ACCESS-MATRIX.md`.
 
 ---
 
+## Plan vs today vs research (23 Sep)
+
+| Area | Nadi today (measured) | Research says | Plan item |
+|---|---|---|---|
+| Home | One block + button, 65% empty | Never leave a blank screen; explain and guide (NN/g empty states, Carbon) | P1-1: every block always renders |
+| Sheets: blocking | Page inert, tab bar/header still live | Modal: everything behind is blocked (M3; WAI-ARIA dialog; WCAG 2.4.3) | P0-2 |
+| Sheets: closing | No Close button; pull-down only | Close (X) + Back + tap on dim (NN/g; M3) | P0-3 |
+| Sheets: use | Some flows live in sheets | Sheets for short tasks, not page-to-page flows; avoid stacking (NN/g) | P1-5: stacked sheets (confirm on sheet) reviewed |
+| Pull to refresh | Text stuck after a pull | Refresher ends on `complete()` (Ionic) | P0-1 |
+| Requests | Scrolls 426 px; chips wrap | Summary first, detail one tap away (NN/g progressive disclosure) | P1-2 |
+| Score | One sentence on a whole tab | Same empty-state rule | P1-4 |
+| Calendar key | Only kinds present | Consistent legend; don't encode by colour alone (WCAG 1.4.1) | P1-3: every kind, with a text label |
+| Words | "INR", "Leave Application", "(s)" | Plain words (basis W-PLAIN) | P0-6, P1-5, P2-3 |
+| Access | Rules in code, none written | Least privilege, need-to-know, deny by default (NIST, ISO, OWASP) | P3 |
+
 ## Order of work (one release)
 
 1. **Seed data + sheet gate** (tests only).
@@ -149,6 +175,11 @@ Deliverable: `docs/glass/ACCESS-MATRIX.md`.
 
 ## Sources
 
+- NN/g: empty states (nngroup.com/videos/empty-states-in-application-design-guidelines),
+  bottom sheets (nngroup.com/articles/bottom-sheet); Carbon empty states;
+  Material 3 bottom sheets (m3.material.io/components/bottom-sheets/guidelines);
+  Apple HIG sheets; W3C WCAG 2.4.3 focus order and H102 modal dialogs;
+  Ionic ion-refresher docs.
 - NN/g progressive disclosure; WCAG 2.2 AA (2.5.8 target size, 2.4.7 focus,
   1.4.3 / 1.4.11 contrast); Core Web Vitals CLS.
 - NIST SP 800-53 AC-6, AC-5; NIST RBAC; NIST SP 800-162 (relationship rules);
