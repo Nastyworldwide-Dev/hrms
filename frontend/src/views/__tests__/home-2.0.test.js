@@ -50,15 +50,16 @@ test("Home reads in the plan's order", () => {
 test("the quick links moved to the screen that is for them", () => {
 	// Not deleted — moved. A link nobody can reach is worse than a crowded Home.
 	assert.doesNotMatch(template("views/Home.vue"), /<QuickLinks/, "Home no longer starts requests")
-	assert.match(template("views/Requests.vue"), /<QuickLinks/, "Requests does")
+	assert.match(template("views/Requests.vue"), /__\('New request'\)/, "Requests does, with one button")
 })
 
 test("nothing Home offered became unreachable", () => {
 	// Every destination Home's quick links named must still be named somewhere.
 	// This is the one check that would catch a link quietly lost in the move.
 	const requests = read("views/Requests.vue")
+	// Fix a day starts from the day on Calendar now (approved Calendar plan).
 	for (const route of [
-		"AttendanceRequestFormView",
+		"AttendanceDashboard",
 		"ShiftRequestFormView",
 		"LeaveApplicationFormView",
 		"ExpenseClaimFormView",
@@ -126,10 +127,9 @@ test("every link on Requests names a route that exists", () => {
 	if (/name: HUB_ROUTE_NAME/.test(router)) names.add(hub)
 
 	const view = read("views/Requests.vue")
-	const used = [...view.matchAll(/route: (?:"([^"]+)"|(HUB_ROUTE_NAME))/g)].map((m) =>
-		m[1] ? m[1] : hub
-	)
-	assert.ok(used.length >= 6, `expected the six links, found ${used.length}`)
+	// The New request type sheet names its routes as { name: "..." }.
+	const used = [...view.matchAll(/\{ name: "([^"]+)" \}/g)].map((m) => m[1])
+	assert.ok(used.length >= 5, `expected the five request types, found ${used.length}`)
 	const missing = used.filter((name) => !names.has(name))
 	assert.deepEqual(missing, [], "a link whose route does not exist throws when tapped")
 })

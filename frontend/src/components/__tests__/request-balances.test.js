@@ -119,11 +119,11 @@ test("an unmarked day means a day somebody actually worked", () => {
 })
 
 test("the strip is the first thing on Requests", () => {
-	// Above the tiles: the numbers inform the decision the tiles act on.
+	// Above New request: the numbers inform the decision the button acts on.
 	const view = code(read("views/Requests.vue"))
 	assert.ok(
-		view.indexOf("<RequestBalances") < view.indexOf("<QuickLinks"),
-		"balances before the actions they inform"
+		view.indexOf("<RequestBalances") < view.indexOf("__('New request')"),
+		"balances before the action they inform"
 	)
 })
 

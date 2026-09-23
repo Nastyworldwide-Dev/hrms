@@ -161,7 +161,9 @@ test("the expenses glyph is still a coin, not a receipt", () => {
 	// The expense link moved from Home to Requests (2.0 slice 1.3). The RULE is
 	// unchanged — the Expenses glyph is the coin the app had, not a receipt —
 	// and this follows it to the two files that draw it now.
-	for (const file of ["views/Requests.vue", "data/navItems.js"]) {
+	// Requests starts a request from a text list now (the type sheet), so it
+	// draws no glyph; the rule still holds wherever the expense glyph is drawn.
+	for (const file of ["data/navItems.js"]) {
 		const text = readFileSync(join(SRC, file), "utf8")
 		assert.match(text, /\bCircleDollarSign\b/, `${file} should draw the coin the app had`)
 		// `Receipt` may legitimately appear for a DIFFERENT link — Requests uses

@@ -30,68 +30,61 @@
 				     remember a figure from another screen. The strip renders
 				     nothing when there is nothing to say. -->
 				<RequestBalances />
-				<QuickLinks :items="quickLinks" :title="__('Start a request')" />
+				<!-- ONE button, one type sheet (audit P1-B, prototype + mockup 4): the
+				     six-tile grid pushed the list below the fold. -->
+				<GButton :label="__('New request')" @click="typeSheetOpen = true" />
 				<RequestPanel />
+				<GActionSheet
+					:is-open="typeSheetOpen"
+					:title="__('New request')"
+					:actions="requestTypes"
+					@select="startRequest"
+					@did-dismiss="typeSheetOpen = false"
+				/>
 			</div>
 		</template>
 	</BaseLayout>
 </template>
 
 <script setup>
-import { computed, inject, markRaw } from "vue"
-import {
-	CalendarClock,
-	CalendarDays,
-	CircleDollarSign,
-	LifeBuoy,
-	Receipt,
-	UserCheck,
-} from "lucide-vue-next"
+import { inject, ref } from "vue"
+import { useRouter } from "vue-router"
 
 import BaseLayout from "@/components/BaseLayout.vue"
-import QuickLinks from "@/components/QuickLinks.vue"
 import RequestBalances from "@/components/RequestBalances.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
+import GActionSheet from "@/components/glass/GActionSheet.vue"
+import GButton from "@/components/glass/GButton.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
-
-import { userResource } from "@/data/user"
 import { reloadRequestLists } from "@/data/requestLists"
-import { hasHRRole } from "@/utils/issueBoard"
-import { HUB_ROUTE_NAME, HR_TAB } from "@/utils/helpdeskHub"
 
 const __ = inject("$translate")
+const router = useRouter()
 
-// The same destinations Home offers, because they are the same requests. Kept
-// as this screen's own list rather than imported from Home: Home's list is
-// Home's editorial choice (it shows what is used most often), and this one is
-// meant to be complete. They agree today and are allowed to diverge.
-const baseLinks = [
-	{
-		icon: markRaw(UserCheck),
-		title: __("Fix a day"),
-		route: "AttendanceRequestFormView",
-	},
-	{ icon: markRaw(CalendarClock), title: __("Change a shift"), route: "ShiftRequestFormView" },
-	{ icon: markRaw(CalendarDays), title: __("Time off"), route: "LeaveApplicationFormView" },
-	{
-		icon: markRaw(CircleDollarSign),
-		title: __("Claim an expense"),
-		route: "ExpenseClaimFormView",
-	},
-	{ icon: markRaw(Receipt), title: __("Claim overtime"), route: "OTRequestFormView" },
+//: The request types, most used first. Asking HR is not a request (it lives
+//: on Help); fixing a day starts from the day, on Calendar (approved Calendar
+//: plan), so "Fix a day" opens Calendar rather than a blank form.
+const ROUTES = {
+	leave: { name: "LeaveApplicationFormView" },
+	overtime: { name: "OTRequestFormView" },
+	expense: { name: "ExpenseClaimFormView" },
+	shift: { name: "ShiftRequestFormView" },
+	fix: { name: "AttendanceDashboard" },
+}
+const requestTypes = [
+	{ key: "leave", label: __("Time off") },
+	{ key: "overtime", label: __("Claim overtime") },
+	{ key: "expense", label: __("Claim an expense") },
+	{ key: "shift", label: __("Change a shift") },
+	{ key: "fix", label: __("Fix a day") },
 ]
 
-const isHR = computed(() => hasHRRole(userResource.data))
-
-const quickLinks = computed(() => [
-	...baseLinks,
-	{
-		icon: markRaw(LifeBuoy),
-		title: isHR.value ? __("Issue board") : __("HR Issues"),
-		route: HUB_ROUTE_NAME,
-		query: { tab: HR_TAB },
-	},
-])
+const typeSheetOpen = ref(false)
+function startRequest(key) {
+	typeSheetOpen.value = false
+	console.info("[Requests] new request", key)
+	if (ROUTES[key]) router.push(ROUTES[key])
+}
 
 async function refreshRequests(event) {
 	console.info("[Requests] pull-to-refresh")
