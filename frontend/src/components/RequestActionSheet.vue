@@ -231,7 +231,7 @@
 			{{ pendingDecision?.body }}
 			<template v-if="needsReason" #extra>
 				<!-- Audit P0-10: the employee sees this reason on their request. -->
-				<GTextarea v-model="rejectReason" :label="__('Why not?')" />
+				<GTextarea v-model="rejectReason" :label="__('Why not? (required)')" />
 			</template>
 		</GConfirm>
 

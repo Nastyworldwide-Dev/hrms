@@ -20,9 +20,11 @@ test("the reject confirm asks why, in the person's words", () => {
 		template.indexOf("<!-- Withdraw own draft")
 	)
 	assert.match(confirm, /<GTextarea[\s\S]*v-model="rejectReason"/)
-	assert.match(confirm, /__\(['"]Why not\?['"]\)/)
+	assert.match(confirm, /__\(['"]Why not\? \(required\)['"]\)/)
 })
 
+// The label says it is required, so a disabled Reject is never a mystery
+// (design review of da51cd501, WCAG 3.3.2 labels or instructions).
 test("Reject cannot be pressed with an empty reason", () => {
 	const confirm = template.slice(
 		template.indexOf("<!-- Irreversible-action confirm"),
