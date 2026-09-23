@@ -84,7 +84,7 @@
 				>
 					<template v-for="group in departmentGroups" :key="group.department">
 						<div class="g-eyebrow px-3 pt-4 pb-1.5">
-							{{ group.department }} ({{ group.members.length }})
+							{{ departmentLabel(group.department) }} ({{ group.members.length }})
 						</div>
 						<div
 							v-for="member in group.members"
@@ -189,6 +189,7 @@ import { clockTime } from "@/utils/daySheet"
 import BaseLayout from "@/components/BaseLayout.vue"
 import { teamManagers, teamStatus } from "@/data/team"
 import { buildManagerOptions, buildTeamCalendarDays, groupByDepartment } from "@/utils/team"
+import { departmentLabel } from "@/utils/departmentLabel"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")

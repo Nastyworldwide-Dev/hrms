@@ -82,7 +82,7 @@
 							:key="department.name"
 							:value="department.name"
 						>
-							{{ department.name }}
+							{{ departmentLabel(department.name) }}
 						</option>
 					</select>
 					<span v-if="errors.department" class="text-kra-label font-bold text-red-600">
@@ -197,6 +197,7 @@
 </template>
 
 <script setup>
+import { departmentLabel } from "@/utils/departmentLabel"
 import { Paperclip, X } from "lucide-vue-next"
 import { personalCacheKey } from "@/utils/personalCache"
 import { IonModal } from "@ionic/vue"

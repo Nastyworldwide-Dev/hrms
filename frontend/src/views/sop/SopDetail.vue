@@ -34,7 +34,7 @@
 				<!-- meta -->
 				<div class="flex items-center gap-2 flex-wrap">
 					<GBadge :variant="isGeneral ? 'open' : 'accent'">
-						{{ isGeneral ? __("General") : sop.data.department }}
+						{{ isGeneral ? __("General") : departmentLabel(sop.data.department) }}
 					</GBadge>
 					<GBadge v-if="!sop.data.published" variant="neutral" class="!text-ink-700">
 						{{ __("Draft") }}
@@ -100,6 +100,7 @@
 </template>
 
 <script setup>
+import { departmentLabel } from "@/utils/departmentLabel"
 import { safeHtml } from "@/utils/safeHtml"
 import { ChevronLeft, Download, FileText, PenLine } from "lucide-vue-next"
 import GEmptyState from "@/components/glass/GEmptyState.vue"

@@ -199,7 +199,9 @@
 								class="kpi-filter g-focusable"
 							>
 								<option value="">{{ __("All departments") }}</option>
-								<option v-for="d in teamDepartments" :key="d" :value="d">{{ d }}</option>
+								<option v-for="d in teamDepartments" :key="d" :value="d">
+									{{ departmentLabel(d) }}
+								</option>
 							</select>
 						</div>
 					</div>
@@ -416,6 +418,7 @@ import GDataTable from "@/components/glass/GDataTable.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import KpiDetail from "@/views/kpi/KpiDetail.vue"
 import { canViewTeamKpi, departmentKpi, employeeKpi, teamKpi } from "@/data/kpi"
+import { departmentLabel } from "@/utils/departmentLabel"
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")

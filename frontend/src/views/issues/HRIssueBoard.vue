@@ -75,7 +75,9 @@
 						</span>
 						<span class="block text-card-title font-extrabold text-inkbase mb-0.5">
 							{{ issue.employee_name }}
-							<span class="text-ink-600 font-semibold">· {{ issue.department || "—" }}</span>
+							<span class="text-ink-600 font-semibold"
+								>· {{ departmentLabel(issue.department) || "—" }}</span
+							>
 						</span>
 						<span class="block text-kra-label text-ink-600 truncate">
 							<b>{{ __(TYPE_SHORT[issue.issue_type]) }}</b> — {{ issue.details }}
@@ -110,7 +112,7 @@
 						{{ detail.data.employee_name }}
 					</span>
 					<span class="text-xs text-ink-600">
-						{{ detail.data.department || "—" }} ·
+						{{ departmentLabel(detail.data.department) || "—" }} ·
 						{{ dayjs(detail.data.creation).format("D MMM YYYY, HH:mm") }}
 					</span>
 				</div>
@@ -167,6 +169,7 @@
 </template>
 
 <script setup>
+import { departmentLabel } from "@/utils/departmentLabel"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
 import GSearchBar from "@/components/glass/GSearchBar.vue"

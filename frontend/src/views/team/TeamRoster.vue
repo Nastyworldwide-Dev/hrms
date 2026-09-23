@@ -46,7 +46,7 @@
 									v-if="member.branch || member.department"
 									class="text-kra-label text-ink-600 truncate"
 								>
-									{{ member.branch || member.department }}
+									{{ member.branch || departmentLabel(member.department) }}
 								</span>
 							</div>
 							<button
@@ -126,6 +126,7 @@
 </template>
 
 <script setup>
+import { departmentLabel } from "@/utils/departmentLabel"
 import { ChevronLeft, ChevronRight } from "lucide-vue-next"
 import { computed, inject, reactive, ref, onMounted } from "vue"
 import { Autocomplete, LoadingIndicator, toast } from "frappe-ui"

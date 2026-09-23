@@ -159,6 +159,7 @@
 </template>
 
 <script setup>
+import { departmentLabel } from "@/utils/departmentLabel"
 import { BookOpen, ChevronRight, PenLine, Plus, Search } from "lucide-vue-next"
 import { personalCacheKey } from "@/utils/personalCache"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
@@ -233,13 +234,14 @@ const sections = computed(() => grouped.value.sections)
 const isEmpty = computed(() => grouped.value.isEmpty)
 
 const scopeLabel = (sop) =>
-	sop.scope === "Department" && sop.department ? sop.department : __("General")
+	sop.scope === "Department" && sop.department ? departmentLabel(sop.department) : __("General")
 
 const sectionLabel = (section) => {
 	if (!section.department) return __("General")
 	// an employee only ever gets their own department group — name it as such;
 	// HR gets every department, where the plain name reads better
-	return isHR.value ? section.department : __("My Department — {0}", [section.department])
+	const name = departmentLabel(section.department)
+	return isHR.value ? name : __("My Department — {0}", [name])
 }
 
 const openCreate = () => {
