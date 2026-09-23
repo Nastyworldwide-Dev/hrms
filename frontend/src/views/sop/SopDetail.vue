@@ -229,7 +229,6 @@ const attachmentKind = computed(() => {
 	padding: 6px 0 6px 14px;
 	border-left: 3px solid var(--g-accent-ink);
 	color: var(--g-ink2);
-	font-style: italic;
 }
 .sop-prose :deep(hr) {
 	border: 0;

@@ -225,7 +225,7 @@ export const EMPLOYEE_CHECKIN_FIELDS = [
 	},
 	{
 		fieldname: "log_type",
-		label: "Log Type",
+		label: "Check-in type",
 		fieldtype: "Data",
 	},
 	{
