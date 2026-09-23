@@ -139,7 +139,9 @@ const rows = computed(() => {
 				? __("{0}+ {1}s to approve", [row.count, row.noun])
 				: __("{0} {1}(s) to approve", [row.count, row.noun]),
 			sublabel: null,
-			go: () => row.route && router.push({ name: row.route }),
+			// ?tab=team: the list opens on the requests waiting for THIS person,
+			// not on their own (audit P0-9). Lists without tabs ignore it.
+			go: () => row.route && router.push({ name: row.route, query: { tab: "team" } }),
 		})
 	}
 

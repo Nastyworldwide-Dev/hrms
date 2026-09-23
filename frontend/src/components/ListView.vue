@@ -67,6 +67,7 @@
 					:buttons="props.tabButtons"
 					v-model="activeTab"
 					:label="__('Filter list')"
+					@update:model-value="tabChosenByHand = true"
 				/>
 
 				<!-- §15.1: ONE glass panel for the whole list, not one surface per
@@ -154,7 +155,8 @@ import { ChevronLeft, Funnel } from "lucide-vue-next"
 import { IonContent, IonHeader, modalController } from "@ionic/vue"
 import { createResource, debounce } from "frappe-ui"
 import { computed, inject, markRaw, onMounted, reactive, ref, watch } from "vue"
-import { useRouter } from "vue-router"
+import { initialListTab } from "@/utils/listTab"
+import { useRoute, useRouter } from "vue-router"
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import EmployeeCheckinItem from "@/components/EmployeeCheckinItem.vue"
 import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
@@ -285,7 +287,18 @@ const dayjs = inject("$dayjs")
 const socket = inject("$socket")
 const employee = inject("$employee")
 const filterMap = reactive({})
-const activeTab = ref(props.tabButtons ? getButtonKey(props.tabButtons[0]) : undefined)
+const route = useRoute()
+// ?tab=team opens the approver's tab (audit P0-9). The team tab only exists
+// once the approver check has loaded, so the pick is re-made when the tabs
+// change, until the person picks a tab themselves.
+const activeTab = ref(initialListTab(props.tabButtons, route.query.tab))
+let tabChosenByHand = false
+watch(
+	() => props.tabButtons,
+	(tabs) => {
+		if (!tabChosenByHand) activeTab.value = initialListTab(tabs, route.query.tab)
+	}
+)
 const areFiltersApplied = ref(false)
 const appliedFilters = ref([])
 const workflowStateField = ref(null)
