@@ -2,6 +2,9 @@
 	<!-- ion-tab-bar is retained, not replaced: Ionic's per-tab navigation stacks
 	     live in this component, and rebuilding it would lose them. Everything
 	     below is a restyle of the HOST plus its published custom properties. -->
+	<!-- Scroll-edge fade: content dissolves into the page ground before it
+	     reaches the floating bar, so rows never butt against the glass. -->
+	<div class="g-tabbar-fade lg:hidden" aria-hidden="true" />
 	<ion-tab-bar slot="bottom" class="g-tabbar lg:hidden">
 		<ion-tab-button
 			v-for="item in tabItems"

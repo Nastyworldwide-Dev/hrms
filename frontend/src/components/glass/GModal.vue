@@ -13,9 +13,9 @@
 
   Only the SKIN is new, applied through ion-modal's published CSS custom
   properties (§16.3): --background, --border-radius, --box-shadow, and the
-  lg: width/height. The surface is SOLID (--glass-fill-fallback), not glass:
-  a modal always covers page content that is itself glass, and glass over
-  glass is nested glass (§15).
+  lg: width/height. Since alpha.5 the sheet IS glass (chrome layer, ruling
+  D3; Apple HIG Materials) and the content under it is solid, so this is no
+  longer glass over glass. The blur sits on ::part(content), not .g-sheet.
 
   Props (CustomIonModal's API, unchanged so phase 5 can swap the import):
     trigger  string — id of the element that opens the modal

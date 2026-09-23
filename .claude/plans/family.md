@@ -1,13 +1,10 @@
-CLASS: server datetime rendered on the wrong clock (PWA boot had no site zone; lists parsed on device clock)
-hrms/www/hrms.py:get_boot same-root (sends sysdefaults.time_zone)
-frontend/src/utils/siteTime.js:siteTimeZone same-root (already reads sysdefaults.time_zone; now populated)
-frontend/src/components/*RequestItem.vue since() same-root (siteTime)
-frontend/src/components/ExpenseClaimItem.vue since() same-root
-frontend/src/components/EmployeeCheckinItem.vue same-root
-frontend/src/components/NowBar.vue elapsed same-root
-frontend/src/views/announcements/List.vue when() same-root
-frontend/src/components/ListView.vue:417 same-root ("HH:mm a" printed "18:31 pm")
-frontend/src/views/Notifications.vue:100 not-affected — already siteTime; fixed by boot
-frontend/src/utils/formatters.js formatTimestamp ticket alpha5-S9 — date-format unification slice
-frontend/src/views/helpdesk/HelpdeskList.vue, issues/IssueList.vue, HRIssueBoard.vue, sop/* ticket alpha5-S8 — rows rewritten in the Help/SOP redesign slice
-frontend/src/components/LateCheckoutDialog.vue, CheckInPanel.vue not-affected — compare device-now to a datetime-local input the user typed on the device clock
+CLASS: glass (backdrop-filter) on the content layer instead of chrome
+frontend/src/theme/glass-components.css:.g-glass same-root (solid fallback fill)
+frontend/src/theme/glass-components.css:.g-glass-ghost same-root
+frontend/src/theme/glass-components.css:.g-modal same-root (sheet becomes glass)
+frontend/src/theme/glass-components.css:toast same-root
+frontend/src/theme/glass-components.css:ion-tab-bar.g-tabbar not-affected — chrome, already correct
+frontend/src/theme/glass-components.css:.g-sidenav not-affected — chrome, already correct
+frontend/src/theme/glass-components.css:.g-header not-affected — nothing scrolls under it (ion-header outside a non-fullscreen ion-content)
+frontend/src/components/BottomTabs.vue same-root (scroll-edge fade)
+design/gates surfaces counter ticket alpha5-gate-surfaces — counts .g-glass class, not blur; still passes

@@ -148,6 +148,24 @@ html[data-transparency="reduce"] ion-tab-bar.g-tabbar {
 	backdrop-filter: none;
 }
 
+/* Scroll-edge effect (owner ruling D3). A fixed band from the page ground to
+   transparent under the floating bar, so content fades out before it meets
+   the glass instead of butting against its edge. It lives in BottomTabs, so it
+   exists exactly where the bar does (tab pages only), and is lg:hidden with it
+   — the side nav replaces the bar there. Above the routed page (ion-tabs'
+   .tabs-inner), below the bar's own layer; never takes a tap. Kept under
+   reduce-transparency: it is a gradient of the solid ground, not a blur. */
+.g-tabbar-fade {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: calc(96px + env(safe-area-inset-bottom, 0px));
+	background: linear-gradient(to top, var(--g-bg), transparent);
+	pointer-events: none;
+	z-index: calc(var(--g-layer-overlay) - 1);
+}
+
 /* Each tab is a §14.1 target. Ionic's default ion-tab-button sizing gave 69×36
    on EVERY screen in the app — the most-tapped control in the product was the
    one furthest under the minimum. The bar's own height token carries the 44 plus
@@ -253,20 +271,26 @@ html[data-transparency="reduce"] .g-sidenav {
 	font-weight: 700;
 }
 
-/* ---------- the recipe (§6) ---------- */
+/* ---------- the content panel (§6) ---------- */
 
+/* SOLID, not glass — owner ruling D3, 23 Sep 2026. Liquid Glass (a backdrop
+   blur) belongs to chrome only: tab bar, side nav, header, sheets, toasts.
+   Apple HIG, Materials: "Don't use Liquid Glass in the content layer"; WWDC25:
+   avoid glass on glass — a blurring panel put a second glass layer under every
+   sheet opened over it. The fill is the §6.1 fallback fill every surface
+   already fell back to; rim, radius, lift and gloss are kept, so no layout
+   moves. The class keeps its name: the surfaces gate counts it (§15.1).
+   glass-chrome-only.test.js fails if a content selector blurs again. */
 .g-glass,
 .g-glass-ghost {
 	position: relative;
-	background: var(--g-glass-fill);
-	-webkit-backdrop-filter: blur(var(--_g-blur, var(--g-blur-panel))) saturate(180%);
-	backdrop-filter: blur(var(--_g-blur, var(--g-blur-panel))) saturate(180%);
+	background: var(--g-glass-fill-fallback);
 	border: 1px solid var(--g-glass-rim);
 	border-radius: var(--g-radius-panel);
 	box-shadow: inset 0 1px 0 var(--g-rim-hi), inset 0 -1px 0 var(--g-rim-lo), var(--g-lift);
-	/* Holds the gloss below. backdrop-filter already makes a stacking context,
-	   but the @supports-not fallback above drops it, and then a z-index -1
-	   pseudo escapes behind the page ground. */
+	/* Holds the gloss below: without a backdrop-filter nothing else makes this
+	   a stacking context, and a z-index -1 pseudo would escape behind the page
+	   ground. */
 	isolation: isolate;
 }
 
@@ -295,36 +319,8 @@ html[data-transparency="reduce"] .g-sidenav {
 }
 
 /* the ghost variant is standalone — never combined with .g-glass in markup,
-   or the surface counter double-counts */
-.g-glass-ghost {
-	--_g-blur: var(--g-blur-ghost);
-}
-
-/* §6.1 fallback — solid fill, layout unchanged */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-	.g-glass,
-	.g-glass-ghost {
-		background: var(--g-glass-fill-fallback);
-	}
-}
-
-/* §6.2 reduce-transparency — system preference and the manual override in
-   data/theme.js (html[data-transparency="reduce"]) swap to the fallback fill.
-   Fill only; no layout change. */
-@media (prefers-reduced-transparency: reduce) {
-	.g-glass,
-	.g-glass-ghost {
-		background: var(--g-glass-fill-fallback);
-		-webkit-backdrop-filter: none;
-		backdrop-filter: none;
-	}
-}
-html[data-transparency="reduce"] .g-glass,
-html[data-transparency="reduce"] .g-glass-ghost {
-	background: var(--g-glass-fill-fallback);
-	-webkit-backdrop-filter: none;
-	backdrop-filter: none;
-}
+   or the surface counter double-counts. Both are solid now (D3); §6.1/§6.2
+   fallbacks need no rule because the panel already wears the fallback fill. */
 
 /* visually hidden, still announced — how components carry the §14.1 phrasing
    ("Annual leave, 7.5 days remaining of 8 allocated") while the visual figures
@@ -2100,16 +2096,44 @@ html[data-theme="dark"] .g-cal__day--present {
 
 /* ---------- GModal / GActionSheet (§10.3 #25, #26) ---------- */
 
-/* ion-modal is shadow DOM: theme through its published custom properties only
-   (§16.3). The surface is SOLID, not glass — a modal always floats above page
-   content that is itself glass, and glass over glass is nested glass (§15). */
+/* ion-modal is shadow DOM: theme through its published custom properties and
+   its content part only (§16.3). The sheet IS glass — owner ruling D3: sheets
+   are chrome. Content panels went solid at the same time, so a panel inside a
+   sheet is solid glass-free content and nothing nests (WWDC25: avoid glass on
+   glass). Same recipe and fallbacks as the tab bar. */
 .g-modal {
-	--background: var(--g-glass-fill-fallback);
+	--background: var(--g-glass-fill);
 	--border-radius: var(--g-radius-panel);
-	--box-shadow: var(--g-lift);
+	--box-shadow: inset 0 1px 0 var(--g-rim-hi), var(--g-lift);
 	/* the built-in backdrop is disabled by backdrop-breakpoint=1 (the
 	   focus-trap workaround); .g-scrim below does the dimming instead */
 	--backdrop-opacity: 0;
+}
+.g-modal::part(content) {
+	border: 1px solid var(--g-glass-rim);
+	-webkit-backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
+	backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	.g-modal {
+		--background: var(--g-glass-fill-fallback);
+	}
+}
+@media (prefers-reduced-transparency: reduce) {
+	.g-modal {
+		--background: var(--g-glass-fill-fallback);
+	}
+	.g-modal::part(content) {
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+	}
+}
+html[data-transparency="reduce"] .g-modal {
+	--background: var(--g-glass-fill-fallback);
+}
+html[data-transparency="reduce"] .g-modal::part(content) {
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
 }
 /* §20.7 #25/#26: bottom sheet on mobile, centred dialog at lg: */
 @media (min-width: 1024px) {
@@ -2236,12 +2260,33 @@ html[data-theme="dark"] .g-cal__day--present {
 /* frappe-ui renders toasts as plain DOM into #frappeui-toast-root (no shadow
    DOM), so the Glass skin can reach them. Coupled to frappe-ui's markup —
    re-verify on the 0.1.278 upgrade (DECISION 6). */
+/* Glass: toasts are chrome (owner ruling D3), same recipe and fallbacks as
+   the tab bar. */
 #frappeui-toast-root > div > div {
-	background: var(--g-glass-fill-fallback) !important;
+	background: var(--g-glass-fill) !important;
+	-webkit-backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
+	backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
 	border-color: var(--g-glass-rim) !important;
 	border-radius: var(--g-radius-banner) !important;
-	box-shadow: var(--g-lift) !important;
+	box-shadow: inset 0 1px 0 var(--g-rim-hi), var(--g-lift) !important;
 	color: var(--g-ink);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	#frappeui-toast-root > div > div {
+		background: var(--g-glass-fill-fallback) !important;
+	}
+}
+@media (prefers-reduced-transparency: reduce) {
+	#frappeui-toast-root > div > div {
+		background: var(--g-glass-fill-fallback) !important;
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+	}
+}
+html[data-transparency="reduce"] #frappeui-toast-root > div > div {
+	background: var(--g-glass-fill-fallback) !important;
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
 }
 #frappeui-toast-root p:first-child {
 	font-family: var(--g-type-card-title-family);
