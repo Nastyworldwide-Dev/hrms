@@ -145,7 +145,7 @@ module.exports = {
 			letterSpacing: "-0.02em",
 			lineHeight: "1",
 		}],
-		"tab-label": ["0.625rem", {
+		"tab-label": ["10px", {
 			fontWeight: "600",
 			letterSpacing: "0.02em",
 			lineHeight: "1.2",

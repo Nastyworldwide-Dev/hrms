@@ -20,9 +20,16 @@ const read = (p) => readFileSync(join(SRC, p), "utf8")
 const tokens = JSON.parse(readFileSync(join(SRC, "../../design/tokens.json"), "utf8"))
 const css = read("theme/glass.css")
 
-test("every type size is emitted in rem", () => {
+//: The one role that must NOT scale. Five uppercase tab labels share one
+//: 320px bar; at 120% text a rem-sized label overflows and the
+//: "CALENDARREQUESTS" collision returns — for the people who raised their text
+//: size precisely because they were struggling. See
+//: components/__tests__/tabbar-fits.test.js for the arithmetic.
+const FIXED_PX_ROLES = ["tab-label"]
+
+test("every type size a person READS is emitted in rem", () => {
 	const px = [...css.matchAll(/--g-type-([a-z-]+)-size:\s*([^;]+);/g)].filter(
-		(m) => !m[2].trim().endsWith("rem")
+		(m) => !m[2].trim().endsWith("rem") && !FIXED_PX_ROLES.includes(m[1])
 	)
 	assert.deepEqual(
 		px.map((m) => `${m[1]} = ${m[2].trim()}`),
@@ -31,10 +38,18 @@ test("every type size is emitted in rem", () => {
 	)
 })
 
+test("the fitting exemption is exactly one role", () => {
+	// A list that grows is a list that eventually contains everything, and
+	// "it did not fit" is the easiest excuse in the world to reach for.
+	const fixed = [...css.matchAll(/--g-type-([a-z-]+)-size:\s*[^;]*px;/g)].map((m) => m[1])
+	assert.deepEqual(fixed, FIXED_PX_ROLES)
+})
+
 test("the rem values are the px ramp, converted — not a second ramp", () => {
 	// The token file stays in px so the scale can be reviewed as one. If these
 	// ever disagree, somebody has edited the generated CSS by hand.
 	for (const [name, step] of Object.entries(tokens.type.scale)) {
+		if (FIXED_PX_ROLES.includes(name)) continue
 		const authored = Number.parseFloat(step.size)
 		const emitted = css.match(new RegExp(`--g-type-${name}-size:\\s*([\\d.]+)rem`))
 		assert.ok(emitted, `${name} is emitted`)

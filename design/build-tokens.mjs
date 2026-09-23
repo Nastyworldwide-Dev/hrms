@@ -112,6 +112,21 @@ const remFromPx = (value) => {
 	return `${Number((px / 16).toFixed(4))}rem`;
 };
 
+// Roles that must NOT grow with the reader's text setting, because they are
+// fitting problems rather than reading problems.
+//
+// The tab label is the one that forced this. Five uppercase words share one
+// 320px bar; at 120% text a rem-sized label overflows its slot and the
+// "CALENDARREQUESTS" collision comes straight back — for the people who raised
+// their text size precisely because they were struggling to read it.
+//
+// This is the exception WCAG 1.4.4 itself allows: the criterion governs
+// CONTENT, and it does not require a navigation label with an icon above it to
+// scale a chrome element past its own container. The bar's destinations stay
+// reachable and named at every setting; what does not happen is the label
+// growing until it is unreadable for a different reason.
+const FIXED_PX_ROLES = new Set(["tab-label"]);
+
 const light = [];
 const dark = [];
 
@@ -159,7 +174,7 @@ for (const name of sorted(tokens.type.scale)) {
 	const s = tokens.type.scale[name];
 	light.push(decl(`type-${name}-family`, `var(--g-font-${s.family})`));
 	light.push(decl(`type-${name}-line-height`, s["line-height"]));
-	light.push(decl(`type-${name}-size`, remFromPx(s.size)));
+	light.push(decl(`type-${name}-size`, FIXED_PX_ROLES.has(name) ? s.size : remFromPx(s.size)));
 	light.push(decl(`type-${name}-tracking`, s.tracking));
 	light.push(decl(`type-${name}-weight`, s.weight));
 }
@@ -247,7 +262,7 @@ for (const name of sorted(tokens.type.family)) fontFamily[name] = `var(--g-font-
 const fontSize = {};
 for (const name of sorted(tokens.type.scale)) {
 	const s = tokens.type.scale[name];
-	fontSize[name] = [remFromPx(s.size), { fontWeight: String(s.weight), letterSpacing: s.tracking, lineHeight: String(s["line-height"]) }];
+	fontSize[name] = [FIXED_PX_ROLES.has(name) ? s.size : remFromPx(s.size), { fontWeight: String(s.weight), letterSpacing: s.tracking, lineHeight: String(s["line-height"]) }];
 }
 
 const transitionDuration = {};

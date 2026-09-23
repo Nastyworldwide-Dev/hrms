@@ -269,3 +269,14 @@ FINDING (not a defect): Needs You is empty on the owner's account because nothin
 NEXT: verify the deployed screens against the plan one more time, then hand over.
 - 2026-09-23T00:49:24Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 19 file(s) ⟂7da499605f72
 - 2026-09-23T00:49:24Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-23T00:49:30Z PUSH: nz-glass @ b54d66f2f
+- 2026-09-23T00:49:30Z COMMIT: b54d66f2f feat(announcements): HR published into silence → review dispatched
+
+EVIDENCE: rung 2 (correct) — tab label fixed in px: 787/787 tests green, 7 static
+  gates green. Mutants killed: 12px and 11px sizes (both overflow at 320px), the
+  rem conversion applied to the tab label.
+DEAD END: emitting the tab label in rem. Type went to rem yesterday for WCAG
+  1.4.4, and at 120% text a rem-sized label overflows its slot — the
+  "CALENDARREQUESTS" collision returns for exactly the people who raised their
+  text size. One named exemption; everything a person READS still scales.
+- 2026-09-23T00:51:56Z EVIDENCE: 2 correct — mapped tests green (bun ) for 21 file(s) ⟂f710e4a84ebd

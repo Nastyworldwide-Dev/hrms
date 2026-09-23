@@ -107,3 +107,34 @@ test("the label never wraps, and is still allowed to ellipsis", () => {
 	assert.match(block, /white-space: nowrap/)
 	assert.match(block, /text-overflow: ellipsis/)
 })
+
+test("the bar does not grow with the reader's text size", () => {
+	// FOUND BY ARITHMETIC, 23 September 2026, an hour after fixing the
+	// collision: type was converted to rem the day before (WCAG 1.4.4), so at
+	// 120% text a rem-sized tab label overflows its slot and
+	// "CALENDARREQUESTS" comes straight back — for exactly the people who
+	// raised their text size because they were struggling to read it.
+	//
+	// 1.4.4 governs CONTENT. It does not ask a navigation label with an icon
+	// above it to scale past its own container: the destinations stay
+	// reachable and named at every setting, which is what the criterion is
+	// protecting.
+	const emitted = readFileSync(join(SRC, "theme/glass.css"), "utf8")
+	const size = /--g-type-tab-label-size:\s*([^;]+);/.exec(emitted)
+	assert.ok(size, "the tab label size is emitted")
+	assert.match(size[1].trim(), /px$/, "it stays in CSS px")
+
+	// And everything a person READS still scales — the exemption is one role,
+	// not a retreat from the criterion.
+	const caption = /--g-type-caption-size:\s*([^;]+);/.exec(emitted)
+	assert.match(caption[1].trim(), /rem$/, "body-ish type still answers to the reader")
+})
+
+test("the exemption is one named role, not a habit", () => {
+	// A list that grows is a list that eventually contains everything.
+	const builder = readFileSync(join(SRC, "../../design/build-tokens.mjs"), "utf8")
+	const set = /const FIXED_PX_ROLES = new Set\(\[([^\]]*)\]\)/.exec(builder)
+	assert.ok(set, "the exempt roles are a named set")
+	const roles = [...set[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
+	assert.deepEqual(roles, ["tab-label"], "exactly one role is exempt")
+})
