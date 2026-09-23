@@ -52,25 +52,46 @@ export function sessionIsCurrent() {
 	return false
 }
 
-// frappe-ui uses the default idb-keyval store with JSON-array keys. Delete
-// only our old shared keys or this origin/account's private keys; other apps,
-// identities and stores remain intact. No database is cleared wholesale.
+// Which browser-store keys a logout removes. frappe-ui uses the default
+// idb-keyval store with JSON-array keys:
+//   * our private keys   [PRIVATE_CACHE, origin, user, key] — this user's only
+//   * our old shared keys ["hrms:…"] / ["nsty:…"]
+//   * frappe-ui's document cache [doctype, name]. createDocumentResource saves
+//     every document it loads there (Profile's Employee record: name, date of
+//     birth, contacts), and until 23 Sep logout left it behind for the next
+//     person on the device (audit P0-5, OWASP ASVS V8.2).
+// Other apps' keys and other identities' private keys are left intact.
+export function isClearedAtLogout(key, user) {
+	let parts
+	try {
+		parts = JSON.parse(key)
+	} catch {
+		return false
+	}
+	if (!Array.isArray(parts)) return false
+	if (parts[0] === PRIVATE_CACHE) {
+		return Boolean(user && parts[1] === window.location.origin && parts[2] === user)
+	}
+	if (/^(hrms:|nsty:(remote-checkin-|hr-contacts$|reporting-manager$))/.test(parts[0])) return true
+	return isDocumentKey(parts)
+}
+
+//: frappe-ui's document cache key: exactly [doctype, name]. A doctype is a
+//: capitalised name ("Employee", "Leave Application"), which is what keeps this
+//: from matching some other app's two-part key.
+function isDocumentKey(parts) {
+	return (
+		parts.length === 2 &&
+		typeof parts[0] === "string" &&
+		/^[A-Z][A-Za-z ]+$/.test(parts[0]) &&
+		(typeof parts[1] === "string" || typeof parts[1] === "number")
+	)
+}
+
 export async function clearPersonalCaches(user = null) {
 	if (typeof indexedDB === "undefined") return
 	try {
-		const obsolete = (await keys()).filter((key) => {
-			let parts
-			try {
-				parts = JSON.parse(key)
-			} catch {
-				return false
-			}
-			if (!Array.isArray(parts)) return false
-			if (parts[0] === PRIVATE_CACHE) {
-				return Boolean(user && parts[1] === window.location.origin && parts[2] === user)
-			}
-			return /^(hrms:|nsty:(remote-checkin-|hr-contacts$|reporting-manager$))/.test(parts[0])
-		})
+		const obsolete = (await keys()).filter((key) => isClearedAtLogout(key, user))
 		await delMany(obsolete)
 		console.info("[personalCache] cleared obsolete resource entries", obsolete.length)
 	} catch {
