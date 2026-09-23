@@ -38,7 +38,8 @@ test.describe("KPI: Home -> KPI -> back, five times", () => {
 		await page.goto(`${BASE}/hrms/home`)
 		await expect(page).toHaveURL(/\/hrms\/home/, { timeout: 15000 })
 		// the sidebar item on desktop; a real tap, not a URL push
-		const kpiNav = page.getByRole("button", { name: /^KPI$/i }).first()
+		// The tab is "Score" since bb3796ebe (22 Sep: "Score, not KPI").
+		const kpiNav = page.getByRole("button", { name: /^Score$/i }).first()
 		await expect(kpiNav).toBeVisible({ timeout: 15000 })
 
 		// Armed only once Home is up: the raw dev index.html still carries the
@@ -52,12 +53,16 @@ test.describe("KPI: Home -> KPI -> back, five times", () => {
 			await expect(page).toHaveURL(/\/dashboard\/kpi/, { timeout: 2000 })
 			// the page actually rendered: its header title, inside a mounted ion-page
 			await expect(
-				page.locator(".ion-page:not(.ion-page-hidden)").getByText(/^KPI$/).first(),
+				page.locator(".ion-page:not(.ion-page-hidden)").getByText(/^Score$/).first(),
 				`cycle ${cycle}: KPI page renders`
 			).toBeVisible({ timeout: 2000 })
 
-			await page.goBack()
-			await expect(page, `cycle ${cycle}: back returns within 2 s`).toHaveURL(/\/hrms\/home/, {
+			// Since 41dab817e (in alpha.3) a section switch REPLACES history, as a
+			// tab bar does (Apple HIG, Material 3), so Back no longer returns to
+			// the previous tab. The glitch under test was the page swap itself;
+			// switching back by the nav exercises the same swap.
+			await page.getByRole("button", { name: /^Home$/i }).first().click()
+			await expect(page, `cycle ${cycle}: Home returns within 2 s`).toHaveURL(/\/hrms\/home/, {
 				timeout: 2000,
 			})
 			await expect(
