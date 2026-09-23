@@ -38,7 +38,7 @@ test("H7: the permission ask comes after a check-in, from the check-in panel", (
 
 test("pulling down refreshes what Home shows: the Now bar, what waits on you, announcements", () => {
 	const body = home.slice(home.indexOf("async function refresh"), home.indexOf("</script>"))
-	for (const resource of ["nowResource", "needsYouResource", "homeAnnouncements"]) {
+	for (const resource of ["nowResource", "needsYouResource", "pendingCountResource", "homeAnnouncements"]) {
 		assert.match(body, new RegExp(`${resource}\\.reload\\(`), resource)
 	}
 	assert.doesNotMatch(body, /reloadRequestLists/)

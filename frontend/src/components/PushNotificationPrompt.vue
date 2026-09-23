@@ -120,7 +120,8 @@ onMounted(async () => {
 		console.info("[PushPrompt] Auto-prompt skipped", context)
 		return
 	}
-	// small grace so the sheet doesn't fight the page-load transition
+	// small grace so the sheet does not open while the check-in sheet that led
+	// here is still closing (it mounts after a successful check-in, Home plan H7)
 	setTimeout(() => {
 		if (!unmounted) isOpen.value = true
 	}, 1200)

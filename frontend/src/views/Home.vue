@@ -51,6 +51,7 @@ import { computed, inject } from "vue"
 import { homeAnnouncements } from "@/data/announcements"
 import { needsYouResource } from "@/data/needsYou"
 import { nowResource } from "@/data/now"
+import { pendingCountResource } from "@/data/remoteCheckin"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
 import NowBar from "@/components/NowBar.vue"
@@ -71,6 +72,8 @@ async function refresh(event) {
 	await Promise.allSettled([
 		nowResource.reload(),
 		needsYouResource.reload(),
+		// NeedsYou's remote check-in row reads its own count (data/remoteCheckin).
+		pendingCountResource.reload(),
 		homeAnnouncements.reload(),
 	])
 	event.target?.complete?.()
