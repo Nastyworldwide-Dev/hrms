@@ -250,3 +250,19 @@ NEXT: push nz-glass after the CLS review (111402a6d) returns clean; Nabil deploy
 - 2026-09-23T07:38:54Z EVIDENCE: 3 works — scripts/smoke.sh on fresh.local: migrate clean, patches.txt fully applied, deciding-status columns live in the schema ⟂62ddd9a606da
 DEAD END: 07:37 PUSH lines were refused pushes (release gate wanted tag v2.0.0-alpha.2), yet reset the evidence window; rung 2 for b88f52ba5 is at 07:36:06, full suite 957/957, rung 3 smoke at 07:38:54.
 NEXT: Nabil deploys nz-glass (tag v2.0.0-alpha.2) on Frappe Cloud.
+- 2026-09-23T07:39:24Z COMMIT: 3649de39e chore(progress): push evidence and next step → review dispatched
+- 2026-09-23T07:44:52Z COMMIT: b55fe916b docs(glass): tab labels fit at 200% text now; F-13 needs no ruling → review dispatched
+- 2026-09-23T08:40:47Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T08:40:50Z COMMIT: 7f6449fb8 fix(sheets): nothing inside an open sheet could be tapped → review+design dispatched
+- 2026-09-23T08:41:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-23T08:41:10Z COMMIT: 1526e13bb fix(update): Reload on "A new version is ready" did nothing → review+design dispatched
+- 2026-09-23T08:42:00Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T08:42:04Z COMMIT: 3b68f2cfe test(e2e): a sheet takes taps; page-motion ignores loading pulses → review dispatched
+- 2026-09-23T08:42:10Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T08:42:13Z COMMIT: db0c599c6 fix(refresh): "Refreshing..." sat on top of the page with nobody pulling → review+design dispatched
+- 2026-09-23T08:42:56Z COMMIT: eb0057205 chore(release): 2.0.0-alpha.3 hotfix — sheets tappable, reload works, refresh text hidden → review+deps dispatched
+- 2026-09-23T08:43:20Z EVIDENCE: 3 works — scripts/smoke.sh on fresh.local: migrate clean, patches.txt fully applied, deciding-status columns live in the schema ⟂62ddd9a606da
+- 2026-09-23T08:43:42Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-23T08:43:54Z COMMIT: 610614dd0 fix(update): a build that cannot take over was offered on every load → review+design dispatched
+EVIDENCE: 3 hotfix alpha.3 — frontend 964/964, smoke pass, live fresh.local: sheet takes taps at 390 and 1280, day sheet button taps, sheet-leaves-with-page 3/3.
+NEXT: Nabil deploys v2.0.0-alpha.3 hotfix; then alpha.4 plan (pages redesign + access matrix).
