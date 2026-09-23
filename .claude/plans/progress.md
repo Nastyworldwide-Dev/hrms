@@ -234,3 +234,18 @@ DEAD END: the cap test matching "the first <button> in the file". The filter
   measuring a chip. Anchored on .g-list-more now.
 NEXT: mockup 4 gap #4 — the claimable-money row on Home (the number already
   exists in requests_summary).
+- 2026-09-23T01:56:55Z PUSH: nz-glass @ 3938741a6
+- 2026-09-23T01:56:55Z COMMIT: 3938741a6 feat(requests): one undivided list became two piles and four filters → review+design dispatched
+- 2026-09-23T01:57:16Z PUSH: nz-glass @ e6eb026cb
+- 2026-09-23T01:57:16Z COMMIT: e6eb026cb docs(glass): the handoff and the mockup 4 gap list → review dispatched
+- 2026-09-23T02:13:35Z NEXT: glass work unchanged; stop-hook fix aa4052f sits unpushed on humanless-pipeline fix/commit-gate-scope
+- 2026-09-23T02:22:48Z COMPACT: context compacted — read the last NEXT above before continuing
+NEXT: owner reviews docs/glass/plan/pages/00-sheets-and-transitions.md + 02-home.md; then plan page 3 (Requests). No code until approved.
+EVIDENCE: 1 recollection — gates 7 pass/3 skip, 814/814 tests, eslint 0; checklist 16 pass/7 partial/27 fail (docs/glass/audit/2026-09-23-recollection.md)
+DEAD END: helper agents invented a blob ruling (D4) and passed orientation without evidence; corrected by hand
+NEXT: owner picks version scheme + approves step 0 foundation; then write pages/00-foundation.md
+EVIDENCE: 2 FLOW-1 confirmed in code — expense_claim/Form.vue FIELDS allowlist (from 94a9e278a) lacks "taxes"; tabs lastField:"taxes" -> FormView findIndex -1 -> empty tab. LIVE DEFECT on deployed 2.0: nobody can file an expense.
+EVIDENCE: 2 verified pages-audit criticals — PAGE-1 main.js beforeEach treats any userResource.reload() failure as logged-out (offline nav -> Login); PAGE-2 announcements/List.vue ResourceError + GEmptyState both render on error; PAGE-3 HRIssueBoard.vue:58 + TeamDashboard.vue:100 clickable divs (keyboard cannot reach). All CONFIRMED in code.
+EVIDENCE: 3 audit merged — docs/glass/audit/2026-09-23-AUDIT-PLAN.md: 92 findings, 13 P0 (all verified in code), F-1..F-15 foundation, 10 page plans
+NEXT: owner rules on 5 questions in AUDIT-PLAN.md, then build alpha.2 = P0-1..13
+NEXT: owner answered the 5 decisions (team line compressed on Calendar -> Team page; reword everything; shift pattern yes; HR reply + goals later). Waiting on "go P0".
