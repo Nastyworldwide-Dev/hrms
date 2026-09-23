@@ -47,7 +47,7 @@ export const acknowledgeAnnouncement = createResource({
 export async function reloadAnnouncements(reason = "change") {
 	console.info("[announcements] reload", { reason })
 	await Promise.all([
-		homeAnnouncements.fetch().catch(() => {}),
-		allAnnouncements.fetch().catch(() => {}),
+		homeAnnouncements.fetch()?.catch?.(() => {}),
+		allAnnouncements.fetch()?.catch?.(() => {}),
 	])
 }

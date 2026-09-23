@@ -145,8 +145,11 @@ onMounted(() => {
 	// pill you are NOT on is that it tells you to go there. Failures are
 	// swallowed — a pill that cannot count is a pill without a number, never
 	// a page that will not open.
-	myIssuesForCount.fetch().catch(() => {})
-	myTickets.fetch?.().catch(() => {})
+	// fetch() returns nothing when frappe-ui skips a request (already loading
+	// or cached), so the promise is optional too (live audit 23 Sep: a
+	// TypeError on every open).
+	myIssuesForCount.fetch?.()?.catch?.(() => {})
+	myTickets.fetch?.()?.catch?.(() => {})
 })
 
 // The availability probe can answer AFTER setup: a cached "it" pill on a site

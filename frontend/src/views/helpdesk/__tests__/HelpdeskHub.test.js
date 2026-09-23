@@ -16,7 +16,8 @@ const code = script.content
 	.replace(/import[\s\S]*?from ["'][^"']+["'];?/g, "")
 	.replace("export default", "return")
 
-function page({ query = {}, stored = null, available = true } = {}) {
+function page({ query = {}, stored = null, available = true, fetchReturnsNothing = false } = {}) {
+	const fetchReturns = fetchReturnsNothing ? undefined : Promise.resolve()
 	const route = reactive({ name: hub.HUB_ROUTE_NAME, query })
 	const replaced = []
 	const router = {
@@ -44,8 +45,8 @@ function page({ query = {}, stored = null, available = true } = {}) {
 		// make every label assertion here depend on fixture data.
 		openIssueCount: () => 0,
 		openTicketCount: () => 0,
-		myIssuesForCount: { fetch: () => Promise.resolve() },
-		myTickets: { fetch: () => Promise.resolve() },
+		myIssuesForCount: { fetch: () => fetchReturns },
+		myTickets: { fetch: () => fetchReturns },
 		localStorage: {
 			getItem: (key) => storage.get(key) ?? null,
 			setItem: (key, value) => storage.set(key, value),
@@ -191,4 +192,12 @@ test("the tab ref is declared before every watch that reads it (KPI TDZ lesson)"
 	const firstWatch = setup.indexOf("watch(")
 	assert.ok(declared > -1 && firstWatch > -1)
 	assert.ok(declared < firstWatch, "a watch above the ref it reads throws at setup")
+})
+
+test("opening Help never throws when a count's fetch returns nothing", () => {
+	// Live audit 23 Sep: "Cannot read properties of undefined (reading 'catch')"
+	// on every open. frappe-ui's fetch returns undefined when it skips a
+	// request (already loading, cached), and `.catch` on undefined throws.
+	const { mount } = page({ fetchReturnsNothing: true })
+	assert.doesNotThrow(mount)
 })

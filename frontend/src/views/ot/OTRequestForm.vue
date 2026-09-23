@@ -139,7 +139,7 @@ watch(
 			params: { employee: employeeId },
 		})
 		claimableRequest.value = resource
-		resource.fetch().catch(() => console.warn("[OTRequestForm] available dates unavailable"))
+		resource.fetch()?.catch?.(() => console.warn("[OTRequestForm] available dates unavailable"))
 	},
 	{ immediate: true, flush: "sync" }
 )

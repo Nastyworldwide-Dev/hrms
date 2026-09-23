@@ -188,7 +188,7 @@ function monthResource(firstDay) {
 		months.set(key, resource)
 		// The banner renders resource.error; the rejection itself is owned here
 		// so a failed month never surfaces as an unhandled promise.
-		resource.fetch().catch(() => console.warn("[AttendanceCalendar] month unavailable", key))
+		resource.fetch()?.catch?.(() => console.warn("[AttendanceCalendar] month unavailable", key))
 	}
 	return months.get(key)
 }

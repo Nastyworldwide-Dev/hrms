@@ -121,7 +121,7 @@ function open(card) {
 
 async function refresh(event) {
 	console.info("[Announcements] pull-to-refresh")
-	await allAnnouncements.fetch().catch(() => {})
+	await allAnnouncements.fetch()?.catch?.(() => {})
 	event.target?.complete?.()
 }
 

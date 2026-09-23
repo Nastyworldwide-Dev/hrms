@@ -67,7 +67,8 @@ test("a reload refreshes both boards", () => {
 	// One failing board must not stop the other refreshing: they are
 	// independent reads, and leaving one stale is the bug this function exists
 	// to prevent.
-	assert.equal((fn.match(/\.catch\(\(\) => \{\}\)/g) || []).length, 2, "each is independent")
+	// `?.catch?.`: fetch() can return nothing when frappe-ui skips a request.
+	assert.equal((fn.match(/\?\.catch\?\.\(\(\) => \{\}\)/g) || []).length, 2, "each is independent")
 })
 
 test("every endpoint is under the announcements API", () => {

@@ -22,7 +22,7 @@ export default function useApprovedCancel(getTarget) {
 				params: { doctype, name },
 			})
 			latest.value = { key: value, resource }
-			resource.fetch().catch(() => console.warn("[approvedCancel] check failed", doctype))
+			resource.fetch()?.catch?.(() => console.warn("[approvedCancel] check failed", doctype))
 		},
 		{ immediate: true }
 	)
