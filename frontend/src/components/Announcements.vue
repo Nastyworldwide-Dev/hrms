@@ -21,7 +21,14 @@
   policy and being able to say who read it.
 -->
 <template>
-	<div v-if="cards.length" class="w-full">
+	<!-- A FAILED READ IS NOT AN EMPTY BOARD. Both used to render nothing, so a
+	     notice HR had published and an outage looked identical from the sofa —
+	     the same class of defect as the Now bar hiding itself. Absence is the
+	     right empty state; silence is not the right error. -->
+	<GBanner v-if="homeAnnouncements.error" variant="error">
+		{{ __("Announcements could not be loaded. Pull down to try again.") }}
+	</GBanner>
+	<div v-else-if="cards.length" class="w-full">
 		<div class="g-eyebrow mb-4">{{ __("Announcements") }}</div>
 		<GListPanel>
 			<GListRow
@@ -64,6 +71,7 @@ import { computed, inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { CalendarDays, Megaphone, ShieldAlert, TriangleAlert } from "lucide-vue-next"
 
+import GBanner from "@/components/glass/GBanner.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GBadge from "@/components/glass/GBadge.vue"

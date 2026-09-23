@@ -20,7 +20,14 @@
   is "we could not check" sends somebody away from money they are owed.
 -->
 <template>
-	<div v-if="hasAnything" class="flex flex-col gap-4">
+	<!-- A FAILED READ IS NOT "YOU HAVE NOTHING". Both rendered nothing, so an
+	     employee with 12 days of leave and a broken endpoint saw the same
+	     screen as one with none — and this strip exists precisely so nobody has
+	     to guess at those numbers. -->
+	<GBanner v-if="requestsSummary.error" variant="error">
+		{{ __("Your balances could not be loaded. Pull down to try again.") }}
+	</GBanner>
+	<div v-else-if="hasAnything" class="flex flex-col gap-4">
 		<GBalanceGrid
 			v-if="shownLeave.length"
 			:count="shownLeave.length"
@@ -87,6 +94,7 @@ import { useRouter } from "vue-router"
 import { CircleDollarSign, Receipt, UserCheck } from "lucide-vue-next"
 
 import GBalanceCard from "@/components/glass/GBalanceCard.vue"
+import GBanner from "@/components/glass/GBanner.vue"
 import GBalanceGrid from "@/components/glass/GBalanceGrid.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"

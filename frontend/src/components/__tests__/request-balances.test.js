@@ -50,8 +50,23 @@ test("a zero is not a row", () => {
 })
 
 test("the whole strip disappears when there is nothing to say", () => {
-	assert.match(component, /v-if="hasAnything"/)
+	// `v-else-if` since the error branch went in above it — still conditional,
+	// still on the same condition.
+	assert.match(component, /v-else-if="hasAnything"/)
 	assert.match(component, /leave\.value\.length > 0 \|\| rows\.value\.length > 0/)
+})
+
+test("a failed read is not the same as having nothing", () => {
+	// Both rendered nothing, so an employee with 12 days of leave and a broken
+	// endpoint saw the same screen as one with none — on the strip that exists
+	// precisely so nobody has to guess at those numbers.
+	assert.match(component, /v-if="requestsSummary\.error"/, "the error is its own branch")
+	assert.ok(
+		component.indexOf("requestsSummary.error") < component.indexOf('v-else-if="hasAnything"'),
+		"and it is checked first"
+	)
+	assert.match(component, /could not be loaded/, "it says so")
+	assert.match(component, /try again/i, "and what to do")
 })
 
 test("a section the server could not read is absent, never zero", () => {

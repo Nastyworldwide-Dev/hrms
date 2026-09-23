@@ -33,7 +33,9 @@ test("an empty board renders nothing at all on Home", () => {
 	// A permanent "no announcements yet" card is wrong most of the time and
 	// costs the fold every day. Absence is the empty state — the same rule
 	// NeedsYou already follows.
-	assert.match(block, /v-if="cards\.length"/, "the whole block is conditional")
+	// `v-else-if` since the error branch went in above it — still conditional
+	// on having cards, which is the rule that matters.
+	assert.match(block, /v-else-if="cards\.length"/, "the whole block is conditional")
 	assert.doesNotMatch(block, /GEmptyState/, "no standing empty card on Home")
 	// The full board DOES have one, because arriving at a screen that renders
 	// nothing reads as broken.
@@ -124,4 +126,16 @@ test("the More tab stays lit while you are on the board", () => {
 	const nav = code(read("data/navItems.js"))
 	const more = nav.slice(nav.indexOf("routes: ["), nav.indexOf("]", nav.indexOf("routes: [")))
 	assert.match(more, /"\/announcements"/)
+})
+
+test("a failed read is not an empty board", () => {
+	// Both rendered nothing, so a notice HR had published and an outage looked
+	// identical from the sofa. Absence is the right EMPTY state; silence is
+	// not the right ERROR — the same class as the Now bar hiding itself.
+	assert.match(block, /v-if="homeAnnouncements\.error"/, "the error is its own branch")
+	assert.ok(
+		block.indexOf("homeAnnouncements.error") < block.indexOf('v-else-if="cards.length"'),
+		"and it is checked first"
+	)
+	assert.match(block, /could not be loaded/, "it says so")
 })

@@ -280,3 +280,14 @@ DEAD END: emitting the tab label in rem. Type went to rem yesterday for WCAG
   "CALENDARREQUESTS" collision returns for exactly the people who raised their
   text size. One named exemption; everything a person READS still scales.
 - 2026-09-23T00:51:56Z EVIDENCE: 2 correct — mapped tests green (bun ) for 21 file(s) ⟂f710e4a84ebd
+- 2026-09-23T00:52:02Z PUSH: nz-glass @ c230f53c0
+- 2026-09-23T00:52:02Z COMMIT: c230f53c0 fix(tabbar): raising your text size brought the collision back → review+security+design dispatched
+
+EVIDENCE: rung 2 (correct) — error branches on Home's blocks: 789/789 tests green.
+  Both mutants killed (each error branch disabled).
+FINDING: swept every component for the self-hiding class that produced the Now-bar
+  defect. Two more found (Announcements, RequestBalances rendered nothing on a
+  FAILED read, identical to rendering nothing on an empty one). The rest — the
+  calendar, the forms, the avatars — are correct: each has its four states or is
+  deliberately absent.
+- 2026-09-23T00:55:23Z EVIDENCE: 2 correct — mapped tests green (bun ) for 20 file(s) ⟂9f33a174e0f9
