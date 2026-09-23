@@ -1731,10 +1731,12 @@ html[data-theme="dark"] .g-cal__day--present {
    a marker that appears nowhere in the legend. A quiet fill recedes, which is
    what a non-working day should do. */
 /* Absent (approved Calendar plan, D1): it had a legend swatch and no day
-   style, so an absent day looked blank. A danger tint with the danger ink,
-   the same tint-plus-ink pattern as leave. */
+   style, so an absent day looked blank. A danger OUTLINE, not a tint: any
+   danger tint under danger ink drops the light-theme numeral below 4.5:1
+   (measured 3.84 at 0.2, 4.14 at 0.1; review of e6e31cdaf), while danger ink
+   on glass is the gate-checked 4.54. The border is the non-text cue (3:1). */
 .g-cal__day--absent {
-	background: rgba(var(--g-danger-rgb) / 0.2);
+	border-color: var(--g-danger-ink);
 	color: var(--g-danger-ink);
 }
 .g-cal__day--rest {

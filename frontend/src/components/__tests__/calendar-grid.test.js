@@ -10,9 +10,13 @@ import { fileURLToPath } from "node:url"
 
 const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8")
 
-test("D1: an absent day has its own colour", () => {
+test("D1: an absent day has its own look: a danger outline and danger ink", () => {
 	const css = read("../../theme/glass-components.css")
-	assert.match(css, /\.g-cal__day--absent\s*\{[^}]*background:/)
+	const rule = css.match(/\.g-cal__day--absent\s*\{[^}]*\}/)[0]
+	assert.match(rule, /border-color:\s*var\(--g-danger-ink\)/)
+	assert.match(rule, /color:\s*var\(--g-danger-ink\)/)
+	// No tint: every danger tint under danger ink measured below 4.5:1 light.
+	assert.doesNotMatch(rule, /background/)
 })
 
 test("D6: today is marked on the grid", () => {
