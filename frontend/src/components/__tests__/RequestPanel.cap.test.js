@@ -57,12 +57,8 @@ test("the panel caps what it renders, and the cap is five", () => {
 
 test("nothing the cap hides is unreachable", () => {
 	const text = panel()
-	assert.match(text, /showAll/, "there is a control that reveals the rest")
-	assert.match(
-		text,
-		/showAll\.value\s*=\s*true|showAll\s*=\s*true/,
-		"and pressing it expands in place — no route, because there is no combined list to route to"
-	)
+	assert.match(text, /pages\.value \+= 1/, "there is a control that reveals the rest")
+	assert.match(text, /@click="expand"/, "and pressing it expands in place — no route")
 })
 
 test("the control says how many, and how many is the truth", () => {
@@ -86,11 +82,11 @@ test("the cap is Home's, not the list component's", () => {
 })
 
 test("expanding does not re-collapse when the tab changes under it", () => {
-	// The tab strip swaps the list; a stale `showAll` would open the next tab
+	// The tab strip swaps the list; stale `pages` would open the next tab
 	// already expanded, which is the opposite of what the cap is for.
 	assert.match(
 		panel(),
-		/watch\(\s*activeTab[\s\S]{0,200}showAll/,
+		/watch\(\s*activeTab[\s\S]{0,200}pages\.value = 0/,
 		"switching tab returns to the capped view"
 	)
 })
@@ -162,7 +158,7 @@ test("expanding says what happened", () => {
 // region asserting a reveal that no longer happened.
 test("switching tab clears the announcement with the expansion", () => {
 	const watcher = panel().slice(panel().indexOf("watch(activeTab"))
-	assert.match(watcher.slice(0, 160), /showAll\.value = false/)
+	assert.match(watcher.slice(0, 160), /pages\.value = 0/)
 	assert.match(watcher.slice(0, 160), /revealed\.value = ""/)
 })
 

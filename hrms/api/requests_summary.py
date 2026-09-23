@@ -49,14 +49,14 @@ def _leave() -> list[dict]:
 
 	# The employee's own day (rule 66a5e6145): an expiry countdown read off
 	# the server clock was a day out near midnight in another time zone.
-	today = employee_now(get_current_employee()).date()
+	employee = get_current_employee()
+	today = employee_now(employee).date()
 
 	# The balance map carries `from_date` and NOT `to_date` — verified on the
 	# bench, after the first version of this read a key that is never there and
 	# quietly reported nothing as expiring, ever. The end date comes from the
 	# allocation itself, which is where it lives.
 	expiry = {}
-	employee = get_current_employee()
 	if employee:
 		for row in frappe.get_all(
 			"Leave Allocation",

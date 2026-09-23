@@ -144,7 +144,6 @@ const HOME_ROWS = 5
 //: "Show more" adds this many at a time — never the whole history at once
 //: (owner, 23 Sep: no endless scrolling; NN/g, Baymard "load more").
 const PAGE = 20
-const showAll = ref(false)
 const pages = ref(0)
 const listRegion = ref(null)
 const revealed = ref("")
@@ -157,7 +156,6 @@ const revealed = ref("")
 // the one thing that cannot announce it (design review of 70bffe660).
 async function expand() {
 	const count = Math.min(hidden.value, PAGE)
-	showAll.value = true
 	pages.value += 1
 	revealed.value = __("{0} more requests shown", [count])
 	await nextTick()
@@ -307,10 +305,9 @@ const hidden = computed(() =>
 	Math.max(0, activeRequests.value.length - HOME_ROWS - PAGE * pages.value)
 )
 
-// The tab strip swaps the list under the control. A stale `showAll` would open
+// The tab strip swaps the list under the control. Stale `pages` would open
 // the next tab already expanded, which is the opposite of what the cap is for.
 watch(activeTab, () => {
-	showAll.value = false
 	pages.value = 0
 	revealed.value = ""
 	// The filter belongs to the list it narrowed. Carrying "Not approved" into
