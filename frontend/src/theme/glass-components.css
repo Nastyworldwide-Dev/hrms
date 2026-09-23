@@ -1661,10 +1661,15 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-cal__day--today {
 	box-shadow: inset 0 0 0 2px var(--g-ink3);
 }
-/* On a worked day's solid brand fill the quiet ring measured ~2.76:1, under
-   the 3:1 floor for a UI indicator (WCAG 1.4.11; review of 015901d24). Full
-   ink there. */
-.g-cal__day--present.g-cal__day--today {
+/* On a filled day the quiet ring falls under the 3:1 floor for a UI
+   indicator (WCAG 1.4.11): worked 2.76 (review of 015901d24); half 2.93/1.74,
+   leave 2.21/2.75, rest 2.78/2.80 light/dark (review of f0d953b41). Full ink
+   on every fill. Unfilled days (absent, the Team picker) keep the quiet ring,
+   which clears 3:1 there and stays distinct from the picker's ink selection. */
+.g-cal__day--present.g-cal__day--today,
+.g-cal__day--half.g-cal__day--today,
+.g-cal__day--leave.g-cal__day--today,
+.g-cal__day--rest.g-cal__day--today {
 	box-shadow: inset 0 0 0 2px var(--g-ink);
 }
 .g-cal__swatch--selected {

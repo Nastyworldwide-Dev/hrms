@@ -68,5 +68,16 @@ test("today is its own channel (an inner ring), so no day state can hide it or b
 
 test("today stays visible on a worked day's brand fill (3:1 non-text)", () => {
 	const css = read("../../theme/glass-components.css")
-	assert.match(css, /\.g-cal__day--present\.g-cal__day--today\s*\{[^}]*box-shadow:\s*inset 0 0 0 2px var\(--g-ink\)/)
+	assert.match(css, /\.g-cal__day--present\.g-cal__day--today[^{]*\{[^}]*box-shadow:\s*inset 0 0 0 2px var\(--g-ink\)/)
+})
+
+test("today stays visible on every filled day (3:1 non-text)", () => {
+	// Review of f0d953b41: half, leave and rest fills also put the quiet ring
+	// under 3:1, in both themes.
+	const css = read("../../theme/glass-components.css")
+	for (const state of ["present", "half", "leave", "rest"]) {
+		const selector = `\\.g-cal__day--${state}\\.g-cal__day--today`
+		const rule = new RegExp(`${selector}[^{]*\\{[^}]*box-shadow:\\s*inset 0 0 0 2px var\\(--g-ink\\)`)
+		assert.match(css, rule, `${state} + today uses full ink`)
+	}
 })

@@ -1,9 +1,10 @@
-CLASS: a request type the server can list with no sheet fields on the client.
-RequestActionSheet requires `fields`; a type missing from the map throws on tap.
+CLASS: the today ring on a filled day. The quiet ring (--g-ink3) is under 3:1
+against any fill; only an unfilled cell carries it legibly.
 
-INSTANCE: Approvals.vue kept its own FIELDS map without Compensatory Leave
-Request, which get_waiting_for_me lists as "Time off in lieu" (review of be4b81edf).
+INSTANCE: half, leave and rest days (review of f0d953b41), after the worked-day
+case in f0d953b41.
 
-Call sites of REQUEST_SUMMARY_FIELDS / requestSummaryFields:
-frontend/src/views/Approvals.vue — same-root, fixed here (reads the shared map; map covers every listed type, pinned by approvals-page.test.js).
-Other readers of the map (forms opening the same sheet) — not-affected: each opens a sheet for its own doctype, all of which were already in the map.
+Call sites of .g-cal__day--today:
+frontend/src/theme/glass-components.css (present/half/leave/rest + today) — same-root, fixed here.
+frontend/src/components/glass/GCalendar.vue (absent + today, unfilled) — not-affected: 3.07/3.71 light/dark, passes.
+Team page picker (unfilled day, selected is ink) — not-affected: quiet ring kept so today and selected stay distinct.
