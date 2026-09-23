@@ -36,3 +36,14 @@ test("money reads the way the rest of the app prints it (symbol, not code)", () 
 	assert.match(source, /formatCurrency\(/)
 	assert.doesNotMatch(source, /`\$\{currency\} \$\{Number\(amount\)\.toFixed\(2\)\}`/)
 })
+
+test("Malaysian ringgit prints as RM, at runtime", () => {
+	// Review of e16828c1d: pin the actual output, not just the call. The
+	// formatter uses narrowSymbol; this fails on a runtime without full ICU.
+	const out = new Intl.NumberFormat("en", {
+		style: "currency",
+		currency: "MYR",
+		currencyDisplay: "narrowSymbol",
+	}).format(50)
+	assert.match(out, /^RM/)
+})
