@@ -7,8 +7,8 @@ build comes before the release it leads to; `2.0.0` is released when every
 item in `docs/glass/audit/2026-09-23-AUDIT-PLAN.md` is closed.
 
 The version lives in `frontend/package.json` and shows on **You → About this
-app**. Git tags are `nadi-v<version>` (the plain `v2.x` names belong to older
-selfie releases).
+app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
+releases).
 
 ## [2.0.0-alpha.4] — 2026-09-23
 

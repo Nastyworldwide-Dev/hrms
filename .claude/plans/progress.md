@@ -2,105 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  killed, including the shipped bug itself (dismissal not remembered).
-DEAD END: a time-based cooldown for the update prompt. An update is a SPECIFIC
-  build — it stops mattering when a newer one lands, so a 30-day silence would
-  hide an urgent fix. Keyed on the worker's __WB_REVISION__ instead.
-NEXT: audit the shipped screens against mockup 4 and write the gap list.
-- 2026-09-23T01:42:14Z PUSH: nz-glass @ c0c11341a
-- 2026-09-23T01:42:14Z COMMIT: c0c11341a fix(update): dismissing the new-version bar did not dismiss anything → review+design dispatched
-- 2026-09-23T01:50:54Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 25 file(s) ⟂7d6596642304
-
-EVIDENCE: rung 2 (correct) — "with whom, since when" on request rows: 809/809 tests
-  green, ruff clean. Two mutants killed (a row dropping the line; `pending`
-  hardcoded, which would show "with Hafiz" under an Approved chip — that one
-  SURVIVED the first version of the test and the assertion was strengthened).
-EVIDENCE: rung 3 (works) — approver_name reaches the leave payload on
-  spoke.localhost (2 rows, both named). Falls back to the login when the User row
-  carries no full name, which is the fallback working.
-FINDING: mockup 4 gap list written to docs/glass/audit/2026-09-23-mockup4-gap.md.
-  Headline: the app follows mockup 4's SHELL and not its CONTENT — six of its
-  blocks need data this app does not compute. Ranked by visible impact; items 1-3
-  are copy over data we already have.
-NEXT: mockup 4 gaps 2 and 3 — split Requests into waiting/finished, add filter chips.
-- 2026-09-23T01:51:01Z PUSH: nz-glass @ 04162c0d3
-- 2026-09-23T01:51:01Z COMMIT: 04162c0d3 feat(requests): "Waiting" never said who it was waiting on → review+design dispatched
-- 2026-09-23T01:56:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 18 file(s) ⟂8670267188cb
-
-EVIDENCE: rung 2 (correct) — Requests filter chips + waiting/finished split:
-  814/814 tests green, 7 static gates green. Mutants killed: a chip losing its
-  44px floor (mockup 4's own audit found its chips at 33px), chips claiming
-  role="tab", the filter surviving a tab change.
-DEAD END: counting each chip by swapping filter.value and restoring it. A side
-  effect inside a computed — eslint refused it, and it would have flickered the
-  rendered list through three filters on every recount. `matches(request, key)`
-  takes the key instead.
-DEAD END: the cap test matching "the first <button> in the file". The filter
-  chips are buttons and come first in the template, so it silently started
-  measuring a chip. Anchored on .g-list-more now.
-NEXT: mockup 4 gap #4 — the claimable-money row on Home (the number already
-  exists in requests_summary).
-- 2026-09-23T01:56:55Z PUSH: nz-glass @ 3938741a6
-- 2026-09-23T01:56:55Z COMMIT: 3938741a6 feat(requests): one undivided list became two piles and four filters → review+design dispatched
-- 2026-09-23T01:57:16Z PUSH: nz-glass @ e6eb026cb
-- 2026-09-23T01:57:16Z COMMIT: e6eb026cb docs(glass): the handoff and the mockup 4 gap list → review dispatched
-- 2026-09-23T02:13:35Z NEXT: glass work unchanged; stop-hook fix aa4052f sits unpushed on humanless-pipeline fix/commit-gate-scope
-- 2026-09-23T02:22:48Z COMPACT: context compacted — read the last NEXT above before continuing
-NEXT: owner reviews docs/glass/plan/pages/00-sheets-and-transitions.md + 02-home.md; then plan page 3 (Requests). No code until approved.
-EVIDENCE: 1 recollection — gates 7 pass/3 skip, 814/814 tests, eslint 0; checklist 16 pass/7 partial/27 fail (docs/glass/audit/2026-09-23-recollection.md)
-DEAD END: helper agents invented a blob ruling (D4) and passed orientation without evidence; corrected by hand
-NEXT: owner picks version scheme + approves step 0 foundation; then write pages/00-foundation.md
-EVIDENCE: 2 FLOW-1 confirmed in code — expense_claim/Form.vue FIELDS allowlist (from 94a9e278a) lacks "taxes"; tabs lastField:"taxes" -> FormView findIndex -1 -> empty tab. LIVE DEFECT on deployed 2.0: nobody can file an expense.
-EVIDENCE: 2 verified pages-audit criticals — PAGE-1 main.js beforeEach treats any userResource.reload() failure as logged-out (offline nav -> Login); PAGE-2 announcements/List.vue ResourceError + GEmptyState both render on error; PAGE-3 HRIssueBoard.vue:58 + TeamDashboard.vue:100 clickable divs (keyboard cannot reach). All CONFIRMED in code.
-EVIDENCE: 3 audit merged — docs/glass/audit/2026-09-23-AUDIT-PLAN.md: 92 findings, 13 P0 (all verified in code), F-1..F-15 foundation, 10 page plans
-NEXT: owner rules on 5 questions in AUDIT-PLAN.md, then build alpha.2 = P0-1..13
-NEXT: owner answered the 5 decisions (team line compressed on Calendar -> Team page; reword everything; shift pattern yes; HR reply + goals later). Waiting on "go P0".
-- 2026-09-23T04:59:44Z COMMIT: 6195d0977 docs(glass): audit of the whole PWA and the plan it produced → review dispatched
-- 2026-09-23T05:01:09Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-23T05:01:13Z COMMIT: 986a46e56 fix(forms): a tab whose last field was filtered out rendered empty → review+design dispatched
-- 2026-09-23T05:02:22Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-23T05:02:25Z COMMIT: bf9d0fb3b fix(glass): a comment closed early and deleted the tab-bar reservation → review+design dispatched
-- 2026-09-23T05:04:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-23T05:04:20Z COMMIT: a16a354ef fix(forms): a missing middle tab boundary still emptied the later tabs → review dispatched
-- 2026-09-23T05:14:12Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-09-23T05:14:12Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-23T05:14:15Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-09-23T05:14:15Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-09-23T05:14:18Z COMMIT: 76367b0fd fix(sheets): a sheet outlived its page and froze the next one → review+design dispatched
-- 2026-09-23T05:16:04Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-23T05:16:04Z EVIDENCE: 3 works — blast radius green: 22 dependent(s), 10 extra test file(s) ⟂87c743b7274b
-- 2026-09-23T05:16:07Z COMMIT: 221503d09 fix(privacy): an employee's record stayed on the phone after logout → review dispatched
-- 2026-09-23T05:18:05Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-23T05:18:05Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-23T05:18:08Z COMMIT: 9fb28a77b fix(session): changing page offline threw people onto the Login screen → review+security dispatched
-- 2026-09-23T05:20:12Z COMMIT: fedb09a20 fix(sheets): a sheet closed after Back left the previous page frozen → review+design dispatched
-- 2026-09-23T05:20:36Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-23T05:20:39Z COMMIT: 6a3f0c968 fix(checkin): check in still opened the camera and confirmed offline → review+design dispatched
-- 2026-09-23T05:21:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-23T05:21:21Z COMMIT: 9eca99cf5 fix(announcements): the board said "could not load" and "nothing here" at once → review+design dispatched
-- 2026-09-23T05:23:39Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-23T05:23:39Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-09-23T05:23:42Z COMMIT: d3c812188 fix(session): offline, a failed employee read froze every navigation → review dispatched
-- 2026-09-23T05:23:58Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-23T05:24:00Z COMMIT: f813eee26 fix(checkin): the remote and late check-out dialogs still sent offline → review+design dispatched
-- 2026-09-23T05:25:49Z EVIDENCE: 2 correct — mapped tests green (bun ) for 13 file(s) ⟂884c4344e835
-- 2026-09-23T05:25:51Z COMMIT: d2c7bd636 fix(a11y): rows you could tap could not be opened from a keyboard → review+design dispatched
-- 2026-09-23T05:26:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-23T05:26:20Z COMMIT: d7bda3a9b fix(sheets): a keyboard-opened sheet drew the browser outline, not the app ring → review+design dispatched
-- 2026-09-23T05:28:53Z COMMIT: d7bda3a9b fix(sheets): a keyboard-opened sheet drew the browser outline, not the app ring → review+design dispatched
-- 2026-09-23T05:29:02Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-23T05:29:05Z COMMIT: 5eaf85485 fix(sheets): a keyboard-opened sheet drew the browser outline, not the app ring → review+design dispatched
-- 2026-09-23T05:29:19Z COMMIT: 5cf0c12f3 fix(glass): at 320px with large text the calendar and balances scrolled sideways → review+design dispatched
-- 2026-09-23T05:32:33Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 5 file(s) ⟂5d9cef17ceeb
-- 2026-09-23T05:32:33Z EVIDENCE: 3 works — blast radius green: 8 dependent(s), 6 extra test file(s) ⟂51e98e473e5f
-- 2026-09-23T05:32:36Z COMMIT: da51cd501 fix(approvals): a rejection gave the employee no reason → review+design dispatched
-- 2026-09-23T05:34:34Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-09-23T05:34:37Z COMMIT: 964cc96f3 fix(home): "1 leave request to approve" opened an empty list → review+design dispatched
-- 2026-09-23T05:35:05Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-09-23T05:35:08Z COMMIT: 5f1fee8b8 fix(approvals): a disabled Reject gave no hint that a reason was needed → review+design dispatched
-- 2026-09-23T05:37:41Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 7 file(s) ⟂85be7f79c548
-- 2026-09-23T05:37:41Z EVIDENCE: 3 works — blast radius green: 8 dependent(s), 6 extra test file(s) ⟂51e98e473e5f
-- 2026-09-23T05:37:44Z COMMIT: 996532e0b fix(approvals): Reject in Desk would have failed, and the reason check ran first → review dispatched
 - 2026-09-23T05:40:43Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
 - 2026-09-23T05:40:43Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
 - 2026-09-23T05:40:46Z COMMIT: 7bfda8858 fix(requests): the filter chips counted only the newest ten requests → review+design dispatched
@@ -266,3 +167,124 @@ NEXT: Nabil deploys nz-glass (tag v2.0.0-alpha.2) on Frappe Cloud.
 - 2026-09-23T08:43:54Z COMMIT: 610614dd0 fix(update): a build that cannot take over was offered on every load → review+design dispatched
 EVIDENCE: 3 hotfix alpha.3 — frontend 964/964, smoke pass, live fresh.local: sheet takes taps at 390 and 1280, day sheet button taps, sheet-leaves-with-page 3/3.
 NEXT: Nabil deploys v2.0.0-alpha.3 hotfix; then alpha.4 plan (pages redesign + access matrix).
+- 2026-09-23T08:44:29Z COMMIT: a3e83868a chore(progress): hotfix evidence → review dispatched
+- 2026-09-23T08:49:30Z COMMIT: 81c21724a docs(plan): 2.0.0-alpha.4 plan for owner approval → review dispatched
+- 2026-09-23T08:58:29Z COMMIT: 72dda5432 docs(plan): alpha.4 plan adds the 23 Sep live audit → review dispatched
+- 2026-09-23T09:08:47Z COMMIT: 61381ddec docs(plan): alpha.4 grouped by priority, owner rulings R1-R4 in → review dispatched
+- 2026-09-23T09:23:21Z COMMIT: fbc003fd4 docs(plan): alpha.4 element-by-element spec; Nadi mark in the header → review dispatched
+- 2026-09-23T09:27:42Z EVIDENCE: 2 correct — mapped tests green (bun ) for 10 file(s) ⟂f3b86cf4d3e6
+- 2026-09-23T09:27:46Z COMMIT: 1344b7cb7 fix(help): Help threw an error every time it opened → review+design dispatched
+- 2026-09-23T09:28:49Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-09-23T09:28:52Z COMMIT: 30e6f96e0 fix(calendar): shift times read "9:00:" with a stray colon → review+design dispatched
+- 2026-09-23T09:31:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-23T09:31:22Z COMMIT: e16828c1d fix(requests): money on Requests showed a currency code, not "RM" → review+design dispatched
+- 2026-09-23T09:31:35Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-09-23T09:31:38Z COMMIT: 01ef697c0 fix(calendar): one shift-time format on Home, day sheet and Team → review dispatched
+- 2026-09-23T09:33:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T09:33:55Z COMMIT: 8aea169f0 fix(you): "Your details" showed five rows with no label → review+design dispatched
+- 2026-09-23T09:35:37Z COMMIT: 5c3d2bcd8 fix(calendar): the day sheet said "No shift" on a day you worked → review dispatched
+- 2026-09-23T09:36:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-23T09:36:37Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
+- 2026-09-23T09:36:40Z COMMIT: 4063f95a1 fix(calendar): a night shift's morning check-out named the wrong day → review dispatched
+- 2026-09-23T09:36:42Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-09-23T09:38:49Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-09-23T09:38:53Z COMMIT: 747fca364 fix(you): "Preferred email" never showed in Your details → review+design dispatched
+- 2026-09-23T09:42:36Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T09:42:40Z COMMIT: e522bada8 fix(refresh): "Refreshing…" stuck after the first pull → review+design dispatched
+- 2026-09-23T09:54:13Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-09-23T09:54:18Z COMMIT: eed4728f0 fix(sheets): tapping the dim area did not close the sheet → review+design dispatched
+- 2026-09-23T09:57:13Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T09:57:16Z COMMIT: cb219b2c6 fix(sheets): Back right after opening a sheet left it over the next page → review+design dispatched
+- 2026-09-23T10:01:55Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T10:01:57Z COMMIT: 92b2b6695 fix(sheets): the only way to close a sheet was to drag it down → review+design dispatched
+REPAIR: alpha.4 P0 — 4063f95a1 night-shift day sheet; 747fca364 Preferred email field (prefered_email); e522bada8 refresh label; eed4728f0 scrim tap closes; cb219b2c6 Back mid-open; 15dd47210 sheet gate e2e; 92b2b6695 sheet Close (X)
+EVIDENCE: 3 frontend 987/987; sheet e2e 11/11 (sheet-closes red 4/5 on 4063f95a1); pull probe second pull reads "Pull to refresh"
+DEAD END: Vue <Teleport to="ion-app"> for the scrim — Ionic moves ion-modal, render throws nextSibling of null; scrim now hand-built (utils/sheetScrim.js)
+NEXT: P0-9 held for owner ruling — no-shift day: server accepts a punch (rest-day work), so hiding Check in could block rest-day OT; then seed data, access matrix draft, sketches
+- 2026-09-23T10:07:36Z COMMIT: 1604a7f53 docs(plan): P0-9 ruled (check in as normal); off-shift OT finding → review dispatched
+PLAN: owner "go" 23 Sep evening — all 23 alpha.4 steps autonomously, push + tag, owner only deploys. No live-data repair, no access-rule change, no deploy.
+- 2026-09-23T10:52:59Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T10:53:02Z COMMIT: bbc69c614 fix(update): a successful update was remembered as a failed one → review+design dispatched
+- 2026-09-23T10:55:21Z EVIDENCE: 2 correct — mapped tests green (bun ) for 12 file(s) ⟂1127c68211d5
+- 2026-09-23T10:55:21Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-23T10:55:24Z COMMIT: ad540b28c fix(words): counts read "1 leave request(s)" instead of "1 leave request" → review+design dispatched
+REPAIR: bbc69c614 update-prompt fallback timer; ad540b28c "(s)" wording -> countOf (13 sites)
+EVIDENCE: 2 frontend 990/990 after ad540b28c
+NEXT: review bbc69c614..ad540b28c together once an agent slot frees (3 executors running: live leave balance, grouped approvals, rest-day OT)
+- 2026-09-23T10:57:04Z EVIDENCE: 2 correct — mapped tests green (bun ) for 10 file(s) ⟂f3b86cf4d3e6
+- 2026-09-23T10:57:07Z COMMIT: 57eba0006 fix(words): departments showed as "Production - NW0A" → review+design dispatched
+NEXT: batch review bbc69c614..57eba0006 (3 small frontend commits) when an agent slot frees
+- 2026-09-23T10:58:37Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-09-23T10:58:41Z COMMIT: b91698cef fix(layout): short pages scrolled for nothing under the tab bar → review+design dispatched
+NEXT: batch review bbc69c614..b91698cef (4 small frontend commits) when an agent slot frees
+- 2026-09-23T11:00:00Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+NEXT: batch review bbc69c614..HEAD (5 small frontend commits)
+- 2026-09-23T11:00:06Z COMMIT: 2711d83f6 fix(lists): team requests had a second home beside Approvals → review+design dispatched
+- 2026-09-23T11:01:28Z COMMIT: d92780f40 docs(access): who sees and does what in Nadi, as the code stands → review dispatched
+REPAIR: b91698cef double tab-bar padding; 2711d83f6 team tabs off lists; d92780f40 ACCESS-MATRIX.md (docs)
+EVIDENCE: 2 leave balance slice: test_approver_sees_the_balance_approve_uses 7/7, test_approval 37/37, comp_leave 16/16, decision_access_properties 1/1; test_a_decision_is_always_recordable 11 pass + 3 Shift fails that are red on clean HEAD (skip-tests used for that reason)
+- 2026-09-23T11:04:16Z COMMIT: bece07866 test(shift): three shift-request tests failed on a missing name, not a rule → review dispatched
+REPAIR: 14a27160e live leave balance (slice A); bece07866 shift test lift missing names
+FINDING: 15 backend test files fail when run alone (/tmp/perfile.out) — ALL also fail at alpha.3 7f6449fb8, so none is an alpha.4 regression. Families: stale tests after rulings (reject-needs-reason, announcements audience, SOP/company fence). Triage each: stale test vs real defect.
+- 2026-09-23T11:11:32Z EVIDENCE: 2 correct — mapped tests green (bun ) for 10 file(s) ⟂f3b86cf4d3e6
+- 2026-09-23T11:11:34Z COMMIT: d83acb1b1 feat(header): the Nadi mark leads every tab page; the date moves into Today → review+design dispatched
+- 2026-09-23T11:12:59Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
+- 2026-09-23T11:13:04Z COMMIT: 470867da6 fix(words): Home would say "2 attendance fixs to approve" → review+design dispatched
+EVIDENCE: 3 rest-day OT: fresh.local probe Sun 13:37 outside 15:00-23:30 stamped shift, offshift 0; test_restday_offshift_ot 7/7; checkin_shift_stamp 6, offshift_punch_heal 40, checkin_override 14; test_ot_nonworking_hours 1 fail pre-existing at 7f6449fb8 (skip-tests reason)
+- 2026-09-23T11:14:46Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T11:14:49Z COMMIT: d3d588a08 fix(header): a screen reader said "Nadi" twice on Home → review+design dispatched
+REPAIR: 470867da6 plurals from server; 5f9cb5d33 rest-day OT (slice C); d83acb1b1 header mark; d3d588a08 header a11y + dead CSS
+- 2026-09-23T11:16:34Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
+- 2026-09-23T11:16:38Z COMMIT: d3d588a08 fix(header): a screen reader said "Nadi" twice on Home → review+design dispatched
+- 2026-09-23T11:17:03Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
+- 2026-09-23T11:17:07Z COMMIT: 44d886d0d feat(reports): HR can see who has no shift, so no overtime goes uncounted → review dispatched
+REPAIR: 44d886d0d Staff Without A Shift report
+REVIEW 5f9cb5d33: reviewer FIX_CRITICAL was process-only — tests were run pre-commit (7/7 + 60 related), overtime_type exists on Shift Assignment json. Real side effect: rest-day off-window punch now gets a shift, so geofence applies (lenient -> Remote Checkin Request; strict -> refused) where before it silent-allowed "No Shift". Matches "check in as normal"; FLAG for owner in HANDOFF.
+- 2026-09-23T11:22:46Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
+- 2026-09-23T11:22:46Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-23T11:22:50Z COMMIT: b12fd210f feat(approvals): the queue is grouped — Yours, then Other teams → review+design dispatched
+REPAIR: b12fd210f grouped Approvals (slice B + page), Home counts yours only
+- 2026-09-23T11:24:53Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-09-23T11:24:57Z COMMIT: c49b731c1 fix(home): blocks vanished when empty, so Home read as broken → review+design dispatched
+- 2026-09-23T11:25:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+REPAIR: c49b731c1 Home never-empty; fix Approvals Other-teams heading
+- 2026-09-23T11:25:20Z COMMIT: 30c11bfb0 fix(approvals): screen readers could not find "Other teams" by heading → review+design dispatched
+- 2026-09-23T11:27:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-23T11:27:21Z COMMIT: 2d10eb07b feat(requests): Annual and Medical on top, every balance one tap away → review+design dispatched
+REPAIR: 2d10eb07b Requests R2 balances (pinned 2 + All balances sheet). NEXT: Requests one-screen (last 5 + See all), Calendar key R1, Score R3, sheet words P1-5, notifications P1-6
+- 2026-09-23T11:28:31Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-23T11:28:33Z COMMIT: 41ab5256c fix(requests): "Show more" poured out every request at once → review+design dispatched
+- 2026-09-23T11:29:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-09-23T11:29:51Z COMMIT: 0c80f1f15 fix(calendar): the key changed from month to month → review dispatched
+REPAIR: 41ab5256c Requests paged 20; 0c80f1f15 calendar full key. QUEUED REVIEW: 2d10eb07b..0c80f1f15
+- 2026-09-23T11:31:11Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T11:31:14Z COMMIT: 42bd5b17c fix(score): no review said who scores you twice → review+design dispatched
+- 2026-09-23T11:31:40Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-09-23T11:31:43Z COMMIT: a1911f88e fix(requests): "Annual" was never pinned on a site that calls it Privilege → review+design dispatched
+- 2026-09-23T11:32:08Z COMMIT: a711e6555 test(fence): two test files had gone stale behind real code changes → review dispatched
+- 2026-09-23T11:32:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-09-23T11:32:59Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-09-23T11:33:03Z COMMIT: 5da924b1e fix(dates): announcements and leave expiry used the server's day → review dispatched
+REPAIR: 42bd5b17c Score R3; a1911f88e pin privilege/earned + v-show; a711e6555 stale fence/allowance tests; 5da924b1e employee clock in announcements + requests_summary
+OWNER DECISIONS PENDING (access/permission, report-only): A5 announcements get_reach/get_outstanding read Employee without company fence (fenced HR sees other companies' names) announcements.py:_audience_employees, get_outstanding; A6 shift_assignment.json System Manager permlevel-1 row with no level-0 row (ba5ddce9d) — may abort migrate.
+- 2026-09-23T11:35:12Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-09-23T11:35:15Z COMMIT: 19e77c1fd fix(sheets): the approval sheet said "Leave Application", an ID and "Open" → review+design dispatched
+- 2026-09-23T11:36:05Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 3 file(s) ⟂892bfc303afb
+- 2026-09-23T11:36:11Z COMMIT: eca50e974 refactor(requests): drop the flag paging replaced; look the employee up once → review+design dispatched
+EVIDENCE: 3 re-ran review EXECUTE for 2d10eb07b..eca50e974 myself (reviewer skipped it): ruff clean; api_clean_errors 10, company_fence 42, attendance_allowance 13, approvals_list 28, live balance 7, restday OT 7, staff_without_shift 6, plurals 3, decision_recordable 14; frontend 1038/1038
+- 2026-09-23T11:38:08Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
+- 2026-09-23T11:38:08Z EVIDENCE: 3 works — blast radius green: 7 dependent(s), 7 extra test file(s) ⟂aa35cf765c28
+- 2026-09-23T11:38:12Z COMMIT: bf646a4b9 feat(calendar): Travel, Training and Open request on the calendar → review+design dispatched
+REPAIR: 19e77c1fd sheet plain words; eca50e974 cleanup; bf646a4b9 calendar Travel/Training/Open. NEXT: notifications P1-6, check-in camera dark P1-5, sweep remaining 8 stale tests, then release
+- 2026-09-23T11:39:51Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-23T11:39:54Z COMMIT: 48eb45aba fix(notifications): a system notice showed a grey "?" as its sender → review+design dispatched
+- 2026-09-23T11:43:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
+- 2026-09-23T11:43:54Z COMMIT: 367c95d8c fix(checkin): the camera box was a white slab in dark mode → review+security+design dispatched
+REPAIR: 48eb45aba notifications; 367c95d8c camera dark + Approvals flattened (gates all OK); stale tests batch 2 committed
+OWNER DECISIONS PENDING (report-only, access/security): A7 local HR_ROLES copies in restamp.py:48, attendance_fix_day.py:65, attendance_master_edit.py:73 (same values today, drift risk); A8 api-contract gate does not count get_current_employee( as a guard (calendar.get_month_flags, now.get_now, request_counts) — no leak today.
+STILL RED pre-existing: test_pwa_resource_states (2), test_selfie_is_private_and_attached (1), utils/test_timezone (2) — not reached.
+- 2026-09-23T11:44:25Z COMMIT: 187d65217 test: five more test files had gone stale behind deliberate changes → review dispatched
+- 2026-09-23T12:03:21Z COMMIT: 5fe5cb7b1 chore(release): 2.0.0-alpha.4 — approvals grouped, rest-day OT, sheets fixed → review+deps dispatched
+FINDING: utils/test_timezone red only under the bench-free stub (frappe.utils.get_datetime_in_timezone not stubbed -> MagicMock); code is a 2-line mirror of frappe now_datetime. Needs real bench or a stub entry; not a product defect.
+EVIDENCE: 3 alpha.4 release: frontend 1045/1045; design gates lint/usage/contrast/surfaces/tokens/scale/motion OK (a11y/visual/coherence need served audit); e2e sheet-closes, sheet-is-tappable, sheet-leaves-with-page, nav-motion, critical-paths, reflow-320, kpi-back, back-race(ITER=1) green on the alpha.4 build
+NEXT: owner deploys v2.0.0-alpha.4; then owner decisions A5-A8 in HANDOFF; P1-1 Home one-screen + P1-2 Requests one-screen still open
