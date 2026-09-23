@@ -22,8 +22,19 @@ class RemoteCheckinRequest(Document):
 		if self.status == "Approved" and not self.approver:
 			frappe.throw(_("Approver is required to approve this request."))
 
+		# The one decision rule (audit P0-10): "Not approved" says why, from
+		# every door — the PWA, Desk (HR may write status here) and code. Only
+		# when the status BECOMES Rejected, so an older rejection with no
+		# reason can still be saved for other fields.
+		if self.status == "Rejected" and self._status_changed() and not (self.approver_remarks or "").strip():
+			frappe.throw(_("Say why this is not approved."), frappe.ValidationError)
+
 		if self.status in ("Approved", "Rejected") and not self.approved_at:
 			self.approved_at = now_datetime()
+
+	def _status_changed(self) -> bool:
+		before = self.get_doc_before_save() if hasattr(self, "get_doc_before_save") else None
+		return not before or before.get("status") != self.status
 
 	def before_save(self):
 		# Permission gate: only the assigned approver, an HR Manager, or System Manager

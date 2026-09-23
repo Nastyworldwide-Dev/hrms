@@ -1,9 +1,13 @@
-CLASS: a "not approved" decision that can be saved with no reason (P0-10).
-approval.decide requires one since the P0-10 fix; remote check-ins decide
-through their own endpoint and still took an empty remark.
+CLASS: a "not approved" decision saved with no reason (P0-10), through any door.
 
-Call sites of remote_checkin._decide:
-hrms/api/remote_checkin.py:reject — same-root, fixed here (reason required, trimmed).
-hrms/api/remote_checkin.py:approve — not-affected: approving needs no reason (pinned by test).
-frontend/src/views/RemoteApprovals.vue submitDecision — not-affected by the server rule's shape; it sent an optional remark and is replaced by the Approvals page sheet in the next commit, which requires one.
-hrms/tests/probes/nadi_api_matrix.py — not-affected: probe calls with an unknown request, refused before the reason check.
+INSTANCE: Desk. HR User / HR Manager / System Manager may write `status` on the
+Remote Checkin Request form, which never reaches remote_checkin._decide
+(review of 9204e9802).
+
+Write paths to Remote Checkin Request.status = Rejected:
+hrms/hr/doctype/remote_checkin_request/remote_checkin_request.py:validate — same-root, fixed here (only when status BECOMES Rejected).
+hrms/api/remote_checkin.py:_decide — not-affected: already requires a reason (9204e9802); the validate rule agrees with it.
+hrms/api/attendance_fix_day.py:192/836/1295 — not-affected: reads remote_approval_status, never writes Rejected.
+hrms/api/approvals_list.py — not-affected: read-only.
+hrms/patches/v16_0/repair_public_selfies.py — not-affected: touches selfie files, not status.
+hrms/overrides/remote_checkin_request_hooks.py:462 — not-affected: reacts to a Rejected save, does not set it.

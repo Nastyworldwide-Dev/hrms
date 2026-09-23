@@ -52,3 +52,30 @@ class TestRejectSaysWhy(unittest.TestCase):
 	def test_approving_still_needs_no_remark(self):
 		result, _ = _decide(remote_checkin.approve, "")
 		self.assertEqual(result["status"], "Approved")
+
+
+class TestEveryDoorAsksWhy(unittest.TestCase):
+	"""Review of 9204e9802: HR User / HR Manager can write `status` on the Desk
+	form, which never passes through remote_checkin._decide. The rule lives in
+	the doctype's validate, so Desk, a patch and the API all ask the same."""
+
+	def _doc(self, **values):
+		from hrms.hr.doctype.remote_checkin_request.remote_checkin_request import RemoteCheckinRequest
+
+		doc = RemoteCheckinRequest.__new__(RemoteCheckinRequest)
+		doc.__dict__.update(
+			doctype="Remote Checkin Request", approver="a@example.com", approved_at="2026-09-23", **values
+		)
+		return doc
+
+	def test_a_desk_rejection_without_a_reason_is_refused(self):
+		for remarks in (None, "", "  "):
+			with self.assertRaises(Exception):
+				self._doc(status="Rejected", approver_remarks=remarks).validate()
+
+	def test_a_desk_rejection_with_a_reason_passes(self):
+		self._doc(status="Rejected", approver_remarks="Wrong site").validate()
+
+	def test_approving_and_pending_need_no_reason(self):
+		self._doc(status="Approved", approver_remarks="").validate()
+		self._doc(status="Pending", approver_remarks="").validate()
