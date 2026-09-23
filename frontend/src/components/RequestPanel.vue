@@ -1,8 +1,5 @@
 <template>
 	<div class="w-full">
-		<div class="g-eyebrow mb-4">
-			{{ __("Requests") }}
-		</div>
 		<GSegmented :buttons="TAB_BUTTONS" v-model="activeTab" :label="__('Requests')" />
 		<p v-if="refreshing" class="text-xs text-ink-500 mt-2" role="status">
 			{{ __("Refreshing…") }}
@@ -39,19 +36,28 @@
 			<template v-if="splitting">
 				<template v-if="waitingGroup.length">
 					<div class="g-eyebrow mt-4 mb-2">{{ __("Waiting on someone") }}</div>
-					<RequestList :items="waitingGroup" :teamRequests="activeTab != 'My Requests'" />
+					<RequestList
+						:items="waitingGroup"
+						:teamRequests="activeTab !== 'mine'"
+						v-bind="emptyCopy"
+					/>
 				</template>
 				<template v-if="finishedGroup.length">
 					<div class="g-eyebrow mt-4 mb-2">{{ __("Finished") }}</div>
-					<RequestList :items="finishedGroup" :teamRequests="activeTab != 'My Requests'" />
+					<RequestList
+						:items="finishedGroup"
+						:teamRequests="activeTab !== 'mine'"
+						v-bind="emptyCopy"
+					/>
 				</template>
 				<RequestList
 					v-if="!waitingGroup.length && !finishedGroup.length"
 					:items="shown"
-					:teamRequests="activeTab != 'My Requests'"
+					:teamRequests="activeTab !== 'mine'"
+					v-bind="emptyCopy"
 				/>
 			</template>
-			<RequestList v-else :items="shown" :teamRequests="activeTab != 'My Requests'" />
+			<RequestList v-else :items="shown" :teamRequests="activeTab !== 'mine'" v-bind="emptyCopy" />
 		</div>
 		<p class="sr-only" role="status">{{ revealed }}</p>
 
@@ -80,28 +86,18 @@
 
 <script setup>
 import { ref, inject, onMounted, computed, markRaw, watch, nextTick } from "vue"
+import { useRoute } from "vue-router"
 
 import GSegmented from "@/components/glass/GSegmented.vue"
 import RequestList from "@/components/RequestList.vue"
 import { myRequestCounts } from "@/data/requestCounts"
 import { requestStatus } from "@/utils/requestStatus"
 
-import {
-	historyShiftRequests,
-	myAttendanceRequests,
-	myShiftRequests,
-	teamShiftRequests,
-	teamAttendanceRequests,
-} from "@/data/attendance"
-import { historyClaims, myClaims, teamClaims } from "@/data/claims"
-import { historyLeaves, myLeaves, teamLeaves } from "@/data/leaves"
+import { historyShiftRequests, myAttendanceRequests, myShiftRequests } from "@/data/attendance"
+import { historyClaims, myClaims } from "@/data/claims"
+import { historyLeaves, myLeaves } from "@/data/leaves"
 import { isApprover } from "@/data/team"
-import {
-	myOTRequests,
-	teamOTRequests,
-	myReplacementLeaveClaims,
-	teamReplacementLeaveClaims,
-} from "@/data/overtime"
+import { myOTRequests, myReplacementLeaveClaims } from "@/data/overtime"
 
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
@@ -114,13 +110,15 @@ import { useListUpdate, useReloadOnGap } from "@/composables/realtime"
 import {
 	MY_REQUEST_LISTS,
 	REQUEST_LISTS,
-	TEAM_REQUEST_LISTS,
 	reloadLists,
 	reloadRequestLists,
 } from "@/data/requestLists"
 import { siteTime } from "@/utils/siteTime"
 
-const activeTab = ref("My Requests")
+const HISTORY_LISTS = [historyLeaves, historyClaims, historyShiftRequests]
+const route = useRoute()
+//: ?tab=answered opens what the approver already decided (Approvals links it).
+const activeTab = ref(route.query.tab === "answered" ? "answered" : "mine")
 
 // Home shows the first five of whatever the active tab holds, and a control
 // that reveals the rest in place. The fold is a budget, not a length
@@ -163,27 +161,29 @@ async function expand() {
 const socket = inject("$socket")
 const __ = inject("$translate")
 
-// Team tabs only for people approval work can actually route to — everyone
-// else got a permanently empty "Team Requests" tab before this gate.
-// __("My Requests"), __("Team Requests"), __("History")
-const TAB_BUTTONS = computed(() =>
-	isApprover.data ? ["My Requests", "Team Requests", "History"] : ["My Requests"]
-)
+// What waits on an approver lives on Approvals (AUDIT-PLAN Approvals row),
+// so there is no team tab here any more. What they already
+// decided stays reachable, worded for what is behind it (ruling 2).
+const MINE = { key: "mine", label: __("My requests") }
+//: Short on the pill so it fits one line at 360; the door on Approvals
+//: carries the full words, "Requests you've already answered".
+const ANSWERED = { key: "answered", label: __("Answered by you") }
+const TAB_BUTTONS = computed(() => (isApprover.data ? [MINE, ANSWERED] : [MINE]))
 
 // The cached isApprover verdict hydrates async and can flip true -> false
 // after paint; without this clamp a user parked on a vanished tab renders an
 // empty panel (no v-if branch matches).
 watch(TAB_BUTTONS, (tabs) => {
-	if (!tabs.includes(activeTab.value)) {
+	if (!tabs.map((tab) => tab.key).includes(activeTab.value)) {
 		console.info("[RequestPanel] active tab vanished, falling back:", activeTab.value)
-		activeTab.value = "My Requests"
+		activeTab.value = "mine"
 	}
 })
 
 // A cached (IndexedDB) paint can show last session's status until the first
 // fetch of this session answers; say so instead of painting it as current.
 const refreshing = computed(() =>
-	(activeTab.value == "My Requests" ? MY_REQUEST_LISTS : TEAM_REQUEST_LISTS).some(
+	(activeTab.value === "mine" ? MY_REQUEST_LISTS : HISTORY_LISTS).some(
 		(list) => !list.fetched && !list.error
 	)
 )
@@ -199,17 +199,6 @@ const myRequests = computed(() =>
 	)
 )
 
-const teamRequests = computed(() =>
-	updateRequestDetails(
-		teamLeaves,
-		teamClaims,
-		teamShiftRequests,
-		teamAttendanceRequests,
-		teamOTRequests,
-		teamReplacementLeaveClaims
-	)
-)
-
 // Attendance Request, OT Request and Replacement Leave Claim are all
 // docstatus-driven (no status/approver field), so the history trail — which is
 // "decided, and I was the named approver" — covers leaves, claims and shift
@@ -218,9 +207,15 @@ const historyRequests = computed(() =>
 	updateRequestDetails(historyLeaves, historyClaims, historyShiftRequests, null, null, null)
 )
 
+//: One line saying what is missing (ruling 2), per tab.
+const emptyCopy = computed(() =>
+	activeTab.value === "answered"
+		? { emptyStateTitle: __("You haven't answered any requests yet."), emptyStateMessage: " " }
+		: {}
+)
+
 const unfiltered = computed(() => {
-	if (activeTab.value === "Team Requests") return teamRequests.value
-	if (activeTab.value === "History") return historyRequests.value
+	if (activeTab.value === "answered") return historyRequests.value
 	return myRequests.value
 })
 
@@ -265,7 +260,7 @@ function matches(request, key) {
 const filterCounts = computed(() => {
 	// My own requests: the server counts every one of them (audit P0-8). The
 	// Team and History tabs keep the loaded-row count until the Approvals page.
-	if (activeTab.value === "My Requests" && myRequestCounts.data) return myRequestCounts.data
+	if (activeTab.value === "mine" && myRequestCounts.data) return myRequestCounts.data
 	const counts = {}
 	for (const { key } of FILTERS) {
 		counts[key] = unfiltered.value.filter((request) => matches(request, key)).length

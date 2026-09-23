@@ -15,7 +15,7 @@ test("the panel reads the server's counts", () => {
 test("on My requests, a chip shows the server count, not the loaded rows", () => {
 	const at = src.indexOf("const filterCounts = computed(")
 	const body = src.slice(at, src.indexOf("\n})", at))
-	assert.match(body, /activeTab\.value === "My Requests" && myRequestCounts\.data/)
+	assert.match(body, /activeTab\.value === "mine" && myRequestCounts\.data/)
 })
 
 test("the counts reload with the lists", () => {

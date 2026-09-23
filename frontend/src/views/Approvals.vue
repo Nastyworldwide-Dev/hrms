@@ -33,9 +33,10 @@
 				</template>
 
 				<!-- Ruling 2 (23 Sep): what you already answered stays reachable,
-				     worded for what is behind it. Check-ins only: other requests
-				     keep their decision on the request itself. -->
+				     worded for what is behind it: requests on the Requests page,
+				     check-ins in a sheet here. -->
 				<GListPanel v-if="isApprover.data">
+					<GListRow :label="requestsAnsweredLabel" @click="openAnsweredRequests" />
 					<GListRow :label="answeredLabel" @click="openAnswered" />
 				</GListPanel>
 			</div>
@@ -75,6 +76,7 @@
 
 <script setup>
 import { computed, inject, ref } from "vue"
+import { useRouter } from "vue-router"
 import { createResource } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
@@ -90,6 +92,7 @@ import { decidedForApproverResource } from "@/data/remoteCheckin"
 import { isApprover } from "@/data/team"
 
 const __ = inject("$translate")
+const router = useRouter()
 const $dayjs = inject("$dayjs")
 
 // The server decides who sees what: only requests routed to the caller, by the
@@ -113,6 +116,12 @@ function rowLine(row) {
 
 const decided = decidedForApproverResource
 const answeredLabel = __("Check-ins you've already answered")
+//: Ruling 2 wording: says what is behind it.
+const requestsAnsweredLabel = __("Requests you've already answered")
+function openAnsweredRequests() {
+	console.info("[Approvals] opening answered requests")
+	router.push({ name: "Requests", query: { tab: "answered" } })
+}
 const answeredOpen = ref(false)
 function openAnswered() {
 	console.info("[Approvals] opening answered check-ins")
