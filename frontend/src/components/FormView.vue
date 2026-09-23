@@ -6,18 +6,16 @@
 	     footer below KEEP their fill — they need to be opaque as content
 	     scrolls under them. -->
 		<div class="w-full h-full flex flex-col">
-			<header
-				class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-sticky lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
+			<!-- The one header (alpha.5). It was a hand-drawn bar with a 2px
+			     hairline at lg:, a phone-only Back and a second desktop-only
+			     "Back" link inside the form. Back is one control now, at every
+			     width, and it still asks before discarding typed work. -->
+			<ShellHeader
+				bare
+				:title="id ? __(props.doctype) : __('New {0}', [__(doctype)], props.doctype)"
+				:back="confirmBack"
 			>
-				<GIconButton :label="__('Back')" flush class="lg:hidden" @click="confirmBack">
-					<ChevronLeft class="h-5 w-5 text-inkbase" />
-				</GIconButton>
-				<div v-if="id" class="flex flex-row items-center gap-2 overflow-hidden grow">
-					<h2
-						class="text-xl font-extrabold text-inkbase tracking-tight whitespace-nowrap overflow-hidden text-ellipsis"
-					>
-						{{ __(props.doctype) }}
-					</h2>
+				<template v-if="id" #actions>
 					<Badge :label="id" class="whitespace-nowrap text-caption" variant="outline" />
 					<!-- GStatusChip, not frappe-ui Badge (8.9). The same value rendered
 					     as a FILLED amber "Open" pill here and an OUTLINED uppercase
@@ -53,29 +51,14 @@
 							variant: 'ghost',
 						}"
 					/>
-				</div>
-				<h2
-					v-else
-					class="text-2xl font-extrabold text-inkbase tracking-tight lg:text-screen-title"
-				>
-					{{ __("New {0}", [__(doctype)], props.doctype) }}
-				</h2>
-				<span v-if="!id" class="g-eyebrow hidden lg:inline ml-auto">
-					{{ dateKicker }}
-				</span>
-			</header>
+				</template>
+			</ShellHeader>
 
 			<!-- Form -->
 			<div class="grow overflow-y-auto">
-				<div class="w-full sm:max-w-2xl sm:mx-auto">
-					<button
-						type="button"
-						class="g-eyebrow hidden lg:flex items-center gap-2 px-4 pt-6 hover:text-inkbase"
-						@click="confirmBack"
-					>
-						<ArrowLeft class="h-4 w-4" />
-						{{ __("Back") }}
-					</button>
+				<!-- The one content column (§20.3): 720px, left-aligned against the
+				     side nav at lg:. It was sm:max-w-2xl (672px) centred. -->
+				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
 					<slot name="beforeFields"></slot>
 					<!-- Tabs -->
 					<template v-if="tabbedView">
@@ -205,7 +188,7 @@
 				v-if="!showFormButton"
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
-				<div class="w-full sm:max-w-2xl sm:mx-auto">
+				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
 					<slot name="formButton"></slot>
 				</div>
 			</div>
@@ -226,7 +209,7 @@
 				v-else-if="canReview"
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
-				<div class="w-full sm:max-w-2xl sm:mx-auto">
+				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
 					<GButton :label="__('Review request')" @click="openReviewSheet" />
 				</div>
 			</div>
@@ -236,7 +219,7 @@
 				v-else-if="isFormDirty || (!workflow?.hasWorkflow && formButton)"
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
-				<div class="w-full sm:max-w-2xl sm:mx-auto">
+				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
 					<ErrorMessage
 						class="mb-2"
 						:message="
@@ -276,16 +259,7 @@
 	     so the user is never stranded on a detail/edit screen. Only reached for
 	     an existing id (new forms are ready immediately, isFormReady). -->
 	<div v-else class="flex flex-col h-full w-full form-view-root">
-		<header
-			class="flex flex-row bg-ground border-b border-divider py-4 px-3 items-center sticky top-0 z-sticky lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
-		>
-			<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
-				<ChevronLeft class="h-5 w-5 text-inkbase" />
-			</GIconButton>
-			<h2 class="text-xl font-extrabold text-inkbase tracking-tight ml-1 truncate">
-				{{ __(props.doctype) }}
-			</h2>
-		</header>
+		<ShellHeader bare :title="__(props.doctype)" :back="() => goBackOrHome(router)" />
 		<div class="grow overflow-y-auto flex items-center justify-center p-6">
 			<div
 				v-if="documentResource.get.loading"
@@ -392,13 +366,12 @@
 </template>
 
 <script setup>
-import { ArrowLeft, ChevronLeft } from "lucide-vue-next"
+import ShellHeader from "@/components/ShellHeader.vue"
 import { splitFieldsByTab } from "@/utils/formTabs"
 import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import { computed, inject, nextTick, onMounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
-import GIconButton from "@/components/glass/GIconButton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 
@@ -516,8 +489,6 @@ const cancelViewer = computed(() => ({
 	employee: currentEmployee?.data?.name,
 }))
 
-// Uppercase long date shown on the lg+ header (e.g. "THURSDAY, 23 JULY 2026").
-const dateKicker = computed(() => $dayjs().format("dddd, D MMMM YYYY"))
 
 let activeTab = ref(props.tabs?.[0].name)
 let fileAttachments = ref([])
@@ -732,7 +703,7 @@ const documentResource = createDocumentResource({
 	},
 	delete: {
 		onSuccess() {
-			router.back()
+			goBackOrHome(router)
 			toast({
 				title: __("Success"),
 				text: __("Your {0} was deleted.", [__(props.noun)]),

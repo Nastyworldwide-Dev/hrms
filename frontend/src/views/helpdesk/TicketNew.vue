@@ -1,16 +1,12 @@
 <template>
 	<GPage>
-		<ion-content :fullscreen="true">
+		<!-- The one header (alpha.5). Back still runs goBack, which asks before
+		     discarding a typed ticket. -->
+		<ShellHeader :title="__('New ticket')" :back="goBack" />
+		<ion-content class="g-page__content">
 			<div
-				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-content-column-lg mx-auto"
+				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-content-column-lg mx-auto lg:mx-0"
 			>
-				<div class="flex flex-row items-center gap-2.5">
-					<GIconButton :label="__('Back')" @click="goBack">
-						<ChevronLeft class="h-4 w-4" />
-					</GIconButton>
-					<span class="text-xl font-extrabold text-inkbase">{{ __("New ticket") }}</span>
-				</div>
-
 				<!-- Same gate as the hub's IT pill: only an ANSWERED "no" is unavailable,
 				     and the form (with its get_options fetch) waits for an answered yes. -->
 				<GEmptyState
@@ -115,11 +111,10 @@
 </template>
 
 <script setup>
-import { ChevronLeft } from "lucide-vue-next"
+import ShellHeader from "@/components/ShellHeader.vue"
 import GPage from "@/components/glass/GPage.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
-import GIconButton from "@/components/glass/GIconButton.vue"
 import GInput from "@/components/glass/GInput.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"
 import GFileUpload from "@/components/glass/GFileUpload.vue"

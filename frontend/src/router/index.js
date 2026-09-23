@@ -126,37 +126,10 @@ const routes = [
 		component: () => import("@/views/Login.vue"),
 	},
 	{
-		path: "/profile",
-		name: "Profile",
-		component: () => import("@/views/Profile.vue"),
-	},
-	{
-		path: "/notifications",
-		name: "Notifications",
-		component: () => import("@/views/Notifications.vue"),
-	},
-	{
 		// The Settings page is cut; its controls live on You (audit-pages §4).
 		// Kept as a redirect for saved links.
 		path: "/settings",
 		redirect: "/profile",
-	},
-	{
-		path: "/change-password",
-		name: "ChangePassword",
-		component: () => import("@/views/ChangePassword.vue"),
-	},
-	{
-		path: "/hr-contacts",
-		name: "HRContacts",
-		component: () => import("@/views/HRContacts.vue"),
-	},
-	{
-		// Everything waiting on the caller's decision (audit-flows 4B). Reached
-		// from Home's Waiting on you, not from More (owner ruling, 23 Sep).
-		path: "/approvals",
-		name: "Approvals",
-		component: () => import("@/views/Approvals.vue"),
 	},
 	{
 		// The check-in queue folded into Approvals (AUDIT-PLAN, Approvals row).
@@ -185,6 +158,38 @@ const routes = [
 			{
 				path: "",
 				redirect: "/home",
+			},
+			// Pushed screens (alpha.5, one shell). These were top-level routes,
+			// so on desktop they rendered with NO side nav — the person lost the
+			// app's navigation the moment they opened You or Notifications.
+			// FormShell draws SideNav at lg: and no tab bar on a phone, which is
+			// right for a pushed screen. Absolute paths: the URLs do not change.
+			{
+				path: "/profile",
+				name: "Profile",
+				component: () => import("@/views/Profile.vue"),
+			},
+			{
+				path: "/notifications",
+				name: "Notifications",
+				component: () => import("@/views/Notifications.vue"),
+			},
+			{
+				path: "/change-password",
+				name: "ChangePassword",
+				component: () => import("@/views/ChangePassword.vue"),
+			},
+			{
+				path: "/hr-contacts",
+				name: "HRContacts",
+				component: () => import("@/views/HRContacts.vue"),
+			},
+			{
+				// Everything waiting on the caller's decision (audit-flows 4B). Reached
+				// from Home's Waiting on you, not from More (owner ruling, 23 Sep).
+				path: "/approvals",
+				name: "Approvals",
+				component: () => import("@/views/Approvals.vue"),
 			},
 			...attendanceRoutes,
 			...otRoutes,

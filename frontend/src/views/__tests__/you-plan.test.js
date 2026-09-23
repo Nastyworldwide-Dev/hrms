@@ -16,7 +16,7 @@ const view = readFileSync(at("../Profile.vue"), "utf8")
 const template = view.slice(0, view.indexOf("<script"))
 
 test("the page is called You", () => {
-	assert.match(template, /__\("You"\)/)
+	assert.match(template, /__\(["']You["']\)/)
 	assert.doesNotMatch(template, /__\("Profile"\)/)
 })
 

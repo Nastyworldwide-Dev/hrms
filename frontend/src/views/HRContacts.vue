@@ -1,23 +1,16 @@
 <template>
 	<GPage>
-		<ion-content class="ion-padding">
+		<!-- The one header (alpha.5); Refresh is this screen's own action. -->
+		<ShellHeader :title="__('HR Contacts')">
+			<template #actions>
+				<GIconButton :label="__('Refresh')" @click="reload">
+					<RefreshCw class="h-4 w-4" />
+				</GIconButton>
+			</template>
+		</ShellHeader>
+		<ion-content class="ion-padding g-page__content">
 			<div class="flex flex-col min-h-full w-full">
-				<div class="w-full max-w-content-column-lg mx-auto">
-					<header
-						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
-					>
-						<div class="flex flex-row items-center gap-2.5">
-							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
-								<ChevronLeft class="h-5 w-5" />
-							</GIconButton>
-							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
-								{{ __("HR Contacts") }}
-							</h2>
-						</div>
-						<GIconButton :label="__('Refresh')" @click="reload">
-							<RefreshCw class="h-4 w-4" />
-						</GIconButton>
-					</header>
+				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
 
 					<div class="flex flex-col p-4 gap-4">
 						<!-- Loading state -->
@@ -68,20 +61,18 @@
 </template>
 
 <script setup>
-import { ChevronLeft, RefreshCw, Users } from "lucide-vue-next"
+import { RefreshCw, Users } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import { inject, onMounted } from "vue"
-import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
 
 import GIconButton from "@/components/glass/GIconButton.vue"
 
 import ContactCard from "@/components/ContactCard.vue"
 import { hrContactsResource } from "@/data/hrContacts"
-import { goBackOrHome } from "@/utils/navigation"
+import ShellHeader from "@/components/ShellHeader.vue"
 
 const __ = inject("$translate")
-const router = useRouter()
 const hrContacts = hrContactsResource
 
 onMounted(() => {

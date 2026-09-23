@@ -1994,6 +1994,13 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-header__spacer {
 	flex: 1;
 }
+/* a pushed screen's own controls, in place of bell + avatar */
+.g-header__actions {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 8px;
+}
 .g-header__title {
 	flex: 1;
 	min-width: 0;

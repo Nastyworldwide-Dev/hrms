@@ -1,21 +1,10 @@
 <template>
 	<GPage>
-		<ion-content class="ion-padding">
+		<!-- The one header (alpha.5), in place of a hand-drawn hairline bar. -->
+		<ShellHeader :title="__('You')" />
+		<ion-content class="ion-padding g-page__content">
 			<div class="flex flex-col min-h-full w-full">
-				<div class="w-full max-w-content-column-lg mx-auto">
-					<header
-						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
-					>
-						<div class="flex flex-row items-center gap-2.5">
-							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
-								<ChevronLeft class="h-5 w-5" />
-							</GIconButton>
-							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
-								{{ __("You") }}
-							</h2>
-						</div>
-					</header>
-
+				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
 					<div class="flex flex-col gap-5 p-4">
 						<!-- Who I am (audit-pages §4 "You"): name, role, and where. -->
 						<div class="flex flex-row items-center gap-4">
@@ -132,15 +121,14 @@
 </template>
 
 <script setup>
-import { ChevronLeft, KeyRound, LogOut, SquareCheck, User } from "lucide-vue-next"
+import { KeyRound, LogOut, SquareCheck, User } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from "vue"
 import { useListUpdate } from "@/composables/realtime"
 import { useRouter } from "vue-router"
-import { goBackOrHome } from "@/utils/navigation"
 import { IonContent, IonModal } from "@ionic/vue"
 import { Switch, createDocumentResource, createResource, toast } from "frappe-ui"
-import GIconButton from "@/components/glass/GIconButton.vue"
+import ShellHeader from "@/components/ShellHeader.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"

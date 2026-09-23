@@ -1,29 +1,18 @@
 <template>
-	<div class="flex flex-col h-full w-full bg-ground">
-		<header
-			class="flex flex-row items-center gap-2.5 bg-ground border-b-2 border-divider py-3.5 px-4 flex-none lg:h-16 lg:px-7 lg:py-0"
-		>
-			<button
-				type="button"
-				class="flex h-11 w-11 -my-2 -ml-3 items-center justify-center text-inkbase"
-				:aria-label="__('Back')"
-				@click="goBackOrHome(router)"
-			>
-				<ChevronLeft class="h-5 w-5" />
-			</button>
-			<h2 class="text-base font-extrabold tracking-tight text-inkbase truncate">
-				{{ sop.data?.title || __("SOP") }}
-			</h2>
-			<button
-				v-if="isHR"
-				type="button"
-				class="ml-auto flex h-11 w-11 -my-2 -mr-2 flex-none items-center justify-center text-accent-700"
-				:aria-label="__('Edit {0}', [sop.data?.title || __('SOP')])"
-				@click="sheetOpen = true"
-			>
-				<PenLine class="h-icon-md w-icon-md" />
-			</button>
-		</header>
+	<GPage>
+	<div class="flex flex-col h-full w-full bg-ground g-page__content">
+		<!-- The one header (alpha.5); HR's Edit takes the bell/avatar slot. -->
+		<ShellHeader bare :title="sop.data?.title || __('SOP')">
+			<template v-if="isHR" #actions>
+				<GIconButton
+					:label="__('Edit {0}', [sop.data?.title || __('SOP')])"
+					class="text-accent-700"
+					@click="sheetOpen = true"
+				>
+					<PenLine class="h-icon-md w-icon-md" />
+				</GIconButton>
+			</template>
+		</ShellHeader>
 
 		<div class="grow overflow-y-auto">
 			<ResourceError :resource="sop" what="this document" />
@@ -97,25 +86,26 @@
 			@saved="sop.reload()"
 		/>
 	</div>
+	</GPage>
 </template>
 
 <script setup>
 import { departmentLabel } from "@/utils/departmentLabel"
 import { safeHtml } from "@/utils/safeHtml"
-import { ChevronLeft, Download, FileText, PenLine } from "lucide-vue-next"
+import { Download, FileText, PenLine } from "lucide-vue-next"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import { createResource } from "frappe-ui"
 import { computed, inject, ref } from "vue"
-import { useRouter } from "vue-router"
 
 import PdfInlineViewer from "@/components/PdfInlineViewer.vue"
 import SopFormSheet from "./SopFormSheet.vue"
-import { goBackOrHome } from "@/utils/navigation"
+import GPage from "@/components/glass/GPage.vue"
+import GIconButton from "@/components/glass/GIconButton.vue"
+import ShellHeader from "@/components/ShellHeader.vue"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
-const router = useRouter()
 
 const props = defineProps({
 	id: { type: String, required: true },

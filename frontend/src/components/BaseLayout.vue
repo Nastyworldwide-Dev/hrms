@@ -1,18 +1,14 @@
 <template>
 	<GPage>
-		<ion-header class="ion-no-border g-page__content">
-			<div class="w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
-				<GAppHeader
-					:title="props.pageTitle"
-					:unread="unreadNotificationsCount.data || 0"
-					:avatar-url="user.data?.user_image"
-					:avatar-label="user.data?.first_name"
-					@notifications="router.push({ name: 'Notifications' })"
-					@profile="router.push({ name: 'Profile' })"
-					@back="router.back()"
-				/>
-			</div>
-		</ion-header>
+		<!-- One wiring for the header (ShellHeader), shared with the screens
+		     that own their own ion-content. Back is goBackOrHome: router.back()
+		     did nothing on a page opened cold from a push notification.
+		     GAppHeader receives :title="props.pageTitle" there. -->
+		<ShellHeader :title="props.pageTitle">
+			<template v-if="$slots.actions" #actions>
+				<slot name="actions" />
+			</template>
+		</ShellHeader>
 
 		<ion-content class="ion-no-padding g-page__content">
 			<div class="flex flex-col min-h-full w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
@@ -24,17 +20,8 @@
 
 <script setup>
 import GPage from "@/components/glass/GPage.vue"
-import GAppHeader from "@/components/glass/GAppHeader.vue"
-import { IonHeader, IonContent } from "@ionic/vue"
-
-import { unreadNotificationsCount } from "@/data/notifications"
-
-import { useRouter } from "vue-router"
-import { inject } from "vue"
-
-const router = useRouter()
-const user = inject("$user")
-const __ = inject("$translate")
+import ShellHeader from "@/components/ShellHeader.vue"
+import { IonContent } from "@ionic/vue"
 
 const props = defineProps({
 	pageTitle: {

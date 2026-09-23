@@ -21,7 +21,9 @@
     unread      number, default 0 — >0 shows the unread dot
     avatarUrl   string — avatar image; falls back to the initial
     avatarLabel string — name behind the initial and the accessible name
-  Emits: notifications, profile
+  Slots:
+    actions     optional — rendered in place of the bell and avatar
+  Emits: notifications, profile, back
 -->
 <template>
 	<header class="g-header">
@@ -47,6 +49,13 @@
 		     the right edge on Home (the mark alone, 23 Sep). -->
 		<span v-if="!title" class="g-header__spacer" aria-hidden="true" />
 
+		<!-- A pushed screen's own controls (Refresh, Edit, a status, Filter)
+		     take the place of the bell and avatar: one right-hand cluster, never
+		     two. Absent the slot, the bell and avatar render exactly as before. -->
+		<div v-if="$slots.actions" class="g-header__actions">
+			<slot name="actions" />
+		</div>
+		<template v-else>
 		<button
 			type="button"
 			class="g-header__action g-focusable"
@@ -69,6 +78,7 @@
 			<!-- decorative: the button above already carries "Profile, <name>" -->
 			<GAvatar :image="avatarUrl" :label="avatarLabel" :size="34" decorative />
 		</button>
+		</template>
 	</header>
 </template>
 

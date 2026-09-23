@@ -1,24 +1,20 @@
 <template>
 	<GPage>
-		<ion-content :fullscreen="true">
+		<!-- The one header (alpha.5); the ticket's status sits where the bell
+		     and avatar would. -->
+		<ShellHeader :title="ticket?.subject || props.id">
+			<template v-if="ticket?.status" #actions>
+				<GStatusChip
+					class="flex-none"
+					:status="ticket.status"
+					:label="__(statusLabel(ticket.status))"
+				/>
+			</template>
+		</ShellHeader>
+		<ion-content class="g-page__content">
 			<div
-				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-content-column-lg mx-auto"
+				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-content-column-lg mx-auto lg:mx-0"
 			>
-				<div class="flex flex-row items-center gap-2.5 min-w-0">
-					<GIconButton :label="__('Back')" @click="goBack">
-						<ChevronLeft class="h-4 w-4" />
-					</GIconButton>
-					<span class="text-lg font-extrabold text-inkbase truncate flex-1 min-w-0">
-						{{ ticket?.subject || props.id }}
-					</span>
-					<GStatusChip
-						v-if="ticket?.status"
-						class="flex-none"
-						:status="ticket.status"
-						:label="__(statusLabel(ticket.status))"
-					/>
-				</div>
-
 				<ResourceError :resource="ticketDetail" back what="this ticket" />
 				<GSkeleton v-if="ticketDetail.loading && !ticket" height="220px" />
 
@@ -81,7 +77,8 @@
 
 <script setup>
 import { safeHtml } from "@/utils/safeHtml"
-import { ArrowUp, ChevronLeft } from "lucide-vue-next"
+import { ArrowUp } from "lucide-vue-next"
+import ShellHeader from "@/components/ShellHeader.vue"
 import GPage from "@/components/glass/GPage.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
@@ -93,16 +90,13 @@ import GTextarea from "@/components/glass/GTextarea.vue"
 import { IonContent } from "@ionic/vue"
 
 import { computed, inject, ref, watch } from "vue"
-import { useRouter } from "vue-router"
 
 import ResourceError from "@/components/ResourceError.vue"
 import { myTickets, replyToTicket, ticketDetail } from "@/data/helpdesk"
 import { sessionUser } from "@/data/session"
 import { statusLabel, threadFromTicket } from "@/utils/helpdesk"
-import { goBackOrHome } from "@/utils/navigation"
 
 const props = defineProps({ id: { type: String, required: true } })
-const router = useRouter()
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 
@@ -130,10 +124,6 @@ function load() {
 	ticketDetail.fetch({ name: props.id })
 }
 watch(() => props.id, load, { immediate: true })
-
-function goBack() {
-	goBackOrHome(router)
-}
 
 async function send() {
 	const message = reply.value.trim()

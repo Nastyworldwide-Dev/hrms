@@ -530,7 +530,8 @@ test("the OT introduction is inside FormView's slot below its existing header", 
 	const formTree = parseTemplate(read(form).split("<script setup>")[0])
 	let header, slot
 	walk(formTree, (n) => {
-		if (n.tag === "header" && !header) header = n
+		// alpha.5: the form's header is ShellHeader (one shell, GAppHeader).
+		if ((n.tag === "header" || n.tag === "ShellHeader") && !header) header = n
 		if (
 			n.tag === "slot" &&
 			n.props?.some(

@@ -1,21 +1,13 @@
 <template>
 	<GPage>
-		<ion-content :fullscreen="true">
+		<!-- The one header (alpha.5), in place of a hand-drawn bar. -->
+		<ShellHeader :title="__('Change password')" />
+		<ion-content class="g-page__content">
 			<!-- 8.5 — never migrated: imported GPage/GInput/GButton but used only
 			     GPage, and a hardcoded `bg-white` painted over the theme so the dark
 			     capture rendered a white page with a near-white primary on it. -->
 			<div class="flex flex-col h-full w-full">
 				<div class="w-full h-full sm:w-96 flex flex-col">
-					<header
-						class="flex flex-row bg-ground py-4 px-3 items-center sticky top-0 z-sticky border-b border-divider"
-					>
-						<GIconButton :label="__('Back')" flush class="mr-1" @click="goBackOrHome(router)">
-							<ChevronLeft class="h-5 w-5 text-inkbase" />
-						</GIconButton>
-						<h2 class="text-xl font-extrabold text-inkbase tracking-tight">
-							{{ __("Change password") }}
-						</h2>
-					</header>
 
 					<div class="grow overflow-y-auto">
 						<form class="flex flex-col space-y-4 p-4" @submit.prevent="submitPasswordChange">
@@ -58,8 +50,7 @@
 </template>
 
 <script setup>
-import { ChevronLeft } from "lucide-vue-next"
-import GIconButton from "@/components/glass/GIconButton.vue"
+import ShellHeader from "@/components/ShellHeader.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GInput from "@/components/glass/GInput.vue"
 import GPage from "@/components/glass/GPage.vue"
@@ -90,7 +81,7 @@ const updatePasswordResource = createResource({
 			iconClasses: "text-green-500",
 		})
 		resetForm()
-		router.back()
+		goBackOrHome(router)
 	},
 	onError(error) {
 		changePasswordError.value = error.messages?.[0] || __("Failed to update password")

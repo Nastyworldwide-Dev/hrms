@@ -1,51 +1,42 @@
 <template>
-	<ion-header class="ion-no-border">
-		<div class="w-full sm:max-w-2xl sm:mx-auto lg:max-w-none lg:mx-0">
-			<div
-				class="flex flex-row bg-ground py-4 px-3 items-center justify-between border-b border-divider lg:h-16 lg:px-7 lg:py-0 lg:border-b-2"
+	<!-- The one header (alpha.5). This list drew its own bar with a 2px
+	     hairline and Back via router.back(), which did nothing on a page opened
+	     cold; ShellHeader's Back is goBackOrHome. Filter and New are this
+	     screen's own actions, so they take the bell/avatar slot. -->
+	<ShellHeader :title="pageTitle">
+		<template #actions>
+			<!-- GIconButton, not frappe-ui Button: an aria-label bound onto the
+			     latter rendered as aria-label="" — it does not forward the attr —
+			     so this stayed the last button-name violation in the app after
+			     every other icon-only control was fixed. -->
+			<GIconButton
+				id="show-filter-modal"
+				:label="__('Filter list')"
+				class="g-iconbtn--boxed"
+				:class="areFiltersApplied ? 'g-iconbtn--on' : ''"
 			>
-				<div class="flex flex-row items-center">
-					<GIconButton :label="__('Back')" flush class="mr-1" @click="router.back()">
-						<ChevronLeft class="h-5 w-5 text-inkbase" />
-					</GIconButton>
-					<h2 class="text-xl font-extrabold text-inkbase tracking-tight">{{ pageTitle }}</h2>
-				</div>
+				<Funnel class="h-4 w-4" />
+			</GIconButton>
+			<!-- A create action is a GButton wherever it appears (§18, v1.11).
+			     This was a white frappe-ui pill in the header while the same
+			     "create a new X" role rendered as a chartreuse GButton on the
+			     dashboards — one role, two components, two colours. -->
+			<router-link
+				v-if="canCreate"
+				:to="{ name: formViewRoute }"
+				v-slot="{ navigate }"
+				class="shrink-0"
+			>
+				<GButton
+					:label="__('New', null, props.doctype)"
+					class="g-btn--compact"
+					@click="navigate"
+				/>
+			</router-link>
+		</template>
+	</ShellHeader>
 
-				<div class="flex flex-row gap-2">
-					<!-- GIconButton, not frappe-ui Button: an aria-label bound onto the
-					     latter rendered as aria-label="" — it does not forward the attr —
-					     so this stayed the last button-name violation in the app after
-					     every other icon-only control was fixed. -->
-					<GIconButton
-						id="show-filter-modal"
-						:label="__('Filter list')"
-						class="g-iconbtn--boxed"
-						:class="areFiltersApplied ? 'g-iconbtn--on' : ''"
-					>
-						<Funnel class="h-4 w-4" />
-					</GIconButton>
-					<!-- A create action is a GButton wherever it appears (§18, v1.11).
-					     This was a white frappe-ui pill in the header while the same
-					     "create a new X" role rendered as a chartreuse GButton on the
-					     dashboards — one role, two components, two colours. -->
-					<router-link
-						v-if="canCreate"
-						:to="{ name: formViewRoute }"
-						v-slot="{ navigate }"
-						class="mr-2 shrink-0"
-					>
-						<GButton
-							:label="__('New', null, props.doctype)"
-							class="g-btn--compact"
-							@click="navigate"
-						/>
-					</router-link>
-				</div>
-			</div>
-		</div>
-	</ion-header>
-
-	<ion-content>
+	<ion-content class="g-page__content">
 		<GPullRefresh @refresh="handleRefresh" />
 
 		<!-- tabindex="0" so a keyboard can reach the scroll. axe's
@@ -53,8 +44,10 @@
 		     focusable child — which happens exactly when the list is EMPTY, so it
 		     only surfaced once the empty state stopped carrying a button. A
 		     keyboard user could not scroll the region at all. -->
+		<!-- The one content column (§20.3): 720px, left-aligned against the side
+		     nav at lg:. It was sm:max-w-2xl (672px) centred — a second width. -->
 		<div
-			class="flex flex-col items-center mb-7 p-4 h-full w-full sm:max-w-2xl sm:mx-auto overflow-y-auto"
+			class="flex flex-col items-center mb-7 p-4 h-full w-full max-w-content-column-lg mx-auto lg:mx-0 overflow-y-auto"
 			ref="scrollContainer"
 			tabindex="0"
 			:aria-label="pageTitle"
@@ -151,8 +144,9 @@
 </template>
 
 <script setup>
-import { ChevronLeft, Funnel } from "lucide-vue-next"
-import { IonContent, IonHeader, modalController } from "@ionic/vue"
+import { Funnel } from "lucide-vue-next"
+import { IonContent, modalController } from "@ionic/vue"
+import ShellHeader from "@/components/ShellHeader.vue"
 import { createResource, debounce } from "frappe-ui"
 import { computed, inject, markRaw, onMounted, reactive, ref, watch } from "vue"
 import { initialListTab } from "@/utils/listTab"

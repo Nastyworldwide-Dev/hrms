@@ -76,6 +76,19 @@
 				<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
 				<span v-show="!collapsed" class="whitespace-nowrap">{{ item.title }}</span>
 			</button>
+			<!-- Public holidays: More has it on the phone, desktop had no way to
+			     reach it (alpha.5 audit). Same sheet, same list. -->
+			<button
+				type="button"
+				class="g-sidenav__item g-focusable"
+				@click="holidaysOpen = true"
+			>
+				<CalendarDays class="h-icon-md w-icon-md flex-none" />
+				<span v-show="!collapsed" class="whitespace-nowrap">{{ __("Public holidays") }}</span>
+			</button>
+			<GModal :is-open="holidaysOpen" :title="__('Public holidays')" @did-dismiss="holidaysOpen = false">
+				<HolidayList v-if="holidaysOpen && employee?.data" />
+			</GModal>
 			<!-- Sibling apps, same group as More on the phone. Plain anchors: each
 			     target is its own SPA outside vue-router's base, so a real
 			     navigation is the only thing that reaches it. New tab on desktop so
@@ -131,7 +144,9 @@
 
 <script setup>
 import GLogo from "@/components/glass/GLogo.vue"
-import { ExternalLink, Users } from "lucide-vue-next"
+import { CalendarDays, ExternalLink, Users } from "lucide-vue-next"
+import GModal from "@/components/glass/GModal.vue"
+import HolidayList from "@/components/HolidayList.vue"
 import { ref, computed, inject } from "vue"
 import { useRoute } from "vue-router"
 import { useIonRouter } from "@ionic/vue"
@@ -148,6 +163,8 @@ const user = inject("$user")
 const employee = inject("$employee")
 
 const route = useRoute()
+
+const holidaysOpen = ref(false)
 
 const STORAGE_KEY = "hrms:sidenav-collapsed"
 const collapsed = ref(localStorage.getItem(STORAGE_KEY) === "true")

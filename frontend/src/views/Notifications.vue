@@ -1,27 +1,11 @@
 <template>
 	<GPage>
-		<ion-content class="ion-padding">
+		<!-- The one header (alpha.5): it replaced a hand-drawn bar with a 2px
+		     hairline and no bell or avatar. -->
+		<ShellHeader :title="__('Notifications')" />
+		<ion-content class="ion-padding g-page__content">
 			<div class="flex flex-col min-h-full w-full">
-				<div class="w-full max-w-content-column-lg mx-auto">
-					<!-- bg-ground belongs on the STICKY element, not an ancestor.
-					     8.4 removed an opaque page-colour fill from the container
-					     above (it was painting over the light field) and this
-					     header, which had no fill of its own, started letting
-					     scrolled rows show straight through the title. Five views
-					     shared the pattern; all five now own their fill. -->
-					<header
-						class="flex flex-row py-3.5 px-4 items-center justify-between border-b-2 border-divider sticky top-0 z-sticky bg-ground"
-					>
-						<div class="flex flex-row items-center gap-2.5">
-							<GIconButton :label="__('Back')" flush @click="goBackOrHome(router)">
-								<ChevronLeft class="h-5 w-5" />
-							</GIconButton>
-							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
-								{{ __("Notifications") }}
-							</h2>
-						</div>
-					</header>
-
+				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
 					<div class="flex flex-col gap-4 mt-5 p-4">
 						<!-- flex-wrap + nowrap labels: the labels used to wrap INSIDE a
 						     fixed-height pill, so "Mark all as read" broke to two lines and
@@ -134,17 +118,16 @@
 
 <script setup>
 import { safeHtml } from "@/utils/safeHtml"
-import { ChevronLeft, CircleCheck } from "lucide-vue-next"
+import { CircleCheck } from "lucide-vue-next"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
-import GIconButton from "@/components/glass/GIconButton.vue"
+import ShellHeader from "@/components/ShellHeader.vue"
 import GLogo from "@/components/glass/GLogo.vue"
 import { getEmployeeInfoByUserID } from "@/data/employees"
 
-import { goBackOrHome } from "@/utils/navigation"
 import { notificationRoute } from "@/utils/notifications"
 import { siteTime } from "@/utils/siteTime"
 import { createResource, Button } from "frappe-ui"
