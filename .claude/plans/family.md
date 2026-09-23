@@ -1,3 +1,3 @@
-CLASS: a themed token used for a surface that must not change with the theme; a grouped list as N glass surfaces.
+CLASS: a forgotten check-in or check-out found only at payroll.
 
-Call sites: CheckInPanel camera frame and message — same-root, fixed (media-frame tokens). Approvals Yours/Other teams — same-root, flattened to one panel each (surfaces gate). Other --g-ink backgrounds — grep: none on a media surface.
+Call sites: new hrms/utils/shift_reminders.py (cron) — same-root. Employee field + patch + extension_custom_fields — same-root. Profile.vue switch — same-root. Existing notification paths — not-affected (reuses PWA Notification after_insert push).

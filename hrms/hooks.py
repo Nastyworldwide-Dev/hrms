@@ -683,6 +683,12 @@ scheduler_events = {
 		"0 10 * * *": [
 			"hrms.utils.checkin_sweeper.sweep_stale_ins",
 		],
+		# Owner ruling, 23 Sep 2026: remind the person 15 min after shift start
+		# (not checked in) / 30 min after shift end (still in). Each reminder has
+		# a 5-minute due window, so exactly one tick sends it.
+		"*/5 * * * *": [
+			"hrms.utils.shift_reminders.send_due_reminders",
+		],
 	},
 	"daily_long": [
 		# Nabil, 16 Sep 2026: the whole attendance repair runs itself — ownership,

@@ -52,7 +52,23 @@ def get_extension_custom_fields() -> dict:
 				),
 				"module": "HR",
 				"translatable": 0,
-			}
+			},
+			{
+				# Owner ruling, 23 Sep 2026: staff turn their own check-in /
+				# check-out reminders off on the PWA You page. ON by default.
+				"fieldname": "nadi_shift_reminders",
+				"fieldtype": "Check",
+				"label": _("Shift Reminders"),
+				"insert_after": "restrict_user_permission_to_hrms",
+				"default": "1",
+				"description": _(
+					"Send this person a reminder 15 minutes after their shift starts if "
+					"they have not checked in, and 30 minutes after it ends if they are "
+					"still checked in. They can turn it off themselves in the app."
+				),
+				"module": "HR",
+				"translatable": 0,
+			},
 		],
 		"Employee Checkin": [
 			{

@@ -88,6 +88,19 @@
 							/>
 						</div>
 
+						<!-- Owner ruling, 23 Sep 2026: check-in / check-out reminders,
+						     the person's own on/off, ON by default. -->
+						<div class="g-switch-row">
+							<Switch
+								size="md"
+								:label="__('Shift reminders')"
+								:description="__('A nudge if you forget to check in or out')"
+								:model-value="remindersOn"
+								:disabled="setReminders.loading"
+								@update:model-value="toggleReminders"
+							/>
+						</div>
+
 						<button
 							@click="logout"
 							class="g-focusable flex items-center justify-center gap-2 w-full bg-transparent border border-divider rounded-action text-inkbase px-4 py-3.5 font-sans font-extrabold text-card-title hover:bg-icon-bg"
@@ -274,6 +287,37 @@ async function togglePush(on) {
 	} finally {
 		pushBusy.value = false
 	}
+}
+
+const remindersOn = ref(true)
+createResource({
+	url: "hrms.utils.shift_reminders.get_shift_reminders",
+	auto: true,
+	onSuccess(data) {
+		remindersOn.value = !!data
+	},
+})
+const setReminders = createResource({
+	url: "hrms.utils.shift_reminders.set_shift_reminders",
+	onSuccess(data) {
+		remindersOn.value = !!data
+		console.info("[You] shift reminders", remindersOn.value ? "on" : "off")
+	},
+	onError(error) {
+		console.error("[You] shift reminders toggle failed:", error)
+		remindersOn.value = !remindersOn.value
+		toast({
+			title: __("Reminders didn't change"),
+			text: __("Try again in a moment."),
+			icon: "alert-circle",
+			position: "bottom-center",
+		})
+	},
+})
+
+function toggleReminders(on) {
+	remindersOn.value = on
+	setReminders.submit({ enabled: on ? 1 : 0 })
 }
 
 const employeeDoc = createDocumentResource({
