@@ -40,12 +40,12 @@
 		:breakpoints="[0, 1]"
 		:backdrop-breakpoint="1"
 		:is-open="isOpen"
-		@willPresent="showModalBackdrop = true"
+		@willPresent="onWillPresent"
 		@willDismiss="onWillDismiss"
-		@didPresent="() => emit('did-present')"
-		@didDismiss="() => emit('did-dismiss')"
+		@didPresent="onDidPresent"
+		@didDismiss="onDidDismiss"
 	>
-		<div class="g-sheet" role="dialog" :aria-label="title || undefined">
+		<div class="g-sheet" role="dialog" aria-modal="true" :aria-label="title || undefined">
 			<p v-if="title" class="g-sheet__title">{{ title }}</p>
 			<slot name="actionSheet" />
 			<slot />
@@ -53,17 +53,15 @@
 	</ion-modal>
 
 	<!-- backdrop — hand-built because backdrop-breakpoint=1 disables Ionic's -->
-	<div
-		v-if="showModalBackdrop"
-		class="g-scrim"
-		aria-hidden="true"
-		@click="() => modalController.dismiss()"
-	></div>
+	<div v-if="showModalBackdrop" class="g-scrim" aria-hidden="true" @click="closeOwnSheet"></div>
 </template>
 
 <script setup>
-import { ref } from "vue"
-import { IonModal, modalController } from "@ionic/vue"
+import { onBeforeUnmount, ref } from "vue"
+import { useRoute } from "vue-router"
+import { IonModal } from "@ionic/vue"
+
+import { holdPageInert, releasePageInert } from "@/utils/sheetInert"
 
 defineProps({
 	trigger: { type: String, required: false },
@@ -72,9 +70,70 @@ defineProps({
 })
 const emit = defineEmits(["did-dismiss", "did-present", "will-dismiss"])
 
+const modal = ref(null)
+const route = useRoute()
+//: The path the sheet was opened on. The router guard closes PRESENTED sheets
+//: before a navigation lands, but a sheet still animating in is not presented
+//: yet — Back pressed mid-animation let it finish opening over the next page
+//: (audit P0-3). A sheet that lands on a different page closes itself.
+let openedOn = null
+const showModalBackdrop = ref(false)
+//: Whether THIS sheet currently holds the page inert. A sheet can be torn down
+//: (route change, v-if) without Ionic's dismiss events, and the page must not
+//: stay frozen behind a sheet that no longer exists.
+let holding = false
+
+//: The page the user is looking at — the one the sheet covers. Ionic marks the
+//: others .ion-page-hidden, and the sheet itself lives at the app root.
+function visiblePage() {
+	return document.querySelector("ion-router-outlet .ion-page:not(.ion-page-hidden)")
+}
+
+function onWillPresent() {
+	openedOn = route.path
+	showModalBackdrop.value = true
+	if (!holding) {
+		holding = true
+		holdPageInert(visiblePage)
+	}
+}
+
+function onDidPresent() {
+	if (openedOn && route.path !== openedOn) {
+		console.info("[GModal] opened on", openedOn, "but landed on", route.path, "- closing")
+		closeOwnSheet()
+		return
+	}
+	emit("did-present")
+}
+
 function onWillDismiss(event) {
 	showModalBackdrop.value = false
 	emit("will-dismiss", event)
 }
-const showModalBackdrop = ref(false)
+
+function onDidDismiss() {
+	showModalBackdrop.value = false
+	release()
+	emit("did-dismiss")
+}
+
+function release() {
+	if (!holding) return
+	holding = false
+	releasePageInert(visiblePage)
+}
+
+//: The scrim closes ITS sheet. `modalController.dismiss()` closed whichever
+//: overlay was on top — another sheet, or nothing while this one was still
+//: animating in (audit APP-2).
+function closeOwnSheet() {
+	console.info("[GModal] scrim tapped, closing this sheet")
+	modal.value?.$el?.dismiss?.()
+}
+
+onBeforeUnmount(() => {
+	showModalBackdrop.value = false
+	release()
+})
 </script>

@@ -12,6 +12,8 @@ import otRoutes from "./ot"
 import sopRoutes from "./sop"
 import { isStaleChunkError } from "./stale-chunk"
 import { queueBehindTraversal } from "./traversalQueue"
+import { closeSheetsOnLeave } from "./sheetGuard"
+import { modalController, actionSheetController, popoverController } from "@ionic/vue"
 
 const routes = [
 	{
@@ -214,6 +216,15 @@ const router = createRouter({
 // router object is app.use()d, so $router, useRouter() and RouterLink all get
 // the held push. See traversalQueue.js.
 queueBehindTraversal(router)
+
+// A sheet never outlives its page: every open modal, action sheet or popover is
+// dismissed before a navigation lands. See sheetGuard.js.
+closeSheetsOnLeave(router, {
+	getTop: async () =>
+		(await modalController.getTop()) ||
+		(await actionSheetController.getTop()) ||
+		(await popoverController.getTop()),
+})
 
 // Release focus before every navigation. Ionic keeps the outgoing page mounted
 // and stamps it aria-hidden — but the control that triggered the navigation
