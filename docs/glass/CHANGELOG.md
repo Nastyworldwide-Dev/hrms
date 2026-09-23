@@ -13,6 +13,18 @@ releases).
 ## [2.0.0-alpha.4] — 2026-09-23
 
 ### Added
+- **Reminders to check in and out.** 15 minutes after your shift starts, if
+  you have not checked in: "You haven't checked in yet." 30 minutes after it
+  ends, if you are still checked in: "You're still checked in." Only on days
+  you have a shift; never on rest days or holidays; only to you. Turn it off
+  on the You page.
+- **Home fits one screen**: Today, then News (moved up so everyone sees it),
+  This week (days worked, overtime to claim), Coming up (next leave, trip,
+  training or public holiday), and Waiting on you for approvers. Every block
+  says something, never blank.
+- **Requests fits one screen**: New request on top, balances in one line,
+  Needs attention only when something does, your last 5, then See all (with
+  the filters).
 - **Approvals, grouped.** "Yours" (sent to you) first, then "Other teams"
   (someone else approves; you may step in), by department and type, one line
   per person. Five lines then "See all"; "Show more (N left)" — never an

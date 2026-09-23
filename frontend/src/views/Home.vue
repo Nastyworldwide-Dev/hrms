@@ -39,8 +39,18 @@
 				     Today "so everyone will notice… kinda like news". Every block
 				     below ALWAYS renders and says why it is empty. -->
 				<Announcements />
-				<HomeWeek />
-				<HomeComingUp />
+				<!-- ONE panel for the two one-line blocks (§15.2, surfaces gate:
+				     Home was 8/6). Each keeps its own title and empty line. -->
+				<div class="w-full">
+					<div class="g-eyebrow mb-4">{{ __("Your week") }}</div>
+					<GListPanel
+						:loading="!homeWeek.data && !homeComingUp.data && homeWeek.loading"
+						:rows="2"
+					>
+						<HomeWeek />
+						<HomeComingUp />
+					</GListPanel>
+				</div>
 				<NeedsYou />
 			</div>
 		</template>
@@ -59,6 +69,7 @@ import NowBar from "@/components/NowBar.vue"
 import NeedsYou from "@/components/NeedsYou.vue"
 import Announcements from "@/components/Announcements.vue"
 import HomeWeek from "@/components/HomeWeek.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
 import HomeComingUp from "@/components/HomeComingUp.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"

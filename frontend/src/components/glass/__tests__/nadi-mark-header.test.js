@@ -43,3 +43,9 @@ test("Home's header is the mark alone, not the mark plus the word", () => {
 	assert.match(layout, /:title="props\.pageTitle"/)
 	assert.doesNotMatch(layout, /pageTitle \|\| __\('Nadi'\)/)
 })
+
+test("with no visible title the bell and avatar stay at the right edge", () => {
+	const header = read("../GAppHeader.vue")
+	assert.match(header, /<span v-if="!title" class="g-header__spacer"/)
+	assert.match(read("../../../theme/glass-components.css"), /\.g-header__spacer \{\s*flex: 1;/)
+})

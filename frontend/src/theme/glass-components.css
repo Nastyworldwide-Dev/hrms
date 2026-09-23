@@ -1995,6 +1995,9 @@ html[data-theme="dark"] .g-cal__day--present {
 	margin-right: 4px;
 	color: var(--g-ink);
 }
+.g-header__spacer {
+	flex: 1;
+}
 .g-header__title {
 	flex: 1;
 	min-width: 0;

@@ -43,6 +43,9 @@
 		     so a labelled mark would say "Nadi" twice to a screen reader. -->
 		<GLogo v-if="!showBack" label="" />
 		<h1 class="g-header__title" :class="{ 'sr-only': !title }">{{ title || __("Nadi") }}</h1>
+		<!-- A hidden title takes no space, so this holds the bell and avatar at
+		     the right edge on Home (the mark alone, 23 Sep). -->
+		<span v-if="!title" class="g-header__spacer" aria-hidden="true" />
 
 		<button
 			type="button"

@@ -11,17 +11,16 @@
 -->
 <template>
 	<div class="w-full">
-		<div class="g-eyebrow mb-4">{{ __("Coming up") }}</div>
 		<p v-if="homeComingUp.error" class="text-caption text-ink-600">
 			{{ __("Coming up could not be loaded. Pull down to try again.") }}
 		</p>
-		<GListPanel v-else :loading="homeComingUp.loading && !homeComingUp.data" :rows="1">
+		<template v-else>
 			<GListRow :label="label" :tappable="Boolean(target)" @click="open">
 				<template #icon>
 					<component :is="icon" class="g-row-icon" />
 				</template>
 			</GListRow>
-		</GListPanel>
+		</template>
 	</div>
 </template>
 
@@ -30,7 +29,6 @@ import { computed, inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { CalendarDays, GraduationCap, Palmtree, Plane } from "lucide-vue-next"
 
-import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 
 import { homeComingUp } from "@/data/home"

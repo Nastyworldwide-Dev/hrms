@@ -25,9 +25,14 @@
 	     notice HR had published and an outage looked identical from the sofa —
 	     the same class of defect as the Now bar hiding itself. Absence is the
 	     right empty state; silence is not the right error. -->
-	<GBanner v-if="homeAnnouncements.error" variant="error">
-		{{ __("Announcements could not be loaded. Pull down to try again.") }}
-	</GBanner>
+	<div v-if="homeAnnouncements.error" class="w-full">
+		<div class="g-eyebrow mb-4">{{ __("Announcements") }}</div>
+		<!-- One plain line, like every other Home block's error: Home's surface
+		     budget is 6 (§15.1), and a failed read is a sentence, not a panel. -->
+		<p class="text-caption text-ink-600" role="alert">
+			{{ __("Announcements could not be loaded. Pull down to try again.") }}
+		</p>
+	</div>
 	<!-- Always shown once loaded: an empty board says so in one line rather
 	     than vanishing, which left Home looking broken (owner, 23 Sep; NN/g
 	     empty states). While loading it waits, so nothing jumps. -->
@@ -82,7 +87,6 @@ import { computed, inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { CalendarDays, Megaphone, ShieldAlert, TriangleAlert } from "lucide-vue-next"
 
-import GBanner from "@/components/glass/GBanner.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GBadge from "@/components/glass/GBadge.vue"

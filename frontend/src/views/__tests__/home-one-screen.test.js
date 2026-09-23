@@ -34,9 +34,12 @@ for (const [name, src, resource, empty] of [
 	test(`${name} always renders: eyebrow, skeleton, error line, empty line`, () => {
 		const t = templateOf(src)
 		assert.doesNotMatch(t.split("\n").find((l) => /<div/.test(l)) || "", /v-if/, "the root never hides")
-		assert.match(t, new RegExp(`__\\("${name}"\\)`), "eyebrow title")
-		assert.match(t, /class="g-eyebrow/, "uses the existing eyebrow class")
-		assert.match(t, new RegExp(`<GListPanel[^>]*:loading="${resource}\\.loading && !${resource}\\.data"`))
+		// Since the surfaces fix, both rows share ONE panel under "Your week"
+		// on Home, which owns the title and the skeleton; each row keeps its
+		// own error line and empty line.
+		const home = read("../Home.vue")
+		assert.match(home, /__\("Your week"\)/, "one eyebrow for both rows")
+		assert.match(home, /<GListPanel\s+:loading=/, "one skeleton for both rows")
 		assert.match(t, new RegExp(`v-if="${resource}\\.error"`), "a failed call is one plain line")
 		assert.match(src, new RegExp(empty.replace(/\./g, "\\.")), "says why it is empty")
 		assert.match(t, /<GListRow/)
@@ -63,4 +66,13 @@ test("pull-to-refresh reloads the two new blocks too", () => {
 	for (const resource of ["homeWeek", "homeComingUp"]) {
 		assert.match(body, new RegExp(`${resource}\\.reload\\(`), resource)
 	}
+})
+
+// Surfaces gate (§15.1, Home was 8/6 after the new blocks): This week and
+// Coming up share ONE panel under "Your week"; the announcement error is a
+// plain line, not a banner panel.
+test("Home stays inside its six glass surfaces", () => {
+	const home = read("../Home.vue")
+	assert.match(home, /__\("Your week"\)[\s\S]*<GListPanel[^>]*>\s*<HomeWeek \/>\s*<HomeComingUp \/>\s*<\/GListPanel>/)
+	assert.doesNotMatch(read("../../components/Announcements.vue"), /<GBanner/)
 })

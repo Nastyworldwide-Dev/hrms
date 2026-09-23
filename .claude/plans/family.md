@@ -1,3 +1,3 @@
-CLASS: one bad item in a scheduler loop rolled back the whole tick.
+CLASS: a Home over its glass-surface budget; a header that lost its layout when its title was hidden; a lost urgency hint.
 
-Call sites: shift_reminders.send_due_reminders — same-root, fixed (per-item commit, logged skip). _is_working_day — not-affected (already try/except per candidate). Other cron job checkin_sweeper — not-affected (not touched in this range).
+Call sites: Home.vue — Your week shares one panel (HomeWeek + HomeComingUp, surfaces 6/6). Announcements error — plain line, not a banner panel. GAppHeader — spacer when no visible title. RequestBalances attendance row — "fix before payroll" kept on one line.

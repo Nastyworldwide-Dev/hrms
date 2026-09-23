@@ -207,7 +207,11 @@ const rows = computed(() => {
 			// The single most common cause of a wrong payslip, and invisible
 			// until payroll — by which time the window to fix it has usually
 			// closed.
-			label: __("{0} with no attendance", [countOf(attendance.days, __("day"))]),
+			// "before payroll" is why it matters; kept on the one line (design
+			// review of ca6a6b9d9: the urgency was dropped with the sublabel).
+			label: __("{0} with no attendance — fix before payroll", [
+				countOf(attendance.days, __("day")),
+			]),
 			amount: "",
 			go: () => router.push({ name: "AttendanceRequestFormView" }),
 		})

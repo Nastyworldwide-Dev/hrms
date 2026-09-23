@@ -11,17 +11,16 @@
 -->
 <template>
 	<div class="w-full">
-		<div class="g-eyebrow mb-4">{{ __("This week") }}</div>
 		<p v-if="homeWeek.error" class="text-caption text-ink-600">
 			{{ __("This week could not be loaded. Pull down to try again.") }}
 		</p>
-		<GListPanel v-else :loading="homeWeek.loading && !homeWeek.data" :rows="1">
+		<template v-else>
 			<GListRow :label="daysLine" :sublabel="claimLine" :tappable="hasOvertime" @click="claim">
 				<template #icon>
 					<CalendarCheck class="g-row-icon" />
 				</template>
 			</GListRow>
-		</GListPanel>
+		</template>
 	</div>
 </template>
 
@@ -30,7 +29,6 @@ import { computed, inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { CalendarCheck } from "lucide-vue-next"
 
-import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 
 import { homeWeek } from "@/data/home"
