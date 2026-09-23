@@ -101,6 +101,11 @@ def _is_routed_approver(doc, user: str | None = None) -> bool:
 	Deliberately NOT "anyone who can read": a worker can read their own request
 	and must not be able to decide it (validate_self_submission double-guards
 	that, but routing refuses it first, with a message about routing).
+
+	ROUTING ONLY, not visibility: the HR branch admits System Manager, whom
+	approval_row_scope denies read. A caller that LISTS or COUNTS requests must
+	check `_request_read_allowed(doc)` first, as `decide` does (review of
+	be4b81edf: an admin-only login saw every team's requests).
 	"""
 	user = frappe.session.user if user is None else user
 	if {"System Manager", "HR Manager", "HR User"} & set(frappe.get_roles(user)):

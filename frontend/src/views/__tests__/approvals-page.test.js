@@ -35,10 +35,12 @@ test("every type the server can list has fields for the sheet it opens", async (
 	// Leave Request) but the page had no fields for it, so tapping that row
 	// threw inside RequestActionSheet — the only way to decide it. The page
 	// reads the ONE shared map, and the map covers every listed type.
-	const server = read("../../../../hrms/api/approvals_list.py")
-	const kinds = [...server.slice(server.indexOf("KIND = {")).split("}")[0].matchAll(/"([^"]+)":/g)].map(
-		(m) => m[1]
-	)
+	// DECIDE_THEN_SUBMIT, not the label map: it is what get_waiting_for_me
+	// iterates, and the label map has a fallback, so a type can be listed
+	// without a label (review of b16b13f76).
+	const server = read("../../../../hrms/api/approval.py")
+	const block = server.slice(server.indexOf("DECIDE_THEN_SUBMIT = {")).split("\n}")[0]
+	const kinds = [...block.matchAll(/^\t"([^"]+)":/gm)].map((m) => m[1])
 	assert.ok(kinds.length >= 7, "the server's list of types was found")
 	const { REQUEST_SUMMARY_FIELDS } = await import("../../data/config/requestSummaryFields.js")
 	for (const doctype of kinds) {
