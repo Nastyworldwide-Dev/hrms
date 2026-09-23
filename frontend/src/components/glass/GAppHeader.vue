@@ -39,7 +39,9 @@
 			</svg>
 		</GIconButton>
 
-		<GLogo v-if="!showBack" class="g-header__mark" :label="title ? '' : __('Nadi')" />
+		<!-- Decorative: the h1 beside it names the page (visually hidden on Home),
+		     so a labelled mark would say "Nadi" twice to a screen reader. -->
+		<GLogo v-if="!showBack" label="" />
 		<h1 class="g-header__title" :class="{ 'sr-only': !title }">{{ title || __("Nadi") }}</h1>
 
 		<button

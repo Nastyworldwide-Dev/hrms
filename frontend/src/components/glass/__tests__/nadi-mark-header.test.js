@@ -17,8 +17,9 @@ test("the Nadi mark is one component drawn from the brand tokens", () => {
 
 test("the header shows the mark at the left of every tab page", () => {
 	const header = read("../GAppHeader.vue")
-	assert.match(header, /<GLogo v-if="!showBack"/)
+	assert.match(header, /<GLogo v-if="!showBack" label="" \/>/, "decorative: the h1 carries the name")
 	assert.doesNotMatch(header, /kicker/)
+	assert.doesNotMatch(read("../../../theme/glass-components.css"), /g-header__kicker/)
 })
 
 test("the side menu uses the same mark, not a second drawing", () => {

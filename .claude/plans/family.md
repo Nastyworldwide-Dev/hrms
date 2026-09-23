@@ -1,3 +1,3 @@
-CLASS: a punch outside the shift window lost its shift, so rest-day and holiday work never reached overtime.
+CLASS: a brand mark labelled beside a heading that already names the page.
 
-Call sites: EmployeeCheckin.fetch_shift no-window branch — same-root, fixed (_stamp_nonworking_day_shift). CustomEmployeeCheckin.fetch_shift (hrms/overrides/employee_checkin_override.py) — same-root via super() for 0/1 assignments; 2+ assignments stay off-shift (ambiguous, deliberate). ot_calculation._is_eligible_checkin / _session_ot_slices — not-affected (already count a whole non-normal-day session once it carries a shift). shift_type attendance — verified by reading: non-normal day marks Present from pairs only, no Absent/Half Day. Pre-existing: test_ot_nonworking_hours 1 fail red at 7f6449fb8 too.
+Call sites: GAppHeader.vue GLogo — same-root, fixed (decorative). SideNav.vue GLogo — not-affected (labelled only when the word Nadi is hidden). .g-header__kicker CSS — dead since d83acb1b1, removed.

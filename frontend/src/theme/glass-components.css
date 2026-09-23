@@ -2005,15 +2005,6 @@ html[data-theme="dark"] .g-cal__day--present {
 	line-height: var(--g-type-screen-title-line-height);
 	color: var(--g-ink);
 }
-.g-header__kicker {
-	display: none; /* lg: only — matches the existing BaseLayout header */
-	font-family: var(--g-type-micro-label-family);
-	font-size: var(--g-type-micro-label-size);
-	font-weight: var(--g-type-micro-label-weight);
-	letter-spacing: var(--g-type-micro-label-tracking);
-	font-variant-numeric: tabular-nums;
-	color: var(--g-ink2);
-}
 .g-header__action {
 	position: relative;
 	display: flex;
@@ -2062,9 +2053,6 @@ html[data-theme="dark"] .g-cal__day--present {
    GAvatar now. .g-header__avatar-link stays — it is the 44px hit area, which is
    a button concern, not an avatar one. */
 @media (min-width: 1024px) {
-	.g-header__kicker {
-		display: inline;
-	}
 	/* the side nav carries identity at lg: (§20.2), as it does today */
 	.g-header__avatar-link {
 		display: none;
