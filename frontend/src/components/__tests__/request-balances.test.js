@@ -154,13 +154,20 @@ test("an expiry replaces the denominator rather than joining it", () => {
 	assert.match(note, /v-else/)
 })
 
-test("the strip is bounded, and says what it is hiding", () => {
-	// Four cards fit a phone without wrapping; seven do not. The count of what
-	// is hidden is stated, so nobody has to tap to find out whether it is worth
-	// tapping.
-	assert.match(component, /const LEAVE_SHOWN = 4/)
-	assert.match(component, /__\("Show \{0\} more", \[countOf\(hiddenLeave\.length, __\("leave type"\)\)\]\)/)
-	assert.match(component, /__\("Show fewer leave types"\)/, "and it folds back")
+test("owner ruling R2: Annual and Medical, then All balances; the full list is compact too", () => {
+	// 23 Sep: "B, even on expand can be better compact so we stay consistent".
+	// Two cards fit one row on a phone; the rest open in a sheet as the same
+	// compact rows, never a wall of big cards.
+	assert.match(component, /const LEAVE_SHOWN = 2/)
+	assert.match(component, /__\("All balances"\)/)
+	assert.match(component, /<GModal :is-open="allOpen"[\s\S]*<GListRow[\s\S]*v-for="row in rankedLeave"/)
+	assert.doesNotMatch(component, /__\("Show fewer leave types"\)/)
+})
+
+test("Annual and Medical lead, whatever the site calls them", () => {
+	const ranked = component.slice(component.indexOf("const rankedLeave"))
+	assert.match(component, /const PINNED = \[\/annual\/i, \/medical\|sick\/i\]/)
+	assert.match(ranked, /pin\(a\) - pin\(b\)/)
 })
 
 test("the types you have actually used come first", () => {

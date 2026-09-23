@@ -1,3 +1,3 @@
-CLASS: a section header that is not a heading, so heading navigation skips it.
+CLASS: a balance strip that grew into a wall of cards.
 
-Call sites: Approvals.vue Other teams toggle — same-root, fixed (h2 > button, aria-controls). Yours h2 — not-affected. .g-approvals__kind spacing off-grid — fixed (12/16).
+Call sites: RequestBalances.vue — same-root, fixed (2 pinned cards + All balances sheet in compact rows). GBalanceGrid — not-affected (renders whatever count it is given).

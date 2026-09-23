@@ -66,22 +66,29 @@
 			</GBalanceCard>
 		</GBalanceGrid>
 
-		<!-- The types nobody is looking at, behind one tap. Seven cards, two of
-		     them wrapping to three lines, is the wall the owner photographed on
-		     23 September; four is a strip. What is hidden is the untouched
-		     statutory entitlement — not news until it is used. -->
+		<!-- Owner ruling R2 (23 Sep): Annual and Medical on the strip, then every
+		     balance behind one tap, in the SAME compact rows ("even on expand can
+		     be better compact so we stay consistent"). A sheet, not an unfolding
+		     wall of cards, so Requests stays one screen. -->
 		<button
 			v-if="hiddenLeave.length"
 			type="button"
 			class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
-			@click="showAllLeave = !showAllLeave"
+			@click="allOpen = true"
 		>
-			{{
-				showAllLeave
-					? __("Show fewer leave types")
-					: __("Show {0} more", [countOf(hiddenLeave.length, __("leave type"))])
-			}}
+			{{ __("All balances") }} ›
 		</button>
+		<GModal :is-open="allOpen" :title="__('All balances')" @did-dismiss="allOpen = false">
+			<GListPanel>
+				<GListRow
+					v-for="row in rankedLeave"
+					:key="row.leave_type"
+					:label="row.leave_type"
+					:sublabel="balanceLine(row)"
+					:tappable="false"
+				/>
+			</GListPanel>
+		</GModal>
 
 		<GListPanel v-if="rows.length">
 			<GListRow
@@ -111,6 +118,7 @@ import GBanner from "@/components/glass/GBanner.vue"
 import GBalanceGrid from "@/components/glass/GBalanceGrid.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
+import GModal from "@/components/glass/GModal.vue"
 
 import { requestsSummary } from "@/data/requestsSummary"
 
@@ -125,9 +133,16 @@ const leave = computed(() => data.value.leave || [])
 //: Four cards fit a phone without wrapping; seven do not. Measured against
 //: the deployed screenshot, where "Compassionate Leave (Immediate Family)"
 //: took three lines and pushed everything actionable below the fold.
-const LEAVE_SHOWN = 4
+const LEAVE_SHOWN = 2
+//: Annual and Medical lead the strip (owner ruling R2), matched by name
+//: because every site names its leave types its own way.
+const PINNED = [/annual/i, /medical|sick/i]
+const pin = (row) => {
+	const at = PINNED.findIndex((re) => re.test(row.leave_type || ""))
+	return at === -1 ? PINNED.length : at
+}
 
-const showAllLeave = ref(false)
+const allOpen = ref(false)
 
 //: USED FIRST, then the rest. A type the employee has actually drawn on is
 //: the one they are checking; an untouched statutory entitlement is a fact
@@ -135,6 +150,7 @@ const showAllLeave = ref(false)
 //: are the only ones with a deadline attached.
 const rankedLeave = computed(() =>
 	[...leave.value].sort((a, b) => {
+		if (pin(a) !== pin(b)) return pin(a) - pin(b)
 		if (a.expiring_soon !== b.expiring_soon) return a.expiring_soon ? -1 : 1
 		const usedA = a.total - a.balance
 		const usedB = b.total - b.balance
@@ -143,9 +159,7 @@ const rankedLeave = computed(() =>
 	})
 )
 
-const shownLeave = computed(() =>
-	showAllLeave.value ? rankedLeave.value : rankedLeave.value.slice(0, LEAVE_SHOWN)
-)
+const shownLeave = computed(() => rankedLeave.value.slice(0, LEAVE_SHOWN))
 const hiddenLeave = computed(() => rankedLeave.value.slice(LEAVE_SHOWN))
 
 //: A whole number reads as a count; 12.5 days is a real half-day balance.
@@ -153,6 +167,13 @@ const hiddenLeave = computed(() => rankedLeave.value.slice(LEAVE_SHOWN))
 function trim(value) {
 	const n = Number(value)
 	return Number.isInteger(n) ? String(n) : n.toFixed(1)
+}
+
+//: "6 of 14 left" — or the expiry, when there is one, as on the cards.
+function balanceLine(row) {
+	if (row.expiring_soon)
+		return __("{0} left · expires {1}", [trim(row.balance), formatDate(row.expires_on)])
+	return __("{0} of {1} left", [trim(row.balance), trim(row.total)])
 }
 
 function formatDate(value) {
