@@ -12,8 +12,19 @@ const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "ut
 test("the scrim is never teleported above the sheet", () => {
 	// Hotfix 23 Sep: teleported to <body>, the scrim painted over every sheet
 	// and nothing inside one could be tapped (check in / out included).
-	assert.doesNotMatch(read("../GModal.vue"), /<Teleport/)
-	assert.match(read("../GModal.vue"), /<div v-if="showModalBackdrop" class="g-scrim"/)
+	assert.doesNotMatch(read("../GModal.vue"), /<Teleport to="body"/)
+})
+
+test("the scrim sits beside the sheet in ion-app, outside the frozen page", () => {
+	// alpha.4 P0-2/3, measured 23 Sep: rendered in place, the scrim lived
+	// inside the page an open sheet makes inert, so a tap on the dim area
+	// did nothing and only a pull-down closed the sheet. In ion-app it is a
+	// sibling of ion-modal, in the same stacking context, below the sheet.
+	// A Vue <Teleport> there lost its anchor when Ionic moved the modal, so the
+	// scrim is placed by hand, right before the presented sheet.
+	const modal = read("../GModal.vue")
+	assert.doesNotMatch(modal, /<Teleport/)
+	assert.match(modal, /function onWillPresent\(\) \{[^}]*mountScrim\(modal\.value\?\.\$el, closeOwnSheet\)/)
 })
 
 test("at lg the sheet is centred, not pinned to the bottom", () => {

@@ -51,13 +51,6 @@
 			<slot />
 		</div>
 	</ion-modal>
-
-	<!-- backdrop — hand-built because backdrop-breakpoint=1 disables Ionic's.
-	     Rendered in place, NOT teleported: in <body> it painted over the sheet
-	     and blocked every tap in it, check in and out included (hotfix 23 Sep,
-	     reverting 25479308e's teleport). The desktop side nav staying undimmed
-	     under a sheet (APP-14) is reopened for alpha.3. -->
-	<div v-if="showModalBackdrop" class="g-scrim" aria-hidden="true" @click="closeOwnSheet"></div>
 </template>
 
 <script setup>
@@ -66,6 +59,7 @@ import { useRoute } from "vue-router"
 import { IonModal } from "@ionic/vue"
 
 import { holdPageInert, releasePageInert } from "@/utils/sheetInert"
+import { mountScrim } from "@/utils/sheetScrim"
 
 defineProps({
 	trigger: { type: String, required: false },
@@ -81,7 +75,9 @@ const route = useRoute()
 //: yet — Back pressed mid-animation let it finish opening over the next page
 //: (audit P0-3). A sheet that lands on a different page closes itself.
 let openedOn = null
-const showModalBackdrop = ref(false)
+//: The dim area behind the sheet; tapping it closes the sheet. Built by
+//: utils/sheetScrim (Ionic's own backdrop is off for the focus-trap workaround).
+let scrim = null
 //: The page THIS sheet froze — the node itself, so release frees that page even
 //: after the route moved on. A sheet can be torn down (route change, v-if)
 //: without Ionic's dismiss events, and no page may stay frozen behind a sheet
@@ -99,7 +95,7 @@ function visiblePage() {
 
 function onWillPresent() {
 	openedOn = route.path
-	showModalBackdrop.value = true
+	if (!scrim) scrim = mountScrim(modal.value?.$el, closeOwnSheet)
 	opener = document.activeElement
 	if (!frozenPage) frozenPage = holdPageInert(visiblePage)
 }
@@ -122,12 +118,12 @@ function moveFocusIn() {
 }
 
 function onWillDismiss(event) {
-	showModalBackdrop.value = false
+	removeScrim()
 	emit("will-dismiss", event)
 }
 
 function onDidDismiss() {
-	showModalBackdrop.value = false
+	removeScrim()
 	release()
 	if (opener?.isConnected) opener.focus?.({ preventScroll: true })
 	opener = null
@@ -147,8 +143,13 @@ function closeOwnSheet() {
 	modal.value?.$el?.dismiss?.()
 }
 
+function removeScrim() {
+	scrim?.remove()
+	scrim = null
+}
+
 onBeforeUnmount(() => {
-	showModalBackdrop.value = false
+	removeScrim()
 	release()
 })
 </script>
