@@ -393,6 +393,7 @@
 
 <script setup>
 import { ArrowLeft, ChevronLeft } from "lucide-vue-next"
+import { splitFieldsByTab } from "@/utils/formTabs"
 import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import { computed, inject, nextTick, onMounted, ref, watch } from "vue"
@@ -620,21 +621,7 @@ watch(
 	{ immediate: true }
 )
 
-const tabFields = computed(() => {
-	let fieldsByTab = {}
-	let fieldList = []
-	let firstFieldIndex = 0
-	let lastFieldIndex = 0
-
-	props.tabs?.forEach((tab) => {
-		lastFieldIndex = props.fields.findIndex((field) => field.fieldname === tab.lastField)
-		fieldList = props.fields.slice(firstFieldIndex, lastFieldIndex + 1)
-		fieldsByTab[tab.name] = fieldList
-		firstFieldIndex = lastFieldIndex + 1
-	})
-
-	return fieldsByTab
-})
+const tabFields = computed(() => splitFieldsByTab(props.fields, props.tabs))
 
 const attachedFiles = createResource({
 	url: "hrms.api.get_attachments",
