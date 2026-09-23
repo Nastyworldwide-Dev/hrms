@@ -96,7 +96,13 @@ test("the tile meets the 44px touch target from the token, not a guess", () => {
 test("four across, so seven links are two rows", () => {
 	const block = css().match(/\.g-cellgrid--quick\s*\{[^}]*\}/)
 	assert.ok(block, ".g-cellgrid--quick should define the column count")
-	assert.match(block[0], /repeat\(4,\s*1fr\)/, "4 columns x 2 rows carries all seven")
+	// minmax(0, 1fr), not 1fr: a column must be able to shrink at 320px with
+	// large text (audit P0-13, stylesheet-parses.test.js).
+	assert.match(
+		block[0],
+		/repeat\(4,\s*minmax\(0,\s*1fr\)\)/,
+		"4 columns x 2 rows carries all seven"
+	)
 	// ...and the component has to ASK for that grid. Without this line the
 	// suite survived swapping --quick for --balance: two columns, eight tiles,
 	// four rows, the whole saving gone, five green tests. A rule nothing is

@@ -216,6 +216,9 @@ function liveSheet(doctype = "OT Request", nativeDocument = false) {
 				"hasPermission",
 				"currentRequest",
 				"pendingDecision",
+				// A rejection must say why (audit P0-10).
+				"rejectReason",
+				"needsReason",
 				"confirmDecision",
 				"runPendingDecision",
 				"updateDocumentStatus",
@@ -343,6 +346,8 @@ test("navigation and changed confirmation context cannot send a PWA decision", a
 		})
 		await tick()
 		state.run("confirmDecision({status: 'Rejected'}, {})")
+		// A real reason, so only the changed context can stop the send.
+		state.run("rejectReason.value = 'Cover is short that week'")
 		mutate(state)
 		const current = state.requests.at(-1)
 		if (current !== state.requests[0]) {

@@ -9,5 +9,5 @@ import { personalCacheKey } from "@/utils/personalCache"
 export const myRequestCounts = createResource({
 	url: "hrms.api.request_counts.get_my_request_counts",
 	auto: true,
-	cache: personalCacheKey("hrms:my_request_counts"),
+	cache: personalCacheKey("hrms:request_counts"),
 })
