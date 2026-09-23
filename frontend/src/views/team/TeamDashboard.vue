@@ -2,7 +2,7 @@
 	<BaseLayout :pageTitle="__('Team')">
 		<template #body>
 			<div
-				class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-24 lg:p-7"
+				class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-4 lg:p-7"
 			>
 				<!-- HR-only team selector: grouped by department, searchable,
 				     "My team" pinned first, team size beside each manager
