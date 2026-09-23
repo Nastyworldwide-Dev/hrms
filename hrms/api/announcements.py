@@ -97,7 +97,11 @@ def _visible_rows(reader) -> list[dict]:
 	fields and an OR-chain of those in a filter is the kind of query that is
 	silently wrong for one branch and nobody notices.
 	"""
-	today = nowdate()
+	from hrms.utils.timezone import employee_now
+
+	# The reader's own day, not the server's: near midnight in another time
+	# zone a notice appeared a day early or late (rule 66a5e6145).
+	today = str(employee_now(reader.name).date())
 	rows = frappe.get_all(
 		"HR Announcement",
 		filters={
@@ -110,9 +114,7 @@ def _visible_rows(reader) -> list[dict]:
 		ignore_permissions=True,
 	)
 	visible = [row for row in rows if audience_matches(row.audience, row.audience_value, reader)]
-	logger.info(
-		"[announcements] employee=%s live=%d visible=%d", reader.name, len(rows), len(visible)
-	)
+	logger.info("[announcements] employee=%s live=%d visible=%d", reader.name, len(rows), len(visible))
 	for row in visible:
 		# The audience is HOW the fence decided, not something the reader needs
 		# or is entitled to know — a department name is another team's business.
@@ -236,9 +238,7 @@ def get_announcement(name: str) -> dict:
 def _record_read(announcement: str, employee: str):
 	"""Idempotent. Opening a card twice is not two readings, and the count HR
 	reads off this has to be one somebody can trust."""
-	existing = frappe.db.exists(
-		"HR Announcement Read", {"announcement": announcement, "employee": employee}
-	)
+	existing = frappe.db.exists("HR Announcement Read", {"announcement": announcement, "employee": employee})
 	if existing:
 		return
 	frappe.get_doc(
@@ -278,9 +278,7 @@ def acknowledge(name: str) -> dict:
 		frappe.throw(_("That announcement does not ask for acknowledgement."))
 
 	_record_read(name, reader.name)
-	row = frappe.db.get_value(
-		"HR Announcement Read", {"announcement": name, "employee": reader.name}, "name"
-	)
+	row = frappe.db.get_value("HR Announcement Read", {"announcement": name, "employee": reader.name}, "name")
 	frappe.db.set_value(
 		"HR Announcement Read",
 		row,
@@ -350,9 +348,7 @@ def get_reach(name: str) -> dict:
 	in_audience = set(audience)
 	read = [row for row in rows if row.employee in in_audience]
 
-	logger.info(
-		"[announcements] reach %s: %d read of %d", doc.name, len(read), len(audience)
-	)
+	logger.info("[announcements] reach %s: %d read of %d", doc.name, len(read), len(audience))
 	return {
 		"audience_count": len(audience),
 		"read_count": len(read),

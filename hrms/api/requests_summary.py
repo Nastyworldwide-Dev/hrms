@@ -45,8 +45,11 @@ def _leave() -> list[dict]:
 	denominator wrong is what makes a bar read 5 of 5 when it is 5 of 14.
 	"""
 	from hrms.api import get_current_employee, get_leave_balance_map
+	from hrms.utils.timezone import employee_now
 
-	today = getdate(nowdate())
+	# The employee's own day (rule 66a5e6145): an expiry countdown read off
+	# the server clock was a day out near midnight in another time zone.
+	today = employee_now(get_current_employee()).date()
 
 	# The balance map carries `from_date` and NOT `to_date` — verified on the
 	# bench, after the first version of this read a key that is never there and
