@@ -48,7 +48,9 @@ export function tapWord(logType) {
 //: for a one-digit hour; slicing five characters left "9:00:" (live audit,
 //: 23 Sep). Read by value, not by position.
 export function clockTime(value) {
-	const [h, m] = String(value || "").split(":")
-	if (!h || m === undefined) return ""
+	// A clock time only ("9:00", "09:00:00"); anything else (a date, a
+	// duration) is not shown rather than shown wrong (review of 30e6f96e0).
+	if (!/^\d{1,2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(String(value || "").trim())) return ""
+	const [h, m] = String(value).trim().split(":")
 	return `${h.padStart(2, "0")}:${m.padStart(2, "0").slice(0, 2)}`
 }

@@ -79,11 +79,18 @@ test("a shift time reads HH:MM whatever the server sends", async () => {
 	assert.equal(clockTime("07:30"), "07:30")
 	assert.equal(clockTime(""), "")
 	assert.equal(clockTime(null), "")
+	// not a clock time: shown as nothing, never as garbage
+	assert.equal(clockTime("1 day, 2:00:00"), "")
+	assert.equal(clockTime("2026-09-10 09:00:00"), "")
 })
 
 test("no screen cuts a server time at five characters", async () => {
 	const { readFileSync } = await import("node:fs")
-	for (const file of ["../../components/DaySheet.vue", "../../views/team/TeamDashboard.vue"]) {
+	for (const file of [
+		"../../components/DaySheet.vue",
+		"../../views/team/TeamDashboard.vue",
+		"../../components/NowBar.vue",
+	]) {
 		const source = readFileSync(new URL(file, import.meta.url), "utf8")
 		assert.doesNotMatch(source, /\.slice\(0, 5\)/, `${file} slices a time`)
 		assert.match(source, /clockTime\(/, `${file} reads times by value`)

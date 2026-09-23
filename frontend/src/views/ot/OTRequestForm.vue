@@ -355,7 +355,7 @@ function loadSummary() {
 	summaryRequest.value = entry
 	entry.resource
 		.fetch()
-		.catch(() => console.warn("[OTRequestForm] selected day capacity unavailable"))
+		?.catch?.(() => console.warn("[OTRequestForm] selected day capacity unavailable"))
 }
 watch([summaryKey, () => otRequest.value.modified], loadSummary, {
 	immediate: true,

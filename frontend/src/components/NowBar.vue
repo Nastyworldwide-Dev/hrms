@@ -37,6 +37,7 @@
 </template>
 
 <script setup>
+import { clockTime } from "@/utils/daySheet"
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue"
 
 import { nowResource } from "@/data/now"
@@ -92,7 +93,11 @@ const detail = computed(() => {
 	// The shift window, when there is one — that is the thing a person checks
 	// the bar for after the state itself.
 	if (shift.value) {
-		return __("{0} · {1}–{2}", [shift.value.shift, shift.value.start, shift.value.end])
+		return __("{0} · {1}–{2}", [
+			shift.value.shift,
+			clockTime(shift.value.start),
+			clockTime(shift.value.end),
+		])
 	}
 	// No shift, but they finished today: say when, because that is the only
 	// other fact the bar has and it is the one the old line carried.

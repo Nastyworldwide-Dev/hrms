@@ -16,9 +16,9 @@ const walk = (dir) =>
 		return /\.(vue|js)$/.test(name) ? [path] : []
 	})
 
-test("no .fetch().catch() without optional chaining", () => {
+test("no .fetch()/.reload()/.submit() .catch() without optional chaining", () => {
 	const offenders = walk(SRC).filter((file) =>
-		/\.fetch\(\)\.catch\(/.test(readFileSync(file, "utf8"))
+		/\.(fetch|reload|submit)\(\)\s*\.catch\(/.test(readFileSync(file, "utf8"))
 	)
 	assert.deepEqual(offenders, [])
 })

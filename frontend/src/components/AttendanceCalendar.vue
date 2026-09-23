@@ -203,7 +203,7 @@ function refresh() {
 	console.info("[AttendanceCalendar] refreshing", key)
 	calendarEvents.value
 		.reload()
-		.catch(() => console.warn("[AttendanceCalendar] refresh failed", key))
+		?.catch?.(() => console.warn("[AttendanceCalendar] refresh failed", key))
 }
 useListUpdate(socket, "Attendance", refresh)
 defineExpose({ refresh })
