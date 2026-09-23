@@ -1,10 +1,7 @@
-CLASS: a sheet presented as a phone sheet on a desktop (audit F-5 / APP-14).
-Measured 23 Sep at 1280x800: wrapper flush to the bottom (y=663); the scrim
-lived inside the page's content box, so it started at x=216 and the side nav
-stayed bright and clickable under an open sheet.
+CLASS: a section that renders nothing while loading, then pushes the page
+down (audit F-12 / APP-28, CWV-CLS limit 0.1). Measured 23 Sep at 390x844:
+Home 0.002 (already fixed), Requests 0.391.
 
 Surfaces and verdicts:
-frontend/src/components/glass/GModal.vue — same-root: scrim teleported to body (covers the side nav; tap there closes).
-frontend/src/theme/glass-components.css .g-modal at lg — same-root: ::part(content) centred (top 50%, translate -50%).
-GActionSheet / every GModal caller — same-root by inheritance (one component).
-Phone (<1024px) — not-affected: live at 390x844 still a bottom sheet (y=707).
+frontend/src/components/RequestBalances.vue — same-root, fixed here: holds its place with skeletons (grid + two rows) on first load. Requests after: 0.058.
+frontend/src/views/Home.vue — not-affected: 0.002 measured.

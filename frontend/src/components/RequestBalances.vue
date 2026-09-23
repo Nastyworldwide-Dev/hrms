@@ -27,6 +27,12 @@
 	<GBanner v-if="requestsSummary.error" variant="error">
 		{{ __("Your balances could not be loaded. Pull down to try again.") }}
 	</GBanner>
+	<!-- First load: hold the strip's place (audit F-12: Requests jumped 0.39
+	     when it appeared and pushed everything below it down). -->
+	<div v-else-if="firstLoad" class="flex flex-col gap-4" aria-hidden="true">
+		<GBalanceGrid loading :cells="4" />
+		<GListPanel loading :rows="2" />
+	</div>
 	<div v-else-if="hasAnything" class="flex flex-col gap-4">
 		<GBalanceGrid
 			v-if="shownLeave.length"
@@ -106,6 +112,7 @@ const $dayjs = inject("$dayjs")
 const router = useRouter()
 
 const loading = computed(() => Boolean(requestsSummary.loading))
+const firstLoad = computed(() => requestsSummary.loading && !requestsSummary.data)
 const data = computed(() => requestsSummary.data || {})
 const leave = computed(() => data.value.leave || [])
 //: Four cards fit a phone without wrapping; seven do not. Measured against
