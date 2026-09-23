@@ -77,7 +77,7 @@ import GSkeleton from "@/components/glass/GSkeleton.vue"
 import ResourceError from "@/components/ResourceError.vue"
 
 import { daySheet } from "@/data/calendar"
-import { dayAction, hoursAsTime, tapWord } from "@/utils/daySheet"
+import { dayAction, hoursAsTime, tapWord, clockTime } from "@/utils/daySheet"
 
 const props = defineProps({
 	open: { type: Boolean, default: false },
@@ -111,7 +111,7 @@ const shiftLine = computed(() => {
 	if (!day) return ""
 	if (day.status === "Holiday") return __("Rest day")
 	if (!day.shift) return __("No shift")
-	return `${day.shift.shift} · ${trimSeconds(day.shift.start)}–${trimSeconds(day.shift.end)}`
+	return `${day.shift.shift} · ${clockTime(day.shift.start)}–${clockTime(day.shift.end)}`
 })
 
 //: "8h 02m worked · 1h 30m overtime" — time, not decimals (D11).
@@ -129,10 +129,6 @@ function punchLabel(punch) {
 	const word = tapWord(punch.log_type)
 	const time = $dayjs(punch.time).format("HH:mm")
 	return word ? `${__(word)} ${time}` : time
-}
-
-function trimSeconds(value) {
-	return String(value || "").slice(0, 5)
 }
 
 function fixDay() {

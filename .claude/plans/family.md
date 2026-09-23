@@ -1,12 +1,8 @@
-CLASS: `.fetch().catch()` on a frappe-ui resource. fetch() returns undefined
-when frappe-ui skips a request (already loading, cached), so `.catch` throws a
-TypeError instead of catching. Live audit 23 Sep: Help threw on every open.
+CLASS: a server time cut at five characters. The server sends "9:00:00" for
+a one-digit hour; `.slice(0, 5)` leaves "9:00:" (live audit 23 Sep: day
+sheet "9:00:–18:00").
 
-Call sites (every one found by grep) — all same-root, fixed here with `?.catch?.`:
-frontend/src/views/helpdesk/HelpdeskHub.vue (two, the reported one)
-frontend/src/components/AttendanceCalendar.vue:191
-frontend/src/views/announcements/List.vue:124
-frontend/src/views/ot/OTRequestForm.vue:142
-frontend/src/composables/approvedCancel.js:25
-frontend/src/data/announcements.js:50-51
-Guard: src/utils/__tests__/fetch-may-return-nothing.test.js fails if the pattern returns.
+Call sites (grep `.slice(0, 5)` across frontend/src and hrms/api):
+frontend/src/components/DaySheet.vue trimSeconds — same-root, fixed (clockTime).
+frontend/src/views/team/TeamDashboard.vue formatTime — same-root, fixed (clockTime).
+No other time is cut by position.

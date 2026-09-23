@@ -43,3 +43,12 @@ export function tapWord(logType) {
 	if (logType === "OUT") return "Out"
 	return ""
 }
+
+//: "HH:MM" from a server time, whatever its width. The server sends "9:00:00"
+//: for a one-digit hour; slicing five characters left "9:00:" (live audit,
+//: 23 Sep). Read by value, not by position.
+export function clockTime(value) {
+	const [h, m] = String(value || "").split(":")
+	if (!h || m === undefined) return ""
+	return `${h.padStart(2, "0")}:${m.padStart(2, "0").slice(0, 2)}`
+}

@@ -184,6 +184,7 @@ import { Autocomplete } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 import { useRoute } from "vue-router"
 import { dateFromRoute } from "@/utils/dateFromRoute"
+import { clockTime } from "@/utils/daySheet"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import { teamManagers, teamStatus } from "@/data/team"
@@ -277,8 +278,9 @@ function formatPunch(value) {
 }
 
 function formatTime(value) {
-	// server sends "HH:MM:SS" strings
-	return value ? value.slice(0, 5) : "—"
+	// "9:00:00" for a one-digit hour: read by value, not by position (live
+	// audit 23 Sep, the "9:00:" shift time).
+	return clockTime(value) || "—"
 }
 
 function summaryLine(member) {
