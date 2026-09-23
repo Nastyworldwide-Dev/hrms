@@ -168,9 +168,17 @@ class TestLeaveWithZeroBalance(unittest.TestCase):
 
 class TestShiftApproverTableChangedSinceFiling(unittest.TestCase):
 	def _run(self, status, is_new=False, approver_changed=False):
-		fn, frappe = _lift(SHIFT, "ShiftRequest", "validate_approver")
-		frappe.get_value.side_effect = ["Sales", "old.approver@example.com"]
-		frappe.qb.from_.return_value.select.return_value.where.return_value.run.return_value = []
+		# validate_approver reads the employee's designated approvers (the chain,
+		# 5134f4856) and words a refusal with no_approver_message (ab74a7904);
+		# the lifted function needs both, or every filing case raised NameError
+		# instead of the refusal it is testing.
+		fn, _frappe = _lift(
+			SHIFT,
+			"ShiftRequest",
+			"validate_approver",
+			get_designated_approvers=lambda *a: ["old.approver@example.com"],
+			no_approver_message=lambda approvers, picked: f"{picked} is not one of your approvers",
+		)
 		fn(
 			SimpleNamespace(
 				name="HR-SHR-SYNTHETIC",
