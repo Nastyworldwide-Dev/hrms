@@ -87,7 +87,7 @@ test("the sheet token declares dvh with a vh fallback, in that order", () => {
 })
 
 test("only the sheet may resize with the address bar", () => {
-	// §15: the light-field blobs are static and glass surfaces do not resize,
+	// §15: glass surfaces do not resize with the address bar,
 	// because either would force a per-frame recomposition of every layer
 	// above them. A `dvh` anywhere else in the glass layer is exactly that.
 	const offenders = []

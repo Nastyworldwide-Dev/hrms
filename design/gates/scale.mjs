@@ -40,10 +40,10 @@ const GRID_EXEMPT = {
 	"layout.content-column-lg": "720px — signed off by the owner as a measured column width",
 };
 
-//: The decorative background blobs. Their geometry is art direction on a layer
-//: nothing is laid out against, so a grid buys nothing and rounding them moves
-//: the composition. Excluded as a GROUP, deliberately and visibly.
-const EXEMPT_GROUPS = new Set(["field", "blur"]);
+//: Blur radii are optical, not layout: a grid buys nothing. Excluded as a
+//: GROUP, deliberately and visibly. (The background-blob group that used to
+//: sit here is gone with the blobs, owner ruling 23 Sep 2026.)
+const EXEMPT_GROUPS = new Set(["blur"]);
 
 const offGrid = [];
 for (const group of ["spacing", "radius", "layout"]) {

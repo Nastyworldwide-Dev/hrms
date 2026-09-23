@@ -33,7 +33,7 @@ const isHex = (v) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
 const isVal = (v) => (typeof v === "string" && v.trim() !== "") || typeof v === "number";
 const sorted = (obj) => Object.keys(obj).sort();
 
-for (const group of ["color-constant", "color-themed", "color-semantic", "spacing", "radius", "blur", "shadow", "layer", "layout", "field", "icon", "type", "motion"]) {
+for (const group of ["color-constant", "color-themed", "color-semantic", "spacing", "radius", "blur", "shadow", "layer", "layout", "icon", "type", "motion"]) {
 	if (!tokens[group] || typeof tokens[group] !== "object") bad(group, "missing group");
 }
 if (errors.length) die();
@@ -48,7 +48,7 @@ for (const group of ["color-themed", "color-semantic"]) {
 			bad(`${group}.${name}`, "value must be { light, dark }");
 	}
 }
-for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "field", "icon"]) {
+for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "icon"]) {
 	for (const name of sorted(tokens[group])) {
 		if (!isVal(tokens[group][name].value)) bad(`${group}.${name}`, "value must be a non-empty string");
 	}
@@ -146,12 +146,12 @@ for (const group of ["color-themed", "color-semantic"]) {
 	}
 }
 
-for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "field", "icon"]) {
+for (const group of ["spacing", "radius", "blur", "shadow", "layer", "layout", "icon"]) {
 	light.push(`\t/* ${group} */`);
 	// shadow and layer names take the group prefix (--g-shadow-action,
 	// --g-layer-scrim); the rest already carry theirs (radius-panel,
 	// blur-ghost) or read fine bare
-	const prefixed = group === "shadow" || group === "layer" || group === "field";
+	const prefixed = group === "shadow" || group === "layer";
 	for (const name of sorted(tokens[group])) {
 		const token = tokens[group][name];
 		const key = prefixed ? `${group}-${name}` : name;
@@ -209,7 +209,7 @@ const RENAME = {
 	ink2: "ink-2",
 	ink3: "ink-3",
 };
-const NON_COLOR_THEMED = new Set(["lift", "blob-opacity"]); // shadow / opacity, mapped below
+const NON_COLOR_THEMED = new Set(["lift"]); // shadow / opacity, mapped below
 
 const colors = {};
 const nonTriplet = []; // rgba()-based tokens: plain var(), no opacity modifier — reported
@@ -295,7 +295,6 @@ const fragment = {
 	fontFamily,
 	fontSize,
 	maxWidth,
-	opacity: { blob: "var(--g-blob-opacity)" },
 	spacing,
 	transitionDuration,
 	transitionTimingFunction,

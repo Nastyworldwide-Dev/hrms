@@ -14,9 +14,9 @@
 // top-left corner, fading out by 40% across it. The first tile lost the
 // contrast; the rest kept it.
 //
-// The page-level twin of this bug was already understood and fixed — see
-// `.g-lightfield` (z-index 0) with `.g-page ion-content` lifted to z-index 1.
-// The panel-level one was never wired the same way.
+// The page-level twin (the old light field at z-index 0 under content at 1)
+// was removed with the blobs on 23 Sep 2026. The panel-level one was never
+// wired the same way.
 //
 // Fix: the panel isolates (it already creates a stacking context via
 // backdrop-filter, but not in the @supports fallback), and the gloss sits at

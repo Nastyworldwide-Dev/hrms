@@ -12,75 +12,14 @@
 	touch-action: manipulation;
 }
 
-/* ---------- GLightField (§3) ---------- */
+/* ---------- the page ground ----------
+   No background blobs (owner ruling, 23 Sep 2026; audit APP-19). The three-blob
+   light field that sat here was decoration with no job, doubled the blurred
+   layers during every page push, and needed a contrast gate of its own. */
 
-/* Sits inside the page (§3.2), behind everything, and never takes a pointer.
-   No transform/opacity/filter on THIS element — the blur belongs on the blobs,
-   because a filter on the container would make the container a backdrop root
-   and cut the glass off from the very field it is meant to blur.
-
-   NAMED .g-lightfield, NOT .g-field. It was .g-field until 8.1, colliding with
-   the GInput/GTextarea wrapper of the same name 700 lines below. The wrapper
-   overrode only `display` and `width`, so `position: absolute`, `inset: 0` and
-   `pointer-events: none` still landed on every form field in the app: controls
-   rendered at the page's top-left corner and could not be clicked at all. The
-   login form was unusable. Two components must never share a class name. */
-.g-lightfield {
-	/* ABSOLUTE against ion-page (Track B). This has now been wrong in BOTH
-	   directions, and the missing invariant explains both:
-
-	     pre-8.18   field per page, pages transparent -> three fields painted
-	                through each other during a push;
-	     8.18       ONE fixed field on ion-app, pages transparent -> during any
-	                push the incoming page bled the outgoing page through
-	                itself. An operator screenshotted Home and Profile
-	                composited as a double exposure.
-
-	   The invariant is that a ROUTED PAGE MUST BE OPAQUE — Ionic stacks live
-	   pages during transitions, and any transparency in the page surface turns
-	   every push into a cross-fade of unrelated screens. So .g-page owns an
-	   opaque ground below, the field lives inside each page again, and the top
-	   page occludes everything under it: exactly one field visible, ever.
-
-	   Anchored to ion-page, which does not scroll (ion-content scrolls
-	   internally) — so 8.18's side-benefit survives: the blobs stay put while
-	   the notifications list scrolls. */
-	position: absolute;
-	inset: 0;
-	z-index: 0;
-	overflow: hidden;
-	pointer-events: none;
-	contain: paint; /* clip the blobs without creating a backdrop root */
-}
-.g-lightfield__blob {
-	position: absolute;
-	border-radius: 50%;
-	filter: blur(var(--g-field-blur));
-	opacity: var(--g-blob-opacity);
-}
-.g-lightfield__blob--a {
-	width: var(--g-field-blob-a-size);
-	height: var(--g-field-blob-a-size);
-	top: var(--g-field-blob-a-top);
-	left: var(--g-field-blob-a-left);
-	background: radial-gradient(circle, var(--g-field-blob-a-color), transparent 70%);
-}
-.g-lightfield__blob--b {
-	width: var(--g-field-blob-b-size);
-	height: var(--g-field-blob-b-size);
-	bottom: var(--g-field-blob-b-bottom);
-	right: var(--g-field-blob-b-right);
-	background: radial-gradient(circle, var(--g-field-blob-b-color), transparent 70%);
-}
-.g-lightfield__blob--c {
-	width: var(--g-field-blob-c-size);
-	height: var(--g-field-blob-c-size);
-	bottom: var(--g-field-blob-c-bottom);
-	left: var(--g-field-blob-c-left);
-	background: radial-gradient(circle, var(--g-field-blob-c-color), transparent 70%);
-}
-
-/* The page ground. Opaque, always — see the invariant on .g-lightfield above.
+/* The page ground. Opaque, always: Ionic keeps the outgoing page alive during
+   a transition, and any transparency in the page surface turns every push into
+   a cross-fade of unrelated screens (the 8.18 double exposure).
    ion-content stays transparent so the page's own field shows through it
    (§16.3 — Ionic is themed through published custom properties only), and the
    opacity lives one level up on the page frame itself.
@@ -149,35 +88,6 @@ ion-tabs .g-page ion-content.ion-no-padding {
 	position: relative;
 	z-index: 1;
 }
-
-/* §20.4 — at lg: the field spans the page frame (viewport-sized), not the
-   content column, and the blobs scale with it. Centres stay outside the
-   column (§3.3). */
-@media (min-width: 1024px) {
-	/* Size AND origin scale together. Scaling only the size — which is how 4.1
-	   first wrote this — grows the blob while its origin stays put, so the
-	   centre marches into the content column and §3.3 fails from 1280px up
-	   (measured: dark ink-muted 1.08 at 1440). The origin:size ratio is held
-	   at the value solved for mobile, so the clearance scales with the blob. */
-	.g-lightfield__blob--a {
-		width: 32vw;
-		height: 32vw;
-		left: -25.04vw;
-	}
-	.g-lightfield__blob--b {
-		width: 29vw;
-		height: 29vw;
-		right: -22.51vw;
-	}
-	.g-lightfield__blob--c {
-		width: 25vw;
-		height: 25vw;
-		left: -19.03vw;
-	}
-}
-
-/* §3.1 is not negotiable, and reduced motion must not be the only thing
-   holding it: there is no animation here to suppress. */
 
 /* ---------- tab bar (§10.1 #8, §13.1, §15.3) ---------- */
 
@@ -371,8 +281,6 @@ html[data-transparency="reduce"] .g-sidenav {
    tile of every glass panel lost its contrast and the rest kept it. An
    employee reported it about her own leave balance: "annual leave tu nape dia
    mcm samar samar".
-   The page-level twin was already wired this way — .g-lightfield sits at
-   z-index 0 with .g-page ion-content lifted to 1.
    For the next person: `isolation: isolate` above makes the panel a stacking
    context unconditionally, so a CHILD you also give `z-index: -1` would tie
    with this gloss and lose on document order — the gloss paints last and would

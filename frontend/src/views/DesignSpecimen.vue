@@ -10,8 +10,6 @@
 			<GPullRefresh @refresh="onRefresh" />
 
 			<div class="spec">
-				<GLightField />
-
 				<header class="spec__head">
 					<h1 class="spec__title">Glass specimens</h1>
 					<div class="spec__toggles">
@@ -451,7 +449,6 @@ import GFileUpload from "@/components/glass/GFileUpload.vue"
 import GLinkPicker from "@/components/glass/GLinkPicker.vue"
 import GDatePicker from "@/components/glass/GDatePicker.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
-import GLightField from "@/components/glass/GLightField.vue"
 import { gToast } from "@/components/glass/toast"
 
 const statuses = [
@@ -544,19 +541,6 @@ function log(name) {
 	padding: var(--g-screen-gutter);
 	padding-bottom: 40px;
 	background: var(--g-bg);
-}
-/* a static stand-in for the §3 light field so blur has something to show */
-.spec__field {
-	position: absolute;
-	inset: 0;
-	background: radial-gradient(
-			280px 280px at 85% 8%,
-			rgba(var(--g-brand-rgb) / 0.5),
-			transparent 70%
-		),
-		radial-gradient(300px 300px at 8% 40%, rgba(var(--g-leave-rgb) / 0.35), transparent 70%);
-	opacity: var(--g-blob-opacity);
-	pointer-events: none;
 }
 .spec__head,
 .spec__section {

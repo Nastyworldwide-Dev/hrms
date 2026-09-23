@@ -27,7 +27,6 @@
 	--g-accent-ink-rgb: 63 92 0;
 	--g-bg: #EDEFF3;
 	--g-bg-rgb: 237 239 243;
-	--g-blob-opacity: 0.62;
 	--g-glass-fill: rgba(255,255,255,.56);
 	--g-glass-fill-fallback: rgba(255,255,255,.92);
 	--g-glass-rim: rgba(255,255,255,.90);
@@ -109,20 +108,6 @@
 	--g-viewport-floor: 320px;
 	--g-viewport-height: 844px;
 	--g-viewport-width: 390px;
-	/* field */
-	--g-field-blob-a-color: rgba(200,255,0,.72);
-	--g-field-blob-a-left: -180px;
-	--g-field-blob-a-size: 230px;
-	--g-field-blob-a-top: -56px;
-	--g-field-blob-b-bottom: 76px;
-	--g-field-blob-b-color: rgba(0,229,192,.62);
-	--g-field-blob-b-right: -163px;
-	--g-field-blob-b-size: 210px;
-	--g-field-blob-c-bottom: -42px;
-	--g-field-blob-c-color: rgba(123,92,255,.66);
-	--g-field-blob-c-left: -137px;
-	--g-field-blob-c-size: 180px;
-	--g-field-blur: 36px;
 	/* icon */
 	--g-control-lg: 56px;
 	--g-control-md: 44px;
@@ -238,7 +223,6 @@ html[data-theme="dark"] {
 	--g-accent-ink-rgb: 200 255 0;
 	--g-bg: #07070A;
 	--g-bg-rgb: 7 7 10;
-	--g-blob-opacity: 0.85;
 	--g-glass-fill: rgba(255,255,255,.075);
 	--g-glass-fill-fallback: #15171D;
 	--g-glass-rim: rgba(255,255,255,.14);

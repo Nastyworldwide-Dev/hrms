@@ -157,9 +157,6 @@ module.exports = {
 		"content-column-read": "var(--g-content-column-read)",
 		"viewport-width": "var(--g-viewport-width)",
 	},
-	opacity: {
-		blob: "var(--g-blob-opacity)",
-	},
 	spacing: {
 		"control-lg": "var(--g-control-lg)",
 		"control-md": "var(--g-control-md)",
