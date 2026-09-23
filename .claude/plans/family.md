@@ -1,3 +1,3 @@
-CLASS: a sheet with no visible way to close it except the drag.
+CLASS: a fallback timer left running after the event it guards arrived.
 
-Call sites: frontend/src/components/glass/GModal.vue — same-root, fixed (Close in the head). All 16 GModal users (DaySheet, GActionSheet, GConfirm, CheckInPanel, RemoteCheckinDialog, StrictRejectionDialog, LateCheckoutDialog, PushNotificationPrompt, InstallPrompt, InvalidEmployee, Login, ListView, More, TeamRoster, Approvals, DesignSpecimen) render through it — same-root.
+Call sites: frontend/src/components/UpdatePrompt.vue reload() — same-root, fixed. GPullRefresh capTimer — not-affected (complete() on a closed refresher is a no-op, verified in review of e522bada8).

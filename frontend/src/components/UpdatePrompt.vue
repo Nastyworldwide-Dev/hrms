@@ -160,7 +160,9 @@ function reload() {
 	needRefresh.value = false
 	console.info("[update] reloading into the new build")
 	let reloaded = false
+	let fallback = null
 	const once = () => {
+		clearTimeout(fallback)
 		if (reloaded) return
 		reloaded = true
 		window.location.reload()
@@ -168,7 +170,7 @@ function reload() {
 	navigator.serviceWorker?.addEventListener("controllerchange", once, { once: true })
 	swRegistration?.waiting?.postMessage({ type: "SKIP_WAITING" })
 	updateServiceWorker?.(true)
-	setTimeout(() => {
+	fallback = setTimeout(() => {
 		// The new build did not take over. Remember this one as offered, so the
 		// next load does not ask again for a build that cannot activate (review
 		// of 1526e13bb); a newer build is a new id and is offered normally.

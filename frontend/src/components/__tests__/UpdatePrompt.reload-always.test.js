@@ -36,3 +36,11 @@ test("a build that never takes over is not offered again and again", () => {
 test("a double tap reloads once", () => {
 	assert.match(source, /if \(reloading\) return\s*\n\s*reloading = true/)
 })
+
+// Review note (P2-7): when the new build takes over, the fallback timer must
+// not still fire and mark that build as "offered but failed".
+test("a takeover cancels the fallback timer", () => {
+	const src = readFileSync(fileURLToPath(new URL("../UpdatePrompt.vue", import.meta.url)), "utf8")
+	assert.match(src, /fallback = setTimeout\(/)
+	assert.match(src, /const once = \(\) => \{[^}]*clearTimeout\(fallback\)/)
+})
