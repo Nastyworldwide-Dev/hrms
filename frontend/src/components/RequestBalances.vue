@@ -100,6 +100,7 @@
 </template>
 
 <script setup>
+import { formatCurrency } from "@/utils/formatters"
 import { computed, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { CircleDollarSign, Receipt, UserCheck } from "lucide-vue-next"
@@ -158,9 +159,9 @@ function formatDate(value) {
 }
 
 function money(amount, currency) {
-	// The currency comes from the claims themselves. Without one the number is
-	// still the useful part — an employee knows what they spend in.
-	return currency ? `${currency} ${Number(amount).toFixed(2)}` : Number(amount).toFixed(2)
+	// The app's one money formatter: "RM 50", the symbol, not the code (live
+	// audit 23 Sep: "INR 50.00" here while every other screen said "RM").
+	return currency ? formatCurrency(amount, currency) : Number(amount).toFixed(2)
 }
 
 //: Everything that is not a leave balance: three counters, each a door into

@@ -1,8 +1,6 @@
-CLASS: a server time cut at five characters. The server sends "9:00:00" for
-a one-digit hour; `.slice(0, 5)` leaves "9:00:" (live audit 23 Sep: day
-sheet "9:00:–18:00").
+CLASS: money printed by hand as "{CODE} {amount}" instead of through the
+app formatter (symbol). Live audit 23 Sep: "INR 50.00" on Requests while other
+screens print the symbol.
 
-Call sites (grep `.slice(0, 5)` across frontend/src and hrms/api):
-frontend/src/components/DaySheet.vue trimSeconds — same-root, fixed (clockTime).
-frontend/src/views/team/TeamDashboard.vue formatTime — same-root, fixed (clockTime).
-No other time is cut by position.
+Call sites (grep for `${currency} ${` in frontend/src): RequestBalances money() — same-root, fixed (formatCurrency). No other.
+Note: fresh.local test company is INR; the live company is MYR, which prints "RM".

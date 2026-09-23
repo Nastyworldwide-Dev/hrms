@@ -29,3 +29,10 @@ test("the first load holds its place with a skeleton grid", () => {
 test("a screen reader is told the balances are loading", () => {
 	assert.match(template, /role="status">\{\{ __\("Loading your balances"\) \}\}/)
 })
+
+test("money reads the way the rest of the app prints it (symbol, not code)", () => {
+	// Live audit 23 Sep: "INR 50.00" here, "RM" on Help and claims. This row
+	// printed the currency CODE by hand; the app's formatter prints the symbol.
+	assert.match(source, /formatCurrency\(/)
+	assert.doesNotMatch(source, /`\$\{currency\} \$\{Number\(amount\)\.toFixed\(2\)\}`/)
+})
