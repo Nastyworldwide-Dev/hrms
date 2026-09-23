@@ -15,8 +15,14 @@ test("each tab ends at its last field", () => {
 		{ name: "One", lastField: "b" },
 		{ name: "Two", lastField: "d" },
 	])
-	assert.deepEqual(out.One.map((x) => x.fieldname), ["a", "b"])
-	assert.deepEqual(out.Two.map((x) => x.fieldname), ["c", "d"])
+	assert.deepEqual(
+		out.One.map((x) => x.fieldname),
+		["a", "b"]
+	)
+	assert.deepEqual(
+		out.Two.map((x) => x.fieldname),
+		["c", "d"]
+	)
 })
 
 test("a tab whose last field is not in the list keeps every remaining field", () => {
@@ -34,10 +40,55 @@ test("a missing boundary on a later tab does not swallow or repeat earlier field
 		{ name: "One", lastField: "a" },
 		{ name: "Two", lastField: "gone" },
 	])
-	assert.deepEqual(out.One.map((x) => x.fieldname), ["a"])
-	assert.deepEqual(out.Two.map((x) => x.fieldname), ["b", "c"])
+	assert.deepEqual(
+		out.One.map((x) => x.fieldname),
+		["a"]
+	)
+	assert.deepEqual(
+		out.Two.map((x) => x.fieldname),
+		["b", "c"]
+	)
 })
 
 test("no tabs gives no groups", () => {
 	assert.deepEqual(splitFieldsByTab(f("a"), undefined), {})
+})
+
+test("a missing boundary on a middle tab never empties the tabs after it", () => {
+	const out = splitFieldsByTab(f("a", "b", "c", "d"), [
+		{ name: "One", lastField: "a" },
+		{ name: "Two", lastField: "gone" },
+		{ name: "Three", lastField: "d" },
+	])
+	assert.deepEqual(
+		out.Three.map((x) => x.fieldname),
+		["b", "c", "d"]
+	)
+})
+
+test("every field lands in exactly one tab, whatever the boundaries", () => {
+	const fields = f("a", "b", "c", "d", "e")
+	const shapes = [
+		[
+			{ name: "1", lastField: "x" },
+			{ name: "2", lastField: "y" },
+			{ name: "3", lastField: "z" },
+		],
+		[
+			{ name: "1", lastField: "c" },
+			{ name: "2", lastField: "a" },
+			{ name: "3", lastField: "e" },
+		],
+		[
+			{ name: "1", lastField: "b" },
+			{ name: "2", lastField: "x" },
+		],
+	]
+	for (const tabs of shapes) {
+		const all = Object.values(splitFieldsByTab(fields, tabs)).flat()
+		assert.deepEqual(
+			all.map((x) => x.fieldname),
+			["a", "b", "c", "d", "e"]
+		)
+	}
 })

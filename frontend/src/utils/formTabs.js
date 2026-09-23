@@ -4,19 +4,26 @@
 // A boundary that is not in the list (filtered out by a screen's allowlist,
 // renamed in Desk) used to produce findIndex -1 and an EMPTY tab: on 22 Sep the
 // expense form lost `taxes` and every new claim rendered no fields at all
-// (audit P0-1). A missing boundary now closes the tab at the end of the list,
-// so a tab can lose its edge but never its fields.
+// (audit P0-1). Now a tab whose boundary is missing (or points backwards)
+// takes the rest of the list when no later tab has a real boundary, and
+// otherwise yields to the next tab that does. Every field lands in exactly one
+// tab, and a missing boundary can never empty the tabs after it.
 export function splitFieldsByTab(fields, tabs) {
+	const list = tabs || []
+	const ends = list.map(
+		(tab) => fields.findIndex((field) => field.fieldname === tab.lastField) + 1
+	)
 	const byTab = {}
 	let start = 0
-	for (const tab of tabs || []) {
-		const found = fields.findIndex((field) => field.fieldname === tab.lastField)
-		if (found === -1) {
+	list.forEach((tab, i) => {
+		let end = ends[i]
+		if (end <= start) {
 			console.warn("[formTabs] tab boundary not in the field list", tab.name, tab.lastField)
+			const laterIsReal = ends.slice(i + 1).some((later) => later > start)
+			end = laterIsReal ? start : fields.length
 		}
-		const end = found === -1 || found < start ? fields.length : found + 1
 		byTab[tab.name] = fields.slice(start, end)
 		start = end
-	}
+	})
 	return byTab
 }
