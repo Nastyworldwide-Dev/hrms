@@ -9,54 +9,56 @@
 				`g-field__label`,
 			]"
 		>
-			{{ props.label }}
+			{{ label }}
 		</span>
 
-		<!-- Select or Link field with predefined options.
-			 Wrapped in .g-linkfield rather than swapped for GLinkPicker: the
-			 wrapper is what carries the glass skin (frappe-ui's Autocomplete
-			 hardcodes a 28px trigger — see the CSS), and wrapping leaves the
-			 v?.value unwrapping and Link.vue's remote-search binding exactly
-			 as they were. GLinkPicker gets the same class, so adopting it
-			 later is a drop-in rather than a re-style. -->
-		<div v-if="props.fieldtype === 'Select' || props.documentList" class="g-linkfield">
-			<Autocomplete
-				:class="isReadOnly ? 'pointer-events-none' : ''"
-				:placeholder="__('Select {0}', [props.label])"
-				:options="selectionList"
-				:modelValue="modelValue"
-				v-bind="$attrs"
-				:disabled="isReadOnly"
-				@update:modelValue="(v) => emit('update:modelValue', v?.value)"
-			/>
-		</div>
-
-		<!-- Link field -->
-		<div v-else-if="props.fieldtype === 'Link'" class="g-linkfield">
-			<Link
-				:doctype="props.options"
-				:modelValue="modelValue"
-				:filters="props.linkFilters"
-				:disabled="isReadOnly"
-				@update:modelValue="(v) => emit('update:modelValue', v)"
-			/>
-		</div>
-
-		<TextEditor
-			v-else-if="props.fieldtype === 'Text Editor'"
-			:content="modelValue"
-			:placeholder="__('Enter {0}', [props.label])"
-			@change="(v) => emit('update:modelValue', v)"
-			:fixedMenu="true"
-			:editable="!isReadOnly"
-			editor-class="prose-sm border-b border-x border-gray-200 rounded-b-sm p-1 min-h-16"
+		<!-- Select, or a Link with a fixed option list (documentList): a native
+			 <select> in the Glass skin — the phone's own picker, not frappe-ui's
+			 Autocomplete (the grey "Select Leave Type" box). No placeholder
+			 words: the label above already names the field. -->
+		<GSelect
+			v-if="props.fieldtype === 'Select' || props.documentList"
+			:options="selectionList"
+			:model-value="modelValue"
+			:aria-label="label"
+			v-bind="$attrs"
+			:disabled="isReadOnly"
+			@update:model-value="
+				(v) => {
+					emit('update:modelValue', v)
+					emit('change', v)
+				}
+			"
 		/>
+
+		<!-- Link field: Glass searchable picker (input-skinned trigger + sheet) -->
+		<Link
+			v-else-if="props.fieldtype === 'Link'"
+			:doctype="props.options"
+			:modelValue="modelValue"
+			:filters="props.linkFilters"
+			:disabled="isReadOnly"
+			:aria-label="label"
+			@update:modelValue="(v) => emit('update:modelValue', v)"
+		/>
+
+		<!-- Rich text keeps frappe-ui's TextEditor (nothing native does rich
+			 text); the Glass container supplies the border, fill and radius. -->
+		<div v-else-if="props.fieldtype === 'Text Editor'" class="g-texteditor">
+			<TextEditor
+				:content="modelValue"
+				@change="(v) => emit('update:modelValue', v)"
+				:fixedMenu="true"
+				:editable="!isReadOnly"
+				editor-class="prose-sm p-2 min-h-16"
+			/>
+		</div>
 
 		<!-- Text -->
 		<GTextarea
 			v-else-if="['Small Text', 'Text', 'Long Text'].includes(props.fieldtype)"
 			:model-value="modelValue"
-			:placeholder="__('Enter {0}', [props.label])"
+			:aria-label="label"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
 			@update:model-value="
@@ -67,21 +69,16 @@
 			"
 		/>
 
-		<!-- Check. g-checkfield expands the 16x16 box to a §14.1 target without
-		     resizing the tick itself — frappe-ui renders a 16px input and does
-		     not forward a class to it, so the theme reaches it by descendant. -->
-		<div v-else-if="props.fieldtype === 'Check'" class="g-checkfield">
-			<Input
-				type="checkbox"
-				:label="props.label"
-				:value="modelValue"
-				@input="(v) => emit('update:modelValue', v)"
-				@change="(v) => emit('change', v)"
-				v-bind="$attrs"
-				:disabled="isReadOnly"
-				class="text-accent-ink"
-			/>
-		</div>
+		<!-- Check: native checkbox; the whole labelled row is the 44px target -->
+		<GCheckbox
+			v-else-if="props.fieldtype === 'Check'"
+			:label="label"
+			:model-value="modelValue"
+			v-bind="$attrs"
+			:disabled="isReadOnly"
+			@update:model-value="(v) => emit('update:modelValue', v)"
+			@change="(v) => emit('change', v)"
+		/>
 
 		<!-- Data field -->
 		<GInput
@@ -134,20 +131,18 @@
 		>
 			<hr v-if="props.addSectionPadding" class="h-px border-0 bg-hair mb-3" />
 			<h2 v-if="props.label" class="g-eyebrow">
-				{{ props.label }}
+				{{ label }}
 			</h2>
 		</div>
 
-		<!-- Date. Was a raw native <input type="date">, flagged FIXME "poor UI"
-			 by whoever wrote it — GDatePicker already existed (skins frappe-ui's
-			 real DatePicker popover) but had never been wired into a live form,
-			 only the design specimen page. min/maxDate are forwarded for parity
-			 with the old input's :min/:max, though nothing in this app's backend
-			 has ever populated field.minDate/maxDate on any doctype. -->
+		<!-- Date: GDatePicker is a native <input type="date"> in the Glass skin —
+			 the phone's own date wheel. min/maxDate forward to min/max, though
+			 nothing in this app's backend has ever populated
+			 field.minDate/maxDate on any doctype. -->
 		<GDatePicker
 			v-else-if="props.fieldtype === 'Date'"
 			:model-value="modelValue"
-			:placeholder="__('Select {0}', [props.label])"
+			:aria-label="label"
 			:disabled="isReadOnly"
 			:min-date="props.minDate"
 			:max-date="props.maxDate"
@@ -164,11 +159,11 @@
 			 time UI is the proven, accessible choice here (frappe-ui ships no
 			 time-only widget). Routed through GInput so it gets the same glass
 			 token styling as every other field, replacing the hardcoded
-			 `border-gray-400` that never adapted to dark mode. -->
+			 hardcoded grey border that never adapted to dark mode. -->
 		<GInput
 			v-else-if="props.fieldtype === 'Time'"
 			type="time"
-			:aria-label="props.label"
+			:aria-label="label"
 			:model-value="modelValue"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
@@ -180,11 +175,11 @@
 			"
 		/>
 
-		<!-- Datetime -->
+		<!-- Datetime: native datetime-local, converted to Frappe's format -->
 		<GDateTimePicker
 			v-else-if="props.fieldtype === 'Datetime'"
 			:model-value="modelValue"
-			:placeholder="__('Select {0}', [props.label])"
+			:aria-label="label"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
 			@update:model-value="
@@ -195,7 +190,7 @@
 			"
 		/>
 
-		<ErrorMessage :message="props.errorMessage" />
+		<p v-if="props.errorMessage" class="g-field-error" role="alert">{{ props.errorMessage }}</p>
 	</div>
 </template>
 
@@ -204,7 +199,10 @@ import GTextarea from "@/components/glass/GTextarea.vue"
 import GInput from "@/components/glass/GInput.vue"
 import GDatePicker from "@/components/glass/GDatePicker.vue"
 import GDateTimePicker from "@/components/glass/GDateTimePicker.vue"
-import { Autocomplete, ErrorMessage, Input, TextEditor } from "frappe-ui"
+import GSelect from "@/components/glass/GSelect.vue"
+import GCheckbox from "@/components/glass/GCheckbox.vue"
+import { TextEditor } from "frappe-ui"
+import { sentenceCase } from "@/utils/sentenceCase"
 import { computed, onMounted, inject } from "vue"
 
 import Link from "@/components/Link.vue"
@@ -237,6 +235,10 @@ const props = defineProps({
 
 const emit = defineEmits(["change", "update:modelValue"])
 const dayjs = inject("$dayjs")
+
+// the doctype label as the server sends it, translated, then sentence case
+// ("Leave Type" -> "Leave type"; acronyms like HR/OT/ID stay capital)
+const label = computed(() => sentenceCase(props.label ? __(props.label) : ""))
 
 const isLayoutField = computed(() => {
 	return ["Section Break", "Column Break"].includes(props.fieldtype)

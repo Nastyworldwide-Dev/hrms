@@ -1,50 +1,49 @@
 <!--
   GDatePicker — date field (spec §10.3 treatment list).
 
-  DECISION: skins frappe-ui's **DatePicker**; does NOT build on GCalendar.
+  DECISION (alpha.5): a native <input type="date"> in the Glass input skin.
+  It used to skin frappe-ui's DatePicker, which still showed the old grey box
+  ("Select From Date") on the owner's New Leave Application screenshot. The
+  platform picker is the Apple HIG answer on phones — the iOS/Android date
+  wheel, locale-aware, accessible, no popover to fight Ionic's focus trap.
+  GCalendar stays a separate DISPLAY component (§10.2 #18), as before.
 
-  Two reasons. First, GCalendar is an attendance DISPLAY — a month grid whose
-  cells carry present/leave/rest state colours and a legend (§10.2 #18). A
-  picker needs selection, month navigation, keyboard traversal, parsing and
-  range handling; bolting those onto a display component produces one component
-  doing two jobs badly, and every §10.2 #18 change would then risk the date
-  fields. Second, DatePicker ships in the installed 0.1.105 (unlike Combobox —
-  see GLinkPicker), so this costs a skin rather than a date library.
-
-  GCalendar and GDatePicker therefore stay separate on purpose: same month-grid
-  shape, different jobs.
-
-  Props:
-    modelValue  string — ISO date
-    label       string — field label, uppercase like GInput's
-    placeholder string
-    disabled    boolean — forwarded as frappe-ui DatePicker's `readonly`
-                (its real prop; it has no `disabled`, and `readonly` is what
-                actually gates the popover open — see its @focus handler).
-                Kept as `disabled` here so every G* form field shares one
-                name for "can't edit this."
-  Emits: update:modelValue
+  Props (unchanged, so callers did not move):
+    modelValue  string — ISO date "YYYY-MM-DD"
+    label       string — visible field label
+    placeholder string — native date inputs draw their own blank; kept for API
+                parity and forwarded as the accessible description only
+    disabled    boolean
+    minDate / maxDate  string — ISO dates, forwarded to min/max
+  Emits: update:modelValue ("YYYY-MM-DD", or "" when cleared)
 -->
 <template>
-	<div class="g-field g-datefield">
+	<label class="g-field g-datefield">
 		<span v-if="label" class="g-field__label">{{ label }}</span>
-		<DatePicker
-			:model-value="modelValue"
-			:placeholder="placeholder"
-			:readonly="disabled"
-			@update:model-value="$emit('update:modelValue', $event)"
+		<input
+			type="date"
+			class="g-input g-focusable"
+			:value="toDateInput(modelValue)"
+			:min="minDate || undefined"
+			:max="maxDate || undefined"
+			:disabled="disabled"
+			:aria-label="!label ? ariaLabel || placeholder || undefined : undefined"
+			@change="$emit('update:modelValue', $event.target.value)"
 		/>
-	</div>
+	</label>
 </template>
 
 <script setup>
-import { DatePicker } from "frappe-ui"
+import { toDateInput } from "@/utils/datetimeInput"
 
 defineProps({
 	modelValue: { type: String, default: "" },
 	label: { type: String, default: "" },
+	ariaLabel: { type: String, default: "" },
 	placeholder: { type: String, default: "" },
 	disabled: { type: Boolean, default: false },
+	minDate: { type: String, default: "" },
+	maxDate: { type: String, default: "" },
 })
 defineEmits(["update:modelValue"])
 </script>

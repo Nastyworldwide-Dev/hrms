@@ -370,14 +370,10 @@
 				</section>
 
 				<section class="spec__section">
-					<h2 class="spec__label">GLINKPICKER / GDATEPICKER (§10.3) — frappe-ui 0.1.105</h2>
-					<GLinkPicker
-						v-model="link"
-						:options="linkOptions"
-						label="Approver"
-						placeholder="Search employees"
-					/>
-					<GDatePicker v-model="date" label="Date worked" placeholder="Select a date" />
+					<h2 class="spec__label">GSELECT / GDATEPICKER (§10.3) — native controls</h2>
+					<GSelect v-model="link" :options="linkOptions" label="Approver" />
+					<GDatePicker v-model="date" label="Date worked" />
+					<GSwitch v-model="switchOn" label="Notifications" />
 				</section>
 
 				<section class="spec__section">
@@ -388,7 +384,7 @@
 							Ionic's focus trap is worked around here exactly as CustomIonModal does it — an
 							autocomplete inside this sheet stays usable.
 						</p>
-						<GLinkPicker v-model="link" :options="linkOptions" label="Reassign to" />
+						<GSelect v-model="link" :options="linkOptions" label="Reassign to" />
 					</GModal>
 				</section>
 
@@ -447,7 +443,8 @@ import GSearchBar from "@/components/glass/GSearchBar.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"
 import GDataTable from "@/components/glass/GDataTable.vue"
 import GFileUpload from "@/components/glass/GFileUpload.vue"
-import GLinkPicker from "@/components/glass/GLinkPicker.vue"
+import GSelect from "@/components/glass/GSelect.vue"
+import GSwitch from "@/components/glass/GSwitch.vue"
 import GDatePicker from "@/components/glass/GDatePicker.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 import { gToast } from "@/components/glass/toast"
@@ -499,7 +496,8 @@ function onSheetSelect(key) {
 	sheetOpen.value = false
 }
 const search = ref("")
-const link = ref(null)
+const link = ref("")
+const switchOn = ref(false)
 const date = ref("")
 const linkOptions = [
 	{ label: "Siti Rahman", value: "HR-EMP-0001" },
