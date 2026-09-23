@@ -65,6 +65,13 @@ test("Back pressed while the sheet is still opening leaves nothing behind", asyn
 	await page.goBack()
 	await page.waitForTimeout(800)
 	await expectNoSheetLeft(page)
+	// The page the sheet froze must be free when you come back to it.
+	await page
+		.locator("ion-tab-button[id='tab-button-/dashboard/attendance']")
+		.evaluate((el) => el.click())
+	await expect(page).toHaveURL(/dashboard\/attendance/)
+	await page.waitForTimeout(400)
+	expect(await page.locator(".ion-page[inert]").count()).toBe(0)
 })
 
 test("focus stays inside an open sheet", async ({ browser }) => {
@@ -80,4 +87,7 @@ test("focus stays inside an open sheet", async ({ browser }) => {
 	expect(inside).toBe(true)
 	await page.keyboard.press("Escape")
 	await expectNoSheetLeft(page)
+	// Focus comes back to the day that opened the sheet.
+	const back = await page.evaluate(() => document.activeElement?.classList.contains("g-cal__day"))
+	expect(back).toBe(true)
 })
