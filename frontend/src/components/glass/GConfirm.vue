@@ -15,6 +15,8 @@
     cancelLabel  string, default "Cancel"
     destructive  boolean — the confirm action deletes or cancels something
     pending      boolean — §11.4: the server has been asked and has not answered
+    confirmDisabled boolean — the confirm cannot be taken yet (e.g. a required
+                 reason is still empty)
   Emits:
     confirm      — the confirm action was taken
     cancel       — dismissed, by button, backdrop or escape. Wire this to close.
@@ -26,12 +28,14 @@
 		<p class="g-confirm__body">
 			<slot />
 		</p>
+		<slot name="extra" />
 
 		<div class="g-confirm__actions">
 			<GGhostButton :label="cancelLabel" @click="$emit('cancel')" />
 			<GButton
 				:label="confirmLabel"
 				:pending="pending"
+				:disabled="confirmDisabled"
 				:class="destructive ? 'g-confirm__destructive' : undefined"
 				@click="$emit('confirm')"
 			/>
@@ -51,6 +55,7 @@ defineProps({
 	cancelLabel: { type: String, default: "Cancel" },
 	destructive: { type: Boolean, default: false },
 	pending: { type: Boolean, default: false },
+	confirmDisabled: { type: Boolean, default: false },
 })
 defineEmits(["confirm", "cancel"])
 </script>

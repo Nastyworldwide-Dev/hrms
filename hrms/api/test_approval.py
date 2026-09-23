@@ -580,3 +580,133 @@ class TestDeskApprovedCancelWiring(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestRejectionCarriesAReason(unittest.TestCase):
+	"""Audit P0-10: an approver could reject with no reason, so the employee
+	never learned why and had nothing to act on. A rejection now requires a
+	reason, stored as a Comment on the request (no schema change), which the
+	employee's own request shows. Approving needs none."""
+
+	APPROVER = "manager@example.com"
+
+	@classmethod
+	def setUpClass(cls):
+		import sys
+		from unittest.mock import MagicMock, patch
+
+		sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests"))
+		import _erpnext_stub
+		import _frappe_stub
+
+		_frappe_stub.install()
+		_erpnext_stub.install()
+		import frappe
+
+		from hrms.api import approval
+
+		cls.frappe, cls.approval, cls.MagicMock, cls.patch = frappe, approval, MagicMock, patch
+
+	def _decide(self, status, reason=None):
+		frappe, approval = self.frappe, self.approval
+		doc = frappe._dict(
+			doctype="Leave Application",
+			name="HR-LAP-0002",
+			docstatus=0,
+			status="Open",
+			employee="HR-EMP-STAFF",
+			modified="2026-09-23 10:00:00",
+			flags=frappe._dict(),
+		)
+		doc.get = lambda key, default=None: doc[key] if key in doc else default
+		doc.set = lambda key, value: doc.__setitem__(key, value)
+		doc.submit = lambda: doc.update(docstatus=1)
+		inserted = []
+
+		def new_doc(values):
+			record = frappe._dict(values)
+			record.insert = lambda ignore_permissions=False: inserted.append(dict(values))
+			return record
+
+		db = self.MagicMock()
+		db.exists.return_value = True
+		db.get_value.return_value = 0
+		patch = self.patch
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(
+				frappe,
+				"get_doc",
+				side_effect=lambda *a, **k: new_doc(a[0]) if a and isinstance(a[0], dict) else doc,
+			),
+			patch.object(frappe, "session", frappe._dict(user=self.APPROVER)),
+			patch.object(approval, "_decision_access", return_value="routed"),
+		):
+			approval.decide(doc.doctype, doc.name, status, reason=reason)
+		return doc, inserted
+
+	def test_rejecting_without_a_reason_is_refused(self):
+		for empty in (None, "", "   "):
+			with self.assertRaises(self.frappe.ValidationError):
+				self._decide("Rejected", reason=empty)
+
+	def test_the_reason_is_stored_on_the_request_for_the_employee(self):
+		doc, inserted = self._decide("Rejected", reason="  Kitchen already short that week  ")
+		self.assertEqual(doc.docstatus, 1)
+		self.assertEqual(len(inserted), 1)
+		comment = inserted[0]
+		self.assertEqual(comment["doctype"], "Comment")
+		self.assertEqual(comment["reference_doctype"], "Leave Application")
+		self.assertEqual(comment["reference_name"], "HR-LAP-0002")
+		self.assertEqual(comment["content"], "Not approved: Kitchen already short that week")
+
+	def test_approving_needs_no_reason_and_writes_none(self):
+		doc, inserted = self._decide("Approved")
+		self.assertEqual(doc.docstatus, 1)
+		self.assertEqual(inserted, [])
+
+
+class TestTheEmployeeReadsTheReason(unittest.TestCase):
+	"""The reason reaches the person it was written for, and nobody else: it is
+	read through the same request-visibility fence as the request itself."""
+
+	@classmethod
+	def setUpClass(cls):
+		import sys
+		from unittest.mock import MagicMock, patch
+
+		sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests"))
+		import _erpnext_stub
+		import _frappe_stub
+
+		_frappe_stub.install()
+		_erpnext_stub.install()
+		import frappe
+
+		from hrms.api import approval
+
+		cls.frappe, cls.approval, cls.MagicMock, cls.patch = frappe, approval, MagicMock, patch
+
+	def _read(self, visible=True, comments=()):
+		frappe, approval = self.frappe, self.approval
+		doc = frappe._dict(doctype="Leave Application", name="HR-LAP-0002", employee="E1")
+		db = self.MagicMock()
+		db.exists.return_value = True
+		with (
+			self.patch.object(frappe, "db", db),
+			self.patch.object(frappe, "get_doc", return_value=doc),
+			self.patch.object(frappe, "get_all", return_value=list(comments), create=True),
+			self.patch.object(approval, "_request_read_allowed", return_value=visible),
+		):
+			return approval.get_rejection_reason("Leave Application", "HR-LAP-0002")
+
+	def test_the_latest_reason_comes_back_without_the_prefix(self):
+		out = self._read(comments=[{"content": "Not approved: kitchen short"}, {"content": "hello"}])
+		self.assertEqual(out, "kitchen short")
+
+	def test_no_reason_recorded_gives_none(self):
+		self.assertIsNone(self._read(comments=[{"content": "hello"}]))
+
+	def test_someone_who_cannot_read_the_request_gets_nothing(self):
+		with self.assertRaises(self.frappe.PermissionError):
+			self._read(visible=False, comments=[{"content": "Not approved: private"}])

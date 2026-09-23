@@ -269,11 +269,21 @@ def _state(doc) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
-def decide(doctype: str, name: str, status: str, expected_modified: str | None = None) -> dict:
+def decide(
+	doctype: str,
+	name: str,
+	status: str,
+	expected_modified: str | None = None,
+	reason: str | None = None,
+) -> dict:
 	"""Record a decision and finalize the request, atomically.
 
 	Returns the resulting state so the caller renders what the server actually
 	did rather than what it hoped would happen.
+
+	A rejection must say why (audit P0-10): the employee was told "not
+	approved" and nothing else, so had nothing to act on. The reason is kept as
+	a Comment on the request, inside the same transaction as the decision.
 	"""
 	fieldname = decision_field(doctype)
 	if status not in DECISIONS:
@@ -281,6 +291,9 @@ def decide(doctype: str, name: str, status: str, expected_modified: str | None =
 			_("{0} is not a decision. Use {1}.").format(status, " or ".join(DECISIONS)),
 			frappe.ValidationError,
 		)
+	reason = (reason or "").strip()
+	if status == "Rejected" and not reason:
+		frappe.throw(_("Say why this is not approved."), frappe.ValidationError)
 
 	if not frappe.db.exists(doctype, name):
 		frappe.throw(_("{0} {1} not found.").format(_(doctype), name), frappe.DoesNotExistError)
@@ -340,6 +353,8 @@ def decide(doctype: str, name: str, status: str, expected_modified: str | None =
 	# Any failure raises and the whole request rolls back; there is no path that
 	# writes the decision and stops.
 	doc.submit()
+	if status == "Rejected":
+		_record_rejection_reason(doc, reason)
 
 	logger.info(
 		"[approval] %s decided %s %s as %s (docstatus=%s)",
@@ -350,6 +365,62 @@ def decide(doctype: str, name: str, status: str, expected_modified: str | None =
 		doc.docstatus,
 	)
 	return _state(doc)
+
+
+#: The prefix the employee's request sheet looks for. Kept here, the one place
+#: that writes it, and read back by hrms.api.get_rejection_reason.
+REJECTION_PREFIX = "Not approved: "
+
+
+def _record_rejection_reason(doc, reason: str) -> None:
+	"""Keep the approver's reason on the request, where the employee reads it.
+
+	A Comment, not a field: every request doctype already carries its comment
+	timeline, so this needs no schema change on seven doctypes.
+	"""
+	frappe.get_doc(
+		{
+			"doctype": "Comment",
+			"comment_type": "Comment",
+			"reference_doctype": doc.doctype,
+			"reference_name": doc.name,
+			"content": REJECTION_PREFIX + reason,
+		}
+	).insert(ignore_permissions=True)
+	logger.info("[approval] rejection reason recorded for %s %s", doc.doctype, doc.name)
+
+
+@frappe.whitelist(methods=["GET", "POST"])
+def get_rejection_reason(doctype: str, name: str) -> str | None:
+	"""The approver's reason for not approving, for whoever may read the request.
+
+	Read through the same fence as the request (native read permission plus
+	the company boundary), so the reason reaches the employee and the people
+	already entitled to see the request, and nobody else.
+	"""
+	if doctype not in DECIDE_THEN_SUBMIT or not frappe.db.exists(doctype, name):
+		return None
+	if not _request_read_allowed(frappe.get_doc(doctype, name)):
+		frappe.throw(_("You cannot read this request."), frappe.PermissionError)
+	rows = frappe.get_all(
+		"Comment",
+		filters={
+			"reference_doctype": doctype,
+			"reference_name": name,
+			"comment_type": "Comment",
+			"content": ("like", REJECTION_PREFIX + "%"),
+		},
+		fields=["content"],
+		order_by="creation desc",
+		limit=1,
+		ignore_permissions=True,
+	)
+	for row in rows:
+		content = row.get("content") or ""
+		if content.startswith(REJECTION_PREFIX):
+			logger.info("[approval] rejection reason read for %s %s", doctype, name)
+			return content[len(REJECTION_PREFIX) :]
+	return None
 
 
 def _check_review_revision(doc, expected_modified: str | None) -> None:

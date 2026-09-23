@@ -130,7 +130,7 @@
 						{ status: 'Rejected' },
 						{
 							title: __('Reject this request?'),
-							body: __('This cannot be undone — the employee is notified of the rejection.'),
+							body: __('The employee sees your reason. This cannot be undone.'),
 							confirmLabel: __('Reject'),
 						}
 					)
@@ -223,11 +223,16 @@
 			:title="pendingDecision?.title"
 			:confirm-label="pendingDecision?.confirmLabel"
 			:cancel-label="__('Keep')"
+			:confirm-disabled="needsReason && !rejectReason.trim()"
 			destructive
 			@confirm="runPendingDecision"
 			@cancel="pendingDecision = null"
 		>
 			{{ pendingDecision?.body }}
+			<template v-if="needsReason" #extra>
+				<!-- Audit P0-10: the employee sees this reason on their request. -->
+				<GTextarea v-model="rejectReason" :label="__('Why not?')" />
+			</template>
 		</GConfirm>
 
 		<!-- Withdraw own draft. -->
@@ -255,6 +260,7 @@ import { computed, defineAsyncComponent, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import FilePreviewModal from "@/components/FilePreviewModal.vue"
 import FormattedField from "@/components/FormattedField.vue"
+import GTextarea from "@/components/glass/GTextarea.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import useWorkflow from "@/composables/workflow"
@@ -299,13 +305,19 @@ function showFilePreview(fileObj) {
 // one-tap so approvers are not slowed on the common path. (RemoteApprovals
 // already confirms this same class of action — this brings the sheet in line.)
 const pendingDecision = ref(null)
+//: A rejection must say why (audit P0-10); the server refuses one without.
+const rejectReason = ref("")
+const needsReason = computed(() => pendingDecision.value?.action?.status === "Rejected")
 function confirmDecision(action, copy) {
+	rejectReason.value = ""
 	pendingDecision.value = { action, review: currentRequest(), ...copy }
 }
 function runPendingDecision() {
 	const decision = pendingDecision.value
+	const reason = rejectReason.value.trim()
+	if (decision?.action?.status === "Rejected" && !reason) return
 	pendingDecision.value = null
-	if (decision) updateDocumentStatus(decision.action, decision.review)
+	if (decision) updateDocumentStatus({ ...decision.action, reason }, decision.review)
 }
 
 const document = createDocumentResource({
@@ -542,7 +554,10 @@ const currentRequest = () => ({
 	expected_modified: document.doc?.modified,
 })
 
-const updateDocumentStatus = ({ status = "", docstatus = 0 }, review = currentRequest()) => {
+const updateDocumentStatus = (
+	{ status = "", docstatus = 0, reason = "" },
+	review = currentRequest()
+) => {
 	if (
 		submitting.value ||
 		review.doctype !== props.modelValue.doctype ||
@@ -567,6 +582,7 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }, review = currentRe
 			{
 				...review,
 				status,
+				reason: status === "Rejected" ? reason : undefined,
 			},
 			{
 				onSuccess(result) {
