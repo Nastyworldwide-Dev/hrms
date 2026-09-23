@@ -99,8 +99,9 @@ test("the modal backdrop reads the layer scale", () => {
 	// z-[10000] was written by hand next to a token holding exactly 10000.
 	// Nothing connected them, so re-ordering the scale would have left the
 	// backdrop behind.
-	const modal = code(read(join(SRC, "components/CustomIonModal.vue")))
-	assert.doesNotMatch(modal, /z-\[\d+\]/, "no hand-written stacking level")
-	assert.match(modal, /z-scrim-backdrop/, "it reads the scale")
-	assert.ok(tokens.layer["scrim-backdrop"], "which has an entry for it")
+	// CustomIonModal is gone (23 Sep); GModal's scrim is .g-scrim, which reads
+	// the same scale from the stylesheet.
+	const css = read(join(SRC, "theme/glass-components.css"))
+	assert.match(css, /\.g-scrim \{[^}]*z-index: var\(--g-layer-scrim\)/, "it reads the scale")
+	assert.ok(tokens.layer["scrim"], "which has an entry for it")
 })

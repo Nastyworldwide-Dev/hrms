@@ -1,29 +1,12 @@
 <template>
-	<ion-modal
+	<GModal
 		:is-open="props.open"
-		:initial-breakpoint="1"
-		:breakpoints="[0, 1]"
-		@didDismiss="close"
-		@willPresent="prefill"
+		:title="props.sopName ? __('Edit SOP') : __('New SOP')"
+		@did-dismiss="close"
 	>
-		<div class="bg-ground w-full flex flex-col max-h-[var(--g-sheet-max-height)]">
-			<!-- header -->
-			<div class="flex items-center justify-between p-4 border-b border-divider flex-none">
-				<h3 class="text-button-label font-extrabold text-inkbase">
-					{{ props.sopName ? __("Edit SOP") : __("New SOP") }}
-				</h3>
-				<button
-					type="button"
-					class="flex h-11 w-11 -m-3 items-center justify-center text-inkbase"
-					:aria-label="__('Close')"
-					@click="close"
-				>
-					<X class="h-icon-md w-icon-md" />
-				</button>
-			</div>
-
+		<div class="w-full flex flex-col">
 			<!-- body -->
-			<div class="flex flex-col gap-4 p-4 overflow-y-auto">
+			<div class="flex flex-col gap-4 px-4 pb-4">
 				<div class="flex flex-col gap-1.5">
 					<label class="m-field-label" for="sop-title">{{ __("Title") }}</label>
 					<input
@@ -174,7 +157,7 @@
 
 			<!-- footer -->
 			<div
-				class="flex gap-2.5 p-4 border-t border-divider bg-ground flex-none standalone:pb-safe-bottom"
+				class="sticky bottom-0 flex gap-2.5 p-4 border-t border-divider bg-ground flex-none standalone:pb-safe-bottom"
 			>
 				<button
 					type="button"
@@ -193,16 +176,16 @@
 				</button>
 			</div>
 		</div>
-	</ion-modal>
+	</GModal>
 </template>
 
 <script setup>
 import { departmentLabel } from "@/utils/departmentLabel"
 import { Paperclip, X } from "lucide-vue-next"
 import { personalCacheKey } from "@/utils/personalCache"
-import { IonModal } from "@ionic/vue"
+import GModal from "@/components/glass/GModal.vue"
 import { createListResource, createResource, toast } from "frappe-ui"
-import { computed, inject, reactive, ref } from "vue"
+import { computed, inject, reactive, ref, watch } from "vue"
 import { firstMessage } from "@/utils/loudRequest"
 
 const __ = inject("$translate")
@@ -293,6 +276,14 @@ const prefill = () => {
 	attachmentCleared.value = false
 	if (props.sopName) detail.fetch({ name: props.sopName })
 }
+
+//: Fresh form each time the sheet is asked to open (was ion-modal's willPresent).
+watch(
+	() => props.open,
+	(open) => {
+		if (open) prefill()
+	}
+)
 
 const close = () => {
 	emit("update:open", false)

@@ -220,9 +220,11 @@
 		</div>
 
 		<!-- File Preview Modal -->
-		<ion-modal ref="modal" :is-open="showPreviewModal" @didDismiss="showPreviewModal = false">
-			<FilePreviewModal :file="selectedFile" />
-		</ion-modal>
+		<FilePreviewModal
+			:is-open="showPreviewModal"
+			:file="selectedFile"
+			@did-dismiss="showPreviewModal = false"
+		/>
 
 		<!-- Irreversible-action confirm (Reject / Cancel). -->
 		<GConfirm
@@ -261,7 +263,7 @@
 
 <script setup>
 import { Check, ExternalLink, Pencil, Trash, X } from "lucide-vue-next"
-import { IonModal, modalController } from "@ionic/vue"
+import { modalController } from "@ionic/vue"
 import { createDocumentResource, createResource, toast } from "frappe-ui"
 import { computed, defineAsyncComponent, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
@@ -660,9 +662,3 @@ onMounted(() => {
 	workflow.value = useWorkflow(props.modelValue.doctype)
 })
 </script>
-
-<style scoped>
-ion-modal {
-	--height: 100%;
-}
-</style>

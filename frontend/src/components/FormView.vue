@@ -290,19 +290,14 @@
 	<!-- Approver's decision sheet — the same component the Team Requests list
 	     opens, so approve/reject/submit stay one code path. Reload on close so
 	     the form shows what the server did. -->
-	<ion-modal
-		:is-open="showReviewSheet"
-		@didDismiss="closeReviewSheet"
-		:initial-breakpoint="1"
-		:breakpoints="[0, 1]"
-	>
+	<GModal :is-open="showReviewSheet" @did-dismiss="closeReviewSheet">
 		<RequestActionSheet
 			v-if="showReviewSheet && reviewRequest"
 			:fields="REQUEST_SUMMARY_FIELDS[props.doctype]"
 			:showOpenForm="false"
 			v-model="reviewRequest"
 		/>
-	</ion-modal>
+	</GModal>
 
 	<GConfirm
 		:is-open="showDeleteDialog"
@@ -391,7 +386,7 @@ import FormField from "@/components/FormField.vue"
 import FileUploaderView from "@/components/FileUploaderView.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
-import { IonModal } from "@ionic/vue"
+import GModal from "@/components/glass/GModal.vue"
 import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
 
 import { FileAttachment, guessStatusColor } from "@/composables"

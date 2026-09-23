@@ -130,9 +130,12 @@
 				</GListPanel>
 			</GModal>
 
-			<GModal :is-open="answeredOpen" @did-dismiss="answeredOpen = false">
-				<div class="flex flex-col gap-3 px-4 pt-6 pb-8">
-					<h2 class="text-card-title text-ink">{{ __("Check-ins you've already answered") }}</h2>
+			<GModal
+				:is-open="answeredOpen"
+				:title="answeredLabel"
+				@did-dismiss="answeredOpen = false"
+			>
+				<div class="flex flex-col gap-3 px-4 pb-8">
 					<GListPanel v-if="decided.loading && !decided.data" loading />
 					<ResourceError v-else-if="decided.error" :resource="decided" what="your answers" />
 					<GListPanel v-else-if="decided.data?.length">

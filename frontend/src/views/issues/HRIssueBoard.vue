@@ -95,22 +95,15 @@
 		</div>
 
 		<!-- detail sheet -->
-		<ion-modal
+		<GModal
 			:is-open="sheetOpen"
-			@didDismiss="sheetOpen = false"
-			:initial-breakpoint="1"
-			:breakpoints="[0, 1]"
+			:title="detail.data?.employee_name || __('Issue')"
+			@did-dismiss="sheetOpen = false"
 		>
 			<ResourceError :resource="detail" what="this issue" />
-			<div
-				v-if="detail.data"
-				class="bg-ground w-full flex flex-col pb-8 max-h-[var(--g-sheet-max-height)] overflow-y-auto"
-			>
-				<div class="w-full flex flex-col gap-1 pt-6 pb-3 px-4">
+			<div v-if="detail.data" class="w-full flex flex-col pb-8">
+				<div class="w-full flex flex-col gap-1 pb-3 px-4">
 					<div class="g-eyebrow">{{ detail.data.name }}</div>
-					<span class="text-inkbase font-extrabold text-screen-title leading-tight">
-						{{ detail.data.employee_name }}
-					</span>
 					<span class="text-xs text-ink-600">
 						{{ departmentLabel(detail.data.department) || "—" }} ·
 						{{ dayjs(detail.data.creation).format("D MMM YYYY, HH:mm") }}
@@ -164,7 +157,7 @@
 					</Button>
 				</div>
 			</div>
-		</ion-modal>
+		</GModal>
 	</div>
 </template>
 
@@ -175,7 +168,7 @@ import GSegmented from "@/components/glass/GSegmented.vue"
 import GSearchBar from "@/components/glass/GSearchBar.vue"
 import GStatTile from "@/components/glass/GStatTile.vue"
 import GStatPanel from "@/components/glass/GStatPanel.vue"
-import { IonModal } from "@ionic/vue"
+import GModal from "@/components/glass/GModal.vue"
 import { createListResource, createResource, toast } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 

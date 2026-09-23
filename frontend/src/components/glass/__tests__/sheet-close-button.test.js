@@ -20,7 +20,9 @@ test("a sheet with a title shows it beside the Close button", () => {
 	assert.match(modal, /<div class="g-sheet__head">[\s\S]*g-sheet__title[\s\S]*g-sheet__close/)
 })
 
-test("the head keeps Close in the top corner", () => {
+test("the head keeps Close on the trailing edge of the bar", () => {
+	// 23 Sep: the bar is [spacer | centred title | Close] (HIG); see
+	// sheet-one-kind.test.js for the rest of the pinned bar.
 	const css = read("../../../theme/glass-components.css")
-	assert.match(css, /\.g-sheet__head \{[^}]*display: flex[^}]*justify-content: space-between/)
+	assert.match(css, /\.g-sheet__close \{[^}]*grid-column: 3/)
 })

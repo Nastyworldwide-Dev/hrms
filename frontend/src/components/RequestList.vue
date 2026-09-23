@@ -54,15 +54,9 @@
 		:body="emptyStateMessage || __('New requests will appear here once submitted')"
 	/>
 
-	<ion-modal
-		ref="modal"
-		:is-open="isRequestModalOpen"
-		@didDismiss="closeRequestModal"
-		:initial-breakpoint="1"
-		:breakpoints="[0, 1]"
-	>
+	<GModal :is-open="isRequestModalOpen" @did-dismiss="closeRequestModal">
 		<RequestActionSheet :fields="fieldsMap[selectedRequest?.doctype]" v-model="selectedRequest" />
-	</ion-modal>
+	</GModal>
 </template>
 
 <script setup>
@@ -72,7 +66,7 @@ import { REQUEST_KIND } from "@/utils/requestKind"
 import { requestStatus } from "@/utils/requestStatus"
 import { siteTime } from "@/utils/siteTime"
 import { ref, inject } from "vue"
-import { IonModal } from "@ionic/vue"
+import GModal from "@/components/glass/GModal.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
 
 import {

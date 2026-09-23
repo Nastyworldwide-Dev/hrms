@@ -1,21 +1,14 @@
 <template>
-	<GModal :is-open="isOpen" @did-dismiss="onDismiss">
-		<div class="bg-bg w-full flex flex-col pb-8 max-h-sheet">
-			<div class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-bg px-4">
-				<div class="g-eyebrow">{{ __("Late check-out") }}</div>
-				<span class="text-ink font-extrabold text-stat-number leading-tight">
-					{{ __("Forgot to check out?") }}
-				</span>
-				<span class="text-xs text-ink-600">
+	<GModal :is-open="isOpen" :title="__('Forgot to check out?')" @did-dismiss="onDismiss">
+		<div class="bg-bg w-full flex flex-col pb-8">
+			<div class="w-full flex flex-col px-4 gap-3">
+				<p class="text-xs text-ink-600">
 					{{
 						__(
 							"Submit the time you actually left. Your reporting manager will review and approve."
 						)
 					}}
-				</span>
-			</div>
-
-			<div class="w-full flex flex-col px-4 gap-3">
+				</p>
 				<div class="bg-track-solid border border-hair px-3 py-2 text-xs text-ink">
 					<div class="flex justify-between">
 						<span class="text-ink-600">{{ __("Original check-in") }}</span>

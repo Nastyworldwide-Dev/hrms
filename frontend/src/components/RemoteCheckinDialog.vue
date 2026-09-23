@@ -1,22 +1,15 @@
 <template>
-	<GModal :is-open="isOpen" @did-dismiss="onDismiss">
-		<div class="bg-bg w-full flex flex-col pb-8 max-h-sheet">
-			<div class="w-full flex flex-col gap-1 pt-6 pb-4 sticky top-0 z-overlay bg-bg px-4">
-				<div class="g-eyebrow">{{ __("Remote check-in") }}</div>
-				<span class="text-ink font-extrabold text-stat-number leading-tight">
-					{{ headline }}
-				</span>
-				<span class="text-xs text-ink-600">
+	<GModal :is-open="isOpen" :title="headline" @did-dismiss="onDismiss">
+		<div class="bg-bg w-full flex flex-col pb-8">
+			<div class="w-full flex flex-col px-4 gap-3">
+				<p class="text-xs text-ink-600">
 					{{
 						__(
 							"Submit a remote {0} request. Your reporting manager will be notified for approval.",
 							[logType === "IN" ? __("check-in") : __("check-out")]
 						)
 					}}
-				</span>
-			</div>
-
-			<div class="w-full flex flex-col px-4 gap-3">
+				</p>
 				<!-- An unplaceable reading computes to a distance of 0 m, so the
 				     metric row is hidden rather than shown as a reassuring lie.
 				     A COARSE one is hidden for the same reason: since 17 Sep 2026

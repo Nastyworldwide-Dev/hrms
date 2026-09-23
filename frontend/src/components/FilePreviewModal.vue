@@ -1,41 +1,32 @@
+<!-- A file preview, as a sheet titled with the file's name (the sheet's own
+     bar carries the Close X; the old ion-toolbar had a text "Close"). -->
 <template>
-	<ion-header>
-		<ion-toolbar>
-			<ion-title>{{ filename }} - {{ __("File preview") }}</ion-title>
-			<ion-buttons slot="end">
-				<ion-button @click="modalController.dismiss()">{{ __("Close") }} </ion-button>
-			</ion-buttons>
-		</ion-toolbar>
-	</ion-header>
-	<ion-content>
-		<div class="bg-ground h-full w-full overflow-auto touch-pinch-zoom">
-			<img v-if="isImageFile" :src="src" class="h-auto image-preview" />
-			<iframe v-else :src="src" class="w-full h-full"></iframe>
+	<GModal :is-open="isOpen" :title="filename" @did-dismiss="$emit('did-dismiss')">
+		<div v-if="isOpen && file" class="file-preview w-full overflow-auto touch-pinch-zoom">
+			<img v-if="isImageFile" :src="src" :alt="filename" class="h-auto w-full image-preview" />
+			<iframe v-else :src="src" :title="filename" class="w-full h-full"></iframe>
 		</div>
-	</ion-content>
+	</GModal>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount } from "vue"
-import {
-	IonHeader,
-	IonToolbar,
-	IonContent,
-	IonButtons,
-	IonTitle,
-	IonButton,
-	modalController,
-} from "@ionic/vue"
+import GModal from "@/components/glass/GModal.vue"
 
 const props = defineProps({
+	isOpen: {
+		type: Boolean,
+		default: false,
+	},
 	file: {
 		type: Object,
-		required: true,
+		default: null,
 	},
 })
+defineEmits(["did-dismiss"])
 
 const filename = computed(() => {
-	return props.file.file_name || props.file.name
+	return props.file?.file_name || props.file?.name || ""
 })
 
 const src = computed(() => {
@@ -47,7 +38,7 @@ const isImageFile = computed(() => {
 })
 
 onBeforeUnmount(() => {
-	URL.revokeObjectURL(src.value)
+	if (props.file && !props.file.file_url) URL.revokeObjectURL(src.value)
 })
 </script>
 
@@ -55,8 +46,9 @@ onBeforeUnmount(() => {
 .image-preview {
 	image-orientation: from-image;
 }
-ion-toolbar {
-	--background: var(--g-bg);
-	--color: var(--g-ink);
+/* a document needs room: the iframe has no height of its own. The sheet's
+   own ceiling (the one place dvh is allowed), less its bar. */
+.file-preview {
+	height: calc(var(--g-sheet-max-height) - 6rem);
 }
 </style>

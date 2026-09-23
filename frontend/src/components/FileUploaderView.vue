@@ -62,9 +62,11 @@
 			</GConfirm>
 
 			<!-- File Preview Modal -->
-			<ion-modal ref="modal" :is-open="showPreviewModal" @didDismiss="showPreviewModal = false">
-				<FilePreviewModal :file="selectedFile" />
-			</ion-modal>
+			<FilePreviewModal
+				:is-open="showPreviewModal"
+				:file="selectedFile"
+				@did-dismiss="showPreviewModal = false"
+			/>
 		</div>
 	</div>
 </template>
@@ -74,7 +76,6 @@ import { Upload, X } from "lucide-vue-next"
 import GConfirm from "@/components/glass/GConfirm.vue"
 
 import { ref } from "vue"
-import { IonModal } from "@ionic/vue"
 
 import FilePreviewModal from "@/components/FilePreviewModal.vue"
 
@@ -105,9 +106,3 @@ function handleFileDelete() {
 	showDialog.value = false
 }
 </script>
-
-<style scoped>
-ion-modal {
-	--height: 100%;
-}
-</style>

@@ -1,13 +1,11 @@
 <template>
-	<GModal :is-open="isOpen" @did-dismiss="onDismiss">
+	<GModal
+		:is-open="isOpen"
+		:title="sheetTitle"
+		@did-dismiss="onDismiss"
+	>
 		<div class="bg-bg w-full flex flex-col pb-8">
-			<div class="w-full flex flex-col gap-1 pt-6 pb-4 bg-bg px-4">
-				<div class="g-eyebrow">
-					{{ step === 1 ? __("Notifications") : __("Are you sure?") }}
-				</div>
-				<span class="text-ink font-extrabold text-stat-number leading-tight">
-					{{ step === 1 ? __("Don't miss an update") : __("Stay in the loop?") }}
-				</span>
+			<div class="w-full flex flex-col gap-1 pb-4 bg-bg px-4">
 				<span class="text-xs text-ink-600">
 					{{
 						step === 1
@@ -55,7 +53,7 @@
 
 <script setup>
 import GModal from "@/components/glass/GModal.vue"
-import { inject, onMounted, onUnmounted, ref } from "vue"
+import { computed, inject, onMounted, onUnmounted, ref } from "vue"
 import { toast } from "frappe-ui"
 
 import { arePushNotificationsEnabled, enablePushNotifications } from "@/data/notifications"
@@ -70,6 +68,9 @@ const __ = inject("$translate")
 
 const isOpen = ref(false)
 const step = ref(1)
+const sheetTitle = computed(() =>
+	step.value === 1 ? __("Don't miss an update") : __("Stay in the loop?")
+)
 const enabling = ref(false)
 // set once the user has answered (enabled, blocked, or declined) so a
 // programmatic close isn't mistaken for a swipe-away in onDismiss

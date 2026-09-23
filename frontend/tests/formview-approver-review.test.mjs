@@ -30,7 +30,7 @@ test("the form offers the approver the decision sheet, not a second approval pat
 // installed Frappe resources in decision-capability.test.mjs.
 
 test("closing the sheet reloads the document so the form shows the decision", () => {
-	assert.match(source, /@didDismiss="closeReviewSheet"/)
+	assert.match(source, /@did-dismiss="closeReviewSheet"/)
 	const fn = source.slice(source.indexOf("function closeReviewSheet"))
 	assert.match(fn.slice(0, 300), /reloadDoc\(\)/)
 })

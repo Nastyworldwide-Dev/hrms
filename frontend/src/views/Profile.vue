@@ -107,15 +107,9 @@
 				</div>
 			</div>
 
-			<ion-modal
-				ref="modal"
-				:is-open="detailsOpen"
-				@didDismiss="detailsOpen = false"
-				:initial-breakpoint="1"
-				:breakpoints="[0, 1]"
-			>
-				<ProfileInfoModal v-if="detailsOpen" :title="__('Your details')" :data="detailRows" />
-			</ion-modal>
+			<GModal :is-open="detailsOpen" :title="__('Your details')" @did-dismiss="detailsOpen = false">
+				<ProfileInfoModal v-if="detailsOpen" :data="detailRows" />
+			</GModal>
 		</ion-content>
 	</GPage>
 </template>
@@ -126,7 +120,8 @@ import GPage from "@/components/glass/GPage.vue"
 import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from "vue"
 import { useListUpdate } from "@/composables/realtime"
 import { useRouter } from "vue-router"
-import { IonContent, IonModal } from "@ionic/vue"
+import { IonContent } from "@ionic/vue"
+import GModal from "@/components/glass/GModal.vue"
 import { Switch, createDocumentResource, createResource, toast } from "frappe-ui"
 import ShellHeader from "@/components/ShellHeader.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"

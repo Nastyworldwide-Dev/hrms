@@ -71,16 +71,9 @@
 		:body="__('Add each item you paid for with the + above')"
 	/>
 
-	<CustomIonModal :isOpen="isModalOpen" @didDismiss="resetSelectedItem()">
-		<template #actionSheet>
+	<GModal :is-open="isModalOpen" :title="modalTitle" @did-dismiss="resetSelectedItem()">
 			<!-- Add Expense Action Sheet -->
 			<div class="bg-ground w-full flex flex-col pb-5">
-				<div class="w-full pt-6 pb-4 px-4 border-b border-divider flex flex-col gap-1">
-					<div class="g-eyebrow">{{ __("Expense") }}</div>
-					<span class="text-inkbase font-extrabold text-stat-number leading-tight">
-						{{ modalTitle }}
-					</span>
-				</div>
 				<div class="w-full flex flex-col items-center justify-center gap-5 p-4 max-h-[80vh]">
 					<div class="flex flex-col w-full space-y-4 overflow-y-auto expense-fields">
 						<FormField
@@ -127,8 +120,7 @@
 					</div>
 				</div>
 			</div>
-		</template>
-	</CustomIonModal>
+		</GModal>
 </template>
 
 <script setup>
@@ -138,7 +130,7 @@ import { computed, ref, watch, inject } from "vue"
 
 import FormField from "@/components/FormField.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
-import CustomIonModal from "@/components/CustomIonModal.vue"
+import GModal from "@/components/glass/GModal.vue"
 
 import { claimTypesByID, claimTypesResource } from "@/data/claims"
 import { formatCurrency } from "@/utils/formatters"

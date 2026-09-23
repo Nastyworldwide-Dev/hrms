@@ -2192,22 +2192,49 @@ html[data-transparency="reduce"] .g-modal::part(content) {
 	   of the two happens to be larger. */
 	padding-bottom: calc(var(--g-sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
 }
-/* Title on the left, Close in the top corner (NN/g bottom sheets: a visible
-   close; the drag and the scrim are not the only ways out). The Close keeps
-   its 44px target; the negative margin pulls it into the sheet's padding so
-   it does not push the content down. */
+/* The pinned bar (Apple HIG Sheets/Toolbars, 23 Sep): a grabber, then the
+   title CENTRED between a 44px spacer and the 44px Close X (NN/g bottom
+   sheets: a visible close; the drag and the scrim are not the only ways out).
+   Sticky, so the title and Close stay put while the content scrolls under
+   them. The sheet's top padding moves into the head: a sticky box in a padded
+   scroller would otherwise leave a strip where content shows above it. The
+   fill is the solid fallback of the sheet's own glass, so nothing reads
+   through the bar and no second blur is stacked (D3: no glass on glass). */
+.g-sheet {
+	padding-top: 0;
+}
 .g-sheet__head {
+	position: sticky;
+	top: 0;
+	z-index: 1;
 	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	gap: 8px;
-	margin: -8px -8px 0 0;
+	flex-direction: column;
+	align-items: center;
+	margin: 0 calc(-1 * var(--g-pad-panel)) var(--g-stack-sm);
+	padding: 8px 8px 0;
+	background: var(--g-glass-fill-fallback);
+}
+.g-sheet__grabber {
+	width: 36px;
+	height: 4px;
+	border-radius: 4px;
+	background: var(--g-ink3);
+	opacity: 0.5;
+}
+.g-sheet__bar {
+	display: grid;
+	grid-template-columns: 44px 1fr 44px;
+	align-items: center;
+	width: 100%;
 }
 .g-sheet__close {
-	flex: none;
-	margin-left: auto;
+	grid-column: 3;
 }
 .g-sheet__title {
+	grid-column: 2;
+	min-width: 0;
+	text-align: center;
+	overflow-wrap: anywhere;
 	padding: 8px 2px 8px;
 	font-family: var(--g-type-panel-title-family);
 	font-size: var(--g-type-panel-title-size);

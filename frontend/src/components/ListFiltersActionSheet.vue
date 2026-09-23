@@ -1,16 +1,8 @@
 <template>
 	<!-- Filter Action Sheet -->
-	<div class="bg-ground w-full flex flex-col pb-5 max-h-sheet">
-		<div
-			class="w-full pt-6 pb-4 px-4 border-b border-divider sticky top-0 z-overlay bg-ground flex flex-col gap-1"
-		>
-			<div class="g-eyebrow">{{ __("Refine") }}</div>
-			<span class="text-inkbase font-extrabold text-stat-number leading-tight">{{
-				__("Filters")
-			}}</span>
-		</div>
-
-		<div class="w-full p-4 overflow-auto">
+	<!-- The sheet (GModal in ListView) owns the "Filters" title. -->
+	<div class="w-full flex flex-col pb-5">
+		<div class="w-full px-4 pb-4">
 			<div class="flex flex-col gap-5">
 				<div
 					v-for="filter in filterConfig"

@@ -121,7 +121,7 @@
 			</div>
 		</div>
 
-		<GModal trigger="show-filter-modal">
+		<GModal trigger="show-filter-modal" :title="__('Filters')">
 			<!-- Filter Action Sheet -->
 			<template #actionSheet>
 				<ListFiltersActionSheet

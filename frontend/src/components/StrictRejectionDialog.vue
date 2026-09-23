@@ -1,19 +1,13 @@
 <template>
-	<GModal :is-open="isOpen" @did-dismiss="onDismiss">
-		<div class="bg-bg w-full flex flex-col pb-5 max-h-sheet">
-			<div
-				class="w-full flex flex-col gap-2 pt-6 pb-4 px-4 border-b border-hair sticky top-0 z-overlay bg-bg"
-			>
-				<div class="h-12 w-12 bg-danger/15 flex items-center justify-center">
-					<Slash class="h-6 w-6 text-danger-ink" />
+	<GModal :is-open="isOpen" :title="title" @did-dismiss="onDismiss">
+		<div class="bg-bg w-full flex flex-col pb-5">
+			<div class="w-full flex flex-row items-center gap-3 pb-4 px-4 border-b border-hair">
+				<div class="h-12 w-12 shrink-0 bg-danger/15 flex items-center justify-center">
+					<Slash class="h-6 w-6 text-danger-ink" aria-hidden="true" />
 				</div>
-				<div class="g-eyebrow">{{ __("Check-in") }}</div>
-				<span class="text-ink font-extrabold text-stat-number leading-tight">
-					{{ title }}
-				</span>
-				<span class="text-xs text-ink-600">
+				<p class="text-xs text-ink-600">
 					{{ subtitle }}
-				</span>
+				</p>
 			</div>
 
 			<div class="w-full flex flex-col px-4 pt-4 gap-3">

@@ -20,7 +20,13 @@
   Props (CustomIonModal's API, unchanged so phase 5 can swap the import):
     trigger  string — id of the element that opens the modal
     isOpen   boolean — controlled open state
-    title    string — optional heading rendered above the slot
+    title    string — the sheet's name, centred in the pinned bar. Every call
+             site passes one (gate: sheet-one-kind.test.js)
+    detent   "large" (default, full height) | "medium" (opens at half
+             height, drags to full)
+  The head is a pinned bar (HIG Sheets/Toolbars): a decorative grabber, then
+  [spacer | centred title | Close X]. Ionic's own handle is off so there is
+  one grabber, not two.
   Emits:
     did-dismiss  — Ionic's didDismiss, as before
     did-present  — Ionic's didPresent. Forwarded because content that starts a
@@ -36,9 +42,10 @@
 		ref="modal"
 		class="g-modal"
 		:trigger="trigger"
-		:initial-breakpoint="1"
-		:breakpoints="[0, 1]"
+		:initial-breakpoint="medium ? 0.5 : 1"
+		:breakpoints="medium ? [0, 0.5, 1] : [0, 1]"
 		:backdrop-breakpoint="1"
+		:handle="false"
 		:is-open="isOpen"
 		@willPresent="onWillPresent"
 		@willDismiss="onWillDismiss"
@@ -47,10 +54,14 @@
 	>
 		<div class="g-sheet" role="dialog" aria-modal="true" :aria-label="title || undefined">
 			<div class="g-sheet__head">
-				<p v-if="title" class="g-sheet__title">{{ title }}</p>
-				<GIconButton class="g-sheet__close" :label="__('Close')" @click="closeOwnSheet">
-					<X class="h-5 w-5" aria-hidden="true" />
-				</GIconButton>
+				<span class="g-sheet__grabber" aria-hidden="true" />
+				<div class="g-sheet__bar">
+					<span class="g-sheet__spacer" aria-hidden="true" />
+					<p class="g-sheet__title">{{ title }}</p>
+					<GIconButton class="g-sheet__close" :label="__('Close')" @click="closeOwnSheet">
+						<X class="h-5 w-5" aria-hidden="true" />
+					</GIconButton>
+				</div>
 			</div>
 			<slot name="actionSheet" />
 			<slot />
@@ -59,7 +70,7 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, ref, watch } from "vue"
+import { computed, onBeforeUnmount, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { IonModal } from "@ionic/vue"
 import { X } from "lucide-vue-next"
@@ -73,7 +84,12 @@ const props = defineProps({
 	trigger: { type: String, required: false },
 	isOpen: { type: Boolean, required: false },
 	title: { type: String, default: "" },
+	detent: { type: String, default: "large" },
 })
+//: "medium" opens at half height and drags up to full (HIG Sheets: a medium
+//: detent for progressive disclosure). backdrop-breakpoint stays 1 at every
+//: detent, so Ionic's own backdrop never comes back (the focus-trap fix).
+const medium = computed(() => props.detent === "medium")
 const emit = defineEmits(["did-dismiss", "did-present", "will-dismiss"])
 
 const modal = ref(null)
