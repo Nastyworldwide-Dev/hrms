@@ -123,7 +123,9 @@ class TestHomeCountsWhatThePageLists(unittest.TestCase):
 
 		# One scan for both since review of 474d12d34: Home counts what the
 		# page lists, by the page's own function.
-		self.assertIn("_mine_of(doctype, field, pending)", inspect.getsource(needs_you._pending_for))
+		self.assertIn(
+			"_mine_of(doctype, field, pending, cap=SCAN_CAP)", inspect.getsource(needs_you._pending_for)
+		)
 		self.assertIn(
 			"_request_read_allowed(doc) and _is_routed_approver(doc)",
 			inspect.getsource(approvals_list._mine_of),
@@ -236,3 +238,26 @@ class TestTheCapCountsMyRowsNotTheSites(unittest.TestCase):
 			result = approvals_list.get_waiting_for_me()
 		self.assertEqual([r["name"] for r in result["rows"]], ["LA-MINE"])
 		self.assertFalse(result["capped"])
+
+
+class TestHomeStopsAtItsOwnCap(unittest.TestCase):
+	def test_home_reads_no_more_than_it_can_show(self):
+		reads = []
+		names = [f"LA-{i:03d}" for i in range(300)]
+
+		def paged(doctype, filters=None, pluck=None, order_by=None, limit=None, start=0, **kw):
+			return names[start : start + limit]
+
+		def doc(dt, n):
+			reads.append(n)
+			return frappe._dict(doctype=dt, name=n, employee="E")
+
+		with (
+			patch.object(frappe, "get_all", side_effect=paged, create=True),
+			patch.object(frappe, "get_doc", side_effect=doc),
+			patch.object(approvals_list, "_request_read_allowed", side_effect=lambda d: True),
+			patch.object(approvals_list, "_is_routed_approver", side_effect=lambda d: True),
+		):
+			mine, more = approvals_list._mine_of("Leave Application", "status", "Open", cap=20)
+		self.assertEqual((len(mine), more), (20, True))
+		self.assertEqual(len(reads), 21, "stops at cap + 1")

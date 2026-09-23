@@ -158,8 +158,12 @@ PAGE = 100
 SCAN_LIMIT = 1000
 
 
-def _mine_of(doctype: str, field: str, pending: str) -> tuple[list, bool]:
-	"""Pending `doctype` rows routed to the caller, oldest first, up to SCAN_CAP."""
+def _mine_of(doctype: str, field: str, pending: str, cap: int = SCAN_CAP) -> tuple[list, bool]:
+	"""Pending `doctype` rows routed to the caller, oldest first, up to `cap`.
+
+	Stops as soon as it has cap + 1, so Home (cap 20) reads no more than it
+	needs to say "20+".
+	"""
 	mine, start = [], 0
 	while start < SCAN_LIMIT:
 		names = frappe.get_all(
@@ -175,8 +179,8 @@ def _mine_of(doctype: str, field: str, pending: str) -> tuple[list, bool]:
 			doc = frappe.get_doc(doctype, name)
 			if _request_read_allowed(doc) and _is_routed_approver(doc):
 				mine.append(doc)
-				if len(mine) > SCAN_CAP:
-					return mine[:SCAN_CAP], True
+				if len(mine) > cap:
+					return mine[:cap], True
 		if len(names) < PAGE:
 			return mine, False
 		start += PAGE

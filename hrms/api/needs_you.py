@@ -72,8 +72,8 @@ def _pending_for(doctype: str, field: str, pending: str) -> int:
 	"""
 	from hrms.api.approvals_list import _mine_of
 
-	mine, more = _mine_of(doctype, field, pending)
-	return SCAN_CAP + 1 if more or len(mine) > SCAN_CAP else len(mine)
+	mine, more = _mine_of(doctype, field, pending, cap=SCAN_CAP)
+	return SCAN_CAP + 1 if more else len(mine)
 
 
 @frappe.whitelist(methods=["GET", "POST"])
