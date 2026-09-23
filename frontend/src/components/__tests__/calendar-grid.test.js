@@ -65,3 +65,8 @@ test("today is its own channel (an inner ring), so no day state can hide it or b
 	assert.match(today, /box-shadow:\s*inset 0 0 0 2px var\(--g-ink3\)/)
 	assert.doesNotMatch(today, /border-color/)
 })
+
+test("today stays visible on a worked day's brand fill (3:1 non-text)", () => {
+	const css = read("../../theme/glass-components.css")
+	assert.match(css, /\.g-cal__day--present\.g-cal__day--today\s*\{[^}]*box-shadow:\s*inset 0 0 0 2px var\(--g-ink\)/)
+})
