@@ -151,6 +151,13 @@ const routes = [
 		component: () => import("@/views/HRContacts.vue"),
 	},
 	{
+		// Everything waiting on the caller's decision (audit-flows 4B). Reached
+		// from Home's Waiting on you, not from More (owner ruling, 23 Sep).
+		path: "/approvals",
+		name: "Approvals",
+		component: () => import("@/views/Approvals.vue"),
+	},
+	{
 		path: "/remote-approvals",
 		name: "RemoteApprovals",
 		component: () => import("@/views/RemoteApprovals.vue"),

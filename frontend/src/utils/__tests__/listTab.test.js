@@ -39,11 +39,10 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8")
 
-test("Home's waiting rows ask their list for the team tab", () => {
-	assert.match(
-		read("../../components/NeedsYou.vue"),
-		/router\.push\(\{ name: row\.route, query: \{ tab: "team" \} \}\)/
-	)
+test("Home's waiting rows open the Approvals page (which replaced the team-tab door)", () => {
+	// P0-9 sent these rows to each list's team tab; the Approvals page is the
+	// one place a request is decided now. ?tab=team still works for deep links.
+	assert.match(read("../../components/NeedsYou.vue"), /router\.push\(\{ name: "Approvals" \}\)/)
 })
 
 test("the list opens on the tab its route asks for", () => {
