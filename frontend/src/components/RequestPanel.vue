@@ -7,10 +7,51 @@
 		<p v-if="refreshing" class="text-xs text-ink-500 mt-2" role="status">
 			{{ __("Refreshing…") }}
 		</p>
+		<!-- FILTER CHIPS (mockup 4 gap #3). The question somebody brings to this
+		     screen is almost always one of three: what is still out, what came
+		     back yes, what came back no. A list with no filter is a list you
+		     scroll.
+
+		     `aria-pressed` toggles in a group, NOT role="tab": these do not move
+		     between panels, they narrow one list — the distinction mockup 4's
+		     own notes make and the reason its nav is aria-current. -->
+		<div class="g-chips" role="group" :aria-label="__('Filter requests')">
+			<button
+				v-for="chip in FILTERS"
+				:key="chip.key"
+				type="button"
+				class="g-chip g-focusable"
+				:class="{ 'g-chip--on': filter === chip.key }"
+				:aria-pressed="filter === chip.key"
+				@click="filter = chip.key"
+			>
+				{{ __(chip.label) }}
+				<span v-if="filterCounts[chip.key]" class="g-chip__count">{{
+					filterCounts[chip.key]
+				}}</span>
+			</button>
+		</div>
+
 		<div ref="listRegion" id="request-panel-list" tabindex="-1" class="g-focusable">
-			<RequestList v-if="activeTab == 'My Requests'" :items="shown" />
-			<RequestList v-else-if="activeTab == 'Team Requests'" :items="shown" :teamRequests="true" />
-			<RequestList v-else-if="activeTab == 'History'" :items="shown" :teamRequests="true" />
+			<!-- TWO PILES while the filter is ALL (mockup 4 gap #2): work in
+			     flight, then the record. Mixing them makes the reader sort by
+			     eye on every open. -->
+			<template v-if="splitting">
+				<template v-if="waitingGroup.length">
+					<div class="g-eyebrow mt-4 mb-2">{{ __("Waiting on someone") }}</div>
+					<RequestList :items="waitingGroup" :teamRequests="activeTab != 'My Requests'" />
+				</template>
+				<template v-if="finishedGroup.length">
+					<div class="g-eyebrow mt-4 mb-2">{{ __("Finished") }}</div>
+					<RequestList :items="finishedGroup" :teamRequests="activeTab != 'My Requests'" />
+				</template>
+				<RequestList
+					v-if="!waitingGroup.length && !finishedGroup.length"
+					:items="shown"
+					:teamRequests="activeTab != 'My Requests'"
+				/>
+			</template>
+			<RequestList v-else :items="shown" :teamRequests="activeTab != 'My Requests'" />
 		</div>
 		<p class="sr-only" role="status">{{ revealed }}</p>
 
@@ -42,6 +83,7 @@ import { ref, inject, onMounted, computed, markRaw, watch, nextTick } from "vue"
 
 import GSegmented from "@/components/glass/GSegmented.vue"
 import RequestList from "@/components/RequestList.vue"
+import { requestStatus } from "@/utils/requestStatus"
 
 import {
 	historyShiftRequests,
@@ -175,14 +217,86 @@ const historyRequests = computed(() =>
 	updateRequestDetails(historyLeaves, historyClaims, historyShiftRequests, null, null, null)
 )
 
-const activeRequests = computed(() => {
+const unfiltered = computed(() => {
 	if (activeTab.value === "Team Requests") return teamRequests.value
 	if (activeTab.value === "History") return historyRequests.value
 	return myRequests.value
 })
 
+//: FILTER CHIPS (mockup 4 gap #3). A list with no filter is a list you scroll,
+//: and the question an employee brings to this screen is almost always one of
+//: three: what is still out, what came back yes, what came back no.
+//:
+//: Derived from `requestStatus`, the same helper the chip on each row reads, so
+//: a filter can never disagree with the label beside it — which is how
+//: "Pending", "Open" and "Draft" came to mean one thing on three screens.
+const FILTERS = [
+	{ key: "all", label: "All" },
+	{ key: "waiting", label: "Waiting" },
+	{ key: "approved", label: "Approved" },
+	{ key: "rejected", label: "Not approved" },
+]
+const filter = ref("all")
+
+function verdictOf(request) {
+	return requestStatus(request.doctype, request)
+}
+
+//: PURE, and takes the key rather than reading the ref. The first version
+//: swapped `filter.value` to count each chip and put it back — a side effect
+//: inside a computed, which eslint caught and which would have made the
+//: displayed list flicker through three filters on every recount.
+function matches(request, key) {
+	if (key === "all") return true
+	const verdict = verdictOf(request)
+	if (key === "waiting") return verdict.pending
+	if (verdict.pending) return false
+	// A decided request is one or the other. Matched on the LABEL rather than
+	// on docstatus, because in this app a rejection is submitted exactly like
+	// an approval — the decision lives in the field, not the docstatus.
+	const decided = String(verdict.label || "").toLowerCase()
+	if (key === "rejected") return decided.includes("reject")
+	return !decided.includes("reject") && !decided.includes("cancel")
+}
+
+//: How many each chip would show. A chip that opens an empty list is a tap
+//: nobody should have to spend to find that out.
+const filterCounts = computed(() => {
+	const counts = {}
+	for (const { key } of FILTERS) {
+		counts[key] = unfiltered.value.filter((request) => matches(request, key)).length
+	}
+	return counts
+})
+
+const activeRequests = computed(() =>
+	unfiltered.value.filter((request) => matches(request, filter.value))
+)
+
 const shown = computed(() =>
 	showAll.value ? activeRequests.value : activeRequests.value.slice(0, HOME_ROWS)
+)
+
+//: TWO PILES, not one list (mockup 4 gap #2). "Waiting on someone" is work in
+//: flight and "Finished" is a record — different jobs, and mixing them makes
+//: the reader sort by eye on every open.
+//:
+//: Only while the filter is ALL. Once somebody has asked for just the waiting
+//: ones, a heading over the only group there is adds a line and no meaning.
+//:
+//: DECLARED AFTER `shown`, which it reads. A computed's getter is lazy, so
+//: this happened to work — and the script-setup order gate refuses it anyway,
+//: rightly: the moment anything makes one of these eager the screen throws
+//: "before initialization" and Ionic is left holding a view with no element.
+//: Third instance of that class today.
+function verdictPending(request) {
+	return verdictOf(request).pending
+}
+
+const splitting = computed(() => filter.value === "all")
+const waitingGroup = computed(() => (splitting.value ? shown.value.filter(verdictPending) : []))
+const finishedGroup = computed(() =>
+	splitting.value ? shown.value.filter((request) => !verdictPending(request)) : []
 )
 
 // What is HIDDEN, not what exists: a person with seven requests told "Show 7
@@ -196,6 +310,9 @@ const hidden = computed(() =>
 watch(activeTab, () => {
 	showAll.value = false
 	revealed.value = ""
+	// The filter belongs to the list it narrowed. Carrying "Not approved" into
+	// the Team tab opens it on an empty list that looks broken.
+	filter.value = "all"
 })
 
 function updateRequestDetails(

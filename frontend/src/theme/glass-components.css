@@ -3187,3 +3187,50 @@ ion-router-outlet {
 	line-height: var(--g-type-caption-line-height);
 	color: var(--g-ink2);
 }
+
+/* ---------- filter chips (mockup 4 gap #3) ---------------------------------
+
+   `aria-pressed` toggles that narrow one list, NOT tabs between panels — the
+   distinction mockup 4's own notes draw, and the reason its nav uses
+   aria-current instead.
+
+   They WRAP rather than scroll sideways. A horizontal scroller inside a
+   vertical page is a named anti-pattern (lost place, broken scroll restore,
+   screen-reader trouble) and mockup 4's 21 September rework removed the last
+   two from the file; adding one back here would undo that. */
+.g-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 12px;
+}
+.g-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	/* The 44px floor, through the token that defines it. A chip is a target
+	   like any other, and mockup 4's own audit found its chips at 33px. */
+	min-height: var(--g-touch-target-min);
+	padding: 8px 16px;
+	border: 1px solid var(--g-glass-rim);
+	border-radius: var(--g-radius-pill);
+	background: transparent;
+	color: var(--g-ink2);
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	transition: background var(--g-motion-state-change-duration)
+		var(--g-motion-state-change-easing);
+}
+.g-chip--on {
+	/* Selection carried by FILL and INK together, never by colour alone
+	   (§14.1) — and the pressed state is already in aria-pressed for anyone
+	   who cannot see either. */
+	background: var(--g-ink);
+	border-color: var(--g-ink);
+	color: var(--g-bg);
+	font-weight: 700;
+}
+.g-chip__count {
+	font-variant-numeric: tabular-nums;
+	opacity: 0.7;
+}

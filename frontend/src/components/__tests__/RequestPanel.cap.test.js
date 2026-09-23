@@ -31,6 +31,15 @@ import { fileURLToPath } from "node:url"
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8")
 const panel = () => read("../RequestPanel.vue")
+
+//: The "Show N more" control specifically. `g-list-more` is its own class and
+//: the one that carries the floor; matching "the first button in the file"
+//: broke the moment the filter chips were added above it.
+function showMoreButton() {
+	const match = panel().match(/<button[\s\S]*?class="([^"]*g-list-more[^"]*)"/)
+	assert.ok(match, "the control is a button carrying g-list-more")
+	return match
+}
 const list = () => read("../RequestList.vue")
 
 test("the panel caps what it renders, and the cap is five", () => {
@@ -98,7 +107,12 @@ test("expanding does not re-collapse when the tab changes under it", () => {
 test("the control meets the 44px touch target", () => {
 	// NOT /<button[\s\S]*?>/: the lazy match ends at the ">" inside
 	// `v-if="hidden > 0"` and never reaches the class attribute.
-	const classes = panel().match(/<button[\s\S]*?class="([^"]*)"/)
+	//
+	// And not the FIRST button either — the filter chips (mockup 4 gap #3) are
+	// buttons too and they come first in the template, so a first-match test
+	// silently started measuring a chip instead of the control it names. It is
+	// anchored on the control's own class now.
+	const classes = showMoreButton()
 	assert.ok(classes, "the control is a button element with a class attribute")
 	assert.match(classes[1], /\bpy-3\b/, "12px either side of the label")
 	assert.match(classes[1], /\btext-sm\b/, "14px at 1.43 = 20px; 20 + 24 = 44 exactly")
@@ -108,7 +122,7 @@ test("the control meets the 44px touch target", () => {
 // It is full-width, so the 44px height is the whole target: there is no narrow
 // hit area next to a wide row. `w-full` carries that.
 test("the target is the full row, not a word in the middle of one", () => {
-	assert.match(panel().match(/<button[\s\S]*?class="([^"]*)"/)[1], /\bw-full\b/)
+	assert.match(showMoreButton()[1], /\bw-full\b/)
 })
 
 // The control renders `v-if="hidden > 0"`, so activating it destroys the
@@ -156,7 +170,7 @@ test("switching tab clears the announcement with the expansion", () => {
 // exactly 44 — the minimum met by luck, one utility away from failing, and at
 // §14.1's 120% dynamic type the label grows while the padding does not.
 test("the 44px floor is guaranteed, not computed", () => {
-	const classes = panel().match(/<button[\s\S]*?class="([^"]*)"/)[1]
+	const classes = showMoreButton()[1]
 	// A named class, not a utility: the lint gate counts every bracketed
 	// arbitrary-value utility, including one that references a token, and it is
 	// right to — the floor has one definition (--g-touch-target-min) and a
@@ -171,4 +185,75 @@ test("the 44px floor is guaranteed, not computed", () => {
 		/\.g-list-more\s*\{[^}]*min-height:\s*var\(--g-touch-target-min\)/,
 		"and it resolves to the token, not to a literal 44px"
 	)
+})
+
+// ---------------------------------------------------------------------------
+// The filter chips (mockup 4 gap #3, 23 September 2026). Mockup 4's own audit
+// found its chips at 33px with no minimum declared — the exact defect this
+// file exists to prevent on the control above.
+
+test("a filter chip is a 44px target too", () => {
+	const css = readFileSync(
+		fileURLToPath(new URL("../../theme/glass-components.css", import.meta.url)),
+		"utf8"
+	)
+	const chip = css.slice(css.indexOf("\n.g-chip {"), css.indexOf("\n.g-chip--on"))
+	assert.match(
+		chip,
+		/min-height:\s*var\(--g-touch-target-min\)/,
+		"through the token that defines the floor, not a literal"
+	)
+})
+
+test("the chips wrap, never scroll sideways", () => {
+	// A horizontal scroller inside a vertical page is a named anti-pattern —
+	// lost place, broken scroll restore, screen-reader trouble — and mockup 4's
+	// 21 September rework removed the last two from that file. Adding one back
+	// here would undo it.
+	const css = readFileSync(
+		fileURLToPath(new URL("../../theme/glass-components.css", import.meta.url)),
+		"utf8"
+	)
+	const chips = css.slice(css.indexOf("\n.g-chips {"), css.indexOf("\n.g-chip {"))
+	assert.match(chips, /flex-wrap:\s*wrap/)
+	assert.doesNotMatch(chips, /overflow-x/, "no sideways scroller")
+})
+
+test("a chip is a toggle, not a tab", () => {
+	// They narrow ONE list; they do not move between panels. role="tab" would
+	// promise a tabpanel that is not there — the distinction mockup 4's notes
+	// draw, and the reason its nav uses aria-current instead.
+	const text = panel()
+	const chips = text.slice(
+		text.indexOf('class="g-chips"'),
+		text.indexOf("</div>", text.indexOf('class="g-chips"'))
+	)
+	assert.match(chips, /role="group"/)
+	assert.match(chips, /:aria-pressed="filter === chip\.key"/)
+	assert.doesNotMatch(chips, /role="tab"/)
+})
+
+test("the filter resets when the tab changes", () => {
+	// Carrying "Not approved" into the Team tab opens it on an empty list that
+	// looks broken — the same reason `showAll` already resets there.
+	const text = panel()
+	const watcher = text.slice(
+		text.indexOf("watch(activeTab"),
+		text.indexOf("function updateRequestDetails")
+	)
+	assert.match(watcher, /filter\.value = "all"/)
+})
+
+test("counting a chip does not mutate the filter", () => {
+	// The first version swapped `filter.value` to count each chip and put it
+	// back — a side effect inside a computed, which would have made the
+	// rendered list flicker through three filters on every recount. eslint
+	// caught it; this keeps it caught.
+	const text = panel()
+	const counts = text.slice(
+		text.indexOf("const filterCounts"),
+		text.indexOf("const activeRequests")
+	)
+	assert.doesNotMatch(counts, /filter\.value =/, "counting is pure")
+	assert.match(counts, /matches\(request, key\)/, "the key is passed, not read from the ref")
 })

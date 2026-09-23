@@ -217,3 +217,20 @@ FINDING: mockup 4 gap list written to docs/glass/audit/2026-09-23-mockup4-gap.md
   blocks need data this app does not compute. Ranked by visible impact; items 1-3
   are copy over data we already have.
 NEXT: mockup 4 gaps 2 and 3 — split Requests into waiting/finished, add filter chips.
+- 2026-09-23T01:51:01Z PUSH: nz-glass @ 04162c0d3
+- 2026-09-23T01:51:01Z COMMIT: 04162c0d3 feat(requests): "Waiting" never said who it was waiting on → review+design dispatched
+- 2026-09-23T01:56:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 18 file(s) ⟂8670267188cb
+
+EVIDENCE: rung 2 (correct) — Requests filter chips + waiting/finished split:
+  814/814 tests green, 7 static gates green. Mutants killed: a chip losing its
+  44px floor (mockup 4's own audit found its chips at 33px), chips claiming
+  role="tab", the filter surviving a tab change.
+DEAD END: counting each chip by swapping filter.value and restoring it. A side
+  effect inside a computed — eslint refused it, and it would have flickered the
+  rendered list through three filters on every recount. `matches(request, key)`
+  takes the key instead.
+DEAD END: the cap test matching "the first <button> in the file". The filter
+  chips are buttons and come first in the template, so it silently started
+  measuring a chip. Anchored on .g-list-more now.
+NEXT: mockup 4 gap #4 — the claimable-money row on Home (the number already
+  exists in requests_summary).
