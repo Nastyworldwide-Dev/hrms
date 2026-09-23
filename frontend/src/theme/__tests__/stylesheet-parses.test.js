@@ -20,7 +20,9 @@ const selectors = []
 root.walkRules((rule) => selectors.push(...rule.selectors))
 
 test("no selector carries comment text (a comment closed early)", () => {
-	const broken = selectors.filter((s) => /\*\/|\/\*|[a-z]{3,} [a-z]{3,} [a-z]{3,} [a-z]{3,} [a-z]{3,}/i.test(s))
+	const broken = selectors.filter((s) =>
+		/\*\/|\/\*|[a-z]{3,} [a-z]{3,} [a-z]{3,} [a-z]{3,} [a-z]{3,}/i.test(s)
+	)
 	assert.deepEqual(broken, [], "selectors that swallowed a comment")
 })
 
