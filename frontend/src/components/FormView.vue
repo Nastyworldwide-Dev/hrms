@@ -16,7 +16,8 @@
 				:back="confirmBack"
 			>
 				<template v-if="id" #actions>
-					<Badge :label="id" class="whitespace-nowrap text-caption" variant="outline" />
+					<!-- No id badge (ruling L4: ids never reach users; alpha.5 walk found
+					     "HR-LAP-2026-00043" on every open request). -->
 					<!-- GStatusChip, not frappe-ui Badge (8.9). The same value rendered
 					     as a FILLED amber "Open" pill here and an OUTLINED uppercase
 					     "OPEN" on the list — two chip designs for one status, because
@@ -373,7 +374,6 @@ import GEmptyState from "@/components/glass/GEmptyState.vue"
 import { goBackOrHome } from "@/utils/navigation"
 import {
 	ErrorMessage,
-	Badge,
 	createListResource,
 	createDocumentResource,
 	toast,

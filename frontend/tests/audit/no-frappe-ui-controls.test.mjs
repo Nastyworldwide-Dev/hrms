@@ -31,8 +31,8 @@ const BANNED = [
 //: file (relative to frontend/) -> banned names it may still import, and why.
 export const ALLOW_LIST = {
 	"src/components/FormView.vue": {
-		names: ["ErrorMessage", "Badge", "Dropdown", "Dialog"],
-		why: "the id badge, the ⋯ menu and the delete dialog need a FormView restructure (GModal/GConfirm + a Glass menu) that no slice has taken yet",
+		names: ["ErrorMessage", "Dropdown", "Dialog"],
+		why: "the ⋯ menu and the delete dialog need a FormView restructure (GModal/GConfirm + a Glass menu) that no slice has taken yet",
 	},
 }
 
