@@ -86,6 +86,9 @@ class DecisionDocument(filing.ot_request.OTRequest):
 		"""The PWA Notification insert is a write; it stops at this boundary like
 		every other one here. test_request_outcome_visible pins that on_submit calls it."""
 
+	def add_comment(self, comment_type, text=None):
+		"""The rejection-reason Comment (da51cd501) is a write; it stops here too."""
+
 
 class TestClaimCapacity(unittest.TestCase):
 	def validate_claim(
@@ -255,7 +258,9 @@ class TestClaimCapacity(unittest.TestCase):
 					patch.object(filing.ot_request, "validate_mandatory_attachment") as attachment_guard,
 					patch.object(filing.ot_request, "grant_replacement_leave") as grant,
 				):
-					state = approval.decide("OT Request", doc.name, decision)
+					# da51cd501: decide refuses a rejection without a reason, so rejections carry one.
+					reason = "synthetic reason" if decision == "Rejected" else None
+					state = approval.decide("OT Request", doc.name, decision, reason=reason)
 					self_guard.assert_called_once_with(doc)
 					if decision == "Rejected":
 						# Evidence is needed to approve; a refusal is recordable without it.

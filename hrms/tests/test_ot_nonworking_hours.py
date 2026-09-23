@@ -199,6 +199,8 @@ class TestNonworkingHours(unittest.TestCase):
 					frappe._dict(ot_date=day, claimed_hours=hours, shift="SHIFT-SYNTHETIC")
 					for day, hours in approved
 				]
+			if doctype in ("Leave Application", "Attendance Request"):
+				return []  # 86371d5cc: discovery reads leave cover; nothing covers a day here
 			raise AssertionError(doctype)
 
 		def get_value(doctype, name, field, **kwargs):

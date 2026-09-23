@@ -48,6 +48,10 @@ class _FakeCheckin(SimpleNamespace):
 		defaults.update(kwargs)
 		super().__init__(**defaults)
 
+	def _is_manual_entry(self):
+		# cf4c4692a added this seam; the fake models the employee's own punch, never an HR entry.
+		return False
+
 
 def _patched(distance_m=120.0, radius=100, strict=False):
 	"""Every collaborator of validate_distance_from_shift_location, stubbed."""

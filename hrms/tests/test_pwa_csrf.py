@@ -95,7 +95,8 @@ class TestRawFetchesSendTheCSRFToken(unittest.TestCase):
 		"""Guards the guard. `fetcher(` is why the first sweep of this came back
 		clean while the broken call sat in the file being swept."""
 		calls = _unsafe_calls()
-		self.assertGreaterEqual(len(calls), 4, f"expected the known raw fetches, found {len(calls)}")
+		# f3774c15f removed CheckInPanel's raw upload fetch, leaving three known call sites.
+		self.assertGreaterEqual(len(calls), 3, f"expected the known raw fetches, found {len(calls)}")
 		files = {str(path) for path, _line, _ctx in calls}
 		self.assertIn("utils/resetPassword.js", files, "the reset-password fetch must be in scope")
 
@@ -120,7 +121,8 @@ class TestThePageStillProvidesTheToken(unittest.TestCase):
 			self.assertIn("context.csrf_token", source, f"www/{page}.py must pass csrf_token to the template")
 
 	def test_the_template_publishes_it_to_the_window(self):
-		html = (HRMS_ROOT / "www" / "hrms.html").read_text(encoding="utf-8")
+		# www/hrms.html is a gitignored build copy (e25495d15, copy-html-entry); read its source.
+		html = (HRMS_ROOT.parent / "frontend" / "index.html").read_text(encoding="utf-8")
 		self.assertRegex(
 			html,
 			r"window\.csrf_token\s*=\s*[\"']\{\{\s*csrf_token\s*\}\}[\"']",
