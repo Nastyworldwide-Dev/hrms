@@ -76,7 +76,10 @@
 								@click="markAsRead(item)"
 							>
 								<span class="grayscale shrink-0">
-									<EmployeeAvatar :userID="item.from_user" size="lg" />
+									<!-- A system sender (Administrator, a background job) has no
+									     person to show: the Nadi mark, not a grey "?" (plan P1-6). -->
+									<GLogo v-if="!getEmployeeInfoByUserID(item.from_user)" :size="40" label="" />
+									<EmployeeAvatar v-else :userID="item.from_user" size="lg" />
 								</span>
 								<div class="flex flex-col gap-0.5 grow ml-3">
 									<div
@@ -100,9 +103,13 @@
 							</component>
 						</div>
 						<div v-if="notifications.data?.length && notifications.hasNextPage" class="flex">
-							<Button variant="outline" class="g-touch ml-auto" @click="loadMore">
+							<button
+								type="button"
+								class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
+								@click="loadMore"
+							>
 								{{ __("Load more") }}
-							</Button>
+							</button>
 						</div>
 						<!-- Three states, each on its own condition. The empty state used
 						     to be chained (v-else-if) to the LOAD MORE div above and gated
@@ -134,6 +141,8 @@ import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
 import GIconButton from "@/components/glass/GIconButton.vue"
+import GLogo from "@/components/glass/GLogo.vue"
+import { getEmployeeInfoByUserID } from "@/data/employees"
 
 import { goBackOrHome } from "@/utils/navigation"
 import { notificationRoute } from "@/utils/notifications"

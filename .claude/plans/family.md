@@ -1,3 +1,3 @@
-CLASS: calendar kinds the owner asked for, with no source on the tile.
+CLASS: a system sender drawn as an unknown person; a list control unlike every other list.
 
-Call sites: calendar.get_month_flags — same-root (travel, training, open buckets). _open_days reuses get_waiting_for_me Yours rows only — access unchanged. AttendanceCalendar/GCalendar/legend — same-root. Team calendar legend — not-affected (own list).
+Call sites: Notifications.vue avatar — same-root, fixed (GLogo when no employee). Load more — same-root, fixed (g-list-more). Other EmployeeAvatar users — not-affected (always a real employee).
