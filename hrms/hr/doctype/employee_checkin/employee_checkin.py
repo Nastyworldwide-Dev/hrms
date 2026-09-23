@@ -163,6 +163,8 @@ class EmployeeCheckin(Document):
 				self.employee, get_datetime(self.time), True
 			)
 		):
+			if self._stamp_nonworking_day_shift():
+				return
 			self.shift = None
 			self.offshift = 1
 			return
@@ -186,6 +188,96 @@ class EmployeeCheckin(Document):
 			self.shift_start = shift_actual_timings.start_datetime
 			self.shift_end = shift_actual_timings.end_datetime
 			self.overtime_type = shift_actual_timings.overtime_type or None
+
+	def _stamp_nonworking_day_shift(self) -> bool:
+		"""A punch outside every shift window, on a rest day or public holiday.
+
+		Owner ruling (23 Sep 2026): staff check in as normal on any day, and a
+		rest day or public holiday is overtime, the whole session. Off-shift
+		punches never reach overtime (ot_calculation._is_eligible_checkin), so
+		a 19:00-23:00 Sunday on a 9-6 shift was worth nothing. Here the punch
+		takes the ONE shift the employee holds on that date (Active submitted
+		assignment, else Employee.default_shift), anchored on the date, but
+		only when that shift's calendar says the date is not a normal day. A
+		normal weekday outside the window stays off-shift, as before; two
+		assignments on the date is ambiguous and stays off-shift too.
+		True when stamped.
+		"""
+		from hrms.utils.ot_calculation import _classify_day
+
+		if self.attendance:
+			return False
+		log_time = get_datetime(self.time)
+		day = log_time.date()
+		assignments = frappe.get_all(
+			"Shift Assignment",
+			filters={
+				"employee": self.employee,
+				"status": "Active",
+				"docstatus": 1,
+				"start_date": ["<=", day],
+			},
+			or_filters=[["end_date", ">=", day], ["end_date", "is", "not set"]],
+			fields=["shift_type", "overtime_type"],
+		)
+		if len(assignments) > 1:
+			logger.info(
+				"[employee_checkin] %s @ %s: %d assignments, off-shift",
+				self.employee,
+				log_time,
+				len(assignments),
+			)
+			return False
+		if assignments:
+			shift, overtime_type = assignments[0].shift_type, assignments[0].get("overtime_type")
+		else:
+			shift = frappe.db.get_value("Employee", self.employee, "default_shift")
+			# ceiling: a default_shift carries no overtime_type (upstream reads it
+			# off the assignment only), upgrade: read Shift Type.overtime_type if
+			# HR relies on overtime types for default-shift staff.
+			overtime_type = None
+		if not shift:
+			logger.info(
+				"[employee_checkin] %s @ %s: no shift on the date, off-shift", self.employee, log_time
+			)
+			return False
+		day_type = _classify_day(self.employee, day, "normal", shift=shift)
+		if day_type == "normal":
+			logger.info(
+				"[employee_checkin] %s @ %s outside %s on a normal day: off-shift",
+				self.employee,
+				log_time,
+				shift,
+			)
+			return False
+		shift_type = frappe.get_cached_doc("Shift Type", shift)
+		start = datetime.combine(day, datetime.min.time()) + _as_timedelta(shift_type.start_time)
+		end = datetime.combine(day, datetime.min.time()) + _as_timedelta(shift_type.end_time)
+		if end <= start:
+			end += timedelta(days=1)
+		# ceiling: a session that starts on a rest day and ends after midnight on a
+		# normal day stamps only the rest-day punch; the OUT is judged on its own
+		# date, upgrade: pair the OUT to the open IN's stamp if HR reports lost
+		# overnight rest-day hours.
+		self.offshift = 0
+		self.shift = shift
+		self.shift_start = start
+		self.shift_end = end
+		self.shift_actual_start = start - timedelta(
+			minutes=cint(shift_type.begin_check_in_before_shift_start_time)
+		)
+		self.shift_actual_end = end + timedelta(minutes=cint(shift_type.allow_check_out_after_shift_end_time))
+		self.overtime_type = overtime_type or None
+		logger.info(
+			"[employee_checkin] %s %s @ %s outside the window on a %s day: stamped %s for %s",
+			self.employee,
+			self.log_type,
+			log_time,
+			day_type,
+			shift,
+			day,
+		)
+		return True
 
 	def validate_distance_from_shift_location(self):
 		# Per company — geolocated check-in is a per-entity rollout decision.
@@ -940,3 +1032,11 @@ def calculate_time_difference(start_time, end_time):
 	time_difference = abs(start_time - end_time)
 
 	return round(time_difference.total_seconds() / 3600, 2)
+
+
+def _as_timedelta(value) -> timedelta:
+	"""Shift Type times arrive as timedelta from the DB, time or "HH:MM:SS" elsewhere."""
+	if isinstance(value, timedelta):
+		return value
+	hours, minutes, seconds = (int(float(part)) for part in str(value).split(":"))
+	return timedelta(hours=hours, minutes=minutes, seconds=seconds)

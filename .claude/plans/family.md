@@ -1,3 +1,3 @@
-CLASS: a plural built by adding "s" to a noun.
+CLASS: a punch outside the shift window lost its shift, so rest-day and holiday work never reached overtime.
 
-Call sites: NeedsYou.vue capped and uncapped rows — same-root, fixed (server sends nouns). hrms/api/needs_you.py ROW_COPY — same-root, fixed (one, many, route). countOf default many — not-affected for its other call sites (day, leave type, file, replacement day: regular plurals).
+Call sites: EmployeeCheckin.fetch_shift no-window branch — same-root, fixed (_stamp_nonworking_day_shift). CustomEmployeeCheckin.fetch_shift (hrms/overrides/employee_checkin_override.py) — same-root via super() for 0/1 assignments; 2+ assignments stay off-shift (ambiguous, deliberate). ot_calculation._is_eligible_checkin / _session_ot_slices — not-affected (already count a whole non-normal-day session once it carries a shift). shift_type attendance — verified by reading: non-normal day marks Present from pairs only, no Absent/Half Day. Pre-existing: test_ot_nonworking_hours 1 fail red at 7f6449fb8 too.
