@@ -11,6 +11,11 @@ async function longestAnimation(page, action) {
 		const tick = () => {
 			for (const a of document.getAnimations()) {
 				if (seen.has(a)) continue
+				// Page transitions only: a loading skeleton's pulse (the Requests
+				// balances placeholder, 111402a6d) is not a navigation.
+				const el = a.effect?.target
+				if (el && !el.closest?.(".ion-page, ion-router-outlet")) continue
+				if (el?.closest?.(".g-skeleton, [aria-hidden='true']")) continue
 				seen.add(a)
 				window.__longest = Math.max(window.__longest, a.effect?.getTiming?.().duration || 0)
 			}
