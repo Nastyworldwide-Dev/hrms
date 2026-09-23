@@ -3,7 +3,6 @@
 		<ListView
 			doctype="Shift Request"
 			pageTitle="Shift Request History"
-			:tabButtons="TAB_BUTTONS"
 			:fields="SHIFT_REQUEST_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>
@@ -12,16 +11,10 @@
 
 <script setup>
 import GPage from "@/components/glass/GPage.vue"
-import { inject, computed } from "vue"
+import { inject } from "vue"
 import ListView from "@/components/ListView.vue"
-import { isApprover } from "@/data/team"
 
 const __ = inject("$translate")
-// Team tab is manager/approver-only — a plain employee saw a permanently
-// empty "Team Requests" tab. Mirrors the RequestPanel isApprover gate.
-const TAB_BUTTONS = computed(() =>
-	isApprover.data ? ["My Requests", "Team Requests"] : ["My Requests"]
-)
 const SHIFT_REQUEST_FIELDS = [
 	"name",
 	"employee",
