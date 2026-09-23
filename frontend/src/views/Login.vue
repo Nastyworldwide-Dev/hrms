@@ -42,9 +42,6 @@
 							:pending-label="__('Signing in…')"
 							:pending="session.login.loading"
 						>
-							<template #trailing>
-								<ArrowRight :size="16" />
-							</template>
 						</GButton>
 
 						<button type="button" class="g-auth__link g-focusable" @click="openForgotDialog">
@@ -153,7 +150,6 @@
 </template>
 
 <script setup>
-import { ArrowRight } from "lucide-vue-next"
 import GLogoWell from "@/components/glass/GLogoWell.vue"
 import GInput from "@/components/glass/GInput.vue"
 import GModal from "@/components/glass/GModal.vue"

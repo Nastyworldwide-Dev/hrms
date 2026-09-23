@@ -96,9 +96,6 @@
 						:pending="newTicket.loading || uploading"
 						:disabled="newTicket.loading || uploading"
 					>
-						<template #trailing>
-							<ArrowRight class="h-icon-md w-icon-md" aria-hidden="true" />
-						</template>
 					</GButton>
 				</form>
 			</div>
@@ -118,7 +115,7 @@
 </template>
 
 <script setup>
-import { ArrowRight, ChevronLeft } from "lucide-vue-next"
+import { ChevronLeft } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
