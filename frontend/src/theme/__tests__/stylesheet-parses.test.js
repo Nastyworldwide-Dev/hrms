@@ -41,3 +41,20 @@ test("the tab-bar reservation reaches the browser as a whole, valid rule", () =>
 		])
 	}
 })
+
+test("the sheet, now focused when it opens, uses the app's focus ring, not the browser's", () => {
+	// GModal focuses .g-sheet (tabindex -1) on present so focus moves into the
+	// dialog (fedb09a20). Every other focus target in this file pairs
+	// outline:none with --g-shadow-focus-ring; the sheet had no rule, so a
+	// keyboard-opened sheet drew the raw browser outline (design review).
+	const decls = (selector) => {
+		const out = {}
+		root.walkRules((rule) => {
+			if (rule.selectors.includes(selector)) rule.walkDecls((d) => (out[d.prop] = d.value))
+		})
+		return out
+	}
+	assert.equal(decls(".g-sheet:focus-visible").outline, "none")
+	assert.match(decls(".g-sheet:focus-visible")["box-shadow"] || "", /--g-shadow-focus-ring-inset/)
+	assert.equal(decls(".g-sheet:focus:not(:focus-visible)").outline, "none")
+})
