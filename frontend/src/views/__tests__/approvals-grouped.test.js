@@ -41,3 +41,8 @@ test("Home counts only check-ins sent to you (Yours), from the same server answe
 	const needs = readFileSync(fileURLToPath(new URL("../../components/NeedsYou.vue", import.meta.url)), "utf8")
 	assert.match(needs, /needsYouResource\.data\?\.checkins/)
 })
+
+test("Other teams is a heading too, with a wired disclosure (heading navigation finds it)", () => {
+	assert.match(template, /<h2 class="m-0">\s*<button[\s\S]*aria-controls="approvals-other-teams"/)
+	assert.match(template, /id="approvals-other-teams"/)
+})

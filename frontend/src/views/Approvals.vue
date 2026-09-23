@@ -51,18 +51,23 @@
 
 					<!-- OTHER TEAMS: someone else approves; you may step in -->
 					<section v-if="groups.other.count" class="flex flex-col gap-3">
-						<button
-							type="button"
-							class="g-focusable g-approvals__toggle"
-							:aria-expanded="String(otherOpen)"
-							@click="otherOpen = !otherOpen"
-						>
-							<span class="g-eyebrow">{{ __("Other teams") }} · {{ groups.other.count }}</span>
-							<span class="text-caption text-ink-600">{{
-								otherOpen ? __("Hide") : __("Show")
-							}}</span>
-						</button>
-						<template v-if="otherOpen">
+						<!-- A heading like "Yours", so heading navigation finds it; the
+						     button inside it is the disclosure (WAI-ARIA APG). -->
+						<h2 class="m-0">
+							<button
+								type="button"
+								class="g-focusable g-approvals__toggle"
+								:aria-expanded="String(otherOpen)"
+								aria-controls="approvals-other-teams"
+								@click="otherOpen = !otherOpen"
+							>
+								<span class="g-eyebrow">{{ __("Other teams") }} · {{ groups.other.count }}</span>
+								<span class="text-caption text-ink-600">{{
+									otherOpen ? __("Hide") : __("Show")
+								}}</span>
+							</button>
+						</h2>
+						<div v-if="otherOpen" id="approvals-other-teams" class="flex flex-col gap-3">
 							<GListPanel v-for="team in groups.other.teams" :key="team.key">
 								<p class="g-approvals__kind text-caption text-ink-600">
 									{{
@@ -88,7 +93,7 @@
 									@more="more(team.key)"
 								/>
 							</GListPanel>
-						</template>
+						</div>
 					</section>
 
 					<p v-if="waiting.data?.capped" class="text-caption text-ink-600">
@@ -291,10 +296,11 @@ async function refresh(event) {
 
 <style scoped>
 .g-approvals__kind {
-	padding: 10px 14px 0;
+	padding: 12px 16px 0;
 }
 .g-approvals__toggle {
 	display: flex;
+	width: 100%;
 	align-items: center;
 	justify-content: space-between;
 	min-height: var(--g-touch-target-min);
