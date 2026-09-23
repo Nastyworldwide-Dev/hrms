@@ -42,7 +42,7 @@
 		<p v-if="!rows.length && needsYouResource.error" class="text-caption text-ink-600" role="alert">
 			{{ __("We couldn't load what needs you. Pull down to try again.") }}
 		</p>
-		<p v-else-if="!rows.length && !needsYouResource.loading" class="text-caption text-ink-600">
+		<p v-else-if="!rows.length && !needsYouResource.loading" class="g-empty-line text-caption text-ink-600">
 			{{ __("Nothing waiting on you.") }}
 		</p>
 		<!-- ONE panel for loading and content (§15.1 surface budget): skeleton

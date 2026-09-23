@@ -76,6 +76,10 @@ test("coherence: profile every screen", async () => {
 					const filled = []
 					for (const e of document.querySelectorAll("button, a[href], [role=button], .g-btn")) {
 						if (!vis(e)) continue
+						// Off-screen until focused (the skip link, WCAG 2.4.1): not an
+						// action anyone sees, so not a second filled button (alpha.5).
+						const box = e.getBoundingClientRect()
+						if (box.bottom <= 0 || box.right <= 0 || box.top >= innerHeight) continue
 						const cs = getComputedStyle(e)
 						const paint = cs.backgroundColor + " " + cs.backgroundImage
 						const cls = (e.className || "").toString()
@@ -229,11 +233,19 @@ test("coherence: profile every screen", async () => {
 						filled,
 						avatars,
 						hasBack: !!back,
+						// A one-line block empty (".g-empty-line": "No news.", "Nothing
+						// waiting on you.") is the sanctioned small form next to
+						// GEmptyState; a list row whose own words contain "nothing"
+						// ("Nothing booked. Next public holiday…") is content, not an
+						// empty state (alpha.5).
 						adHocEmpty:
 							!document.querySelector(".g-empty") &&
-							!![...document.querySelectorAll("div,p")].find(
+							!![...document.querySelectorAll("div,p,span")].find(
 								(e) =>
 									vis(e) &&
+									!e.closest(".g-empty-line, .g-row, .g-list-panel, .g-card") &&
+									!e.querySelector(".g-empty-line") &&
+									![...e.children].some((c) => /nothing|no .*(yet|found|added)|all caught up/i.test((c.textContent || "").slice(0, 80))) &&
 									/nothing|no .*(yet|found|added)|all caught up/i.test(
 										(e.textContent || "").slice(0, 80)
 									)

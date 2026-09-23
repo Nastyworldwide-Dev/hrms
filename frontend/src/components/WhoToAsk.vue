@@ -9,7 +9,7 @@
 		<GListPanel v-if="manager.loading || manager.data" :loading="manager.loading" :rows="1">
 			<ContactCard v-if="manager.data" :contact="manager.data" />
 		</GListPanel>
-		<span v-else class="text-caption text-ink-600">{{ __("No manager is set for you.") }}</span>
+		<span v-else class="g-empty-line text-caption text-ink-600">{{ __("No manager is set for you.") }}</span>
 
 		<span class="g-eyebrow mt-2">{{ __("HR") }}</span>
 		<ResourceError :resource="hrContacts" :what="__('HR contacts')" />

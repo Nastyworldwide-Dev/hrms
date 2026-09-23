@@ -84,6 +84,7 @@
 		<GInput
 			v-else-if="props.fieldtype === 'Data'"
 			:model-value="modelValue"
+			:aria-label="label"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
 			@update:model-value="
@@ -99,6 +100,7 @@
 			v-else-if="props.fieldtype === 'Currency' && isReadOnly"
 			type="text"
 			:model-value="modelValue"
+			:aria-label="label"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
 			@update:model-value="
@@ -114,6 +116,7 @@
 			v-else-if="isNumberType"
 			type="number"
 			:model-value="modelValue"
+			:aria-label="label"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
 			@update:model-value="

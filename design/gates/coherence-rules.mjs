@@ -21,5 +21,8 @@ export const TAB_ROOTS = new Set([
 	"dash-kpi", // Score
 	"more",
 	"login",
+	// /forgot-password has no route of its own: it renders Login, the entry
+	// screen, which has nothing to go back to (alpha.5 served run).
+	"forgot-password",
 	"invalid-employee",
 ]);

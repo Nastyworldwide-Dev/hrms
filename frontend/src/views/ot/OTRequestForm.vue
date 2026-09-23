@@ -85,7 +85,7 @@
 
 					<!-- An empty list used to leave a blank date picker and no answer.
 			     Say which of the four situations this is. -->
-					<p v-if="emptyReason && !props.id" class="mx-4 mt-4 text-sm text-ink-600" role="status">
+					<p v-if="emptyReason && !props.id" class="g-empty-line mx-4 mt-4 text-sm text-ink-600" role="status">
 						{{ emptyReason }}
 					</p>
 

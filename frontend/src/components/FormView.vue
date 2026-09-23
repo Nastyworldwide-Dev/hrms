@@ -55,8 +55,9 @@
 				</template>
 			</ShellHeader>
 
-			<!-- Form -->
-			<div class="grow overflow-y-auto">
+			<!-- Form. Focusable so a keyboard user can scroll it (WCAG 2.1.1;
+			     axe scrollable-region-focusable, alpha.5 served gate). -->
+			<div class="grow overflow-y-auto" tabindex="0" :aria-label="__(formTitle(props.doctype, !id))">
 				<!-- The one content column (§20.3): 720px, left-aligned against the
 				     side nav at lg:. It was sm:max-w-2xl (672px) centred. -->
 				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">

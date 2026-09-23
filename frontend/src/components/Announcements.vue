@@ -38,7 +38,7 @@
 	     empty states). While loading it waits, so nothing jumps. -->
 	<div v-else-if="homeAnnouncements.data" class="w-full">
 		<div class="g-eyebrow mb-4">{{ __("Announcements") }}</div>
-		<p v-if="!cards.length" class="text-caption text-ink-600">{{ __("No news.") }}</p>
+		<p v-if="!cards.length" class="g-empty-line text-caption text-ink-600">{{ __("No news.") }}</p>
 		<GListPanel v-else>
 			<GListRow
 				v-for="card in cards"

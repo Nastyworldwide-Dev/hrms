@@ -7,6 +7,12 @@
     "aria-allowed-attr": 1,
     "label": 1
   },
+  "expense-claims-detail:dark": {
+    "aria-allowed-attr": 1
+  },
+  "expense-claims-detail:light": {
+    "aria-allowed-attr": 1
+  },
   "expense-claims-new:dark": {
     "button-name": 1,
     "label": 1

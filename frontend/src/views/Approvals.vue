@@ -20,7 +20,7 @@
 					<p v-if="rows.length" class="text-card-title text-ink-600">
 						{{ summary }}
 					</p>
-					<p v-else class="text-card-title text-ink-600">{{ __("Nothing is waiting on you.") }}</p>
+					<p v-else class="g-empty-line text-card-title text-ink-600">{{ __("Nothing is waiting on you.") }}</p>
 
 					<!-- YOURS: sent to you to decide -->
 					<section v-if="groups.yours.count" class="flex flex-col gap-3">

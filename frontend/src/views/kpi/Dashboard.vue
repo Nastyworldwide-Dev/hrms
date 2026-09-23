@@ -73,7 +73,7 @@
 					     ask. -->
 					<div v-else-if="dashboard.data" class="flex flex-col gap-4">
 						<GBanner variant="info">
-							<div class="flex flex-col gap-1">
+							<div class="g-empty-line flex flex-col gap-1">
 								<span class="text-panel-title">{{ nextCycleTitle }}</span>
 								<span class="text-caption text-ink-600">{{ nextCycleBody }}</span>
 							</div>
