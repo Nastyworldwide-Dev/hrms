@@ -209,7 +209,8 @@ class TestDaySheet(FrappeTestCase):
 
 		self.assertEqual(list(inspect.signature(calendar.get_day).parameters), ["date"])
 		source = inspect.getsource(calendar.get_day)
-		self.assertIn("get_employees_routed_to(frappe.session.user)", source)
+		# Direct reports since owner ruling 1 (23 Sep 2026).
+		self.assertIn("get_direct_report_employees(frappe.session.user)", source)
 
 	def test_a_skipped_punch_is_shown_rather_than_hidden(self):
 		""" "My tap is missing" and "my tap was set aside" are different

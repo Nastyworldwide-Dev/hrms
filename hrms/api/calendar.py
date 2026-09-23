@@ -86,6 +86,19 @@ def _holidays(employee: str, start, end) -> set:
 	return {getdate(value) for value in get_holidays_for_calendar(employee, start, end)}
 
 
+def _board_missing(error: Exception) -> bool:
+	"""The board is not there: its doctype is unknown, or its table is.
+
+	Only these are swallowed by _event_days; anything else is a bug and must
+	be loud (review of 8fc7dbe6a). By name for the DB error, so this reads no
+	`frappe.db` at import, when there is no connection yet.
+	"""
+	return isinstance(error, frappe.DoesNotExistError) or type(error).__name__ in (
+		"ProgrammingError",
+		"TableMissingError",
+	)
+
+
 def _event_days(employee: str, start, end) -> set:
 	"""Company events dated inside the window — today, announcements.
 
@@ -100,7 +113,11 @@ def _event_days(employee: str, start, end) -> set:
 		return set()
 	try:
 		rows = _visible_rows(reader)
-	except Exception:
+	except Exception as error:
+		if not _board_missing(error):
+			raise
+		# Narrowed to "the board is not there" (review of 8fc7dbe6a): a real
+		# bug in the board must still fail loudly.
 		# The least of four dot kinds. A site without the announcement board
 		# (seen on fresh.local, 23 Sep) made the whole month a 403, so every
 		# employee lost their leave, holiday and needs-you dots too.
@@ -384,7 +401,7 @@ def get_day(date: str) -> dict:
 	nothing on that side to get wrong and nothing to keep in step with this.
 	"""
 	from hrms.api import get_current_employee
-	from hrms.hr.utils import get_employees_routed_to
+	from hrms.hr.utils import get_direct_report_employees
 
 	if not isinstance(date, str) or not date.strip():
 		frappe.throw(frappe._("A day must be named."), frappe.PermissionError)
@@ -393,24 +410,25 @@ def get_day(date: str) -> dict:
 	employee = get_current_employee()
 	sections = {"me": _my_day(employee, day)}
 
-	# The reporting line, derived from the caller's identity — never from
-	# anything they sent. An employee who is nobody's approver gets an empty
-	# list here, and an empty list means NO ADMISSION rather than no filter.
+	# The caller's DIRECT team (owner ruling 1, 23 Sep 2026): the same people
+	# the Team page lists, not everyone routed to them for approval. Derived
+	# from identity, never from anything sent. An empty list means NO
+	# ADMISSION rather than no filter.
 	try:
-		routed = [name for name in get_employees_routed_to(frappe.session.user) if name != employee]
+		team = [name for name in get_direct_report_employees(frappe.session.user) if name != employee]
 	except Exception:
-		logger.exception("[calendar] could not resolve the caller's reporting line")
-		routed = []
+		logger.exception("[calendar] could not resolve the caller's team")
+		team = []
 
-	if routed:
-		sections["team_off"] = _who_is_off(routed, day)
-		sections["coverage"] = _coverage(routed, day)
+	if team:
+		sections["team_off"] = _who_is_off(team, day)
+		sections["coverage"] = _coverage(team, day)
 
 	logger.info(
-		"[calendar] day employee=%s date=%s sections=%s routed=%d",
+		"[calendar] day employee=%s date=%s sections=%s team=%d",
 		employee,
 		day,
 		sorted(sections),
-		len(routed),
+		len(team),
 	)
 	return sections
