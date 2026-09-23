@@ -51,13 +51,20 @@ def get_my_request_counts() -> dict:
 	employee = get_current_employee()
 	counts = {"all": 0, "waiting": 0, "approved": 0, "rejected": 0}
 	for doctype, field in DECISION_FIELD.items():
-		rows = frappe.get_all(
-			doctype,
-			filters={"employee": employee},
-			# Frappe 16 refuses SQL functions written as strings in fields.
-			fields=["docstatus", field, {"COUNT": "*", "as": "n"}],
-			group_by=f"docstatus, {field}",
-		)
+		try:
+			rows = frappe.get_all(
+				doctype,
+				filters={"employee": employee},
+				# Frappe 16 refuses SQL functions written as strings in fields.
+				fields=["docstatus", field, {"COUNT": "*", "as": "n"}],
+				group_by=f"docstatus, {field}",
+			)
+		except Exception:
+			# One type a site lacks (missing app, unmigrated table) must not
+			# blank every chip (review of the P0-8 counts). Logged by name so a
+			# short count is never mistaken for a true one.
+			logger.exception("[request_counts] %s failed; skipped", doctype)
+			continue
 		for row in rows:
 			bucket = _bucket(int(row.get("docstatus") or 0), row.get(field))
 			if not bucket:

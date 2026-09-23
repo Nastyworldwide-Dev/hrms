@@ -66,3 +66,21 @@ class TestRequestCounts(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestOneTypeFailing(unittest.TestCase):
+	def test_one_missing_type_does_not_blank_the_other_chips(self):
+		# A site without one request type (a missing app, an unmigrated table)
+		# must not take every chip down with it; the page then showed an error
+		# and no counts at all.
+		def some_fail(doctype, **kw):
+			if doctype == "Replacement Leave Claim":
+				raise frappe.DoesNotExistError("DocType Replacement Leave Claim not found")
+			return fake_get_all(doctype, **kw)
+
+		with (
+			patch.object(request_counts, "get_current_employee", return_value="HR-EMP-1"),
+			patch.object(frappe, "get_all", side_effect=some_fail, create=True),
+		):
+			counts = request_counts.get_my_request_counts()
+		self.assertGreater(counts["all"], 0)

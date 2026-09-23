@@ -1,8 +1,6 @@
-CLASS: an approval surface in two places (AUDIT-PLAN Approvals row: cut the
-Requests Team tab) and a past-decision door in system words (ruling 2).
+CLASS: one optional source failing a whole read (same class as 8fc7dbe6a).
 
-Surfaces and verdicts:
-frontend/src/components/RequestPanel.vue — same-root: tabs are "My requests" and, for approvers, "Answered by you" (was My / Team / History); ?tab=answered opens it; empty state says "You haven't answered any requests yet."; the eyebrow that repeated the title is gone.
-frontend/src/views/Approvals.vue — same-root: "Requests you've already answered ›" opens Requests on that tab.
-frontend/src/data/requestLists.js TEAM_REQUEST_LISTS — not-affected: still reloaded by realtime for Home's counts; only the tab that rendered them is cut.
-frontend/src/views/attendance/ShiftRequestList.vue ["My Requests","Team Requests"] — ticket: the per-list Team tabs (AUDIT-PLAN "cut the list-page Team tabs") are a separate slice.
+Call sites and verdicts:
+hrms/api/request_counts.py get_my_request_counts — same-root, fixed here (per-type try/except, logged).
+hrms/api/approvals_list.py get_waiting_for_me — not-affected: already per-type try/except + _types_on_site.
+hrms/api/needs_you.py get_needs_you — not-affected: already per-type try/except + table check.
