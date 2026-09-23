@@ -85,6 +85,9 @@ function fixture(id) {
 				calls.push({ options, resolve, reject })
 			),
 		defineProps: () => reactive({ id }),
+		// ?date= from a Calendar day (approved Calendar plan, D2); none here.
+		useRoute: () => ({ query: {} }),
+		dateFromRoute: () => null,
 		inject: (key) =>
 			key === "$employee"
 				? employee

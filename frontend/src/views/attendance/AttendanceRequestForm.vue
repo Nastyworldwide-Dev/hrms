@@ -23,6 +23,9 @@ import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"
 import { ref, watch, inject } from "vue"
+import { useRoute } from "vue-router"
+
+import { dateFromRoute } from "@/utils/dateFromRoute"
 
 import FormView from "@/components/FormView.vue"
 
@@ -36,8 +39,11 @@ const props = defineProps({
 	},
 })
 
-// reactive object to store form data
-const attendanceRequest = ref({})
+// reactive object to store form data. A Calendar day's "Fix this day" opens
+// with that day chosen (?date=, approved Calendar plan D2).
+const route = useRoute()
+const startDay = props.id ? null : dateFromRoute(route.query)
+const attendanceRequest = ref(startDay ? { from_date: startDay, to_date: startDay } : {})
 
 // get form fields
 const formFields = createResource({

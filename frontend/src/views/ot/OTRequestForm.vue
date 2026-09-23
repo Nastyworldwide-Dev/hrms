@@ -108,6 +108,8 @@
 </template>
 
 <script setup>
+import { useRoute } from "vue-router"
+import { dateFromRoute } from "@/utils/dateFromRoute"
 import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"
 import { computed, inject, ref, shallowRef, watch } from "vue"
@@ -238,7 +240,11 @@ const props = defineProps({
 	},
 })
 
-const otRequest = ref({})
+//: A Calendar day's "Claim" opens with that day chosen (?date=, approved
+//: Calendar plan D2).
+const route = useRoute()
+const startDay = props.id ? null : dateFromRoute(route.query)
+const otRequest = ref(startDay ? { ot_date: startDay } : {})
 
 // Declared after otRequest on purpose: watch() reads its source at creation, and a
 // ref declared below it crashes setup (the KPI page did exactly this, d8c5f58b4).

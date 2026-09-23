@@ -26,28 +26,24 @@
 			</template>
 
 			<template v-else-if="me">
-				<!-- What the day WAS. The shift window is here because "I was
-				     marked absent" and "I was marked absent on a shift I was
-				     not assigned" are different conversations. -->
-				<GMetaGrid :cells="facts" />
+				<!-- One line of shift, the taps, the hours (approved Calendar plan
+				     §4). No explaining paragraph. -->
+				<p class="text-card-title text-ink-600">{{ shiftLine }}</p>
 
-				<template v-if="me.punches.length">
-					<div class="g-eyebrow">{{ __("Your taps") }}</div>
-					<GListPanel>
-						<GListRow
-							v-for="(punch, index) in me.punches"
-							:key="index"
-							:label="punchTime(punch)"
-							:sublabel="punch.skipped ? __('Set aside by HR') : null"
-							:chevron="false"
-						/>
-					</GListPanel>
-				</template>
-				<GEmptyState
-					v-else
-					:title="__('No taps on this day')"
-					:body="__('If you worked, ask for the day to be fixed below.')"
-				/>
+				<GListPanel v-if="me.punches.length">
+					<GListRow
+						v-for="(punch, index) in me.punches"
+						:key="index"
+						:label="punchLabel(punch)"
+						:sublabel="punch.skipped ? __('Set aside by HR') : null"
+						:chevron="false"
+					/>
+				</GListPanel>
+				<p v-else class="text-card-title text-ink-600">
+					{{ __("You didn't check in this day.") }}
+				</p>
+
+				<p v-if="hoursLine" class="text-card-title text-inkbase">{{ hoursLine }}</p>
 
 				<!-- WHO IS OFF — approver and above. Type, never reason. -->
 				<template v-if="teamOff">
@@ -67,14 +63,11 @@
 				<!-- COVERAGE — the number a manager opens a calendar for. -->
 				<GMetaGrid v-if="coverage" :cells="coverageCells" />
 
-				<div class="flex flex-col gap-2">
-					<GGhostButton :label="__('Request a fix for this day')" @click="fixDay" />
-					<GGhostButton
-						v-if="me.ot_hours > 0"
-						:label="__('Claim this overtime')"
-						@click="claimOt"
-					/>
-				</div>
+				<!-- Exactly one main action, chosen by the day, or one line saying
+				     there is nothing to do (D10: it offered "fix" on every day). -->
+				<GButton v-if="action.kind === 'claim'" :label="__(action.label)" @click="claimOt" />
+				<GButton v-else-if="action.kind === 'fix'" :label="__(action.label)" @click="fixDay" />
+				<p v-else-if="action.note" class="text-card-title text-ink-600">{{ __(action.note) }}</p>
 			</template>
 		</div>
 	</GModal>
@@ -85,7 +78,7 @@ import { computed, inject, watch } from "vue"
 import { useRouter } from "vue-router"
 
 import GEmptyState from "@/components/glass/GEmptyState.vue"
-import GGhostButton from "@/components/glass/GGhostButton.vue"
+import GButton from "@/components/glass/GButton.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GMetaGrid from "@/components/glass/GMetaGrid.vue"
@@ -94,6 +87,7 @@ import GSkeleton from "@/components/glass/GSkeleton.vue"
 import ResourceError from "@/components/ResourceError.vue"
 
 import { daySheet } from "@/data/calendar"
+import { dayAction, hoursAsTime, tapWord } from "@/utils/daySheet"
 
 const props = defineProps({
 	open: { type: Boolean, default: false },
@@ -115,29 +109,41 @@ const coverage = computed(() => daySheet.data?.coverage)
 
 const heading = computed(() => (props.date ? $dayjs(props.date).format("dddd, D MMMM") : ""))
 
-function punchTime(punch) {
-	return $dayjs(punch.time).format("HH:mm") + (punch.log_type ? ` · ${punch.log_type}` : "")
-}
-
 function offLabel(row) {
 	// The TYPE, never the reason (owner's ruling). Half-day is part of the
 	// type's meaning for anybody planning cover.
 	return row.half_day ? __("{0} · half day", [row.leave_type]) : row.leave_type
 }
 
-const facts = computed(() => {
+//: What the day needs: one action or a note (utils/daySheet.js).
+const action = computed(() =>
+	me.value ? dayAction(me.value, $dayjs().format("YYYY-MM-DD")) : { kind: "none", note: "" }
+)
+
+const shiftLine = computed(() => {
 	const day = me.value
-	if (!day) return []
-	return [
-		{ k: __("Status"), v: day.status || __("Not marked") },
-		{
-			k: __("Shift"),
-			v: day.shift ? `${trimSeconds(day.shift.start)}–${trimSeconds(day.shift.end)}` : __("None"),
-		},
-		{ k: __("Worked"), v: day.worked_hours ? __("{0} h", [day.worked_hours.toFixed(2)]) : "—" },
-		{ k: __("Overtime"), v: day.ot_hours ? __("{0} h", [day.ot_hours.toFixed(2)]) : "—" },
-	]
+	if (!day) return ""
+	if (day.status === "Holiday") return __("Rest day")
+	if (!day.shift) return __("No shift")
+	return `${day.shift.shift} · ${trimSeconds(day.shift.start)}–${trimSeconds(day.shift.end)}`
 })
+
+//: "8h 02m worked · 1h 30m overtime" — time, not decimals (D11).
+const hoursLine = computed(() => {
+	const day = me.value
+	if (!day?.worked_hours) return ""
+	const worked = __("{0} worked", [hoursAsTime(day.worked_hours)])
+	return day.ot_hours > 0
+		? `${worked} · ${__("{0} overtime", [hoursAsTime(day.ot_hours)])}`
+		: worked
+})
+
+//: "In 09:31", never the raw "IN" (D12).
+function punchLabel(punch) {
+	const word = tapWord(punch.log_type)
+	const time = $dayjs(punch.time).format("HH:mm")
+	return word ? `${__(word)} ${time}` : time
+}
 
 const coverageCells = computed(() => {
 	const row = coverage.value
