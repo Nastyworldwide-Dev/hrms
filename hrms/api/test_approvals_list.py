@@ -261,3 +261,25 @@ class TestHomeStopsAtItsOwnCap(unittest.TestCase):
 			mine, more = approvals_list._mine_of("Leave Application", "status", "Open", cap=20)
 		self.assertEqual((len(mine), more), (20, True))
 		self.assertEqual(len(reads), 21, "stops at cap + 1")
+
+
+class TestGivingUpIsNotMore(unittest.TestCase):
+	"""Review of f0cd01580: when the scan stopped at SCAN_LIMIT with only a
+	few of mine found, Home said "20+" while the page listed those few."""
+
+	def test_a_long_scan_with_three_of_mine_reports_three(self):
+		names = [f"LA-{i:04d}" for i in range(approvals_list.SCAN_LIMIT + 200)]
+		mine_names = {"LA-0005", "LA-0400", "LA-0900"}
+
+		def paged(doctype, filters=None, pluck=None, order_by=None, limit=None, start=0, **kw):
+			return names[start : start + limit]
+
+		with (
+			patch.object(frappe, "get_all", side_effect=paged, create=True),
+			patch.object(frappe, "get_doc", side_effect=lambda dt, n: frappe._dict(doctype=dt, name=n)),
+			patch.object(approvals_list, "_request_read_allowed", side_effect=lambda d: True),
+			patch.object(approvals_list, "_is_routed_approver", side_effect=lambda d: d.name in mine_names),
+		):
+			mine, more = approvals_list._mine_of("Leave Application", "status", "Open", cap=20)
+		self.assertEqual(len(mine), 3)
+		self.assertFalse(more, "gave up scanning, did not find more than the cap")

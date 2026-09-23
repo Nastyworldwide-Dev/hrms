@@ -154,6 +154,10 @@ def _range(start, end) -> str:
 #: counts MY rows, not the site's: capping the site-wide list before asking
 #: whose each row was dropped an approver's own request behind 50 older ones
 #: routed elsewhere (review of 474d12d34). SCAN_LIMIT bounds the cost.
+#: Offset paging over a list that can change mid-scan (a decision elsewhere)
+#: may skip one row for that one load; the next load reads it. Accepted:
+#: ceiling: offset paging, upgrade: keyset paging if an approver reports a
+#: missing row that a reload shows.
 PAGE = 100
 SCAN_LIMIT = 1000
 
@@ -184,8 +188,11 @@ def _mine_of(doctype: str, field: str, pending: str, cap: int = SCAN_CAP) -> tup
 		if len(names) < PAGE:
 			return mine, False
 		start += PAGE
+	# Gave up scanning; that is not "more than the cap" (review of
+	# f0cd01580: Home said "20+" while the page listed three). What was found
+	# is what both show; the log says the scan was cut short.
 	logger.warning("[approvals_list] %s: scanned %d pending, stopped", doctype, SCAN_LIMIT)
-	return mine, True
+	return mine, False
 
 
 @frappe.whitelist(methods=["GET", "POST"])
