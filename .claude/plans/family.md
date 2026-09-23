@@ -1,5 +1,5 @@
-CLASS: a read-only sheet taking its labels from the fillable-fields list (get_doctype_fields drops links the caller cannot open).
+CLASS: the day sheet shift read from the roster only.
 
-Call sites of getFieldInfo / get_doctype_fields for display:
-frontend/src/views/Profile.vue Your details — same-root, fixed (own labels, empty rows left out).
-Forms (FormView) — not-affected: they SHOULD use the fillable list; a field the employee cannot fill is correctly absent.
+Call sites of the day shift:
+hrms/api/calendar.py _my_day — same-root, fixed (_day_shift: attendance → check-ins → roster, ended roster skipped).
+hrms/api/now.py get_now (Home) — not-affected: reads the live shift for today from the check-in engine.

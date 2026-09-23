@@ -295,6 +295,40 @@ def _my_punches(employee: str, day) -> list[dict]:
 	]
 
 
+def _day_shift(employee: str, day, attendance) -> str | None:
+	"""The shift the day was actually worked on (owner, 23 Sep: "No shift" on
+	a worked day). The day's attendance first, then its check-ins, then the
+	roster; the roster alone missed every day worked off-roster."""
+	if attendance and attendance.get("shift"):
+		return attendance.shift
+	checkin_shift = frappe.get_all(
+		"Employee Checkin",
+		filters={
+			"employee": employee,
+			"time": ("between", [f"{day} 00:00:00", f"{day} 23:59:59"]),
+			"shift": ("is", "set"),
+		},
+		pluck="shift",
+		order_by="time asc",
+		limit=1,
+		ignore_permissions=True,
+	)
+	if checkin_shift:
+		return checkin_shift[0]
+	# The roster: an assignment that covers the day (an ended one no longer does).
+	for row in frappe.get_all(
+		"Shift Assignment",
+		filters={"employee": employee, "start_date": ("<=", day), "docstatus": 1, "status": "Active"},
+		fields=["shift_type", "end_date"],
+		order_by="start_date desc",
+		limit=5,
+		ignore_permissions=True,
+	):
+		if not row.end_date or getdate(row.end_date) >= day:
+			return row.shift_type
+	return None
+
+
 def _my_day(employee: str, day) -> dict:
 	"""Everything about the caller's own day."""
 	attendance = frappe.db.get_value(
@@ -303,12 +337,7 @@ def _my_day(employee: str, day) -> dict:
 		["name", "status", "working_hours", "ot_hours", "shift", "leave_type"],
 		as_dict=True,
 	)
-	shift = frappe.db.get_value(
-		"Shift Assignment",
-		{"employee": employee, "start_date": ("<=", day), "docstatus": 1},
-		["shift_type"],
-		order_by="start_date desc",
-	)
+	shift = _day_shift(employee, day, attendance)
 	window = None
 	if shift:
 		start, end = frappe.db.get_value("Shift Type", shift, ["start_time", "end_time"]) or (None, None)
