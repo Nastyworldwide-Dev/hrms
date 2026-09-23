@@ -29,9 +29,14 @@
 	</GBanner>
 	<!-- First load: hold the strip's place (audit F-12: Requests jumped 0.39
 	     when it appeared and pushed everything below it down). -->
-	<div v-else-if="firstLoad" class="flex flex-col gap-4" aria-hidden="true">
-		<GBalanceGrid loading :cells="4" />
-		<GListPanel loading :rows="2" />
+	<div v-else-if="firstLoad" class="flex flex-col gap-4">
+		<!-- The skeleton is hidden from screen readers; this line says what it
+		     means (review of 111402a6d). -->
+		<span class="sr-only" role="status">{{ __("Loading your balances") }}</span>
+		<div class="flex flex-col gap-4" aria-hidden="true">
+			<GBalanceGrid loading :cells="4" />
+			<GListPanel loading :rows="2" />
+		</div>
 	</div>
 	<div v-else-if="hasAnything" class="flex flex-col gap-4">
 		<GBalanceGrid

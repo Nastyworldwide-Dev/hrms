@@ -25,3 +25,7 @@ test("the first load holds its place with a skeleton grid", () => {
 		/const firstLoad = computed\(\(\) => requestsSummary\.loading && !requestsSummary\.data\)/
 	)
 })
+
+test("a screen reader is told the balances are loading", () => {
+	assert.match(template, /role="status">\{\{ __\("Loading your balances"\) \}\}/)
+})
