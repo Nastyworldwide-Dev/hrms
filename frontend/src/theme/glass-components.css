@@ -114,7 +114,7 @@
    and the border on both edges render outside it. Measured: a 64px token with
    11px/9px padding and a 1px border rendered 86px tall while this reservation
    read 82px, 4px short, and every tab screen came to rest with its last row
-   under the glass. Reading the same --g-tabbar-pad-*/--g-tabbar-border tokens
+   under the glass. Reading the same --g-tabbar-pad-top, --g-tabbar-pad-bottom and --g-tabbar-border tokens
    the bar itself draws from is what tabbar-reservation.test.mjs guards. */
 /* `.ion-no-padding` — which BaseLayout puts on EVERY ion-content — sets
    `--padding-bottom: 0`, and it is a class while this was an element+descendant
