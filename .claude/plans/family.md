@@ -1,3 +1,3 @@
-CLASS: the system's words (doctype, record id, raw select value) on a sheet people read.
+CLASS: calendar kinds the owner asked for, with no source on the tile.
 
-Call sites: RequestActionSheet heading — same-root, fixed (REQUEST_KIND). requestSummaryFields ID rows (all types) — same-root, removed. Status row — same-root, from utils/requestStatus. Approvals list — not-affected (server KIND, same words).
+Call sites: calendar.get_month_flags — same-root (travel, training, open buckets). _open_days reuses get_waiting_for_me Yours rows only — access unchanged. AttendanceCalendar/GCalendar/legend — same-root. Team calendar legend — not-affected (own list).

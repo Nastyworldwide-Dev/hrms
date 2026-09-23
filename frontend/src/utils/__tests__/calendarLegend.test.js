@@ -1,29 +1,46 @@
-// Which legend keys a month shows (approved Calendar plan, C6): only the
-// states the month has, in the legend's own fixed order.
+// Which keys the Calendar shows. Owner ruling R1, 23 Sep 2026: the key ALWAYS
+// shows every kind — it replaced the earlier "only the states this month has"
+// (plan C6), because a key that changes month to month teaches nothing — plus
+// Travel, Training and, for approvers only, Open request.
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
 import { legendFor } from "../calendarLegend.js"
 
-const all = [
+const states = [
 	{ state: "present", label: "Worked" },
 	{ state: "half", label: "Half day" },
 	{ state: "leave", label: "Leave" },
 	{ state: "rest", label: "Rest day" },
 	{ state: "absent", label: "Absent" },
 ]
+const kinds = [
+	{ state: "travel", label: "Travel" },
+	{ state: "training", label: "Training" },
+	{ state: "open", label: "Open request" },
+]
+const legend = [...states, ...kinds]
 
-// SUPERSEDED by owner ruling R1 (23 Sep 2026): "always show every kind".
-// A key that changes month to month has to be re-read every month; one that
-// never changes is learned once (WCAG 1.4.1: colour always has its word).
-test("every kind, every month, in the legend's order", () => {
-	const days = [{ state: "absent" }, { state: "present" }, { state: "none" }]
+test("every kind is listed even in an empty month, in the key's own order", () => {
 	assert.deepEqual(
-		legendFor(all, days).map((k) => k.state),
-		["present", "half", "leave", "rest", "absent"]
+		legendFor(legend, { flags: {}, approver: false }).map((k) => k.state),
+		["present", "half", "leave", "rest", "absent", "travel", "training"]
 	)
 })
 
-test("an empty month still shows the whole key", () => {
-	assert.equal(legendFor(all, [{ state: "none" }]).length, all.length)
+test("Open request is shown to an approver", () => {
+	const keys = legendFor(legend, { flags: {}, approver: true }).map((k) => k.state)
+	assert.equal(keys.at(-1), "open")
+	assert.equal(keys.length, legend.length)
+})
+
+test("Open request is shown when the server sent an open flag", () => {
+	const flags = { "2026-09-03": ["leave", "open"] }
+	assert.ok(legendFor(legend, { flags, approver: false }).some((k) => k.state === "open"))
+})
+
+test("nobody else sees Open request", () => {
+	const flags = { "2026-09-03": ["leave"] }
+	assert.ok(!legendFor(legend, { flags, approver: false }).some((k) => k.state === "open"))
+	assert.ok(!legendFor(legend, {}).some((k) => k.state === "open"))
 })

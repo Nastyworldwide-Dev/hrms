@@ -71,15 +71,39 @@ test("the dots sit under the numeral, not beside it", () => {
 })
 
 test("every flag has a colour of its own", () => {
-	const flags = ["leave", "holiday", "event", "needs_you"]
+	// Travel, training and open added by owner ruling R1 (23 Sep 2026).
+	const flags = ["leave", "travel", "training", "holiday", "event", "open", "needs_you"]
 	for (const flag of flags) {
 		assert.match(css, new RegExp(`\\.g-cal__dot--${flag}`), `${flag} is drawn`)
+		assert.match(calendar, new RegExp(`\\b${flag}: "`), `${flag} is spoken in the tile's name`)
 	}
 	// And they come from tokens: a raw hex here is a colour that will not
 	// follow the theme.
 	const dots = css.slice(css.indexOf(".g-cal__dot {"), css.length)
 	const block = dots.slice(0, dots.indexOf("\n}\n", dots.indexOf("needs_you")))
 	assert.doesNotMatch(block, /#[0-9a-f]{3,6}/i, "dot colours are tokens")
+})
+
+test("an open request is a ring, not a fill, and its key matches", () => {
+	// A request waiting on you is not yet a thing that happened; a hollow mark
+	// says "pending" the way the absent outline says "missing".
+	const dot = css.slice(css.indexOf(".g-cal__dot--open {"))
+	const rule = dot.slice(0, dot.indexOf("}"))
+	assert.match(rule, /background: transparent/)
+	assert.match(rule, /box-shadow: inset 0 0 0 1px var\(--g-/)
+	const key = css.slice(css.indexOf(".g-cal__swatch--open {"))
+	assert.match(key.slice(0, key.indexOf("}")), /background: transparent/)
+})
+
+test("the key names every new kind in words", () => {
+	const component = code(read("components/AttendanceCalendar.vue"))
+	assert.match(component, /state: "travel", label: __\("Travel"\)/)
+	assert.match(component, /state: "training", label: __\("Training"\)/)
+	assert.match(component, /state: "open", label: __\("Open request"\)/)
+	assert.match(component, /approver: isApprover\.data/, "the approver gate is the server's answer")
+	for (const kind of ["travel", "training", "open"]) {
+		assert.match(css, new RegExp(`\\.g-cal__swatch--${kind} \\{`), `${kind} has a key swatch`)
+	}
 })
 
 test("the day sheet holds no role logic", () => {

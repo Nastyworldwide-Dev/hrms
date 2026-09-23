@@ -65,6 +65,7 @@ import GCalendar from "@/components/glass/GCalendar.vue"
 import DaySheet from "@/components/DaySheet.vue"
 
 import { monthFlags } from "@/data/calendar"
+import { isApprover } from "@/data/team"
 import { legendFor } from "@/utils/calendarLegend"
 import { computed, inject, ref, watch } from "vue"
 import { createResource } from "frappe-ui"
@@ -96,6 +97,11 @@ const LEGEND = [
 	{ state: "leave", label: __("Leave") },
 	{ state: "rest", label: __("Rest day") },
 	{ state: "absent", label: __("Absent") },
+	// The dot kinds (owner ruling R1, 23 Sep 2026). "Open request" is a day
+	// with a request waiting on YOU; legendFor shows it to approvers only.
+	{ state: "travel", label: __("Travel") },
+	{ state: "training", label: __("Training") },
+	{ state: "open", label: __("Open request") },
 ]
 
 const days = computed(() =>
@@ -116,8 +122,10 @@ const days = computed(() =>
 	})
 )
 
-//: Only the states this month has (approved Calendar plan, C6).
-const monthLegend = computed(() => legendFor(LEGEND, days.value))
+//: Every kind, always (owner ruling R1); Open request for approvers only.
+const monthLegend = computed(() =>
+	legendFor(LEGEND, { flags: monthFlags.data?.flags, approver: isApprover.data })
+)
 
 // Day-cell and legend colour-coding for present/absent/leave/holiday now
 // lives in GCalendar itself (state-driven, not inline style strings) — these

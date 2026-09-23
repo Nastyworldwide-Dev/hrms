@@ -125,8 +125,11 @@ function stateLabel(state) {
 //: name rather than being drawn and left unexplained.
 const FLAG_LABELS = {
 	leave: "on leave",
+	travel: "travel",
+	training: "training",
 	holiday: "holiday",
 	event: "company event",
+	open: "open request waiting on you",
 	needs_you: "needs you",
 }
 

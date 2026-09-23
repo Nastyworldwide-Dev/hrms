@@ -21,6 +21,7 @@ Session-scoped by construction: no endpoint takes an employee.
 """
 
 import logging
+from datetime import timedelta
 
 import frappe
 from frappe.utils import add_days, date_diff, flt, getdate
@@ -35,7 +36,21 @@ MAX_DOTS = 3
 #: The flags, in the order they are drawn. Order is fixed so a person learns
 #: the position rather than re-reading the legend: the first dot is always
 #: "you were off", never sometimes something else.
-FLAG_ORDER = ("leave", "holiday", "event", "needs_you")
+#: Travel and training sit beside leave (owner ruling R1, 23 Sep 2026): all
+#: three say "you were away from your usual work". "open" (a request waiting
+#: on the caller as approver) sits before needs_you.
+FLAG_ORDER = ("leave", "travel", "training", "holiday", "event", "open", "needs_you")
+
+#: The date fields of each request type an approver decides, for the "open"
+#: dot. Dates ONLY — never a reason (owner: managers see the type, never why).
+#: A type not listed here (Expense Claim, Replacement Leave Claim) has no day.
+OPEN_DATE_FIELDS = {
+	"Leave Application": ("from_date", "to_date"),
+	"OT Request": ("ot_date",),
+	"Attendance Request": ("from_date", "to_date"),
+	"Shift Request": ("from_date", "to_date"),
+	"Compensatory Leave Request": ("work_from_date", "work_end_date"),
+}
 
 #: How far a month request may reach. A calendar shows a month; a caller
 #: asking for two years is either a bug or a scrape, and either way it is a
@@ -77,6 +92,125 @@ def _leave_days(employee: str, start, end) -> set:
 		while date_diff(last, day) >= 0:
 			days.add(day)
 			day = add_days(day, 1)
+	return days
+
+
+def _span(first, last, start, end) -> set:
+	"""Every date from `first` to `last`, clipped to the window."""
+	day = max(getdate(first), start)
+	last = min(getdate(last or first), end)
+	days = set()
+	while day <= last:
+		days.add(day)
+		day += timedelta(days=1)
+	logger.debug("[calendar] span %s..%s -> %d days", first, last, len(days))
+	return days
+
+
+def _travel_days(employee: str, start, end) -> set:
+	"""Days of the employee's approved trips (submitted Travel Requests).
+
+	A trip runs from its first leg's departure to its last leg's arrival; the
+	days between are travel too. On Duty attendance requests are NOT travel:
+	they carry no signal that the duty was away.
+	"""
+	if not frappe.db.exists("DocType", "Travel Request"):
+		return set()
+	# ceiling: reads every approved trip of the employee, upgrade: filter legs
+	# by date if one person ever holds hundreds of Travel Requests.
+	names = [
+		row.name
+		for row in frappe.get_all(
+			"Travel Request",
+			filters={"employee": employee, "docstatus": 1},
+			fields=["name"],
+			ignore_permissions=True,
+		)
+	]
+	if not names:
+		return set()
+	legs = {}
+	for row in frappe.get_all(
+		"Travel Itinerary",
+		filters={"parenttype": "Travel Request", "parent": ("in", names)},
+		fields=["parent", "departure_date", "arrival_date"],
+		ignore_permissions=True,
+	):
+		for value in (row.departure_date, row.arrival_date):
+			if value:
+				legs.setdefault(row.parent, []).append(getdate(value))
+	days = set()
+	for dates in legs.values():
+		days |= _span(min(dates), max(dates), start, end)
+	logger.info("[calendar] travel employee=%s trips=%d days=%d", employee, len(legs), len(days))
+	return days
+
+
+def _training_days(employee: str, start, end) -> set:
+	"""Days of Training Events the employee is listed on, unless cancelled."""
+	if not frappe.db.exists("DocType", "Training Event"):
+		return set()
+	events = sorted(
+		{
+			row.parent
+			for row in frappe.get_all(
+				"Training Event Employee",
+				filters={"parenttype": "Training Event", "employee": employee},
+				fields=["parent"],
+				ignore_permissions=True,
+			)
+		}
+	)
+	if not events:
+		return set()
+	days = set()
+	for row in frappe.get_all(
+		"Training Event",
+		filters={
+			"name": ("in", events),
+			"docstatus": 1,
+			"event_status": ("!=", "Cancelled"),
+			"start_time": ("<=", f"{end} 23:59:59"),
+			"end_time": (">=", f"{start} 00:00:00"),
+		},
+		fields=["start_time", "end_time"],
+		ignore_permissions=True,
+	):
+		if row.start_time:
+			days |= _span(row.start_time, row.end_time, start, end)
+	logger.info("[calendar] training employee=%s events=%d days=%d", employee, len(events), len(days))
+	return days
+
+
+def _open_days(start, end) -> set:
+	"""Days covered by requests waiting on the CALLER's decision.
+
+	Reuses the Approvals page's own list, so a dot can never admit a request
+	the caller could not already open there; only its "yours" section counts.
+	Reads dates only — a manager sees the type of a request, never its reason.
+	"""
+	from hrms.api.approvals_list import YOURS, get_waiting_for_me
+	from hrms.api.team import is_approver
+
+	days, rows = set(), []
+	try:
+		if not is_approver():
+			return set()
+		rows = get_waiting_for_me()["rows"]
+		for row in rows:
+			fields = OPEN_DATE_FIELDS.get(row.get("doctype"))
+			if row.get("section") != YOURS or not fields:
+				continue
+			# A list of fields, so the answer is always a tuple: (first, last)
+			# or (the one date,).
+			dates = frappe.db.get_value(row["doctype"], row["name"], list(fields)) or ()
+			if dates and dates[0]:
+				days |= _span(dates[0], dates[-1], start, end)
+	except Exception:
+		# The least of the dots: a broken queue must not take the month down.
+		logger.exception("[calendar] approvals queue unavailable; no open dots")
+		return set()
+	logger.info("[calendar] open user=%s rows=%d days=%d", frappe.session.user, len(rows), len(days))
 	return days
 
 
@@ -225,8 +359,11 @@ def get_month_flags(from_date: str, to_date: str) -> dict:
 
 	buckets = {
 		"leave": _leave_days(employee, start, end),
+		"travel": _travel_days(employee, start, end),
+		"training": _training_days(employee, start, end),
 		"holiday": _holidays(employee, start, end),
 		"event": _event_days(employee, start, end),
+		"open": _open_days(start, end),
 		"needs_you": _needs_you_days(employee, start, end, worked, marked),
 	}
 
