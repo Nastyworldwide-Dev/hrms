@@ -83,6 +83,7 @@ import { ref, inject, onMounted, computed, markRaw, watch, nextTick } from "vue"
 
 import GSegmented from "@/components/glass/GSegmented.vue"
 import RequestList from "@/components/RequestList.vue"
+import { myRequestCounts } from "@/data/requestCounts"
 import { requestStatus } from "@/utils/requestStatus"
 
 import {
@@ -262,6 +263,9 @@ function matches(request, key) {
 //: How many each chip would show. A chip that opens an empty list is a tap
 //: nobody should have to spend to find that out.
 const filterCounts = computed(() => {
+	// My own requests: the server counts every one of them (audit P0-8). The
+	// Team and History tabs keep the loaded-row count until the Approvals page.
+	if (activeTab.value === "My Requests" && myRequestCounts.data) return myRequestCounts.data
 	const counts = {}
 	for (const { key } of FILTERS) {
 		counts[key] = unfiltered.value.filter((request) => matches(request, key)).length

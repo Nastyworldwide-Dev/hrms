@@ -12,6 +12,7 @@ import {
 	teamShiftRequests,
 } from "@/data/attendance"
 import { historyClaims, myClaims, teamClaims } from "@/data/claims"
+import { myRequestCounts } from "@/data/requestCounts"
 import { historyLeaves, myLeaves, teamLeaves } from "@/data/leaves"
 import {
 	myOTRequests,
@@ -40,5 +41,7 @@ export function reloadLists(lists, why) {
 	return Promise.allSettled(idle.map((list) => list.reload()))
 }
 
+// The chip counts move with the lists: a pull-to-refresh or a decision that
+// reloads the lists must not leave "Waiting 3" beside two rows (audit P0-8).
 export const reloadRequestLists = (why) =>
-	reloadLists([...MY_REQUEST_LISTS, ...TEAM_REQUEST_LISTS], why)
+	reloadLists([...MY_REQUEST_LISTS, ...TEAM_REQUEST_LISTS, myRequestCounts], why)
