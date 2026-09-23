@@ -346,6 +346,49 @@ export const REPLACEMENT_LEAVE_CLAIM_FIELDS = [
 	},
 ]
 
+export const COMPENSATORY_LEAVE_REQUEST_FIELDS = [
+	{
+		fieldname: "name",
+		label: "ID",
+		fieldtype: "Data",
+	},
+	{
+		fieldname: "employee",
+		label: "Employee",
+		fieldtype: "Link",
+	},
+	{
+		fieldname: "leave_type",
+		label: "Leave Type",
+		fieldtype: "Link",
+	},
+	{
+		fieldname: "work_from_date",
+		label: "Work From Date",
+		fieldtype: "Date",
+	},
+	{
+		fieldname: "work_end_date",
+		label: "Work End Date",
+		fieldtype: "Date",
+	},
+	{
+		fieldname: "half_day",
+		label: "Half Day",
+		fieldtype: "Check",
+	},
+	{
+		fieldname: "status",
+		label: "Status",
+		fieldtype: "Select",
+	},
+	{
+		fieldname: "reason",
+		label: "Reason",
+		fieldtype: "Small Text",
+	},
+]
+
 // Summary fields by doctype — what RequestActionSheet renders above its
 // Approve / Reject bar. Shared so a form can open the same sheet the Team
 // Requests list opens, instead of growing a second approval path.
@@ -356,4 +399,5 @@ export const REQUEST_SUMMARY_FIELDS = {
 	"Shift Request": SHIFT_REQUEST_FIELDS,
 	"OT Request": OT_REQUEST_FIELDS,
 	"Replacement Leave Claim": REPLACEMENT_LEAVE_CLAIM_FIELDS,
+	"Compensatory Leave Request": COMPENSATORY_LEAVE_REQUEST_FIELDS,
 }

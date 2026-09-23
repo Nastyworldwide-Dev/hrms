@@ -36,7 +36,7 @@
 			<GModal :is-open="!!selected" @did-dismiss="close">
 				<RequestActionSheet
 					v-if="selected"
-					:fields="FIELDS[selected.doctype]"
+					:fields="REQUEST_SUMMARY_FIELDS[selected.doctype]"
 					v-model="selected"
 				/>
 			</GModal>
@@ -55,26 +55,10 @@ import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
-import {
-	ATTENDANCE_REQUEST_FIELDS,
-	EXPENSE_CLAIM_FIELDS,
-	LEAVE_FIELDS,
-	OT_REQUEST_FIELDS,
-	REPLACEMENT_LEAVE_CLAIM_FIELDS,
-	SHIFT_REQUEST_FIELDS,
-} from "@/data/config/requestSummaryFields"
+import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
-
-const FIELDS = {
-	"Leave Application": LEAVE_FIELDS,
-	"Expense Claim": EXPENSE_CLAIM_FIELDS,
-	"Attendance Request": ATTENDANCE_REQUEST_FIELDS,
-	"Shift Request": SHIFT_REQUEST_FIELDS,
-	"OT Request": OT_REQUEST_FIELDS,
-	"Replacement Leave Claim": REPLACEMENT_LEAVE_CLAIM_FIELDS,
-}
 
 // The server decides who sees what: only requests routed to the caller, by the
 // same check approval.decide uses (hrms/api/approvals_list.py).

@@ -29,3 +29,20 @@ test("the route exists, and Home's waiting rows open it", () => {
 	assert.match(read("../../router/index.js"), /name: "Approvals"/)
 	assert.match(read("../../components/NeedsYou.vue"), /name: "Approvals"/)
 })
+
+test("every type the server can list has fields for the sheet it opens", async () => {
+	// Review of be4b81edf: the server lists "Time off in lieu" (Compensatory
+	// Leave Request) but the page had no fields for it, so tapping that row
+	// threw inside RequestActionSheet — the only way to decide it. The page
+	// reads the ONE shared map, and the map covers every listed type.
+	const server = read("../../../../hrms/api/approvals_list.py")
+	const kinds = [...server.slice(server.indexOf("KIND = {")).split("}")[0].matchAll(/"([^"]+)":/g)].map(
+		(m) => m[1]
+	)
+	assert.ok(kinds.length >= 7, "the server's list of types was found")
+	const { REQUEST_SUMMARY_FIELDS } = await import("../../data/config/requestSummaryFields.js")
+	for (const doctype of kinds) {
+		assert.ok(Array.isArray(REQUEST_SUMMARY_FIELDS[doctype]), `${doctype} has sheet fields`)
+	}
+	assert.match(page, /REQUEST_SUMMARY_FIELDS\[selected\.doctype\]/, "the page uses the shared map")
+})
