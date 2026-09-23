@@ -47,15 +47,15 @@
 					<div class="order-2">
 						<GListPanel>
 							<GListRow
-								:label="__('Request Attendance')"
+								:label="__('Fix a day')"
 								@click="router.push({ name: 'AttendanceRequestFormView' })"
 							/>
 							<GListRow
-								:label="__('Claim Overtime or Leave')"
+								:label="__('Claim overtime')"
 								@click="router.push({ name: 'OTRequestFormView' })"
 							/>
 							<GListRow
-								:label="__('Request a Shift')"
+								:label="__('Change a shift')"
 								@click="router.push({ name: 'ShiftRequestFormView' })"
 							/>
 						</GListPanel>

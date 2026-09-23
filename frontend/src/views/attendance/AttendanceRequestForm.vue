@@ -93,7 +93,7 @@ watch(
 		const out_time_field = formFields.data.find((field) => field.fieldname === "out_time")
 		if (!out_time_field) return
 		out_time_field.error_message =
-			!!in_time !== !!out_time ? __("Both In Time and Out Time are required") : ""
+			!!in_time !== !!out_time ? __("Give both the time in and the time out") : ""
 	}
 )
 
@@ -105,7 +105,8 @@ function setFormReadOnly() {
 function validateDates(from_date, to_date) {
 	if (!(from_date && to_date)) return
 
-	const error_message = from_date > to_date ? __("To Date cannot be before From Date") : ""
+	const error_message =
+		from_date > to_date ? __("The end date cannot be before the start date") : ""
 
 	const from_date_field = formFields.data.find((field) => field.fieldname === "from_date")
 	from_date_field.error_message = error_message

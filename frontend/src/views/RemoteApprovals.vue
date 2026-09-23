@@ -247,7 +247,7 @@
 						>
 							<GSkeleton v-if="submitting" height="14px" width="42%" />
 							<template v-else>
-								{{ decision === "approve" ? __("Confirm Approve") : __("Confirm Reject") }}
+								{{ decision === "approve" ? __("Approve") : __("Not approve") }}
 							</template>
 						</button>
 					</div>

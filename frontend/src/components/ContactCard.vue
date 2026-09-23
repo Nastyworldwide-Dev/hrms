@@ -19,7 +19,7 @@
 		<!-- Body -->
 		<div class="flex-1 min-w-0">
 			<div class="text-button-label font-sans font-semibold text-inkbase truncate">
-				{{ contact.employee_name || __("Unnamed Employee") }}
+				{{ contact.employee_name || __("Unnamed employee") }}
 			</div>
 			<div v-if="contact.designation" class="g-eyebrow truncate mt-0.5">
 				{{ contact.designation }}

@@ -44,7 +44,7 @@ const FILTER_CONFIG = [
 	{
 		fieldname: "shift_type",
 		fieldtype: "Link",
-		label: __("Shift Type"),
+		label: __("Shift type"),
 		options: "Shift Type",
 	},
 	{
@@ -59,7 +59,7 @@ const FILTER_CONFIG = [
 		label: __("Department"),
 		options: "Department",
 	},
-	{ fieldname: "from_date", fieldtype: "Date", label: __("From Date") },
-	{ fieldname: "to_date", fieldtype: "Date", label: __("To Date") },
+	{ fieldname: "from_date", fieldtype: "Date", label: __("From date") },
+	{ fieldname: "to_date", fieldtype: "Date", label: __("To date") },
 ]
 </script>

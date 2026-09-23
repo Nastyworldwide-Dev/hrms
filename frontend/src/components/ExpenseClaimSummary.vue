@@ -5,7 +5,7 @@
 		     measured 1.03 in light theme. -->
 		<div class="g-poster">
 			<div class="g-eyebrow-type g-poster__label">
-				{{ __("Total Claimed") }}
+				{{ __("Total claimed") }}
 			</div>
 			<div class="g-poster__figure tabular-nums">
 				{{ formatCurrency(total_claimed_amount, company_currency) }}

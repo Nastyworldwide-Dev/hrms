@@ -86,7 +86,7 @@
 						     was the only accented element on Profile — so the loudest thing
 						     on the page was the way out of the app. -->
 							<LogOut class="w-4 h-4" />
-							{{ __("Log Out") }}
+							{{ __("Log out") }}
 						</button>
 					</div>
 				</div>
@@ -181,7 +181,7 @@ const router = useRouter()
 const profileLinks = [
 	{
 		icon: User,
-		title: __("Employee Details"),
+		title: __("Your details"),
 		fields: [
 			"employee_name",
 			"employee_number",
@@ -193,7 +193,7 @@ const profileLinks = [
 	},
 	{
 		icon: File,
-		title: __("Company Information"),
+		title: __("Company information"),
 		fields: [
 			"company",
 			"department",
@@ -206,7 +206,7 @@ const profileLinks = [
 	},
 	{
 		icon: Book,
-		title: __("Contact Information"),
+		title: __("Contact information"),
 		kind: "contact",
 		fields: ["cell_number", "personal_email", "company_email", "preferred_email"],
 	},

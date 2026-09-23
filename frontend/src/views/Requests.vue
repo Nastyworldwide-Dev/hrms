@@ -68,17 +68,17 @@ const __ = inject("$translate")
 const baseLinks = [
 	{
 		icon: markRaw(UserCheck),
-		title: __("Request Attendance"),
+		title: __("Fix a day"),
 		route: "AttendanceRequestFormView",
 	},
-	{ icon: markRaw(CalendarClock), title: __("Request a Shift"), route: "ShiftRequestFormView" },
-	{ icon: markRaw(CalendarDays), title: __("Request Leave"), route: "LeaveApplicationFormView" },
+	{ icon: markRaw(CalendarClock), title: __("Change a shift"), route: "ShiftRequestFormView" },
+	{ icon: markRaw(CalendarDays), title: __("Time off"), route: "LeaveApplicationFormView" },
 	{
 		icon: markRaw(CircleDollarSign),
-		title: __("Claim an Expense"),
+		title: __("Claim an expense"),
 		route: "ExpenseClaimFormView",
 	},
-	{ icon: markRaw(Receipt), title: __("Claim Overtime"), route: "OTRequestFormView" },
+	{ icon: markRaw(Receipt), title: __("Claim overtime"), route: "OTRequestFormView" },
 ]
 
 const isHR = computed(() => hasHRRole(userResource.data))
@@ -87,7 +87,7 @@ const quickLinks = computed(() => [
 	...baseLinks,
 	{
 		icon: markRaw(LifeBuoy),
-		title: isHR.value ? __("Issue Board") : __("HR Issues"),
+		title: isHR.value ? __("Issue board") : __("HR Issues"),
 		route: HUB_ROUTE_NAME,
 		query: { tab: HR_TAB },
 	},

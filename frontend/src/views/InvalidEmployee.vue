@@ -4,7 +4,7 @@
 			<div class="flex min-h-full w-full flex-col justify-center">
 				<GModal :is-open="showDialog" :title="__('Login failed')" @did-dismiss="onDismissed">
 					<p class="g-confirm__body">{{ reason }}</p>
-					<GButton :label="__('Go to Login')" @click="() => session.logout.submit()" />
+					<GButton :label="__('Go to log in')" @click="() => session.logout.submit()" />
 				</GModal>
 			</div>
 		</ion-content>

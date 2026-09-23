@@ -29,7 +29,7 @@
 				@click="navigate"
 				class="w-full !text-ink-600 py-6 text-sm border-none bg-transparent hover:bg-transparent"
 			>
-				{{ __("View List") }}
+				{{ __("View list") }}
 			</Button>
 		</router-link>
 	</div>

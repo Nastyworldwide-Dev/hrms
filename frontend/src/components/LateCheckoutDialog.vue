@@ -24,7 +24,7 @@
 				</div>
 
 				<label class="text-xs uppercase text-ink-700 tracking-wide">
-					{{ __("Actual Check-Out Time") }}
+					{{ __("Time you left") }}
 				</label>
 				<input
 					type="datetime-local"

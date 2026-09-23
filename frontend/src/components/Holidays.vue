@@ -1,13 +1,13 @@
 <template>
 	<div class="flex flex-col w-full">
 		<div class="flex flex-row items-baseline justify-between mb-2.5">
-			<span class="g-eyebrow">{{ __("Upcoming Holidays") }}</span>
+			<span class="g-eyebrow">{{ __("Upcoming holidays") }}</span>
 			<span
 				v-if="holidays?.data?.length"
 				id="open-holiday-list"
 				class="g-seclink text-kra-label text-accent-ink underline underline-offset-link cursor-pointer"
 			>
-				{{ __("View All") }}
+				{{ __("View all") }}
 			</span>
 		</div>
 
@@ -33,7 +33,7 @@
 	<GModal v-if="holidays?.data?.length" trigger="open-holiday-list">
 		<div class="bg-ground w-full flex flex-col items-center justify-center pb-5">
 			<div class="w-full pt-8 pb-5 border-b-2 border-divider text-center">
-				<span class="text-inkbase font-extrabold text-lg">{{ __("Holiday List") }}</span>
+				<span class="text-inkbase font-extrabold text-lg">{{ __("Holiday list") }}</span>
 			</div>
 			<div class="w-full flex flex-col items-center justify-center gap-5 p-4">
 				<div

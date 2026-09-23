@@ -2,7 +2,7 @@
 	<GPage>
 		<ListView
 			doctype="Leave Application"
-			:pageTitle="__('Leave History')"
+			:pageTitle="__('Leave history')"
 			:tabButtons="TAB_BUTTONS"
 			:fields="LEAVE_FIELDS"
 			:filterConfig="FILTER_CONFIG"
@@ -43,7 +43,7 @@ const FILTER_CONFIG = [
 	{
 		fieldname: "leave_type",
 		fieldtype: "Link",
-		label: __("Leave Type"),
+		label: __("Leave type"),
 		options: "Leave Type",
 	},
 	{
@@ -58,7 +58,7 @@ const FILTER_CONFIG = [
 		label: __("Department"),
 		options: "Department",
 	},
-	{ fieldname: "from_date", fieldtype: "Date", label: __("From Date") },
-	{ fieldname: "to_date", fieldtype: "Date", label: __("To Date") },
+	{ fieldname: "from_date", fieldtype: "Date", label: __("From date") },
+	{ fieldname: "to_date", fieldtype: "Date", label: __("To date") },
 ]
 </script>

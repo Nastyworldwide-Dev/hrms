@@ -1,7 +1,7 @@
 <template>
 	<template v-if="expenseClaim.expenses">
 		<div class="flex flex-row justify-between items-center pt-4 pb-2 border-b-2 border-divider">
-			<h2 class="g-eyebrow">{{ __("Taxes & Charges") }}</h2>
+			<h2 class="g-eyebrow">{{ __("Taxes and charges") }}</h2>
 			<div class="flex flex-row gap-3 items-center">
 				<span class="text-base font-extrabold text-inkbase">
 					{{ formatCurrency(expenseClaim.total_taxes_and_charges, expenseClaim.currency) }}
@@ -114,7 +114,7 @@
 								<template #prefix>
 									<component :is="editingIdx === null ? Plus : Check" class="w-4" />
 								</template>
-								{{ editingIdx === null ? __("Add Tax") : __("Update Tax") }}
+								{{ editingIdx === null ? __("Add tax") : __("Update tax") }}
 							</Button>
 						</div>
 					</div>
@@ -207,9 +207,9 @@ const expenseClaimRef = computed(() => props.expenseClaim)
 useCurrencyConversion(taxesTableFields, expenseClaimRef, ["tax_amount", "total"])
 
 const modalTitle = computed(() => {
-	if (props.isReadOnly) return __("Expense Tax")
+	if (props.isReadOnly) return __("Expense tax")
 
-	return editingIdx.value === null ? __("New Expense Tax") : __("Edit Expense Tax")
+	return editingIdx.value === null ? __("New expense tax") : __("Edit expense tax")
 })
 
 const addButtonDisabled = computed(() => {

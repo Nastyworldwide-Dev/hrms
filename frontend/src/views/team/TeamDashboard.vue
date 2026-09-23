@@ -141,7 +141,7 @@
 								</span>
 								<span v-if="member.leave_type">
 									{{ __(member.leave_type, null, "Leave Type") }}
-									<template v-if="member.half_day">({{ __("Half Day") }})</template>
+									<template v-if="member.half_day">({{ __("Half day") }})</template>
 									· {{ __("until") }} {{ dayjs(member.leave_until).format("D MMM") }}
 								</span>
 							</div>
@@ -281,11 +281,11 @@ const dayLabel = computed(() => {
 
 const summaryTiles = computed(() => {
 	const summary = teamStatus.data?.summary || {}
-	// __("Present"), __("On Leave"), __("Not In Yet"), __("Absent")
+	// __("Present"), __("On leave"), __("Not In Yet"), __("Absent")
 	return [
 		{ label: __("Present"), count: summary["Present"] || 0 },
-		{ label: __("On Leave"), count: summary["On Leave"] || 0 },
-		{ label: __("Not In Yet"), count: summary["Not In Yet"] || 0 },
+		{ label: __("On leave"), count: summary["On Leave"] || 0 },
+		{ label: __("Not in yet"), count: summary["Not In Yet"] || 0 },
 		{ label: __("Absent"), count: summary["Absent"] || 0 },
 	]
 })

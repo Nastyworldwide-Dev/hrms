@@ -102,9 +102,9 @@ const STATE = {
 
 const LEGEND = [
 	{ state: "present", label: __("Present") },
-	{ state: "half", label: __("Half Day") },
+	{ state: "half", label: __("Half day") },
 	{ state: "absent", label: __("Absent") },
-	{ state: "leave", label: __("On Leave") },
+	{ state: "leave", label: __("On leave") },
 	{ state: "rest", label: __("Holiday") },
 ]
 
@@ -129,7 +129,7 @@ const days = computed(() =>
 // two maps were the pre-GCalendar implementation and stopped being read by
 // anything once the template below switched to `<GCalendar :days :legend>`.
 
-// __("Present"), __("Half Day"), __("Absent"), __("On Leave"), __("Work From Home")
+// __("Present"), __("Half day"), __("Absent"), __("On leave"), __("Work from home")
 const summaryStatuses = ["Present", "Half Day", "Absent", "On Leave"]
 
 //: The day sheet. Opened by tapping a tile, closed by the sheet itself — a

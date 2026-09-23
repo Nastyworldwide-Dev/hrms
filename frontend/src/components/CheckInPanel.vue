@@ -508,9 +508,9 @@ function isSessionStale(log) {
 const liveAction = computed(() => {
 	const last = lastLog?.value
 	if (!last || last.log_type !== "IN" || isSessionStale(last)) {
-		return { action: "IN", label: __("Check In") }
+		return { action: "IN", label: __("Check in") }
 	}
-	return { action: "OUT", label: __("Check Out") }
+	return { action: "OUT", label: __("Check out") }
 })
 
 // The action the open sheet committed to. Taken ONCE when the sheet presents

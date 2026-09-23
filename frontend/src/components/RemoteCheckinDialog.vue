@@ -60,7 +60,7 @@
 					@click="submit"
 					:disabled="submitting || !remarks.trim() || !online"
 				>
-					{{ submitting ? __("Submitting…") : __("Submit Request") }}
+					{{ submitting ? __("Submitting…") : __("Send request") }}
 				</button>
 			</div>
 			<!-- Owner ruling: never an offline check-in (audit P0-7). -->

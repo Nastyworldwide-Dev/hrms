@@ -20,7 +20,7 @@
 -->
 <template>
 	<div class="w-full">
-		<div class="g-eyebrow mb-2.5">{{ title || __("Quick Links") }}</div>
+		<div class="g-eyebrow mb-2.5">{{ title || __("Quick links") }}</div>
 
 		<GTileGrid :loading="loading" :empty="!loading && !props.items.length">
 			<template #empty>

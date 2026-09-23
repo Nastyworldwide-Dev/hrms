@@ -7,12 +7,12 @@
 	     are banked hours to spend, so those hours are never stranded. -->
 	<div v-if="bank.data?.hours_available > 0" class="flex flex-col w-full">
 		<div class="flex flex-row items-baseline justify-between mb-3">
-			<span class="g-eyebrow">{{ __("Replacement Leave") }}</span>
+			<span class="g-eyebrow">{{ __("Replacement leave") }}</span>
 			<router-link
 				:to="{ name: 'ReplacementLeaveView' }"
 				class="g-focusable g-seclink text-kra-label text-accent-ink underline underline-offset-link"
 			>
-				{{ __("View Claims") }}
+				{{ __("View claims") }}
 			</router-link>
 		</div>
 		<ResourceError :resource="bank" what="your replacement leave bank" />

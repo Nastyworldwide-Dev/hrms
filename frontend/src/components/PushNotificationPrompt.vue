@@ -38,7 +38,7 @@
 					@click="enable"
 					:disabled="enabling"
 				>
-					<span>{{ enabling ? __("Enabling…") : __("Enable Notifications") }}</span>
+					<span>{{ enabling ? __("Enabling…") : __("Turn on notifications") }}</span>
 					<span aria-hidden="true">→</span>
 				</button>
 				<button

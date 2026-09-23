@@ -77,14 +77,14 @@
 				variant="outline"
 				class="w-full py-5 text-sm !bg-transparent !border !border-divider !text-inkbase"
 			>
-				{{ __("Clear All") }}
+				{{ __("Clear all") }}
 			</Button>
 			<Button
 				@click="emit('apply-filters')"
 				variant="solid"
 				class="w-full py-5 text-sm !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
 			>
-				{{ __("Apply Filters") }}
+				{{ __("Apply filters") }}
 			</Button>
 		</div>
 	</div>

@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :pageTitle="__('Expense Claims')">
+	<BaseLayout :pageTitle="__('Expense claims')">
 		<template #body>
 			<div
 				class="flex flex-col gap-8 px-4 pt-6 pb-8 lg:grid lg:grid-cols-[1fr_1.2fr] lg:gap-x-0 lg:p-7 lg:items-start"
@@ -16,13 +16,13 @@
 					<div class="order-3 lg:order-1">
 						<div class="flex items-baseline justify-between mb-2.5">
 							<span class="g-eyebrow !text-ink-600">
-								{{ __("Recent Expenses") }}
+								{{ __("Recent expenses") }}
 							</span>
 							<router-link
 								:to="{ name: 'ExpenseClaimListView' }"
 								class="g-seclink text-kra-label text-accent-700 underline underline-offset-link cursor-pointer"
 							>
-								{{ __("View List") }}
+								{{ __("View list") }}
 							</router-link>
 						</div>
 						<hr class="h-px border-0 bg-hair" />
@@ -40,7 +40,7 @@
 						v-slot="{ navigate }"
 						class="order-2 lg:order-2"
 					>
-						<GButton :label="__('Claim an Expense')" @click="navigate">
+						<GButton :label="__('Claim an expense')" @click="navigate">
 							<template #trailing>
 								<ArrowRight :size="17" />
 							</template>

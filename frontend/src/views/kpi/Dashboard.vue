@@ -40,7 +40,7 @@
 								@change="refetch"
 								class="kpi-filter g-focusable"
 							>
-								<option :value="ALL_CYCLES">{{ __("All Appraisal Cycles") }}</option>
+								<option :value="ALL_CYCLES">{{ __("All review periods") }}</option>
 								<option v-for="c in cycles" :key="c" :value="c">{{ c }}</option>
 							</select>
 						</div>
@@ -158,7 +158,7 @@
 								@change="fetchTeam"
 								class="kpi-filter g-focusable"
 							>
-								<option :value="ALL_CYCLES">{{ __("All Appraisal Cycles") }}</option>
+								<option :value="ALL_CYCLES">{{ __("All review periods") }}</option>
 								<option v-for="c in teamCycles" :key="c" :value="c">{{ c }}</option>
 							</select>
 						</div>
@@ -775,7 +775,7 @@ const scopeLabel = computed(() =>
 		isManagerTier.value
 			? teamDepartment.value || __("All departments")
 			: departmentKpi.data?.node?.label || __("All departments"),
-		teamCycle.value === ALL_CYCLES ? __("All Appraisal Cycles") : teamCycle.value,
+		teamCycle.value === ALL_CYCLES ? __("All review periods") : teamCycle.value,
 	]
 		.filter(Boolean)
 		.join(" · ")

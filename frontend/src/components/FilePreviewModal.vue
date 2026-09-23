@@ -1,7 +1,7 @@
 <template>
 	<ion-header>
 		<ion-toolbar>
-			<ion-title>{{ filename }} - {{ __("File Preview") }}</ion-title>
+			<ion-title>{{ filename }} - {{ __("File preview") }}</ion-title>
 			<ion-buttons slot="end">
 				<ion-button @click="modalController.dismiss()">{{ __("Close") }} </ion-button>
 			</ion-buttons>

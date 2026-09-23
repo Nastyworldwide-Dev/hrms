@@ -37,7 +37,7 @@
 
 					<div class="bg-track-solid border border-hair px-3 py-2.5">
 						<div class="g-eyebrow">
-							{{ __("Shift Location") }}
+							{{ __("Shift location") }}
 						</div>
 						<div class="text-sm font-medium text-ink mt-0.5">
 							{{ shiftLocation || __("(unnamed)") }}

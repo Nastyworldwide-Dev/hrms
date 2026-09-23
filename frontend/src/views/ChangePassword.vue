@@ -13,26 +13,26 @@
 							<ChevronLeft class="h-5 w-5 text-inkbase" />
 						</GIconButton>
 						<h2 class="text-xl font-extrabold text-inkbase tracking-tight">
-							{{ __("Change Password") }}
+							{{ __("Change password") }}
 						</h2>
 					</header>
 
 					<div class="grow overflow-y-auto">
 						<form class="flex flex-col space-y-4 p-4" @submit.prevent="submitPasswordChange">
 							<GInput
-								:label="__('Current Password') + ' *'"
+								:label="__('Current password') + ' *'"
 								type="password"
 								v-model="currentPassword"
 								autocomplete="current-password"
 							/>
 							<GInput
-								:label="__('New Password') + ' *'"
+								:label="__('New password') + ' *'"
 								type="password"
 								v-model="newPassword"
 								autocomplete="new-password"
 							/>
 							<GInput
-								:label="__('Confirm New Password') + ' *'"
+								:label="__('Confirm new password') + ' *'"
 								type="password"
 								v-model="confirmPassword"
 								autocomplete="new-password"
@@ -45,7 +45,7 @@
 						class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 					>
 						<GButton
-							:label="__('Update Password')"
+							:label="__('Update password')"
 							:pending-label="__('Updating…')"
 							:pending="updatePasswordResource.loading"
 							@click="submitPasswordChange"

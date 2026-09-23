@@ -61,7 +61,7 @@
 							<Bell class="h-icon-md w-icon-md text-accent-ink shrink-0" />
 							<Switch
 								size="md"
-								:label="__('Enable Push Notifications')"
+								:label="__('Turn on notifications')"
 								:class="['flex-1', description ? 'p-2' : '']"
 								:model-value="pushNotificationState"
 								:disabled="disablePushSetting"
@@ -90,7 +90,7 @@
 								<div class="flex flex-row items-center gap-3 grow">
 									<Lock class="h-icon-md w-icon-md text-inkbase" />
 									<div class="text-button-label text-inkbase">
-										{{ __("Change Password") }}
+										{{ __("Change password") }}
 									</div>
 								</div>
 								<ChevronRight class="h-icon-md w-icon-md text-ink-600" />
@@ -186,7 +186,7 @@ const enablePushNotifications = () => {
 			} else {
 				toast({
 					title: __("Error"),
-					text: __("Push Notification permission denied"),
+					text: __("Notifications are blocked for this site"),
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",

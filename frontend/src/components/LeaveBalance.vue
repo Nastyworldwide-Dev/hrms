@@ -1,13 +1,13 @@
 <template>
 	<div class="flex flex-col w-full">
 		<div class="flex flex-row items-baseline justify-between mb-3">
-			<span class="g-eyebrow">{{ __("Leave Balance") }}</span>
+			<span class="g-eyebrow">{{ __("Leave balance") }}</span>
 			<router-link
 				v-if="leaveBalance.data"
 				:to="{ name: 'LeaveApplicationListView' }"
 				class="g-focusable text-kra-label text-accent-ink underline underline-offset-link"
 			>
-				{{ __("View Leave History") }}
+				{{ __("View leave history") }}
 			</router-link>
 		</div>
 

@@ -23,7 +23,7 @@ const FILTER_CONFIG = [
 	{
 		fieldname: "log_type",
 		fieldtype: "Select",
-		label: __("Log Type"),
+		label: __("Check-in type"),
 		options: "IN\nOUT",
 	},
 	{

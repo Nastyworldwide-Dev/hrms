@@ -227,7 +227,7 @@ const EMPTY_COPY = {
 	},
 	"OT Request": {
 		title: __("No overtime claims yet"),
-		body: __("Stay past your shift end, punch out, then use New above"),
+		body: __("Stay past your shift end, check out, then tap New"),
 	},
 	"Employee Issue": {
 		title: __("Nothing reported"),
@@ -247,7 +247,7 @@ const EMPTY_COPY = {
 	},
 	"Employee Checkin": {
 		title: __("No check-ins recorded"),
-		body: __("Punch in from Home and your record appears here"),
+		body: __("Check in from Home and your record appears here"),
 	},
 	"Expense Claim": {
 		title: __("No expense claims yet"),

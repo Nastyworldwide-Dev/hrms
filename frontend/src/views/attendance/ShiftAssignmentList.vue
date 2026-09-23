@@ -21,10 +21,10 @@ const FILTER_CONFIG = [
 	{
 		fieldname: "shift_type",
 		fieldtype: "Link",
-		label: __("Shift Type"),
+		label: __("Shift type"),
 		options: "Shift Type",
 	},
-	{ fieldname: "start_date", fieldtype: "Date", label: __("Start Date") },
-	{ fieldname: "end_date", fieldtype: "Date", label: __("End Date") },
+	{ fieldname: "start_date", fieldtype: "Date", label: __("Start date") },
+	{ fieldname: "end_date", fieldtype: "Date", label: __("End date") },
 ]
 </script>

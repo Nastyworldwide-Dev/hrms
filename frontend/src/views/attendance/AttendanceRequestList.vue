@@ -24,7 +24,7 @@ const FILTER_CONFIG = [
 		label: __("Shift"),
 		options: "Shift Type",
 	},
-	{ fieldname: "from_date", fieldtype: "Date", label: __("From Date") },
-	{ fieldname: "to_date", fieldtype: "Date", label: __("To Date") },
+	{ fieldname: "from_date", fieldtype: "Date", label: __("From date") },
+	{ fieldname: "to_date", fieldtype: "Date", label: __("To date") },
 ]
 </script>

@@ -45,7 +45,7 @@
 						</GButton>
 
 						<button type="button" class="g-auth__link g-focusable" @click="openForgotDialog">
-							{{ __("Forgot Password?") }}
+							{{ __("Forgot password?") }}
 						</button>
 					</form>
 
@@ -89,7 +89,7 @@
 					{{ __("Your password has expired. Please reset your password to continue") }}
 				</p>
 				<a class="g-provider" :href="resetPassword.link" target="_blank">
-					{{ __("Go to Reset Password page") }}
+					{{ __("Reset your password") }}
 				</a>
 			</GModal>
 
@@ -114,7 +114,7 @@
 					<GButton
 						v-else
 						type="submit"
-						:label="__('Send Reset Link')"
+						:label="__('Send reset link')"
 						:pending-label="__('Sending…')"
 						:pending="forgot.loading"
 					/>
@@ -132,7 +132,7 @@
 				<form class="flex flex-col gap-stack-md" @submit.prevent="submit">
 					<GInput
 						v-model="otp.code"
-						:label="__('OTP Code')"
+						:label="__('OTP code')"
 						placeholder="000000"
 						:error="errorMessage"
 						autocomplete="one-time-code"

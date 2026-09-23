@@ -79,7 +79,8 @@ function setFormReadOnly() {
 function validateDates(start_date, end_date) {
 	if (!(start_date && end_date)) return
 
-	const error_message = start_date > end_date ? __("End Date cannot be before Start Date") : ""
+	const error_message =
+		start_date > end_date ? __("The end date cannot be before the start date") : ""
 
 	const start_date_field = formFields.data.find((field) => field.fieldname === "start_date")
 	start_date_field.error_message = error_message

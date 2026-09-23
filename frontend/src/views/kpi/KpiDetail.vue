@@ -36,7 +36,7 @@
 				<div>
 					<div class="g-eyebrow">
 						<template v-if="current.is_average">
-							{{ data.selected_year }} · {{ __("All Appraisal Cycles") }}
+							{{ data.selected_year }} · {{ __("All review periods") }}
 						</template>
 						<template v-else> {{ __("Appraisal cycle") }} · {{ current.cycle }} </template>
 					</div>

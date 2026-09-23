@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :pageTitle="__('Team Roster')">
+	<BaseLayout :pageTitle="__('Team roster')">
 		<template #body>
 			<div
 				class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-24 lg:p-7"

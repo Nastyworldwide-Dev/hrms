@@ -122,7 +122,7 @@
 							<template #prefix>
 								<component :is="editingIdx === null ? Plus : Check" class="w-4" />
 							</template>
-							{{ editingIdx === null ? __("Add Expense") : __("Update Expense") }}
+							{{ editingIdx === null ? __("Add expense") : __("Update expense") }}
 						</Button>
 					</div>
 				</div>
@@ -252,9 +252,9 @@ const expenseClaimRef = computed(() => props.expenseClaim)
 useCurrencyConversion(expensesTableFields, expenseClaimRef, ["amount", "sanctioned_amount"])
 
 const modalTitle = computed(() => {
-	if (props.isReadOnly) return __("Expense Item")
+	if (props.isReadOnly) return __("Expense item")
 
-	return editingIdx.value === null ? __("New Expense Item") : __("Edit Expense Item")
+	return editingIdx.value === null ? __("New expense item") : __("Edit expense item")
 })
 
 const addButtonDisabled = computed(() => {

@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :pageTitle="__('Leaves & Holidays')">
+	<BaseLayout :pageTitle="__('Leave and holidays')">
 		<template #body>
 			<!-- §20.3: one 720px column, left-aligned (7.3 ruling). Was
 			     lg:grid-cols-[1fr_280px] over the balance band and lg:grid-cols-2 over
@@ -20,7 +20,7 @@
 						v-slot="{ navigate }"
 						class="block"
 					>
-						<GButton :label="__('Request a Leave')" @click="navigate">
+						<GButton :label="__('Ask for time off')" @click="navigate">
 							<template #trailing>
 								<ArrowRight :size="17" />
 							</template>
@@ -32,12 +32,12 @@
 				<div class="flex flex-col gap-8">
 					<div>
 						<div class="flex flex-row items-baseline justify-between mb-2.5">
-							<span class="g-eyebrow">{{ __("Recent Leaves") }}</span>
+							<span class="g-eyebrow">{{ __("Recent leave") }}</span>
 							<router-link
 								:to="{ name: 'LeaveApplicationListView' }"
 								class="g-focusable g-seclink text-kra-label text-accent-ink underline underline-offset-link"
 							>
-								{{ __("View List") }}
+								{{ __("View list") }}
 							</router-link>
 						</div>
 						<div class="border-t-2 border-divider">

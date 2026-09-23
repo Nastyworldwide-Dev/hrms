@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :pageTitle="__('Replacement Leave')">
+	<BaseLayout :pageTitle="__('Replacement leave')">
 		<template #body>
 			<div class="flex flex-col gap-5 p-4 pt-6">
 				<!-- The header, back control and title now come from the shared shell
@@ -10,7 +10,7 @@
 				<div class="flex items-center justify-end">
 					<router-link :to="{ name: 'ReplacementLeaveClaimFormView' }" v-slot="{ navigate }">
 						<GButton
-							:label="__('New Claim')"
+							:label="__('New claim')"
 							class="g-btn--compact"
 							:disabled="!canClaim"
 							@click="navigate"
@@ -56,7 +56,7 @@
 
 				<!-- claims -->
 				<div class="flex flex-col gap-1.5">
-					<span class="g-eyebrow">{{ __("My Claims") }}</span>
+					<span class="g-eyebrow">{{ __("My claims") }}</span>
 					<ResourceError v-if="claims.error" :resource="claims" :what="__('your claims')" />
 					<GEmptyState
 						v-else-if="!claims.data?.length"
