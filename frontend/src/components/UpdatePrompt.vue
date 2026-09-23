@@ -67,6 +67,12 @@ let updateServiceWorker = null
 //: The build currently waiting, so a dismissal can name what it dismissed.
 //: Captured at registration because `onNeedRefresh` takes no arguments.
 let waitingId = null
+//: The registration, so Reload can reach the waiting worker itself.
+let swRegistration = null
+//: How long Reload waits for the new build to take control before reloading
+//: anyway (hotfix 23 Sep: on a real phone that event never came, so Reload
+//: did nothing and the bar kept returning).
+const RELOAD_FALLBACK_MS = 3000
 
 //: Storage is a CONVENIENCE, never a dependency — private mode and cleared
 //: site data both throw on access, and the update offer has to work anyway.
@@ -103,6 +109,7 @@ import("virtual:pwa-register")
 			// `onNeedRefresh` takes no arguments, so the id has to be captured
 			// here and read when the offer fires.
 			onRegisteredSW(_url, registration) {
+				swRegistration = registration
 				waitingId = waitingBuildId(registration)
 			},
 			onNeedRefresh() {
@@ -134,18 +141,33 @@ function dismiss() {
 }
 
 function reload() {
-	// `true` reloads the page once the new worker has taken control — the
-	// worker is told to skipWaiting from HERE, after the employee agreed,
-	// rather than unconditionally at install time.
+	// Always ends in a reload. The library alone waits for the browser to say
+	// the new build took control; on a real phone that never came and the tap
+	// did nothing (hotfix 23 Sep). So: tell the waiting build directly, reload
+	// on controllerchange, and reload anyway after RELOAD_FALLBACK_MS. A reload
+	// on the old build is harmless: the waiting one takes over on the next load.
 	//
 	// The remembered dismissal is cleared first. It belongs to a build that is
-	// about to become the CURRENT one, and a stale key sitting in storage is a
-	// coincidence waiting to suppress a future offer.
+	// about to become the CURRENT one.
 	try {
 		localStorage.removeItem(UPDATE_DISMISS_KEY)
 	} catch {
 		// Storage being unavailable cannot stop a reload the employee asked for.
 	}
+	needRefresh.value = false
+	console.info("[update] reloading into the new build")
+	let reloaded = false
+	const once = () => {
+		if (reloaded) return
+		reloaded = true
+		window.location.reload()
+	}
+	navigator.serviceWorker?.addEventListener("controllerchange", once, { once: true })
+	swRegistration?.waiting?.postMessage({ type: "SKIP_WAITING" })
 	updateServiceWorker?.(true)
+	setTimeout(() => {
+		console.info("[update] no takeover signal; reloading anyway")
+		once()
+	}, RELOAD_FALLBACK_MS)
 }
 </script>
