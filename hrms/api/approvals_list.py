@@ -150,30 +150,54 @@ def _range(start, end) -> str:
 	return start if not end or end == start else f"{start} – {end}"
 
 
+#: Candidates read per page, and the most read per type in one call. The cap
+#: counts MY rows, not the site's: capping the site-wide list before asking
+#: whose each row was dropped an approver's own request behind 50 older ones
+#: routed elsewhere (review of 474d12d34). SCAN_LIMIT bounds the cost.
+PAGE = 100
+SCAN_LIMIT = 1000
+
+
+def _mine_of(doctype: str, field: str, pending: str) -> tuple[list, bool]:
+	"""Pending `doctype` rows routed to the caller, oldest first, up to SCAN_CAP."""
+	mine, start = [], 0
+	while start < SCAN_LIMIT:
+		names = frappe.get_all(
+			doctype,
+			filters={field: pending, "docstatus": 0},
+			pluck="name",
+			order_by="modified asc",
+			limit=PAGE,
+			start=start,
+			ignore_permissions=True,
+		)
+		for name in names:
+			doc = frappe.get_doc(doctype, name)
+			if _request_read_allowed(doc) and _is_routed_approver(doc):
+				mine.append(doc)
+				if len(mine) > SCAN_CAP:
+					return mine[:SCAN_CAP], True
+		if len(names) < PAGE:
+			return mine, False
+		start += PAGE
+	logger.warning("[approvals_list] %s: scanned %d pending, stopped", doctype, SCAN_LIMIT)
+	return mine, True
+
+
 @frappe.whitelist(methods=["GET", "POST"])
 def get_waiting_for_me() -> dict:
 	rows, capped = [], False
 	for doctype in _types_on_site():
 		field, pending = DECIDE_THEN_SUBMIT[doctype]
 		try:
-			names = frappe.get_all(
-				doctype,
-				filters={field: pending, "docstatus": 0},
-				pluck="name",
-				order_by="modified asc",
-				limit=SCAN_CAP + 1,
-				ignore_permissions=True,
-			)
+			mine, hit_cap = _mine_of(doctype, field, pending)
 		except Exception:
 			# One unavailable type must not take the page down; logged by name
 			# so a silent zero is never mistaken for an empty queue.
 			logger.exception("[approvals_list] %s failed; skipped", doctype)
 			continue
-		capped = capped or len(names) > SCAN_CAP
-		for name in names[:SCAN_CAP]:
-			doc = frappe.get_doc(doctype, name)
-			if _request_read_allowed(doc) and _is_routed_approver(doc):
-				rows.append(_row(doc))
+		capped = capped or hit_cap
+		rows.extend(_row(doc) for doc in mine)
 	try:
 		rows.extend(_remote_row(req) for req in _remote_checkins())
 	except Exception:

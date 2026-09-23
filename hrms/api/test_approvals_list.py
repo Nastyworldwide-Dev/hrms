@@ -121,8 +121,13 @@ class TestHomeCountsWhatThePageLists(unittest.TestCase):
 
 		from hrms.api import needs_you
 
-		source = inspect.getsource(needs_you._pending_for)
-		self.assertIn("_request_read_allowed(doc) and _is_routed_approver(doc)", source)
+		# One scan for both since review of 474d12d34: Home counts what the
+		# page lists, by the page's own function.
+		self.assertIn("_mine_of(doctype, field, pending)", inspect.getsource(needs_you._pending_for))
+		self.assertIn(
+			"_request_read_allowed(doc) and _is_routed_approver(doc)",
+			inspect.getsource(approvals_list._mine_of),
+		)
 
 
 class TestRemoteCheckinsJoinTheList(unittest.TestCase):
@@ -195,3 +200,39 @@ class TestDatesReadLikeACalendar(unittest.TestCase):
 
 	def test_nothing_stays_nothing(self):
 		self.assertEqual(approvals_list._range(None, None), "")
+
+
+class TestTheCapCountsMyRowsNotTheSites(unittest.TestCase):
+	"""Review of 474d12d34: the cap was applied to every pending request on the
+	site BEFORE asking whose it was. With 60 older requests routed elsewhere,
+	the one routed to me fell past the cap: missing from the page and from
+	Home's count, with no other door left."""
+
+	def test_my_request_behind_sixty_others_is_still_found(self):
+		others = [f"LA-{i:03d}" for i in range(60)]
+		names = [*others, "LA-MINE"]
+
+		def paged(doctype, filters=None, pluck=None, order_by=None, limit=None, start=0, **kw):
+			return names[start : start + limit] if doctype == "Leave Application" else []
+
+		docs = {
+			n: frappe._dict(
+				doctype="Leave Application",
+				name=n,
+				employee="E",
+				employee_name=n,
+				modified=f"2026-09-{1 + i % 20:02d} 00:00:00",
+			)
+			for i, n in enumerate(names)
+		}
+		with (
+			patch.object(frappe, "get_all", side_effect=paged, create=True),
+			patch.object(frappe, "get_doc", side_effect=lambda dt, n: docs[n]),
+			patch.object(approvals_list, "_request_read_allowed", side_effect=lambda d: True),
+			patch.object(approvals_list, "_is_routed_approver", side_effect=lambda d: d.name == "LA-MINE"),
+			patch.object(approvals_list, "_types_on_site", return_value=["Leave Application"]),
+			patch.object(approvals_list, "_remote_checkins", return_value=[]),
+		):
+			result = approvals_list.get_waiting_for_me()
+		self.assertEqual([r["name"] for r in result["rows"]], ["LA-MINE"])
+		self.assertFalse(result["capped"])

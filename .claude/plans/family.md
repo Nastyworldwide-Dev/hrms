@@ -1,8 +1,9 @@
-CLASS: role names in the frontend deciding what a person is offered (audit
-F-15; OWN "no role literals in frontend").
+CLASS: a cap applied before asking whose the row is (review of 474d12d34).
+The site-wide oldest 50 pending of a type were read first and only then
+filtered to the caller, so an approver's own newer request fell past the cap.
+With the Requests Team tab cut, Approvals is the only door, so the row was lost.
 
-Readers and verdicts:
-frontend/src/data/appLinks.js — same-root: roles removed; visibleAppLinks filters by the keys the server offers.
-hrms/api/app_links.py get_my_apps — new: the role rule, next to the roles it reads; session-scoped.
-frontend/src/views/More.vue, frontend/src/components/SideNav.vue — same-root: read myApps (server) instead of user roles.
-frontend/src/data/navItems.js visibleAppItems — same-root: thin map over the offered keys.
+Call sites and verdicts:
+hrms/api/approvals_list.py get_waiting_for_me — same-root, fixed here (_mine_of pages until SCAN_CAP of MY rows; SCAN_LIMIT 1000 bounds cost, capped=true past it).
+hrms/api/needs_you.py _pending_for — same-root, fixed here (reuses _mine_of, so Home counts what the page lists).
+hrms/api/remote_checkin.py list_pending_for_approver — not-affected: its query filters by the caller's routing in SQL before the limit.

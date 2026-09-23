@@ -23,7 +23,7 @@ import logging
 
 import frappe
 
-from hrms.api.approval import DECIDE_THEN_SUBMIT, _is_routed_approver, _request_read_allowed
+from hrms.api.approval import DECIDE_THEN_SUBMIT
 
 logger = logging.getLogger(__name__)
 
@@ -64,38 +64,16 @@ ROW_COPY = {
 def _pending_for(doctype: str, field: str, pending: str) -> int:
 	"""How many `doctype` rows are waiting on THIS caller.
 
-	Pending means the decision field still says so AND the document is not
-	submitted: `approval` treats docstatus 1 as decided whatever the field
-	says, because that is when the consequence lands (the allocation, the
-	attendance row, the banked hours).
+	The SAME scan the Approvals page lists (approvals_list._mine_of): the cap
+	counts the caller's rows, not the site's, so an approver's own request
+	behind older ones routed elsewhere is counted (review of 474d12d34), and
+	the number here always matches the page it opens. Returns SCAN_CAP + 1
+	when there are more, which the row shows as "20+".
 	"""
-	# `name` ONLY. Compensatory Leave Request has no `company` column, and
-	# asking for one made that query raise — which the caller's except swallowed,
-	# so six of the seven types silently reported zero on a site that had
-	# pending rows. Found by running it against the bench; a per-doctype field
-	# list is a promise about seven schemas that nothing was checking.
-	candidates = frappe.get_all(
-		doctype,
-		filters={field: pending, "docstatus": 0},
-		pluck="name",
-		order_by="modified desc",
-		limit=SCAN_CAP + 1,
-		ignore_permissions=True,
-	)
-	if not candidates:
-		return 0
+	from hrms.api.approvals_list import _mine_of
 
-	count = 0
-	for name in candidates:
-		# The full document, because `_is_routed_approver` reads whichever of
-		# the approver field, the employee and the company THAT type has — and
-		# the point of calling it is that this module does not need to know.
-		# Read first, as approval.decide does: routing's HR branch admits System
-		# Manager, whom approval_row_scope denies read (review of be4b81edf).
-		doc = frappe.get_doc(doctype, name)
-		if _request_read_allowed(doc) and _is_routed_approver(doc):
-			count += 1
-	return count
+	mine, more = _mine_of(doctype, field, pending)
+	return SCAN_CAP + 1 if more or len(mine) > SCAN_CAP else len(mine)
 
 
 @frappe.whitelist(methods=["GET", "POST"])
