@@ -2629,6 +2629,13 @@ textarea {
 ion-refresher {
 	z-index: 2;
 }
+/* Above the content, it must only be SEEN while someone is pulling: at rest
+   its "Refreshing…" / "Pull to refresh" line showed through the page top on a
+   real phone (hotfix 23 Sep, screenshots of Home and Requests). Ionic marks
+   the live states with refresher-active (pulling, ready, refreshing). */
+ion-refresher:not(.refresher-active) .g-refresh {
+	visibility: hidden;
+}
 
 /* ion-refresher-content's inner icon nodes are shadow DOM with no published
    custom properties, so the spinner is switched OFF (refreshing-spinner=none,
