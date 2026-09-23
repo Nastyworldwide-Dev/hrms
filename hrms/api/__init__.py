@@ -456,6 +456,8 @@ def get_shift_requests(
 		for application in shift_requests:
 			application["workflow_state_field"] = workflow_state_field
 
+	name_approvers(shift_requests, "approver")
+
 	return shift_requests
 
 
@@ -1076,7 +1078,40 @@ def get_leave_applications(
 		for application in applications:
 			application["workflow_state_field"] = workflow_state_field
 
+	# WHO it is with, by name. `leave_approver` is a user id, and "Waiting"
+	# that does not say on whom is the defect 2.0 fixed on the approvals screen
+	# and never fixed on the employee's own list (mockup 4 gap #1).
+	name_approvers(applications, "leave_approver")
+
 	return applications
+
+
+def name_approvers(rows, field: str) -> None:
+	"""Fill `approver_name` on each row from the user id in `field`.
+
+	ONE query for the whole list, never one per row: a request list is the
+	screen an employee opens most often, and an N+1 here is an N+1 on every
+	open.
+
+	Falls back to the user id when the User row carries no full name — better
+	a login than a blank, since the reader is trying to work out who to chase.
+	"""
+	ids = {row.get(field) for row in rows if row.get(field)}
+	if not ids:
+		return
+	names = dict(
+		frappe.get_all(
+			"User",
+			filters={"name": ("in", list(ids))},
+			fields=["name", "full_name"],
+			as_list=True,
+			ignore_permissions=True,
+		)
+	)
+	for row in rows:
+		user = row.get(field)
+		if user:
+			row["approver_name"] = names.get(user) or user
 
 
 @frappe.whitelist(methods=["GET", "POST"])
@@ -1366,6 +1401,10 @@ def get_expense_claims(
 	if workflow_state_field:
 		for claim in claims:
 			claim["workflow_state_field"] = workflow_state_field
+
+	# Same reason as the leave list: a chip reading "Waiting" that does not say
+	# on whom sends the employee to ask HR who has it.
+	name_approvers(claims, "expense_approver")
 
 	return claims
 

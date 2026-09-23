@@ -2,108 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-  "Shift Assignment" is the TABLE that stores a roster line — the word is
-  "shifts". Now "Your check-ins", "Your shifts", "Your attendance requests".
-  And the dashboard carried the SAME defect slice 2.2 had just fixed one
-  screen over: `__(claimableOt.data.compensation)`, translating the server's
-  own Select value, so "Overtime Pay" reached the screen because the
-  translation files do not contain it. Mapped explicitly, same two values, and
-  a test now scans every attendance screen and every component for
-  `__(compensation|workflow_state|docstatus)` so the class cannot reappear.
-NOTE: the layout work §3.2 describes for these screens — the day sheet, the
-  missing-punch flag, travel and training dots — is marked N in the plan: it
-  needs backend that does not exist. Building it is a FEATURE, and §7 puts
-  features out of 2.0's scope. This slice is the wording, which is what the
-  §6 row actually asks for ("plain labels; no doctype words").
-NOTE: the fix exposed a real runtime bug that only the lint gate could see.
-  `__` is a TEMPLATE-only global (main.js:141, app.config.globalProperties) —
-  Vue resolves it in markup, and this file had never needed it in the script
-  because every previous call was in the template. A computed that builds a
-  word does need the real function, and `no-undef` said so. Injected.
-EVIDENCE: 2 correct — 5 tests red first (4 of 5), 4 mutants killed: a title
-  reverts to the doctype; the raw compensation is translated; the shifts title
-  says "Assignment"; the outcome mapping is dropped. Suite 608 / 604 pass,
-  same 4 red at HEAD. Gates: lint 234/0, contrast 56/0, surfaces 47/0, tokens
-  ok. Build clean.
-NEXT: 2.0 slice 4.1 — Approvals and the Helpdesk hub. Then D.1 (desktop).
-- 2026-09-22T14:31:11Z PUSH: nz-glass @ 1e4e07f51
-- 2026-09-22T14:31:11Z COMMIT: 1e4e07f51 fix(attendance): three screens were titled with the name of a table → review+design dispatched
-- 2026-09-22T14:36:57Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
-
-REPAIR: 2.0 slice 4.1 — approvals say whose turn it is. The tabs were
-  "Pending" and "History", and "Pending" never said pending on WHOM: both
-  lists on that screen hold pending things and only one is waiting on the
-  person reading it. Now "Waiting on you" / "Decided by you" (§3.5's own
-  words), plus the count above the rows — an approver wants to know whether
-  this is a two-minute job before they start reading.
-  KEY AND LABEL ARE DIFFERENT THINGS and conflating them is why the tabs still
-  said "Pending": the string is compared in the template
-  (`activeTab === 'History'`) and carried in the deep link a decided request's
-  notification uses (`?tab=History`). GSegmented already takes { key, label },
-  so the key is untouched and only the label is the employee's word.
-NOTE: §3.5 also asks for a UNIFIED queue over a new
-  `approval.list_pending_for_user`. The plan marks it N (new backend) and §7
-  puts new backend out of 2.0's scope, so that is its own piece of work. This
-  slice is what §6's row asks for.
-NOTE: my first placement of the count was wrong twice in one edit — it landed
-  in the HISTORY branch (the anchor matched the first occurrence) counting the
-  PENDING list, and it sat between `v-else-if` and `v-else`, which breaks the
-  chain. It shares the v-else with the rows now.
-NOTE: two of my own assertions were too loose and mutants proved it. The count
-  check matched a `.length` in a `v-if`, which is a render decision and not a
-  number anybody reads; and the "Remote survives" check matched the word
-  anywhere in a file that contains it eight times, so renaming the HEADING
-  passed. Both are scoped now — a number in a sentence, and the <h2>.
-EVIDENCE: 2 correct — 5 tests red first (3 of 5 after the count check was
-  tightened), 4 mutants killed: labels revert; the key is translated (which
-  would break the deep link); the count is removed; "Remote" leaves the title.
-  Suite 613 / 609 pass, same 4 red at HEAD. Gates: lint 234/0, contrast 56/0,
-  surfaces 47/0, tokens ok. Build clean — the template change was verified by
-  compiling, not only by reading.
-NEXT: D.1 — desktop. O2 answered (720px), so the token is signed off rather
-  than provisional. The 1440 baselines it asks for need a reachable site.
-- 2026-09-22T14:37:04Z PUSH: nz-glass @ 2e3c01175
-- 2026-09-22T14:37:04Z COMMIT: 2e3c01175 fix(approvals): "Pending" never said pending on whom → review+design dispatched
-- 2026-09-22T14:40:25Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
-
-REPAIR: 2.0 slice D.1 — desktop. Mostly VERIFICATION, and that is the finding:
-  the shell was built in phase 4 and slice 0.1's tab change reached it BY
-  ITSELF, because SideNav reads the same TAB_ITEMS and MORE_ITEMS the phone
-  bar reads. That is now pinned — a future edit giving the desktop its own
-  copy would let the two drift on the surface fewest people look at, and the
-  drift would survive for months.
-  Two real changes. (a) The 720px token still described itself as "a starting
-  value, expected to be tuned on device". The owner signed it off, so it says
-  that instead: a token that reads as unfinished invites the question to be
-  re-opened by whoever meets it next. (b) §20.2's own text still named the
-  PRE-2.0 side-nav order (HOME · ATTEND · LEAVE · PAY, then KPI, Issues,
-  SOPs, Expenses) — the spec describing a bar that no longer exists.
-NOTE: my own rule caught my own prose. The first rewrite of the token's
-  description explained the history using the words "expected to be tuned",
-  which is exactly what the test forbids. Reworded.
-NOTE: `yarn tokens` regenerated glass.css and the dvh fallback SURVIVED — the
-  generator-level fix from earlier today held, where the hand-patch had been
-  silently reverted twice.
-EVIDENCE: 2 correct — 5 tests, 1 red first (four already held, which is the
-  slice's point), 4 mutants killed: the token calls itself provisional again;
-  the side nav keeps its own list; the tab bar is visible at lg:; the width
-  changes. Suite 618 / 614 pass, same 4 red at HEAD all day. Gates: lint
-  234/0, contrast 56/0, surfaces 47 screens / 0 over, tokens ok. Build clean.
-
-=== 2.0 COMPLETE, 22 Sep 2026 ===
-All eight slices shipped: 0.1 tabs · 1.1 form copy · 1.2 chips · 1.3 Home ·
-2.1 attendance · 2.2 overtime · 3.1 form allowlists · 4.1 approvals · D.1
-desktop. Status table with commit shas is in the plan of record §6.
-NOT BUILT, deliberately, each because the plan marks it new backend and §7
-puts that out of scope: the unified approval queue, the attendance day sheet
-and missing-punch flag, travel and training rows, the leave ledger breakdown.
-OWED, both needing a reachable site: the 1440 visual baselines D.1 asks for,
-and every measured number in the 2026-09-09 audit (tabH 0 on all 36 screens,
-now marked stale in its own data).
-NEXT: Nabil deploys. Pre-2.0 and 2.0 are both on nz-glass, unreleased.
-- 2026-09-22T14:41:29Z COMMIT: 082fbbeeb docs(glass): the handoff still described the attendance repair → review dispatched
-- 2026-09-22T14:54:57Z PUSH: nz-glass @ 082fbbeeb
-- 2026-09-22T14:54:58Z COMMIT: 082fbbeeb docs(glass): the handoff still described the attendance repair → review dispatched
 - 2026-09-22T14:55:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 18 file(s) ⟂8670267188cb
 - 2026-09-22T14:55:21Z COMMIT: b46d8ea83 chore(home): remove a dead translator binding, guard against dead links → review+design dispatched
 - 2026-09-22T14:55:30Z PUSH: nz-glass @ b46d8ea83
@@ -303,3 +201,19 @@ DEAD END: a time-based cooldown for the update prompt. An update is a SPECIFIC
   build — it stops mattering when a newer one lands, so a 30-day silence would
   hide an urgent fix. Keyed on the worker's __WB_REVISION__ instead.
 NEXT: audit the shipped screens against mockup 4 and write the gap list.
+- 2026-09-23T01:42:14Z PUSH: nz-glass @ c0c11341a
+- 2026-09-23T01:42:14Z COMMIT: c0c11341a fix(update): dismissing the new-version bar did not dismiss anything → review+design dispatched
+- 2026-09-23T01:50:54Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 25 file(s) ⟂7d6596642304
+
+EVIDENCE: rung 2 (correct) — "with whom, since when" on request rows: 809/809 tests
+  green, ruff clean. Two mutants killed (a row dropping the line; `pending`
+  hardcoded, which would show "with Hafiz" under an Approved chip — that one
+  SURVIVED the first version of the test and the assertion was strengthened).
+EVIDENCE: rung 3 (works) — approver_name reaches the leave payload on
+  spoke.localhost (2 rows, both named). Falls back to the login when the User row
+  carries no full name, which is the fallback working.
+FINDING: mockup 4 gap list written to docs/glass/audit/2026-09-23-mockup4-gap.md.
+  Headline: the app follows mockup 4's SHELL and not its CONTENT — six of its
+  blocks need data this app does not compute. Ranked by visible impact; items 1-3
+  are copy over data we already have.
+NEXT: mockup 4 gaps 2 and 3 — split Requests into waiting/finished, add filter chips.

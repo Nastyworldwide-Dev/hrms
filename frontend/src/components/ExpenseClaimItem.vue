@@ -16,6 +16,10 @@
 						{{ formatCurrency(props.doc.total_claimed_amount, props.doc.currency) }}
 					</span>
 				</div>
+				<!-- WHO it is with, and since when. A chip reading "Waiting"
+				     does not say on whom (mockup 4 gap #1). Renders nothing when
+				     there is nothing true to say. -->
+				<div v-if="waiting" class="text-xs text-ink-500">{{ waiting }}</div>
 			</div>
 		</template>
 		<template #right>
@@ -32,6 +36,7 @@ import ListItem from "@/components/ListItem.vue"
 
 import { formatCurrency } from "@/utils/formatters"
 import { requestStatus } from "@/utils/requestStatus"
+import { waitingWith } from "@/utils/requestWaiting"
 
 const dayjs = inject("$dayjs")
 const __ = inject("$translate")
@@ -74,4 +79,16 @@ const claimDates = computed(() => {
 		)}`
 	}
 })
+
+//: WHO it is with, and since when (mockup 4 gap #1). Never on a TEAM row:
+//: an approver reading their own queue knows who it is with.
+const waiting = computed(() =>
+	props.isTeamRequest
+		? ""
+		: waitingWith(props.doc, {
+				pending: requestStatus("Expense Claim", props.doc).pending,
+				since: (date) => dayjs(date).fromNow(),
+				t: __,
+		  })
+)
 </script>

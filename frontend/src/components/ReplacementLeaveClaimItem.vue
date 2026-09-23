@@ -18,6 +18,10 @@
 						}}</span>
 					</span>
 				</div>
+				<!-- WHO it is with, and since when. A chip reading "Waiting"
+				     does not say on whom (mockup 4 gap #1). Renders nothing when
+				     there is nothing true to say. -->
+				<div v-if="waiting" class="text-xs text-ink-500">{{ waiting }}</div>
 			</div>
 		</template>
 		<template #right>
@@ -33,8 +37,10 @@ import { computed, inject } from "vue"
 import ListItem from "@/components/ListItem.vue"
 import { formatHours } from "@/utils/formatters"
 import { requestStatus } from "@/utils/requestStatus"
+import { waitingWith } from "@/utils/requestWaiting"
 
 const __ = inject("$translate")
+const $dayjs = inject("$dayjs")
 
 const props = defineProps({
 	doc: {
@@ -55,4 +61,16 @@ const status = computed(() => {
 	if (props.workflowStateField) return props.doc[props.workflowStateField]
 	return requestStatus("Replacement Leave Claim", props.doc).label
 })
+
+//: WHO it is with, and since when (mockup 4 gap #1). Never on a TEAM row:
+//: an approver reading their own queue knows who it is with.
+const waiting = computed(() =>
+	props.isTeamRequest
+		? ""
+		: waitingWith(props.doc, {
+				pending: requestStatus("Replacement Leave Claim", props.doc).pending,
+				since: (date) => $dayjs(date).fromNow(),
+				t: __,
+		  })
+)
 </script>
