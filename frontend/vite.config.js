@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { defineConfig } from "vite"
 import vue from "@vitejs/plugin-vue"
 import { VitePWA } from "vite-plugin-pwa"
@@ -13,6 +14,12 @@ export default defineConfig({
 	// at build time on a host that may be a tarball.
 	define: {
 		__APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ")),
+		// The PWA's version (SemVer), one source: package.json. Shown on You
+		// next to the build time; docs/glass/CHANGELOG.md has an entry per
+		// version, and design/gates/version.test.mjs holds them together.
+		__APP_VERSION__: JSON.stringify(
+			JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version
+		),
 	},
 	server: {
 		port: 8080,

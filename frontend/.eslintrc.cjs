@@ -9,6 +9,7 @@ module.exports = {
 		// the bundle and nowhere in the source. Declared readonly: writing to
 		// it would be writing to a literal.
 		__APP_BUILD__: "readonly",
+		__APP_VERSION__: "readonly",
 	},
 	extends: [
 		"eslint:recommended",

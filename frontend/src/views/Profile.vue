@@ -224,6 +224,9 @@ const pendingApprovalsCount = computed(() => Number(pendingCountResource.data) |
 //: diagnostics report carries — so the version a person reads off the screen
 //: is the version in the report they send.
 const buildString = typeof __APP_BUILD__ === "string" ? __APP_BUILD__ : "dev"
+//: The PWA version (package.json, SemVer), stamped by vite. "Version
+//: 2.0.0-alpha.2 · 2026-09-23 14:02" answers "which version are you on".
+const versionString = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev"
 
 //: FOUR GROUPS. Each answers a different question, which is what makes them
 //: groups rather than a divided list: who am I, where do I work, how does the
@@ -307,7 +310,7 @@ const groups = computed(() => [
 				// are you on". The answer is now on the screen people are
 				// already looking at when they report one.
 				label: __("About this app"),
-				sublabel: buildString,
+				sublabel: __("Version {0} · {1}", [versionString, buildString]),
 				go: () => {},
 			},
 		],
