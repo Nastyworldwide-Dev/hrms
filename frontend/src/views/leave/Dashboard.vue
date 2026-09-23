@@ -12,7 +12,6 @@
 				<div class="flex flex-col gap-8">
 					<div class="flex flex-col gap-8">
 						<LeaveBalance />
-						<ReplacementLeaveCard />
 					</div>
 
 					<router-link
@@ -67,7 +66,6 @@ import { markRaw } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import LeaveBalance from "@/components/LeaveBalance.vue"
-import ReplacementLeaveCard from "@/components/ReplacementLeaveCard.vue"
 import RequestList from "@/components/RequestList.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
 

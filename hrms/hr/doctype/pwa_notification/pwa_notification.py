@@ -82,6 +82,8 @@ class PWANotification(Document):
 #: used to be mapped, so an OT Request, Shift Request or Replacement Leave Claim
 #: push opened the PWA home (runtime crawl, 15 Sep 2026). Employee Advance is
 #: deliberately absent: it stays hidden in the PWA (owner ruling, 15 Sep 2026).
+#: So is Replacement Leave Claim: HR policy (23 Sep 2026) is no banked overtime,
+#: and the PWA has no screen for it; its pushes open Home.
 PWA_DETAIL_PATHS = {
 	"Leave Application": "leave-applications",
 	"Expense Claim": "expense-claims",
@@ -89,7 +91,6 @@ PWA_DETAIL_PATHS = {
 	"Shift Request": "shift-requests",
 	"Shift Assignment": "shift-assignments",
 	"OT Request": "ot-requests",
-	"Replacement Leave Claim": "replacement-leave/claims",
 	"Employee Issue": "issues",
 }
 

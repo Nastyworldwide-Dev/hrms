@@ -50,7 +50,6 @@ test("every request row, the detail header and the OT views use the shared helpe
 		"../src/components/OTRequestItem.vue",
 		"../src/components/ReplacementLeaveClaimItem.vue",
 		"../src/components/FormView.vue",
-		"../src/views/ot/ReplacementLeave.vue",
 	]) {
 		const source = read(rel)
 		assert.match(

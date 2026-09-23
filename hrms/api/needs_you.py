@@ -50,7 +50,10 @@ ROW_COPY = {
 	"Shift Request": ("shift request", "ShiftRequestListView"),
 	"OT Request": ("overtime claim", "OTRequestListView"),
 	"Attendance Request": ("attendance fix", "AttendanceRequestListView"),
-	"Replacement Leave Claim": ("replacement leave claim", "ReplacementLeaveView"),
+	# HR policy, 23 Sep 2026: no banked overtime, so the PWA has no
+	# replacement-leave screen. An approver decides any claim still open on
+	# the Approvals page, where every row count here leads anyway.
+	"Replacement Leave Claim": ("replacement leave claim", "Approvals"),
 	# No list of its own in the PWA — comp leave surfaces with leave. Sending
 	# somebody to a screen that does not show the thing they tapped is worse
 	# than sending them to the nearest one that does.

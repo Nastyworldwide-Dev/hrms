@@ -62,24 +62,10 @@ const sites = {
 	"../src/components/ReplacementLeaveClaimItem.vue": [
 		/formatHours\(props\.doc\.hours_cost\)/,
 	],
-	"../src/components/ReplacementLeaveCard.vue": [
-		/formatHours\(bank\.data\?\.hours_available\)/,
-	],
-	"../src/views/ot/ReplacementLeave.vue": [
-		/formatHours\(bank\.data\.hours_available\)/,
-		/formatHours\(bank\.data\.hours_claimed\)/,
-		/formatHours\(request\.claimed_hours\)/,
-		/formatHours\(claimRow\.hours_cost\)/,
-	],
 	"../src/views/ot/OTRequestForm.vue": [
 		/formatHoursCap\(otSummary\.data\.punch_ot_hours\)/,
 		/formatHours: formatHoursCap/,
 		/formatHoursCap\(cap\)/,
-	],
-	"../src/views/ot/ReplacementLeaveClaimForm.vue": [
-		/formatHours\(data\.hours_available\)/,
-		/formatHours\(cost\)/,
-		/formatHours\(available\)/,
 	],
 }
 

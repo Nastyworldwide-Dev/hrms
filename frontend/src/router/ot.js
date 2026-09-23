@@ -16,20 +16,10 @@ const routes = [
 		component: () => import("@/views/ot/OTRequestForm.vue"),
 	},
 	{
-		name: "ReplacementLeaveView",
-		path: "/replacement-leave",
-		component: () => import("@/views/ot/ReplacementLeave.vue"),
-	},
-	{
-		name: "ReplacementLeaveClaimFormView",
-		path: "/replacement-leave/claims/new",
-		component: () => import("@/views/ot/ReplacementLeaveClaimForm.vue"),
-	},
-	{
-		name: "ReplacementLeaveClaimDetailView",
-		path: "/replacement-leave/claims/:id",
-		props: true,
-		component: () => import("@/views/ot/ReplacementLeaveClaimForm.vue"),
+		// HR policy, 23 Sep 2026: no banked overtime, so no bank, converter or
+		// replacement-leave claim screens. Saved links land on Requests.
+		path: "/replacement-leave/:rest(.*)*",
+		redirect: "/requests",
 	},
 ]
 

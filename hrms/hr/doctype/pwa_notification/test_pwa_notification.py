@@ -24,7 +24,8 @@ class TestPWANotification(HRMSTestSuite):
 			("Shift Request", "SR-0001", f"{base_url}/shift-requests/SR-0001"),
 			("Shift Assignment", "SA-0001", f"{base_url}/shift-assignments/SA-0001"),
 			("OT Request", "OT-0001", f"{base_url}/ot-requests/OT-0001"),
-			("Replacement Leave Claim", "RLC-0001", f"{base_url}/replacement-leave/claims/RLC-0001"),
+			# No banked overtime (HR policy, 23 Sep 2026): no PWA screen, so Home.
+			("Replacement Leave Claim", "RLC-0001", base_url),
 			("Employee Issue", "ISS-0001", f"{base_url}/issues/ISS-0001"),
 			("Remote Checkin Request", "RCR-0001", f"{base_url}/notifications"),
 			("Compensatory Leave Request", "CLR-0001", base_url),
