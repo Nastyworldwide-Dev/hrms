@@ -74,7 +74,7 @@ Every page sits on these. Doing a page first means redoing it after.
 | F-10 | **No emoji, no arrow on buttons that don't navigate, no gradient-and-glow on the main button** | S-EMOJI, S-ARROW, S-DECO | APP-20, APP-23 |
 | F-11 | **Fonts:** download Inter once, only the weights used (saves about 770 kB per page) | PERF-BUDGET | APP-27 |
 | F-12 | **Layout jumps** on Home (0.32) and Requests (0.51), limit 0.1: reserve space while loading | CWV-CLS | APP-28 |
-| F-13 | **Tab labels grow with text size**, and still never cut off. **OPEN — needs a design ruling (23 Sep):** at 200% text "CALENDAR" cannot fit its 57.6px slot at 320px (the 22 Sep CALENDARREQUESTS break). Options: icon-only bar at large text with the label on long-press (iOS large-content viewer pattern), or a 4-tab bar. Not built by guess. | A-1.4.4 | APP-7 |
+| F-13 | **Tab labels grow with text size**, and never cut off. **CLOSED 23 Sep:** the break was block capitals plus capital-sized letter-spacing. With both removed (fa429e100), all five labels fit at 200% text at 320, 360 and 390 wide (widest: Requests 50px, Calendar 49px; none cut). No design ruling needed. | NG-CAPS, W-DYS | APP-9 |
 | F-14 | **The checks must actually run:** the a11y, visual and coherence gates run on every PR against a migrated test site. The visual gate **fails** on a missing baseline instead of writing one. Baselines are refreshed on purpose after F-1. The skip-link false positive is fixed. | H1 (for us) | APP-31, recollection E5 |
 | F-15 | **Role names out of the frontend** (the Apps group in More) → decided by the server | OWN (no role literals) | PAGE-18 |
 

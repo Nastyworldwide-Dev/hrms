@@ -9,6 +9,6 @@ files:    hrms/api/{approvals_list,app_links,calendar,needs_you,request_counts,r
           frontend/src/components/glass/GModal.vue, theme/glass-components.css, design/tokens.json
 verify:   cd frontend && yarn test && node ../design/gates/run.mjs && yarn build
 flags:    no migrate/patch needed; banked-OT screens removed (policy), data kept
-          OPEN rulings: F-13 tab labels at 200% text; OT form "Replacement Leave" option
+          F-13 closed (labels fit at 200% after caps removal); Replacement Leave stays (owner)
           follow-ups: zero-balance skeleton collapse; desktop sheet drag; per-list Team tabs
-next:     deploy nz-glass on Frappe Cloud, then the two rulings
+next:     deploy nz-glass on Frappe Cloud
