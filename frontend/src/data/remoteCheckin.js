@@ -6,12 +6,6 @@ export const submitRemarksResource = createResource({
 	auto: false,
 })
 
-export const pendingForApproverResource = createResource({
-	url: "hrms.api.remote_checkin.list_pending_for_approver",
-	cache: personalCacheKey("nsty:remote-checkin-pending"),
-	auto: false,
-})
-
 export const decidedForApproverResource = createResource({
 	url: "hrms.api.remote_checkin.list_decided_for_approver",
 	auto: false,

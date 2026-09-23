@@ -8,27 +8,20 @@ const remote = (name = "RCR-0001") => ({
 	reference_document_name: name,
 })
 
-test("pending remote check-in lands on the approvals queue", () => {
-	const route = notificationRoute(remote(), "Pending", () => false)
-	assert.deepEqual(route, {
-		name: "RemoteApprovals",
-		query: { tab: "Pending" },
-	})
-})
-
-test("decided remote check-in lands on History, whatever the decision was", () => {
-	for (const status of ["Approved", "Rejected", undefined]) {
-		const route = notificationRoute(remote(), status, () => false)
-		assert.deepEqual(route, {
-			name: "RemoteApprovals",
-			query: { tab: "History" },
-		})
+test("a remote check-in, pending or decided, lands on Approvals", () => {
+	// The check-in queue folded into Approvals (AUDIT-PLAN, Approvals row);
+	// decided ones are behind its "Check-ins you've already answered" link.
+	for (const status of ["Pending", "Approved", "Rejected", undefined]) {
+		assert.deepEqual(
+			notificationRoute(remote(), status, () => false),
+			{ name: "Approvals" }
+		)
 	}
 })
 
 test("remote check-ins never derive a DetailView, even if one were registered", () => {
 	const route = notificationRoute(remote(), "Approved", () => true)
-	assert.equal(route.name, "RemoteApprovals")
+	assert.equal(route.name, "Approvals")
 })
 
 test("other doctypes derive <Doctype>DetailView when the route exists", () => {

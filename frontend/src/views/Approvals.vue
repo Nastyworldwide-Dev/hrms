@@ -31,11 +31,45 @@
 						{{ __("Showing the oldest first. More are waiting.") }}
 					</p>
 				</template>
+
+				<!-- Ruling 2 (23 Sep): what you already answered stays reachable,
+				     worded for what is behind it. Check-ins only: other requests
+				     keep their decision on the request itself. -->
+				<button
+					v-if="isApprover.data"
+					type="button"
+					class="self-start text-caption text-ink-600 underline underline-offset-2 py-2"
+					@click="openAnswered"
+				>
+					{{ __("Check-ins you've already answered") }} ›
+				</button>
 			</div>
 
+			<GModal :is-open="answeredOpen" @did-dismiss="answeredOpen = false">
+				<div class="flex flex-col gap-3 px-4 pt-6 pb-8">
+					<h2 class="text-card-title text-ink">{{ __("Check-ins you've already answered") }}</h2>
+					<GListPanel v-if="decided.loading && !decided.data" loading />
+					<ResourceError v-else-if="decided.error" :resource="decided" what="your answers" />
+					<GListPanel v-else-if="decided.data?.length">
+						<GListRow
+							v-for="req in decided.data"
+							:key="req.name"
+							:label="`${req.employee_name || req.employee} · ${__(req.status)}`"
+							:sublabel="answeredLine(req)"
+						/>
+					</GListPanel>
+					<p v-else class="text-caption text-ink-600">{{ __("Nothing answered yet.") }}</p>
+				</div>
+			</GModal>
+
 			<GModal :is-open="!!selected" @did-dismiss="close">
+				<CheckinDecisionSheet
+					v-if="selected?.doctype === 'Remote Checkin Request'"
+					:row="selected.row"
+					@decided="close"
+				/>
 				<RequestActionSheet
-					v-if="selected"
+					v-else-if="selected"
 					:fields="REQUEST_SUMMARY_FIELDS[selected.doctype]"
 					v-model="selected"
 				/>
@@ -49,6 +83,7 @@ import { computed, inject, ref } from "vue"
 import { createResource } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
+import CheckinDecisionSheet from "@/components/CheckinDecisionSheet.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
@@ -56,6 +91,8 @@ import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
 import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
+import { decidedForApproverResource } from "@/data/remoteCheckin"
+import { isApprover } from "@/data/team"
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
@@ -79,10 +116,24 @@ function rowLine(row) {
 	return [row.when, row.detail].filter(Boolean).join(" · ")
 }
 
+const decided = decidedForApproverResource
+const answeredOpen = ref(false)
+function openAnswered() {
+	console.info("[Approvals] opening answered check-ins")
+	answeredOpen.value = true
+	decided.reload()
+}
+function answeredLine(req) {
+	const when = $dayjs(req.checkin_time).format("D MMM, h:mm a")
+	return [when, req.approver_remarks].filter(Boolean).join(" · ")
+}
+
 const selected = ref(null)
 function open(row) {
 	console.info("[Approvals] opening", row.doctype)
-	selected.value = { doctype: row.doctype, name: row.name }
+	// A check-in carries its photo and reason on the row; the request sheet
+	// loads its own document.
+	selected.value = { doctype: row.doctype, name: row.name, row }
 }
 function close() {
 	selected.value = null

@@ -121,9 +121,9 @@ const rows = computed(() => {
 			// goes to RemoteApprovals only, so a bare "check-ins to approve"
 			// could be read as EVERY pending approval and an approver would
 			// stop looking. A qualifier that makes a count true is information.
-			label: __("{0} remote check-in(s) to approve", [approvals.value]),
+			label: __("{0} check-in(s) outside the area to approve", [approvals.value]),
 			sublabel: null,
-			go: () => router.push({ name: "RemoteApprovals" }),
+			go: () => router.push({ name: "Approvals" }),
 		})
 	}
 

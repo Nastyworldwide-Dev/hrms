@@ -9,17 +9,14 @@
 // plain content instead of a link that goes nowhere.
 //
 // Remote Checkin Requests never derive: notifications notify, deciding happens
-// on the Remote Approvals screen. A pending request lands on its queue; a
-// decided one lands on the History tab where the decision stays reviewable.
+// on the Approvals page, where every check-in outside the area waits with the
+// rest (AUDIT-PLAN, Approvals row).
 export function notificationRoute(item, remoteStatus, hasRoute) {
 	const doctype = item?.reference_document_type
 	if (!doctype) return null
 
 	if (doctype === "Remote Checkin Request") {
-		return {
-			name: "RemoteApprovals",
-			query: { tab: remoteStatus === "Pending" ? "Pending" : "History" },
-		}
+		return { name: "Approvals" }
 	}
 
 	const name = `${doctype.replace(/\s+/g, "")}DetailView`

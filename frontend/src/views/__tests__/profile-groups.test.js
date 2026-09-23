@@ -67,7 +67,7 @@ test("change password has its own row", () => {
 test("nothing was removed in the regroup", () => {
 	// Every destination the flat list reached is still reachable. A tidy-up
 	// that loses a screen is not a tidy-up.
-	for (const destination of ["HRContacts", "RemoteApprovals", "Settings", "ChangePassword"]) {
+	for (const destination of ["HRContacts", "Approvals", "Settings", "ChangePassword"]) {
 		assert.match(view, new RegExp(`name: "${destination}"`), `${destination} survives`)
 	}
 	assert.match(view, /profileLinks\.map/, "and the three detail sheets do too")

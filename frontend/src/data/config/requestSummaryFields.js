@@ -346,7 +346,7 @@ export const REPLACEMENT_LEAVE_CLAIM_FIELDS = [
 	},
 ]
 
-export const COMPENSATORY_LEAVE_REQUEST_FIELDS = [
+const COMPENSATORY_LEAVE_REQUEST_FIELDS = [
 	{
 		fieldname: "name",
 		label: "ID",

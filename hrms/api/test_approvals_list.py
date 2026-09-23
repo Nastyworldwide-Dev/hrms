@@ -123,3 +123,75 @@ class TestHomeCountsWhatThePageLists(unittest.TestCase):
 
 		source = inspect.getsource(needs_you._pending_for)
 		self.assertIn("_request_read_allowed(doc) and _is_routed_approver(doc)", source)
+
+
+class TestRemoteCheckinsJoinTheList(unittest.TestCase):
+	"""Owner ruling 23 Sep: approvals appear only where they can be done, and
+	the plan (AUDIT-PLAN, Approvals row) folds "check-ins outside the area"
+	into the one list instead of their own page. The rows come from the SAME
+	fenced query the old page read (remote_checkin.list_pending_for_approver),
+	so the fold changes where they show, never who sees them."""
+
+	REMOTE = (
+		frappe._dict(
+			name="RCR-1",
+			employee="E9",
+			employee_name="Hafiz",
+			checkin_time="2026-09-18 08:05:00",
+			log_type="IN",
+			distance_m=1250,
+			employee_remarks="Client site",
+			selfie_image="/files/s.jpg",
+		),
+	)
+
+	def _list(self, remote):
+		with (
+			patch.object(frappe, "get_all", side_effect=fake_get_all, create=True),
+			patch.object(frappe, "get_doc", side_effect=lambda dt, name: DOCS[(dt, name)]),
+			patch.object(approvals_list, "_is_routed_approver", side_effect=lambda doc: doc.name != "LA-2"),
+			patch.object(approvals_list, "_request_read_allowed", side_effect=lambda doc: True),
+			patch.object(approvals_list, "_types_on_site", return_value=["Leave Application"]),
+			patch.object(approvals_list, "_remote_checkins", side_effect=remote),
+		):
+			return approvals_list.get_waiting_for_me()
+
+	def test_a_check_in_outside_the_area_is_a_row_like_any_other(self):
+		rows = self._list(lambda: self.REMOTE)["rows"]
+		remote = next(r for r in rows if r["doctype"] == "Remote Checkin Request")
+		self.assertEqual(remote["kind"], "Check-in outside the area")
+		self.assertEqual(remote["who"], "Hafiz")
+		self.assertEqual(remote["detail"], "In · 1.25 km away")
+		self.assertEqual(remote["reason"], "Client site")
+		self.assertEqual(remote["selfie_image"], "/files/s.jpg")
+		# Oldest first across every type: the check-in (18 Sep) before the leave (20 Sep).
+		self.assertEqual(rows[0]["name"], "RCR-1")
+
+	def test_the_remote_rows_come_from_the_old_pages_fenced_query(self):
+		import inspect
+
+		self.assertIn("list_pending_for_approver", inspect.getsource(approvals_list._remote_checkins))
+
+	def test_a_failing_remote_query_does_not_take_the_page_down(self):
+		def boom():
+			raise RuntimeError("table missing")
+
+		names = [r["name"] for r in self._list(boom)["rows"]]
+		self.assertEqual(names, ["LA-1"])
+
+
+class TestDatesReadLikeACalendar(unittest.TestCase):
+	"""Seen live on fresh.local 23 Sep: rows read "2026-09-15 · Nadi W0 Annual".
+	An approver reads "Tue 15 Sep", the Home title's format."""
+
+	def test_one_day(self):
+		self.assertEqual(approvals_list._range("2026-09-15", "2026-09-15"), "Tue 15 Sep")
+
+	def test_a_span(self):
+		self.assertEqual(approvals_list._range("2026-09-22", "2026-09-23"), "Tue 22 Sep – Wed 23 Sep")
+
+	def test_a_check_in_time(self):
+		self.assertEqual(approvals_list._moment("2026-09-18 08:05:00"), "Fri 18 Sep, 8:05 am")
+
+	def test_nothing_stays_nothing(self):
+		self.assertEqual(approvals_list._range(None, None), "")

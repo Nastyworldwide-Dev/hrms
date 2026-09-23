@@ -74,13 +74,6 @@ const moreItems = computed(() => {
 	const items = MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
 	if (hasTeam.data) {
 		items.push({ icon: markRaw(Users), title: __("Team"), route: "/team" })
-		// §13.1 lists Remote Approvals behind More; it had no entry in any nav
-		// surface before, reachable only by typing the URL
-		items.push({
-			icon: markRaw(Users),
-			title: __("Remote Approvals"),
-			route: "/remote-approvals",
-		})
 	}
 	return items
 })

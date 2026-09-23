@@ -158,9 +158,11 @@ const routes = [
 		component: () => import("@/views/Approvals.vue"),
 	},
 	{
+		// The check-in queue folded into Approvals (AUDIT-PLAN, Approvals row).
+		// Kept as a redirect: installed phones and old notifications still
+		// carry this address.
 		path: "/remote-approvals",
-		name: "RemoteApprovals",
-		component: () => import("@/views/RemoteApprovals.vue"),
+		redirect: "/approvals",
 	},
 	{
 		path: "/invalid-employee",

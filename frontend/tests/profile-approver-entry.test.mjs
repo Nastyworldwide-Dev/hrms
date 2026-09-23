@@ -33,7 +33,7 @@ test("the entry is gated on the approver verdict", () => {
 	assert.match(gate, /\?\s*\[/, "isApprover decides whether the row is built")
 	assert.match(
 		row,
-		/name: "RemoteApprovals"/,
+		/name: "Approvals"/,
 		"and it goes to the approvals screen"
 	)
 })

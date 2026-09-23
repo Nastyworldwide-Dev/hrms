@@ -14,6 +14,7 @@ Session-scoped: the caller is never a parameter.
 """
 
 import logging
+from datetime import date, datetime
 
 import frappe
 
@@ -64,7 +65,7 @@ def _row(doc) -> dict:
 		detail = f"{doc.get('leave_type')} · {_days(doc.get('total_leave_days'))}"
 		reason = doc.get("description") or ""
 	elif doc.doctype == "OT Request":
-		when = str(doc.get("ot_date") or "")
+		when = _day(doc.get("ot_date"))
 		detail = _hours(doc.get("claimed_hours"))
 		reason = doc.get("explanation") or ""
 	elif doc.doctype == "Expense Claim":
@@ -78,7 +79,7 @@ def _row(doc) -> dict:
 		detail = doc.get("reason") or ""
 		reason = doc.get("explanation") or ""
 	elif doc.doctype == "Replacement Leave Claim":
-		when = str(doc.get("bank_month") or "")
+		when = f"{date.fromisoformat(str(doc.bank_month)[:10]):%B %Y}" if doc.get("bank_month") else ""
 		detail = _days(doc.get("claimed_days"))
 		reason = doc.get("explanation") or ""
 	elif doc.doctype == "Compensatory Leave Request":
@@ -97,8 +98,55 @@ def _row(doc) -> dict:
 	}
 
 
+def _distance(metres) -> str:
+	metres = float(metres or 0)
+	return f"{metres / 1000:.2f} km away" if metres >= 1000 else f"{round(metres)} m away"
+
+
+def _remote_checkins() -> list[dict]:
+	"""Check-ins outside the work area waiting on the caller.
+
+	The SAME fenced query the old Remote approvals page read, so folding them
+	into this list changes where they show, never who sees them.
+	"""
+	from hrms.api.remote_checkin import list_pending_for_approver
+
+	return list_pending_for_approver()
+
+
+def _remote_row(req) -> dict:
+	return {
+		"doctype": "Remote Checkin Request",
+		"name": req.get("name"),
+		"kind": "Check-in outside the area",
+		"who": req.get("employee_name") or req.get("employee"),
+		"when": _moment(req.get("checkin_time")),
+		"detail": f"{'In' if req.get('log_type') == 'IN' else 'Out'} · {_distance(req.get('distance_m'))}",
+		"reason": req.get("employee_remarks") or "",
+		"selfie_image": req.get("selfie_image"),
+		"modified": str(req.get("checkin_time") or ""),
+	}
+
+
+def _day(value) -> str:
+	"""'Tue 15 Sep' — the Home title's format, not an ISO date."""
+	if not value:
+		return ""
+	d = value if isinstance(value, date) else date.fromisoformat(str(value)[:10])
+	return f"{d:%a} {d.day} {d:%b}"
+
+
+def _moment(value) -> str:
+	"""'Fri 18 Sep, 8:05 am' for a check-in time."""
+	if not value:
+		return ""
+	t = value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
+	hour = t.hour % 12 or 12
+	return f"{_day(t)}, {hour}:{t.minute:02d} {'am' if t.hour < 12 else 'pm'}"
+
+
 def _range(start, end) -> str:
-	start, end = str(start or ""), str(end or "")
+	start, end = _day(start), _day(end)
 	return start if not end or end == start else f"{start} – {end}"
 
 
@@ -126,6 +174,10 @@ def get_waiting_for_me() -> dict:
 			doc = frappe.get_doc(doctype, name)
 			if _request_read_allowed(doc) and _is_routed_approver(doc):
 				rows.append(_row(doc))
+	try:
+		rows.extend(_remote_row(req) for req in _remote_checkins())
+	except Exception:
+		logger.exception("[approvals_list] remote check-ins failed; skipped")
 	# Oldest first: the one waiting longest is the one to decide next.
 	rows.sort(key=lambda row: row["modified"])
 	logger.info("[approvals_list] user=%s rows=%d capped=%s", frappe.session.user, len(rows), capped)

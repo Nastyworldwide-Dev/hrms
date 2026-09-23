@@ -126,7 +126,7 @@ export const TAB_ITEMS = [
 			HUB_PATH,
 			"/sop",
 			"/team",
-			"/remote-approvals",
+			"/approvals",
 			// The board is reached from Home's block as well as from More, and
 			// a destination that moved into MORE_ITEMS without being listed here
 			// leaves the bar with nothing selected while you are standing on it.

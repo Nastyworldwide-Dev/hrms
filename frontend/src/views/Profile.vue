@@ -267,10 +267,10 @@ const groups = computed(() => [
 						{
 							key: "approvals",
 							icon: SquareCheck,
-							label: __("Remote Approvals"),
+							label: __("Approvals"),
 							sublabel: null,
 							badge: pendingApprovalsCount.value > 0 ? String(pendingApprovalsCount.value) : null,
-							go: () => router.push({ name: "RemoteApprovals" }),
+							go: () => router.push({ name: "Approvals" }),
 						},
 				  ]
 				: []),

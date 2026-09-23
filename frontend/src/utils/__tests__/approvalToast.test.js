@@ -85,6 +85,11 @@ test("ordinary approvals and rejections keep the notified message", () => {
 })
 
 test("the approver view builds its toast from the approve result", () => {
-	const source = readFileSync(new URL("../../views/RemoteApprovals.vue", import.meta.url), "utf8")
-	assert.match(source, /decisionToast\(\s*decision\.value,\s*result\?\.attendance_repair/)
+	// The check-in sheet on the Approvals page (the old Remote approvals page
+	// folded into it, AUDIT-PLAN Approvals row).
+	const source = readFileSync(
+		new URL("../../components/CheckinDecisionSheet.vue", import.meta.url),
+		"utf8"
+	)
+	assert.match(source, /decisionToast\(\s*kind,\s*result\?\.attendance_repair/)
 })
