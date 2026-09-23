@@ -1,12 +1,12 @@
 <template>
 	<div v-if="!props.value" class="text-ink-600 text-base">-</div>
 
-	<Badge
+	<!-- One status map (utils/requestStatus.js via GStatusChip): the local
+	     three-entry colour table this used to carry disagreed with every list. -->
+	<GStatusChip
 		v-else-if="props.fieldtype === 'Select'"
-		variant="outline"
-		:theme="colorMap[props.value]"
+		:status="props.value"
 		:label="__(props.value)"
-		size="md"
 	/>
 
 	<div v-else-if="props.fieldtype === 'Date'" class="text-inkbase text-base">
@@ -17,13 +17,10 @@
 	     shows a formatted value, and v-model here silently mutated the "value"
 	     prop (harmless while :disabled locks the box, but wrong data flow and
 	     a real Vue warning either way). -->
-	<Input
+	<GCheckbox
 		v-else-if="props.fieldtype === 'Check'"
-		type="checkbox"
-		label=""
 		:model-value="props.value"
 		:disabled="true"
-		class="text-accent-ink"
 	/>
 
 	<div
@@ -63,7 +60,8 @@
 
 <script setup>
 import { inject } from "vue"
-import { Badge, Input } from "frappe-ui"
+import GCheckbox from "@/components/glass/GCheckbox.vue"
+import GStatusChip from "@/components/glass/GStatusChip.vue"
 
 import EmployeeAvatar from "@/components/EmployeeAvatar.vue"
 
@@ -74,12 +72,6 @@ const props = defineProps({
 	fieldtype: String,
 	fieldname: String,
 })
-
-const colorMap = {
-	Approved: "green",
-	Rejected: "red",
-	Open: "orange",
-}
 
 const getCoordinates = (value) => {
 	const [longitude, latitude] = JSON.parse(value).features[0].geometry.coordinates

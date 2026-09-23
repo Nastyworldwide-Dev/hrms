@@ -85,13 +85,7 @@
 			</div>
 
 			<div class="flex flex-col gap-2 px-4 pt-4">
-				<Button
-					class="w-full py-5 !bg-brand hover:!bg-brand !text-on-brand !border-none"
-					variant="solid"
-					@click="close"
-				>
-					{{ __("OK") }}
-				</Button>
+				<GButton :label="__('OK')" @click="close" />
 				<button class="w-full text-xs text-ink-600 underline py-2" @click="contactHR">
 					{{ __("Contact HR") }}
 				</button>
@@ -104,7 +98,7 @@
 import { Slash, TriangleAlert } from "lucide-vue-next"
 import GModal from "@/components/glass/GModal.vue"
 import { computed, inject } from "vue"
-import { Button } from "frappe-ui"
+import GButton from "@/components/glass/GButton.vue"
 import { formatAccuracy, isReadingCoarse } from "@/utils/geolocation"
 
 const __ = inject("$translate")

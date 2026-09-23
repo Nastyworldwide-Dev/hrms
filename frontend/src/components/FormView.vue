@@ -124,7 +124,7 @@
 									class="flex flex-row gap-2 items-center justify-center p-5"
 									v-if="isFileUploading"
 								>
-									<LoadingIndicator class="w-3 h-3 text-accent-ink" />
+									<GSkeleton width="12px" height="12px" radius="var(--g-radius-well)" />
 									<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 								</div>
 
@@ -168,7 +168,7 @@
 							class="flex flex-row gap-2 items-center justify-center p-5"
 							v-if="isFileUploading"
 						>
-							<LoadingIndicator class="w-3 h-3 text-accent-ink" />
+							<GSkeleton width="12px" height="12px" radius="var(--g-radius-well)" />
 							<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 						</div>
 
@@ -265,7 +265,7 @@
 				v-if="documentResource.get.loading"
 				class="flex flex-col items-center gap-3 text-ink-600"
 			>
-				<LoadingIndicator class="h-6 w-6 text-accent-ink" />
+				<GSkeleton width="24px" height="24px" radius="var(--g-radius-well)" />
 				<span class="text-caption">{{ __("Loading…") }}</span>
 			</div>
 			<GEmptyState
@@ -380,8 +380,8 @@ import {
 	createResource,
 	Dropdown,
 	Dialog,
-	LoadingIndicator,
 } from "frappe-ui"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import FormField from "@/components/FormField.vue"
 import FileUploaderView from "@/components/FileUploaderView.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
@@ -389,7 +389,7 @@ import RequestActionSheet from "@/components/RequestActionSheet.vue"
 import GModal from "@/components/glass/GModal.vue"
 import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
 
-import { FileAttachment, guessStatusColor } from "@/composables"
+import { FileAttachment } from "@/composables"
 import useWorkflow from "@/composables/workflow"
 import useDecisionCapability from "@/composables/decisionCapability"
 import useApprovedCancel from "@/composables/approvedCancel"
@@ -487,7 +487,6 @@ const cancelViewer = computed(() => ({
 
 let activeTab = ref(props.tabs?.[0].name)
 let fileAttachments = ref([])
-let statusColor = ref("")
 let formErrorMessage = ref("")
 let isFormDirty = ref(false)
 
@@ -576,15 +575,6 @@ watch(
 		}
 	},
 	{ deep: true }
-)
-
-watch(
-	() => status.value,
-	async (value) => {
-		if (!value) return
-		statusColor.value = await guessStatusColor(props.doctype, status.value)
-	},
-	{ immediate: true }
 )
 
 const tabFields = computed(() => splitFieldsByTab(props.fields, props.tabs))

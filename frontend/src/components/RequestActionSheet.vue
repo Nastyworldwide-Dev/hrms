@@ -87,29 +87,16 @@
 			"
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
-			<Button
+			<GButton
 				@click="askWithdraw"
-				:loading="withdraw.loading"
-				:disabled="withdraw.loading"
-				class="w-full py-5 !bg-transparent !border !border-danger-ink !text-danger-ink"
-				variant="subtle"
-				theme="red"
-			>
-				<template #prefix>
-					<Trash class="w-4" />
-				</template>
-				{{ __("Withdraw") }}
-			</Button>
-			<Button
+				:pending="withdraw.loading"
+				:label="__('Withdraw')"
+				danger
+			/>
+			<GButton
 				@click="openFormView"
-				class="w-full py-5 !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
-				variant="solid"
-			>
-				<template #prefix>
-					<Pencil class="w-4" />
-				</template>
-				{{ __("Edit") }}
-			</Button>
+				:label="__('Edit')"
+			/>
 		</div>
 
 		<WorkflowActionSheet
@@ -129,7 +116,7 @@
 				{{ leaveShortNotice }}
 			</p>
 			<div class="flex w-full flex-row items-center justify-between gap-3">
-				<Button
+				<GButton
 					v-if="hasPermission('reject')"
 					@click="
 						confirmDecision(
@@ -141,31 +128,17 @@
 							}
 						)
 					"
-					:loading="submitting"
-					:disabled="submitting"
-					class="w-full py-5 !bg-transparent !border !border-danger-ink !text-danger-ink"
-					variant="subtle"
-					theme="red"
-				>
-					<template #prefix>
-						<X class="w-4" />
-					</template>
-					{{ __("Reject") }}
-				</Button>
+					:pending="submitting"
+					:label="__('Reject')"
+					danger
+				/>
 
-				<Button
+				<GButton
 					v-if="hasPermission('approve')"
 					@click="updateDocumentStatus({ status: 'Approved' })"
-					:loading="submitting"
-					:disabled="submitting"
-					class="w-full py-5 !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
-					variant="solid"
-				>
-					<template #prefix>
-						<Check class="w-4" />
-					</template>
-					{{ __("Approve") }}
-				</Button>
+					:pending="submitting"
+					:label="__('Approve')"
+				/>
 			</div>
 		</div>
 
@@ -177,15 +150,11 @@
 			"
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
-			<Button
+			<GButton
 				@click="updateDocumentStatus({ docstatus: 1 })"
-				:loading="submitting"
-				:disabled="submitting"
-				class="w-full py-5 !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
-				variant="solid"
-			>
-				{{ __("Submit") }}
-			</Button>
+				:pending="submitting"
+				:label="__('Submit')"
+			/>
 		</div>
 
 		<div
@@ -195,7 +164,7 @@
 			"
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
-			<Button
+			<GButton
 				@click="
 					confirmDecision(
 						{ docstatus: 2 },
@@ -206,17 +175,10 @@
 						}
 					)
 				"
-				:loading="submitting"
-				:disabled="submitting"
-				class="w-full py-5 !bg-transparent !border !border-danger-ink !text-danger-ink"
-				variant="subtle"
-				theme="red"
-			>
-				<template #prefix>
-					<X class="w-4" />
-				</template>
-				{{ __("Cancel") }}
-			</Button>
+				:pending="submitting"
+				:label="__('Cancel')"
+				danger
+			/>
 		</div>
 
 		<!-- File Preview Modal -->
@@ -262,9 +224,10 @@
 </template>
 
 <script setup>
-import { Check, ExternalLink, Pencil, Trash, X } from "lucide-vue-next"
+import { ExternalLink } from "lucide-vue-next"
 import { modalController } from "@ionic/vue"
 import { createDocumentResource, createResource, toast } from "frappe-ui"
+import GButton from "@/components/glass/GButton.vue"
 import { computed, defineAsyncComponent, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import FilePreviewModal from "@/components/FilePreviewModal.vue"

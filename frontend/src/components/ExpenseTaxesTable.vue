@@ -6,14 +6,14 @@
 				<span class="text-base font-extrabold text-inkbase">
 					{{ formatCurrency(expenseClaim.total_taxes_and_charges, expenseClaim.currency) }}
 				</span>
-				<Button
+				<GIconButton
 					v-if="!isReadOnly"
 					id="add-taxes-modal"
-					class="text-sm !border !border-divider !bg-transparent"
-					icon="plus"
-					variant="subtle"
+					:label="__('Add a tax')"
 					@click="openModal()"
-				/>
+				>
+					<Plus class="w-4" />
+				</GIconButton>
 			</div>
 		</div>
 
@@ -86,29 +86,18 @@
 							v-if="!isReadOnly"
 							class="flex w-full flex-row items-center justify-between gap-3"
 						>
-							<Button
+							<GButton
 								v-if="editingIdx !== null"
-								class="!border !border-red-600 !text-red-600 !bg-transparent py-5 text-sm"
-								variant="outline"
-								theme="red"
+								class="g-btn--compact"
+								danger
+								:label="__('Delete')"
 								@click="deleteExpenseTax()"
-							>
-								<template #prefix>
-									<Trash class="w-4" />
-								</template>
-								{{ __("Delete") }}
-							</Button>
-							<Button
-								variant="solid"
-								class="w-full py-5 text-sm !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
-								@click="updateExpenseTax()"
+							/>
+							<GButton
+								:label="editingIdx === null ? __('Add tax') : __('Update tax')"
 								:disabled="addButtonDisabled"
-							>
-								<template #prefix>
-									<component :is="editingIdx === null ? Plus : Check" class="w-4" />
-								</template>
-								{{ editingIdx === null ? __("Add tax") : __("Update tax") }}
-							</Button>
+								@click="updateExpenseTax()"
+							/>
 						</div>
 					</div>
 				</div>
@@ -117,8 +106,10 @@
 </template>
 
 <script setup>
-import { Check, ChevronRight, Plus, Trash } from "lucide-vue-next"
+import { ChevronRight, Plus } from "lucide-vue-next"
 import { createResource } from "frappe-ui"
+import GButton from "@/components/glass/GButton.vue"
+import GIconButton from "@/components/glass/GIconButton.vue"
 import { computed, ref, watch, inject } from "vue"
 
 import FormField from "@/components/FormField.vue"

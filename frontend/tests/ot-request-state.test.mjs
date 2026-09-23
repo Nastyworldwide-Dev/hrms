@@ -584,7 +584,7 @@ test("own saved Open and Approved drafts stay pristine after an unchanged delaye
 			})
 			const source = script(form),
 				start = source.indexOf("watch(\n\t() => formModel.value,"),
-				end = source.indexOf("\n\nwatch(", start)
+				end = source.indexOf("{ deep: true }\n)", start) + "{ deep: true }\n)".length
 			vm.runInContext(
 				source.slice(start, end) + "\n" + declaration(form, "canReview"),
 				context

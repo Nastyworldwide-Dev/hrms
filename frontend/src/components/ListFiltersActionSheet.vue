@@ -18,20 +18,19 @@
 							{{ __(filter.label) }}
 						</div>
 						<div class="flex flex-row gap-2 mt-2 flex-wrap">
-							<Button
+							<!-- Chips that narrow one list: aria-pressed, the same
+							     control the Requests filter uses. -->
+							<button
 								v-for="option in filter.options"
 								:key="option"
-								variant="outline"
+								type="button"
+								class="g-chip g-focusable"
+								:class="{ 'g-chip--on': option === filters[filter.fieldname].value }"
+								:aria-pressed="option === filters[filter.fieldname].value"
 								@click="setStatusFilter(filter.fieldname, option)"
-								class="text-sm"
-								:class="[
-									option === filters[filter.fieldname].value
-										? '!border !border-accent-ink !text-accent-ink !bg-accent-100 !font-extrabold'
-										: '!border !border-divider !text-inkbase !font-normal',
-								]"
 							>
 								{{ __(option) }}
-							</Button>
+							</button>
 						</div>
 					</div>
 
@@ -41,9 +40,10 @@
 							{{ __(filter.label) }}
 						</div>
 						<div class="flex flex-row items-center gap-3">
-							<Autocomplete
+							<GSelect
 								v-if="filterConditionMap[filter.fieldtype]"
 								class="mt-1 w-20"
+								:aria-label="__('Condition')"
 								:options="filterConditionMap[filter.fieldtype]"
 								v-model="filters[filter.fieldname].condition"
 							/>
@@ -64,20 +64,8 @@
 		<div
 			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground p-4 z-overlay"
 		>
-			<Button
-				@click="emit('clear-filters')"
-				variant="outline"
-				class="w-full py-5 text-sm !bg-transparent !border !border-divider !text-inkbase"
-			>
-				{{ __("Clear all") }}
-			</Button>
-			<Button
-				@click="emit('apply-filters')"
-				variant="solid"
-				class="w-full py-5 text-sm !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none"
-			>
-				{{ __("Apply filters") }}
-			</Button>
+			<GGhostButton :label="__('Clear all')" @click="emit('clear-filters')" />
+			<GButton :label="__('Apply filters')" @click="emit('apply-filters')" />
 		</div>
 	</div>
 </template>
@@ -85,7 +73,9 @@
 <script setup>
 import { computed } from "vue"
 import FormField from "@/components/FormField.vue"
-import { Autocomplete } from "frappe-ui"
+import GButton from "@/components/glass/GButton.vue"
+import GGhostButton from "@/components/glass/GGhostButton.vue"
+import GSelect from "@/components/glass/GSelect.vue"
 
 const props = defineProps({
 	filterConfig: {

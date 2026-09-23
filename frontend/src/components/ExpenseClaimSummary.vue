@@ -49,12 +49,19 @@
 	<div v-else-if="summary.error" class="text-p-sm text-ink-500 py-6 text-center">
 		{{ __("Could not load the expense summary. Refresh to try again.") }}
 	</div>
+	<!-- Four states (D6): the poster and the stat row as skeletons while the
+	     first read is in flight, so the screen does not open on a blank. -->
+	<div v-else-if="summary.loading" class="flex flex-col gap-stack-md w-full" aria-hidden="true">
+		<GSkeleton height="96px" radius="var(--g-radius-card)" />
+		<GSkeleton height="64px" radius="var(--g-radius-panel)" />
+	</div>
 </template>
 
 <script setup>
 import { computed } from "vue"
 
 import { expenseClaimSummary as summary } from "@/data/claims"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatPanel from "@/components/glass/GStatPanel.vue"
 import GStatTile from "@/components/glass/GStatTile.vue"
 

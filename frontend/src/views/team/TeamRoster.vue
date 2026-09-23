@@ -8,12 +8,13 @@
 				     the roster is empty. Same pattern as TeamDashboard. -->
 				<div v-if="teamManagers.data?.length" class="flex flex-row items-center gap-2">
 					<span class="g-eyebrow flex-none">{{ __("Team of") }}</span>
-					<Autocomplete
+					<GSelect
 						class="flex-1 min-w-0"
+						:aria-label="__('Team of')"
 						:options="managerOptions"
-						:modelValue="selectedOption"
+						:model-value="selectedManager"
 						:placeholder="__('Select a team')"
-						@update:modelValue="onManagerPicked"
+						@update:model-value="onManagerPicked"
 					/>
 				</div>
 
@@ -79,8 +80,8 @@
 				<div v-else-if="!teamRoster.loading" class="text-caption text-ink-600 text-center py-8">
 					{{ __("No team members to roster. You only see people who report to you.") }}
 				</div>
-				<div v-if="teamRoster.loading" class="flex mt-2 items-center justify-center">
-					<LoadingIndicator class="w-6 h-6 text-ink-500" />
+				<div v-if="teamRoster.loading" class="flex flex-col gap-2 mt-2" aria-hidden="true">
+					<GSkeleton v-for="n in 3" :key="n" height="44px" radius="var(--g-radius-panel)" />
 				</div>
 			</div>
 
@@ -129,7 +130,9 @@
 import { departmentLabel } from "@/utils/departmentLabel"
 import { ChevronLeft, ChevronRight } from "lucide-vue-next"
 import { computed, inject, reactive, ref, onMounted } from "vue"
-import { Autocomplete, LoadingIndicator, toast } from "frappe-ui"
+import { toast } from "frappe-ui"
+import GSelect from "@/components/glass/GSelect.vue"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
@@ -150,7 +153,8 @@ const selectedOption = ref(null)
 const managerOptions = computed(() =>
 	buildManagerOptions(teamManagers.data || [], __("Select a team"))
 )
-function onManagerPicked(option) {
+function onManagerPicked(value) {
+	const option = value ? { value } : null
 	selectedOption.value = option
 	selectedManager.value = option?.value || ""
 	load()

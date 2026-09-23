@@ -7,7 +7,7 @@
 		<p v-if="refreshing" class="text-xs text-ink-500 mb-2" role="status">
 			{{ __("Refreshing…") }}
 		</p>
-		<RequestList :items="lastFive" compact />
+		<RequestList :items="lastFive" :resource="lastFiveResource" :what="__('your requests')" compact />
 		<button
 			type="button"
 			class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
@@ -110,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted, computed, markRaw, watch, nextTick } from "vue"
+import { ref, reactive, inject, onMounted, computed, markRaw, watch, nextTick } from "vue"
 import { useRoute } from "vue-router"
 
 import GModal from "@/components/glass/GModal.vue"
@@ -244,6 +244,20 @@ const myRequests = computed(() =>
 
 //: The page's list: your own five newest, whatever tab See all was left on.
 const lastFive = computed(() => lastRequests(myRequests.value))
+
+//: The six own-request lists seen as ONE resource, so "Your last 5" can tell
+//: loading and failure from "nothing here" (four states, D6). Failure counts
+//: only when there is nothing to show — five good rows are not hidden behind
+//: one list's error.
+//: ceiling: a partial failure with rows reads as complete, upgrade: a "some
+//: requests could not load" line if a single list failing is ever reported.
+const lastFiveResource = reactive({
+	error: computed(() =>
+		lastFive.value.length ? null : MY_REQUEST_LISTS.find((list) => list.error)?.error || null
+	),
+	loading: computed(() => MY_REQUEST_LISTS.some((list) => list.loading && !list.data)),
+	reload: () => reloadLists(MY_REQUEST_LISTS, "last five retry"),
+})
 
 // Attendance Request, OT Request and Replacement Leave Claim are all
 // docstatus-driven (no status/approver field), so the history trail — which is

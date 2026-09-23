@@ -51,6 +51,8 @@
 			:resource="leaveBalance"
 			what="your leave balance"
 		/>
+		<!-- Four states (D6): in flight is not "none allocated". -->
+		<GBalanceGrid v-else-if="leaveBalance.loading" loading />
 		<GBalanceGrid v-else empty>
 			<template #empty>
 				<GEmptyState

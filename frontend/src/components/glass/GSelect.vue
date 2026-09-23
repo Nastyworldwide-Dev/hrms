@@ -8,7 +8,9 @@
 
   Props:
     modelValue  string | number — v-model; "" means nothing chosen
-    options     array — [{ label, value }]
+    options     array — [{ label, value }], or groups
+                [{ group, hideLabel?, items: [{ label, value }] }] drawn as
+                <optgroup> (an unlabelled group's items sit at the top level)
     label       string — visible label (always shown when given)
     ariaLabel   string — accessible name when the caller renders the label
     placeholder string — the empty first option; plain words, never "Select X"
@@ -28,13 +30,26 @@
 				@change="$emit('update:modelValue', $event.target.value)"
 			>
 				<option value="">{{ placeholder }}</option>
-				<option
-					v-for="option in options"
-					:key="String(option.value)"
-					:value="option.value"
-				>
-					{{ option.label ?? option.value }}
-				</option>
+				<template v-for="option in options" :key="option.items ? `g:${option.group}` : String(option.value)">
+					<optgroup v-if="option.items && !option.hideLabel" :label="option.group">
+						<option v-for="item in option.items" :key="String(item.value)" :value="item.value">
+							{{ item.label ?? item.value }}
+						</option>
+					</optgroup>
+					<template v-else-if="option.items">
+						<option
+							v-for="item in option.items"
+							:key="String(item.value)"
+							:value="item.value"
+							:hidden="item.value === '' || undefined"
+						>
+							{{ item.label ?? item.value }}
+						</option>
+					</template>
+					<option v-else :value="option.value">
+						{{ option.label ?? option.value }}
+					</option>
+				</template>
 			</select>
 			<ChevronDown class="g-select__chevron" aria-hidden="true" />
 		</span>

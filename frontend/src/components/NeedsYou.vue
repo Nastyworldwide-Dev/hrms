@@ -36,10 +36,18 @@
 	     NN/g empty states). Everyone else sees it only when something waits. -->
 	<div v-if="rows.length || isApprover.data" class="w-full">
 		<div class="g-eyebrow mb-4">{{ __("Needs you") }}</div>
-		<p v-if="!rows.length" class="text-caption text-ink-600">
+		<!-- Four states (D6). A failed read is not an empty queue: saying
+		     "Nothing waiting on you." then would tell an approver they are done
+		     when we simply could not ask. -->
+		<p v-if="!rows.length && needsYouResource.error" class="text-caption text-ink-600" role="alert">
+			{{ __("We couldn't load what needs you. Pull down to try again.") }}
+		</p>
+		<p v-else-if="!rows.length && !needsYouResource.loading" class="text-caption text-ink-600">
 			{{ __("Nothing waiting on you.") }}
 		</p>
-		<GListPanel v-else>
+		<!-- ONE panel for loading and content (§15.1 surface budget): skeleton
+		     rows while the first read is in flight, real rows after. -->
+		<GListPanel v-else :loading="!rows.length && needsYouResource.loading" :rows="1">
 			<GListRow
 				v-for="row in shown"
 				:key="row.key"

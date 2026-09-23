@@ -84,7 +84,7 @@
 					<!-- loading: the missing fourth state — without it the page was a
 				     blank shell during the initial fetch. -->
 					<div v-else class="flex items-center justify-center gap-3 py-12 text-ink-600">
-						<LoadingIndicator class="h-5 w-5 text-accent-ink" />
+						<GSkeleton width="20px" height="20px" radius="var(--g-radius-well)" />
 						<span class="text-caption">{{ __("Loading your KPIs…") }}</span>
 					</div>
 				</template>
@@ -121,7 +121,7 @@
 						v-else-if="employeeKpi.loading"
 						class="flex items-center justify-center gap-3 py-12 text-ink-600"
 					>
-						<LoadingIndicator class="h-5 w-5 text-accent-ink" />
+						<GSkeleton width="20px" height="20px" radius="var(--g-radius-well)" />
 						<span class="text-caption">{{ __("Loading…") }}</span>
 					</div>
 				</template>
@@ -406,7 +406,7 @@ import { ChevronRight, Lock } from "lucide-vue-next"
 import GProgressRing from "@/components/glass/GProgressRing.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import { computed, inject, nextTick, ref, watch } from "vue"
-import { createResource, LoadingIndicator } from "frappe-ui"
+import { createResource } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"

@@ -8,32 +8,25 @@
 		]"
 	>
 		<div :class="props.view === 'form' ? 'w-full sm:max-w-2xl sm:mx-auto' : 'contents'">
-			<Button
+			<GButton
 				v-if="props.view === 'form' || actions.length > 2"
+				:label="__('Actions')"
 				@click="showTransitions()"
-				class="w-full py-5 text-base !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
-				variant="solid"
 			>
-				<template #prefix>
-					<ChevronUp class="w-4" />
-				</template>
-				{{ __("Actions") }}
-			</Button>
+				<template #trailing><ChevronUp class="w-4" /></template>
+			</GButton>
 
 			<template v-else>
-				<Button
+				<!-- Destructive transitions (reject, cancel) take the danger fill;
+				     approve is the primary; anything else is a ghost. -->
+				<component
+					:is="action.role === 'destructive' || action.variant === 'solid' ? GButton : GGhostButton"
 					v-for="action in actions"
 					:key="action.text"
-					class="w-full py-5"
-					:variant="action.variant"
-					:theme="action.theme"
+					:label="__(action.text, null, props.doc?.doctype)"
+					:danger="action.role === 'destructive' || undefined"
 					@click="applyWorkflow({ workflowAction: action.text })"
-				>
-					<template #prefix v-if="action.icon">
-						<component :is="action.icon" class="w-4" />
-					</template>
-					{{ __(action.text, null, props.doc?.doctype) }}
-				</Button>
+				/>
 			</template>
 		</div>
 	</div>
@@ -48,6 +41,8 @@
 
 <script setup>
 import { Check, ChevronUp, X } from "lucide-vue-next"
+import GButton from "@/components/glass/GButton.vue"
+import GGhostButton from "@/components/glass/GGhostButton.vue"
 import { IonActionSheet, modalController } from "@ionic/vue"
 import { ref, onMounted, inject } from "vue"
 

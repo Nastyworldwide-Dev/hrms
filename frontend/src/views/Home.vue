@@ -21,7 +21,7 @@
 			     the arithmetic: src/views/__tests__/home-fold-budget.test.js. -->
 			<GPullRefresh @refresh="refresh" />
 			<div
-				class="flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
+				class="g-rows--compact flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
 			>
 				<!-- §3.1's order, and the order is the argument: what is
 				     happening now, what is waiting on you, what you already

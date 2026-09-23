@@ -6,14 +6,14 @@
 			<span class="text-base font-extrabold text-inkbase">
 				{{ formatCurrency(expenseClaim.total_claimed_amount, expenseClaim.currency) }}
 			</span>
-			<Button
+			<GIconButton
 				v-if="!isReadOnly"
 				id="add-expense-modal"
-				class="text-sm !border !border-divider !bg-transparent"
-				icon="plus"
-				variant="subtle"
+				:label="__('Add an expense')"
 				@click="openModal()"
-			/>
+			>
+				<Plus class="w-4" />
+			</GIconButton>
 		</div>
 	</div>
 
@@ -94,29 +94,18 @@
 					</div>
 
 					<div v-if="!isReadOnly" class="flex w-full flex-row items-center justify-between gap-3">
-						<Button
+						<GButton
 							v-if="editingIdx !== null"
-							class="!border !border-red-600 !text-red-600 !bg-transparent py-5 text-sm"
-							variant="outline"
-							theme="red"
+							class="g-btn--compact"
+							danger
+							:label="__('Delete')"
 							@click="deleteExpenseItem()"
-						>
-							<template #prefix>
-								<Trash class="w-4" />
-							</template>
-							{{ __("Delete") }}
-						</Button>
-						<Button
-							variant="solid"
-							class="w-full py-5 text-sm !bg-accent-ink hover:!bg-accent-600 !text-ground !border-none disabled:opacity-60"
-							@click="updateExpenseItem()"
+						/>
+						<GButton
+							:label="editingIdx === null ? __('Add expense') : __('Update expense')"
 							:disabled="addButtonDisabled"
-						>
-							<template #prefix>
-								<component :is="editingIdx === null ? Plus : Check" class="w-4" />
-							</template>
-							{{ editingIdx === null ? __("Add expense") : __("Update expense") }}
-						</Button>
+							@click="updateExpenseItem()"
+						/>
 					</div>
 				</div>
 			</div>
@@ -124,8 +113,10 @@
 </template>
 
 <script setup>
-import { Check, ChevronRight, Plus, Trash } from "lucide-vue-next"
+import { ChevronRight, Plus } from "lucide-vue-next"
 import { createResource } from "frappe-ui"
+import GButton from "@/components/glass/GButton.vue"
+import GIconButton from "@/components/glass/GIconButton.vue"
 import { computed, ref, watch, inject } from "vue"
 
 import FormField from "@/components/FormField.vue"

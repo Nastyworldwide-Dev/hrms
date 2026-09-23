@@ -188,8 +188,10 @@ test("a second tap while a decision is in flight is ignored", () => {
 		"submitting is the first clause of the guard"
 	)
 	assert.match(sheet, /const submitting = computed\(/)
-	// every action button carries the flag
-	const buttons = sheet.match(/:disabled="submitting"/g) || []
+	// every action button carries the flag. GButton's `pending` swallows the
+	// click while set (GButton.onClick), which is what :disabled did on the
+	// frappe-ui Button it replaced.
+	const buttons = sheet.match(/:pending="submitting"/g) || []
 	assert.ok(
 		buttons.length >= 4,
 		`expected the four decision buttons to be disabled in flight, got ${buttons.length}`

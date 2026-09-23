@@ -504,6 +504,18 @@ html[data-transparency="reduce"] .g-sidenav {
 	box-shadow: none;
 	cursor: not-allowed;
 }
+/* Destructive action (reject, withdraw, delete, cancel). Solid danger with
+   on-brand ink: the same pair .g-chip--danger measured at 7.11 in both themes,
+   where a danger TINT cannot clear 4.5 on light. Placed before --disabled so a
+   disabled danger button still reads disabled. */
+.g-btn--danger {
+	background: var(--g-danger);
+	color: var(--g-on-brand);
+}
+.g-btn--danger.g-btn--disabled {
+	background: var(--g-icon-bg);
+	color: var(--g-ink3);
+}
 /* §11.4 pending keeps the brand fill; feedback is the label swap + bottom bar */
 .g-btn--pending {
 	cursor: default;
@@ -895,7 +907,9 @@ html[data-theme="dark"] .g-badge--open {
 	align-items: center;
 	gap: 12px;
 	width: 100%;
-	min-height: 44px;
+	/* 56px (owner ruling P5): the row is the app's main tap target; 44 is
+	   the platform floor, not a design size. */
+	min-height: 56px;
 	padding: var(--g-pad-row);
 	background: transparent;
 	border: 0;
@@ -903,6 +917,12 @@ html[data-theme="dark"] .g-badge--open {
 	color: var(--g-ink);
 	font-family: var(--g-type-row-label-family);
 	transition: background var(--g-motion-row-tap-duration) var(--g-motion-row-tap-easing);
+}
+/* Home only: one screen against the ~440px small-phone fold budget
+   (home-fold-budget.test.js), up to seven rows; 56 each was never measured
+   there. Still the 44px platform floor. */
+.g-rows--compact .g-row {
+	min-height: 44px;
 }
 .g-row--tappable {
 	cursor: pointer;

@@ -10,12 +10,13 @@
 				     pinned by tests/manager-options.test.mjs) -->
 				<div v-if="teamManagers.data?.length" class="flex flex-row items-center gap-2">
 					<span class="g-eyebrow flex-none">{{ __("Team of") }}</span>
-					<Autocomplete
+					<GSelect
 						class="flex-1 min-w-0"
+						:aria-label="__('Team of')"
 						:options="managerOptions"
-						:modelValue="selectedOption"
+						:model-value="selectedManager"
 						:placeholder="__('My team')"
-						@update:modelValue="onManagerPicked"
+						@update:model-value="onManagerPicked"
 					/>
 				</div>
 
@@ -180,7 +181,7 @@ import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GCalendar from "@/components/glass/GCalendar.vue"
-import { Autocomplete } from "frappe-ui"
+import GSelect from "@/components/glass/GSelect.vue"
 import { computed, inject, ref } from "vue"
 import { useRoute } from "vue-router"
 import { dateFromRoute } from "@/utils/dateFromRoute"
@@ -238,7 +239,8 @@ const notEntitled = computed(() => teamStatus.data?.entitled === false)
 const selectedOption = ref(null) // null renders the placeholder: "My team"
 const managerOptions = computed(() => buildManagerOptions(teamManagers.data || [], __("My team")))
 
-function onManagerPicked(option) {
+function onManagerPicked(value) {
+	const option = value ? { value } : null
 	console.info("[TeamDashboard] team selected:", option?.label || "My team")
 	selectedOption.value = option
 	selectedManager.value = option?.value || ""

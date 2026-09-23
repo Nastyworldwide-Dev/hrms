@@ -67,27 +67,25 @@
 						<!-- Only where the site can push: a switch that cannot work is
 						     not offered (audit-pages §4, "actionable only"). -->
 						<div v-if="canPush" class="g-switch-row">
-							<Switch
-								size="md"
+							<GSwitch
 								:label="__('Notifications')"
-								:description="__('On this phone')"
 								:model-value="pushOn"
 								:disabled="pushBusy"
 								@update:model-value="togglePush"
 							/>
+							<p class="text-caption text-ink-600">{{ __("On this phone") }}</p>
 						</div>
 
 						<!-- Owner ruling, 23 Sep 2026: check-in / check-out reminders,
 						     the person's own on/off, ON by default. -->
 						<div class="g-switch-row">
-							<Switch
-								size="md"
+							<GSwitch
 								:label="__('Shift reminders')"
-								:description="__('A nudge if you forget to check in or out')"
 								:model-value="remindersOn"
 								:disabled="setReminders.loading"
 								@update:model-value="toggleReminders"
 							/>
+							<p class="text-caption text-ink-600">{{ __("A nudge if you forget to check in or out") }}</p>
 						</div>
 
 						<button
@@ -122,7 +120,8 @@ import { useListUpdate } from "@/composables/realtime"
 import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
 import GModal from "@/components/glass/GModal.vue"
-import { Switch, createDocumentResource, createResource, toast } from "frappe-ui"
+import { createDocumentResource, createResource, toast } from "frappe-ui"
+import GSwitch from "@/components/glass/GSwitch.vue"
 import ShellHeader from "@/components/ShellHeader.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"
 import GBadge from "@/components/glass/GBadge.vue"

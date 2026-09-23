@@ -27,7 +27,12 @@
 		<!-- The date is content, so it sits with today's content, once — not in
 		     the header in place of the Nadi mark (owner, 23 Sep; DETAIL §1.3). -->
 		<p class="g-now__date" data-visual-mask>{{ today }}</p>
-		<div class="g-now__row">
+		<!-- Four states (D6): a skeleton while the first read is in flight, so
+		     the bar keeps its space without claiming "No shift today" early. -->
+		<div v-if="pending" class="g-now__row">
+			<GSkeleton width="60%" height="18px" />
+		</div>
+		<div v-else class="g-now__row">
 			<span class="g-now__dot" aria-hidden="true" />
 			<p class="g-now__state">{{ stateLine }}</p>
 		</div>
@@ -44,6 +49,7 @@ import { siteTime } from "@/utils/siteTime"
 import { clockTime } from "@/utils/daySheet"
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue"
 
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import { nowResource } from "@/data/now"
 
 const __ = inject("$translate")
@@ -70,6 +76,9 @@ const shift = computed(() => data.value.shift)
 //: that jump is a layout shift (CLS) on the first screen of the app.
 const stateKey = computed(() => data.value.state?.key || "off")
 
+//: First read in flight with nothing (not even a cached copy) to show.
+const pending = computed(() => Boolean(nowResource.loading && !data.value.state))
+
 const elapsed = computed(() => {
 	void tick.value // read it so the interval re-evaluates this
 	if (!session.value?.since) return ""
@@ -87,6 +96,12 @@ const elapsed = computed(() => {
 
 const stateLine = computed(() => {
 	const label = data.value.state?.label
+	// A failed read is not "no shift": that would be a false answer at the top
+	// of Home. Say we could not load, and how to retry (D6).
+	if (!label && nowResource.error) {
+		console.warn("[NowBar] today's state failed to load", nowResource.error)
+		return __("We couldn't load today. Pull down to try again.")
+	}
 	if (!label) return __("No shift today")
 	// The running time belongs IN the state line, not under it: "Working ·
 	// 3h 12m" is one fact, and splitting it across two lines makes the reader
@@ -97,6 +112,7 @@ const stateLine = computed(() => {
 })
 
 const detail = computed(() => {
+	if (!data.value.state && nowResource.error) return ""
 	// The shift window, when there is one — that is the thing a person checks
 	// the bar for after the state itself.
 	if (shift.value) {

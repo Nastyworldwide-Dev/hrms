@@ -32,7 +32,7 @@ function declaration(name) {
 const watcherStart = script.indexOf("watch(\n\t() => formModel.value,")
 const watcher = script.slice(
 	watcherStart,
-	script.indexOf("\n\nwatch(", watcherStart)
+	script.indexOf("{ deep: true }\n)", watcherStart) + "{ deep: true }\n)".length
 )
 const tick = async () => {
 	await nextTick()

@@ -10,6 +10,8 @@
     type         "button" (default) | "submit" | "reset"
     disabled     boolean — §11.4: icon-bg fill, ink3 label, aria-disabled;
                  stays focusable so the state is discoverable
+    danger       boolean — a destructive action (reject, withdraw, delete,
+                 cancel): danger fill instead of brand. Never primary.
   Emits: click — suppressed while pending or disabled (§11.5 duplicate guard
          is the caller's 60s window; this only stops re-entry while pending)
   Slots:
@@ -21,7 +23,7 @@
 	<button
 		:type="type"
 		class="g-btn"
-		:class="{ 'g-btn--pending': pending, 'g-btn--disabled': disabled }"
+		:class="{ 'g-btn--pending': pending, 'g-btn--disabled': disabled, 'g-btn--danger': danger }"
 		:aria-busy="pending || undefined"
 		:aria-disabled="disabled || undefined"
 		@click="onClick"
@@ -45,6 +47,7 @@ const props = defineProps({
 	pendingLabel: { type: String, default: "" },
 	pending: { type: Boolean, default: false },
 	disabled: { type: Boolean, default: false },
+	danger: { type: Boolean, default: false },
 })
 const emit = defineEmits(["click"])
 

@@ -9,18 +9,30 @@
 	>
 		<span class="text-center">{{ message }}</span>
 		<div class="flex flex-row items-center gap-2">
-			<Button v-if="resource.reload" :loading="loading" @click="retry">
-				{{ __("Try again") }}
-			</Button>
+			<GButton
+				v-if="resource.reload"
+				class="g-btn--compact"
+				:label="__('Try again')"
+				:pending-label="__('Trying…')"
+				:pending="loading"
+				@click="retry"
+			/>
 			<!-- Back is opt-in: this component also renders inline inside lists,
 			     cards and dashboards that carry their own navigation, where a Back
 			     button would be wrong. It is set only where this error is the SOLE
 			     full-screen content — a form/detail whose meta failed to load, so
 			     the view that owns the Back button (FormView) never mounted and the
 			     user would otherwise be stranded with no way out. -->
-			<Button v-if="back" variant="subtle" @click="goBackOrHome(router)">
+			<!-- A text control, not GGhostButton: that is a glass surface, and an
+			     error line inside a panel must not spend the screen's §15 budget. -->
+			<button
+				v-if="back"
+				type="button"
+				class="g-focusable g-list-more px-4 py-3 text-sm text-ink-600 bg-transparent border-none"
+				@click="goBackOrHome(router)"
+			>
 				{{ __("Back") }}
-			</Button>
+			</button>
 		</div>
 	</div>
 </template>
@@ -36,7 +48,7 @@
 // "missing", and why the app feels unreliable even when it is working: the eye
 // can never confirm that empty means empty.
 import { computed, inject } from "vue"
-import { Button } from "frappe-ui"
+import GButton from "@/components/glass/GButton.vue"
 import { useRouter } from "vue-router"
 import { goBackOrHome } from "@/utils/navigation"
 

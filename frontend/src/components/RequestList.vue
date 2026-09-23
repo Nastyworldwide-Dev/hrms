@@ -37,14 +37,26 @@
 			:to="{ name: props.listButtonRoute }"
 			v-slot="{ navigate }"
 		>
-			<Button
-				variant="ghost"
+			<!-- A text control under a list, the same one "See all" uses — not a
+			     frappe-ui Button (no frappe-ui controls in the app). -->
+			<button
+				type="button"
+				class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
 				@click="navigate"
-				class="w-full !text-ink-600 py-6 text-sm border-none bg-transparent hover:bg-transparent"
 			>
 				{{ __("View list") }}
-			</Button>
+			</button>
 		</router-link>
+	</div>
+	<!-- Four states (D6): while the owning resource's first read is in
+	     flight, skeleton rows — not "Nothing here yet", which is a claim. -->
+	<div
+		v-else-if="props.resource?.loading"
+		class="flex flex-col gap-3 py-3"
+		role="status"
+		:aria-label="__('Loading')"
+	>
+		<GSkeleton v-for="n in 3" :key="n" height="20px" />
 	</div>
 	<!-- §11.1: callers pass the copy for their list; this is the fallback for
 	     any that has not yet been given one -->
@@ -61,6 +73,7 @@
 
 <script setup>
 import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { REQUEST_KIND } from "@/utils/requestKind"
 import { requestStatus } from "@/utils/requestStatus"
