@@ -548,6 +548,9 @@ def _day_claim(employee: str, day) -> dict | None:
 
 	name = ""
 	for approver in get_designated_approvers(employee, "leave_approver", "leave_approvers"):
+		# A disabled account never receives the claim; name the next one.
+		if not frappe.db.get_value("User", approver, "enabled"):
+			continue
 		name = frappe.db.get_value("User", approver, "full_name") or ""
 		if name:
 			break

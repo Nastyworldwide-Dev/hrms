@@ -24,7 +24,7 @@ import frappe
 from hrms.api import calendar
 
 
-def _day(claims):
+def _day(claims, approvers=("hafiz@example.com",)):
 	seen = {}
 
 	def get_value(doctype, filters=None, fieldname=None, **kw):
@@ -35,6 +35,8 @@ def _day(claims):
 		if doctype == "Employee":
 			return frappe._dict(leave_approver="hafiz@example.com", reports_to=None)
 		if doctype == "User":
+			if fieldname == "enabled":
+				return 0 if filters == "gone@example.com" else 1
 			return "Hafiz Rahman"
 		return None
 
@@ -50,7 +52,7 @@ def _day(claims):
 		patch.object(frappe, "get_all", side_effect=get_all, create=True),
 		patch.object(calendar, "_my_punches", return_value=[]),
 		# Named the way OT notifications route (review): designated approvers.
-		patch("hrms.hr.utils.get_designated_approvers", return_value=["hafiz@example.com"], create=True),
+		patch("hrms.hr.utils.get_designated_approvers", return_value=approvers, create=True),
 	):
 		return calendar._my_day("E1", calendar.getdate("2026-09-16")), seen
 
@@ -83,3 +85,14 @@ class TestDayClaim(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestDayClaimApprover(unittest.TestCase):
+	def test_a_disabled_approver_is_skipped(self):
+		# Review of the claim commit: name someone who can actually decide it.
+		me, _ = _day([{"name": "OT-1", "status": "Open"}], approvers=["gone@example.com", "hafiz@example.com"])
+		self.assertEqual(me["claim"]["approver_name"], "Hafiz Rahman")
+
+	def test_only_disabled_approvers_names_nobody(self):
+		me, _ = _day([{"name": "OT-1", "status": "Open"}], approvers=["gone@example.com"])
+		self.assertEqual(me["claim"]["approver_name"], "")
