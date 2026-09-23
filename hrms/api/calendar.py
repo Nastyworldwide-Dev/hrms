@@ -98,8 +98,16 @@ def _event_days(employee: str, start, end) -> set:
 	reader = _reader()
 	if not reader:
 		return set()
+	try:
+		rows = _visible_rows(reader)
+	except Exception:
+		# The least of four dot kinds. A site without the announcement board
+		# (seen on fresh.local, 23 Sep) made the whole month a 403, so every
+		# employee lost their leave, holiday and needs-you dots too.
+		logger.exception("[calendar] announcements unavailable; no event dots")
+		return set()
 	days = set()
-	for row in _visible_rows(reader):
+	for row in rows:
 		if row.get("category") != "Event":
 			continue
 		day = getdate(row.get("publish_from"))
