@@ -141,6 +141,16 @@ class TestOneHelper(unittest.TestCase):
 		self.assertEqual(paired, set())
 		self.assertEqual(open_days, set())
 
+	def test_an_in_left_open_for_days_does_not_pair_with_a_later_out(self):
+		# Forgot to check out Monday; the next punch is an OUT on Wednesday.
+		# That is not a shift, so Monday is not worked (and not open either).
+		from hrms.utils import worked_days
+
+		punches = [_punch(D(2026, 9, 14), 9, "IN"), _punch(D(2026, 9, 16), 18, "OUT")]
+		with patch.object(frappe, "get_all", side_effect=_site(punches), create=True):
+			paired, _ = worked_days.punch_days("E1", D(2026, 9, 14), D(2026, 9, 16))
+		self.assertEqual(paired, set())
+
 
 class TestMonthFlagsCarryWorkedDays(unittest.TestCase):
 	def test_paired_days_and_todays_open_in_reach_the_calendar(self):

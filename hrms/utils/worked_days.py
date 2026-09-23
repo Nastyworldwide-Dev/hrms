@@ -13,9 +13,12 @@ import logging
 from datetime import timedelta
 
 import frappe
-from frappe.utils import getdate
+from frappe.utils import get_datetime, getdate
 
 logger = logging.getLogger(__name__)
+
+#: Longest IN->OUT span still read as one shift.
+MAX_SHIFT = timedelta(hours=24)
 
 
 def punch_days(employee: str, start, end) -> tuple[set, set]:
@@ -38,12 +41,15 @@ def punch_days(employee: str, start, end) -> tuple[set, set]:
 		order_by="time asc",
 		ignore_permissions=True,
 	)
-	paired, open_in = set(), None
+	paired, open_in, open_at = set(), None, None
 	for row in sorted(punches, key=lambda r: r.time):
 		if row.log_type == "IN":
-			open_in = getdate(row.time)
+			open_in, open_at = getdate(row.time), get_datetime(row.time)
 		elif row.log_type == "OUT" and open_in is not None:
-			paired.add(open_in)
+			# A shift is under a day long. An IN left open for days that meets
+			# a later OUT is a forgotten check-out, not a worked day.
+			if get_datetime(row.time) - open_at <= MAX_SHIFT:
+				paired.add(open_in)
 			open_in = None
 	start, end = getdate(start), getdate(end)
 	paired = {day for day in paired if start <= day <= end}
