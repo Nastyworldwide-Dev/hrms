@@ -111,3 +111,48 @@ test("the strip is the first thing on Requests", () => {
 		"balances before the actions they inform"
 	)
 })
+
+// ---------------------------------------------------------------------------
+// Deployed 23 September 2026: seven leave cards, two of them wrapping to three
+// lines, above anything actionable — a wall where the plan asked for a strip.
+// And every number was bare: "60 HOSPITALIZATION" reads as alarming until you
+// know it is 60 of 60, i.e. untouched.
+
+test("a balance states what it is out of", () => {
+	// The plan's words are "12.5 of 16 left". A number with no scale is not a
+	// balance, it is a number.
+	assert.match(component, /__\("of \{0\}", \[trim\(row\.total\)\]\)/)
+})
+
+test("a whole number does not render a trailing .0", () => {
+	// "of 16" reads as a count; "of 16.0" reads as a measurement. Half-days
+	// are real, so the decimal stays when it means something.
+	const fn = component.slice(component.indexOf("function trim"))
+	assert.match(fn, /Number\.isInteger\(n\) \? String\(n\) : n\.toFixed\(1\)/)
+})
+
+test("an expiry replaces the denominator rather than joining it", () => {
+	// Two notes on one card is the wrap that made the wall. A date is the more
+	// urgent of the two, so it wins the line.
+	const note = component.slice(component.indexOf("#note"), component.indexOf("</GBalanceCard>"))
+	assert.match(note, /v-if="row\.expiring_soon"/)
+	assert.match(note, /v-else/)
+})
+
+test("the strip is bounded, and says what it is hiding", () => {
+	// Four cards fit a phone without wrapping; seven do not. The count of what
+	// is hidden is stated, so nobody has to tap to find out whether it is worth
+	// tapping.
+	assert.match(component, /const LEAVE_SHOWN = 4/)
+	assert.match(component, /__\("Show \{0\} more leave type\(s\)", \[hiddenLeave\.length\]\)/)
+	assert.match(component, /__\("Show fewer leave types"\)/, "and it folds back")
+})
+
+test("the types you have actually used come first", () => {
+	// An untouched statutory entitlement is a fact you can look up; a type you
+	// have drawn on is the one you are checking. Expiring types outrank both,
+	// because only they have a deadline.
+	const ranked = component.slice(component.indexOf("const rankedLeave"))
+	assert.match(ranked, /a\.expiring_soon !== b\.expiring_soon/, "expiry first")
+	assert.match(ranked, /usedA > 0/, "then types with usage")
+})

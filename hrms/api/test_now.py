@@ -15,7 +15,7 @@ from frappe.utils import add_to_date, now_datetime
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
-from hrms.api.now import MAX_OPEN_SESSION_HOURS, _hhmm, get_now
+from hrms.api.now import MAX_OPEN_SESSION_HOURS, _hhmm, _state, get_now
 from hrms.tests.test_utils import create_company
 
 
@@ -102,3 +102,106 @@ class TestNowBar(FrappeTestCase):
 		first screen — it may not 500."""
 		payload = self._now()
 		self.assertIn("shift", payload, "the key is always present")
+
+
+class TestStateWord(FrappeTestCase):
+	"""Every employee is always in exactly one state.
+
+	The bar shipped on 23 September with every part optional, so an employee
+	with no shift assigned and no open punch got an empty line — and Home
+	opened on the same "Last check-out was at 08:17 pm" it always had. A
+	status line does not get to say nothing.
+	"""
+
+	def setUp(self):
+		self.company = create_company("_Test Now State").name
+		self.user = "now_state@example.com"
+		self.employee = make_employee(self.user, company=self.company)
+		frappe.db.delete("Employee Checkin", {"employee": self.employee})
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def _now(self):
+		frappe.set_user(self.user)
+		try:
+			return get_now()
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_there_is_always_a_state(self):
+		"""The one assertion that would have caught the deploy. No punches, no
+		shift — the emptiest an account can be — and the bar still has a word
+		for it."""
+		payload = self._now()
+		self.assertIsNotNone(payload["state"])
+		self.assertTrue(payload["state"]["label"], "a label a person can read")
+		self.assertIn(payload["state"]["key"], ("working", "done", "before", "off"))
+
+	def test_an_open_session_is_working(self):
+		frappe.get_doc(
+			{
+				"doctype": "Employee Checkin",
+				"employee": self.employee,
+				"time": add_to_date(now_datetime(), hours=-2),
+				"log_type": "IN",
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(self._now()["state"]["key"], "working")
+
+	def test_checked_out_today_is_done(self):
+		for log_type, hours in (("IN", -8), ("OUT", -1)):
+			frappe.get_doc(
+				{
+					"doctype": "Employee Checkin",
+					"employee": self.employee,
+					"time": add_to_date(now_datetime(), hours=hours),
+					"log_type": log_type,
+				}
+			).insert(ignore_permissions=True)
+		payload = self._now()
+		self.assertEqual(payload["state"]["key"], "done")
+		self.assertIsNotNone(payload["last_out"], "and it can say when")
+
+	def test_nothing_at_all_is_off_rather_than_blank(self):
+		"""A rest day is a fact. Saying it is better than an empty bar, which
+		reads as a screen that failed to load."""
+		self.assertEqual(self._now()["state"]["key"], "off")
+
+	def test_the_last_out_is_not_read_while_a_session_runs(self):
+		"""When somebody is checked IN, when they last left is not what the top
+		of Home should be saying."""
+		frappe.get_doc(
+			{
+				"doctype": "Employee Checkin",
+				"employee": self.employee,
+				"time": add_to_date(now_datetime(), hours=-9),
+				"log_type": "OUT",
+			}
+		).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Employee Checkin",
+				"employee": self.employee,
+				"time": add_to_date(now_datetime(), hours=-2),
+				"log_type": "IN",
+			}
+		).insert(ignore_permissions=True)
+		payload = self._now()
+		self.assertEqual(payload["state"]["key"], "working")
+		self.assertIsNone(payload["last_out"])
+
+	def test_the_state_is_pure_and_testable_on_its_own(self):
+		"""The rule is a function of four inputs, so it can be exercised
+		without a site — which is what makes every branch cheap to pin."""
+		from frappe.utils import getdate
+
+		now = now_datetime()
+		today = str(getdate(now))
+		self.assertEqual(_state({"since": "x"}, None, None, now)["key"], "working")
+		self.assertEqual(_state(None, None, f"{today} 08:00:00", now)["key"], "done")
+		self.assertEqual(_state(None, {"shift": "A"}, None, now)["key"], "before")
+		self.assertEqual(_state(None, None, None, now)["key"], "off")
+		# Yesterday's check-out is not today's "done" — that would tell
+		# somebody their day was finished before it started.
+		self.assertEqual(_state(None, None, "2000-01-01 08:00:00", now)["key"], "off")

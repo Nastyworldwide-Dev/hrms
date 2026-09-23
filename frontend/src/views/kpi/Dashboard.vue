@@ -60,16 +60,17 @@
 
 					     Everything here is about the READER'S OWN cycle (revamp
 					     KR3). No other employee's data enters an empty state. -->
-					<GEmptyState
-						v-else-if="dashboard.data && !whatsNext"
-						:title="__('No review scheduled')"
-						:body="
-							__(
-								'Your score appears here once HR opens a review cycle that includes you. There is nothing for you to do yet.'
-							)
-						"
-					/>
+					<!-- ONE empty path, always populated. There used to be two, and
+					     the second was a dashed box for the case where no cycle
+					     includes this employee — which on 23 September was every
+					     employee on the site, so the screen the owner opened was
+					     still the field of black 2.0 shipped.
 
+					     `whats_next` now always answers: with a cycle when there is
+					     one, and with the appraiser's name when there is not,
+					     because an employee whose review has not been scheduled
+					     cannot fix that themselves and what they need is who to
+					     ask. -->
 					<div v-else-if="dashboard.data" class="flex flex-col gap-4">
 						<GBanner variant="info">
 							<div class="flex flex-col gap-1">
@@ -77,7 +78,7 @@
 								<span class="text-caption text-ink-600">{{ nextCycleBody }}</span>
 							</div>
 						</GBanner>
-						<GMetaGrid :cells="nextCycleFacts" />
+						<GMetaGrid v-if="nextCycleFacts.length" :cells="nextCycleFacts" />
 					</div>
 
 					<!-- loading: the missing fourth state — without it the page was a
@@ -475,9 +476,14 @@ const current = computed(() => dashboard.data?.current)
 // does not, and it carries only the reader's own cycle (revamp KR3).
 const whatsNext = computed(() => dashboard.data?.whats_next || null)
 
+//: A cycle exists for this employee. Without one there is nothing to name,
+//: and the copy below says who to ask instead.
+const hasCycle = computed(() => Boolean(whatsNext.value?.cycle))
+
 const nextCycleTitle = computed(() => {
 	const next = whatsNext.value
 	if (!next) return ""
+	if (!hasCycle.value) return __("No review scheduled yet")
 	return next.status === "In Progress"
 		? __("Your review is open now")
 		: __("Your next review is scheduled")
@@ -486,6 +492,18 @@ const nextCycleTitle = computed(() => {
 const nextCycleBody = computed(() => {
 	const next = whatsNext.value
 	if (!next) return ""
+
+	// NOTHING SCHEDULED is the case that shipped as a dashed box in a field of
+	// black. The employee cannot schedule their own review, so the useful
+	// thing is not "there is nothing here" — it is who can.
+	if (!hasCycle.value) {
+		return next.appraiser
+			? __("HR has not opened one that includes you. {0} scores you when they do.", [
+					next.appraiser,
+			  ])
+			: __("HR has not opened one that includes you. Nothing for you to do yet.")
+	}
+
 	// The date is the thing being communicated, so it goes in the sentence
 	// rather than being left for the reader to find in a table below.
 	if (next.status === "In Progress") {
@@ -503,11 +521,20 @@ const nextCycleBody = computed(() => {
 const nextCycleFacts = computed(() => {
 	const next = whatsNext.value
 	if (!next) return []
+
+	// With no cycle there are no dates and no status — a grid of four "Not
+	// set" cells is worse than no grid. Who scores you is still a fact, and
+	// the one the sentence above just used.
+	if (!hasCycle.value) {
+		return next.appraiser ? [{ k: __("Scored by"), v: next.appraiser }] : []
+	}
+
 	return [
 		{ k: __("Cycle"), v: next.cycle_name },
 		{ k: __("Status"), v: cycleStatusLabel(next.status) },
 		{ k: __("Opens"), v: formatCycleDate(next.start_date) || __("Not set") },
 		{ k: __("Closes"), v: formatCycleDate(next.end_date) || __("Not set") },
+		...(next.appraiser ? [{ k: __("Scored by"), v: next.appraiser }] : []),
 	]
 })
 

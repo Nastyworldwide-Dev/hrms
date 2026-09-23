@@ -244,3 +244,13 @@ NEXT: SOP search-first (the last D3 piece), then the deploy note.
 - 2026-09-22T17:56:48Z COMMIT: f4373af50 feat(sop): the library re-grouped itself between every keystroke → review+design dispatched
 - 2026-09-22T18:01:30Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 22 file(s) ⟂16efdd472c5b
 - 2026-09-22T18:01:30Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
+- 2026-09-22T18:01:36Z PUSH: nz-glass @ cd8144e7c
+- 2026-09-22T18:01:36Z COMMIT: cd8144e7c feat(home): the first line made the reader do arithmetic → review+design dispatched
+- 2026-09-22T18:02:03Z PUSH: nz-glass @ 9d9798ff8
+- 2026-09-22T18:02:03Z COMMIT: 9d9798ff8 docs(glass): the handoff still described the night before → review dispatched
+- 2026-09-23T00:45:30Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 36 file(s) ⟂8bd154a716de
+- 2026-09-23T00:45:30Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 4 extra test file(s) ⟂ec40e5b3a4bb
+- 2026-09-23T00:45:55Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 22 file(s) ⟂16efdd472c5b
+- 2026-09-23T00:45:55Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 4 extra test file(s) ⟂ec40e5b3a4bb
+- 2026-09-23T00:46:17Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 22 file(s) ⟂16efdd472c5b
+- 2026-09-23T00:46:17Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 4 extra test file(s) ⟂ec40e5b3a4bb

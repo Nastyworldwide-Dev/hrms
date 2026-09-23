@@ -48,13 +48,36 @@ test("an unparseable timestamp renders nothing, not NaN", () => {
 	assert.match(bar, /Number\.isNaN\(started\.getTime\(\)\)/, "and a bad value is refused")
 })
 
-test("each fact disappears when it does not apply", () => {
-	// An employee with no shift assigned sees a shorter line, not "Shift:
-	// none". The whole bar goes when neither applies, which is most of a day
-	// off.
-	assert.match(bar, /v-if="sessionText"/)
-	assert.match(bar, /v-if="shiftText"/)
-	assert.match(bar, /v-if="hasAnything"/)
+test("the bar ALWAYS renders", () => {
+	// THIS ASSERTION IS INVERTED FROM WHAT IT WAS, and the inversion is the
+	// fix. It used to require `v-if="hasAnything"` — the bar hiding itself
+	// when it had no shift and no open session — which is precisely the defect
+	// that deployed on 23 September: an employee with neither got an empty
+	// space and Home opened on the same "Last check-out was at 08:17 pm" it
+	// always had.
+	//
+	// A status line whose whole job is to say what is true right now does not
+	// get to say nothing. "No shift today" is an answer; blank is a screen
+	// that looks like it failed to load.
+	assert.doesNotMatch(bar, /v-if="hasAnything"/, "the bar may not hide itself")
+	const root = bar.slice(bar.indexOf("<template>"), bar.indexOf("</template>"))
+	const opening = root.slice(root.indexOf("<div"), root.indexOf(">", root.indexOf("<div")))
+	assert.doesNotMatch(opening, /v-if=/, "its root element is unconditional")
+})
+
+test("a missing state still reads as a state", () => {
+	// While the payload is in flight, and on a site where the read fails
+	// outright, the bar falls back to "off" rather than to nothing — so Home
+	// does not jump when it lands, which is a layout shift on the first screen
+	// of the app.
+	assert.match(bar, /data\.value\.state\?\.key \|\| "off"/)
+	assert.match(bar, /__\("No shift today"\)/, "and it says something")
+})
+
+test("the detail line disappears, but the state never does", () => {
+	// The shift window is genuinely optional — an employee with no shift
+	// assigned should not read "Shift: none". The STATE is not.
+	assert.match(bar, /v-if="detail"/)
 })
 
 test("a forgotten punch is not a running session", () => {

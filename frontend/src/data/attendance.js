@@ -30,14 +30,6 @@ export const getTotalShiftDays = (shift) => {
 	return end_date.diff(start_date, "d") + 1
 }
 
-export const getShiftTiming = (shift) => {
-	return (
-		shift.start_time.split(":").slice(0, 2).join(":") +
-		" - " +
-		shift.end_time.split(":").splice(0, 2).join(":")
-	)
-}
-
 const transformShiftRequests = (data) =>
 	data.map((request) => {
 		request.doctype = "Shift Request"

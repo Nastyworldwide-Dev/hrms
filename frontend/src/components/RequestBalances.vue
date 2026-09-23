@@ -21,20 +21,49 @@
 -->
 <template>
 	<div v-if="hasAnything" class="flex flex-col gap-4">
-		<GBalanceGrid v-if="leave.length" :count="leave.length" :loading="loading && !leave.length">
+		<GBalanceGrid
+			v-if="shownLeave.length"
+			:count="shownLeave.length"
+			:loading="loading && !shownLeave.length"
+		>
 			<GBalanceCard
-				v-for="row in leave"
+				v-for="row in shownLeave"
 				:key="row.leave_type"
 				:label="row.leave_type"
 				:remaining="row.balance"
 				:allocated="row.total"
 				:entitlement="row.total"
 			>
-				<template v-if="row.expiring_soon" #note>
-					{{ __("Expires {0}", [formatDate(row.expires_on)]) }}
+				<!-- "12.5 of 16", not a bare "60". The plan asks for the
+				     DENOMINATOR because a number with no scale is not a balance:
+				     60 hospitalization days reads as alarming until you know it
+				     is 60 of 60, untouched. An expiry replaces it when there is
+				     one, because a date is the more urgent of the two. -->
+				<template #note>
+					<template v-if="row.expiring_soon">{{
+						__("Expires {0}", [formatDate(row.expires_on)])
+					}}</template>
+					<template v-else>{{ __("of {0}", [trim(row.total)]) }}</template>
 				</template>
 			</GBalanceCard>
 		</GBalanceGrid>
+
+		<!-- The types nobody is looking at, behind one tap. Seven cards, two of
+		     them wrapping to three lines, is the wall the owner photographed on
+		     23 September; four is a strip. What is hidden is the untouched
+		     statutory entitlement — not news until it is used. -->
+		<button
+			v-if="hiddenLeave.length"
+			type="button"
+			class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
+			@click="showAllLeave = !showAllLeave"
+		>
+			{{
+				showAllLeave
+					? __("Show fewer leave types")
+					: __("Show {0} more leave type(s)", [hiddenLeave.length])
+			}}
+		</button>
 
 		<GListPanel v-if="rows.length">
 			<GListRow
@@ -53,7 +82,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted } from "vue"
+import { computed, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { CircleDollarSign, Receipt, UserCheck } from "lucide-vue-next"
 
@@ -71,6 +100,38 @@ const router = useRouter()
 const loading = computed(() => Boolean(requestsSummary.loading))
 const data = computed(() => requestsSummary.data || {})
 const leave = computed(() => data.value.leave || [])
+//: Four cards fit a phone without wrapping; seven do not. Measured against
+//: the deployed screenshot, where "Compassionate Leave (Immediate Family)"
+//: took three lines and pushed everything actionable below the fold.
+const LEAVE_SHOWN = 4
+
+const showAllLeave = ref(false)
+
+//: USED FIRST, then the rest. A type the employee has actually drawn on is
+//: the one they are checking; an untouched statutory entitlement is a fact
+//: they can look up. Expiring types jump the queue either way, because those
+//: are the only ones with a deadline attached.
+const rankedLeave = computed(() =>
+	[...leave.value].sort((a, b) => {
+		if (a.expiring_soon !== b.expiring_soon) return a.expiring_soon ? -1 : 1
+		const usedA = a.total - a.balance
+		const usedB = b.total - b.balance
+		if (usedA > 0 !== usedB > 0) return usedA > 0 ? -1 : 1
+		return b.balance - a.balance
+	})
+)
+
+const shownLeave = computed(() =>
+	showAllLeave.value ? rankedLeave.value : rankedLeave.value.slice(0, LEAVE_SHOWN)
+)
+const hiddenLeave = computed(() => rankedLeave.value.slice(LEAVE_SHOWN))
+
+//: A whole number reads as a count; 12.5 days is a real half-day balance.
+//: Trailing ".0" on every card is noise.
+function trim(value) {
+	const n = Number(value)
+	return Number.isInteger(n) ? String(n) : n.toFixed(1)
+}
 
 function formatDate(value) {
 	return value ? $dayjs(value).format("D MMM") : ""

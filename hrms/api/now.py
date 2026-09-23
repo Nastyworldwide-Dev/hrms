@@ -101,6 +101,55 @@ def _hhmm(value) -> str:
 	return f"{int(hours):02d}:{minutes[:2].zfill(2)}" if hours.isdigit() else text
 
 
+def _last_completed(employee, now):
+	"""The most recent OUT, when there is no session running.
+
+	Read ONLY in that case: while somebody is checked in, when they last left
+	is not what the top of Home should be saying.
+	"""
+	rows = frappe.get_all(
+		"Employee Checkin",
+		filters={"employee": employee, "log_type": "OUT"},
+		fields=["time"],
+		order_by="time desc",
+		limit=1,
+		ignore_permissions=True,
+	)
+	if not rows:
+		return None
+	return str(rows[0].time)
+
+
+def _state(session, shift, last_out, now):
+	"""One word for what is true, and a sentence under it.
+
+	FOUR STATES, and every employee is always in exactly one:
+
+	  working    — a session is open. The number is the point.
+	  done       — checked out today. Their day is finished and they can see it.
+	  before     — on shift later today, not in yet.
+	  off        — no shift today, nothing open. A rest day, and saying so is
+	               better than an empty bar that reads as a broken screen.
+
+	The `key` is for the screen to style and test against; the `label` is what
+	renders, so the wording lives in one place rather than in every consumer.
+	"""
+	if session:
+		return {"key": "working", "label": "Working"}
+
+	if last_out and str(last_out)[:10] == str(now.date()):
+		return {"key": "done", "label": "Done for today"}
+
+	if shift:
+		# A shift exists for today and nothing is open. Before its start time
+		# that is "not in yet"; after, it is a day they have not punched — and
+		# the honest word for both is the same, because the bar is not the
+		# place to accuse somebody of missing a shift.
+		return {"key": "before", "label": "Not checked in"}
+
+	return {"key": "off", "label": "No shift today"}
+
+
 @frappe.whitelist(methods=["GET", "POST"])
 def get_now() -> dict:
 	"""The one line at the top of Home."""
@@ -110,13 +159,27 @@ def get_now() -> dict:
 	employee = get_current_employee()
 	now = employee_now(employee)
 
+	session = _open_session(employee, now)
+	shift = _shift_window(employee, now.date())
+	last_out = None if session else _last_completed(employee, now)
+
 	payload = {
 		"date": str(now.date()),
 		# The employee's own wall clock, not the server's. A site in another
 		# timezone put the wrong day at the top of Home near midnight.
 		"time": now.strftime("%H:%M"),
-		"shift": _shift_window(employee, now.date()),
-		"session": _open_session(employee, now),
+		"shift": shift,
+		"session": session,
+		# The STATE WORD the plan asked for. Always present, because the bar's
+		# whole job is to say what is true right now — and "nothing is true
+		# right now" is not an outcome a status line is allowed to have.
+		#
+		# The first build made every part optional, so an employee with no
+		# shift assigned and no open punch got an empty bar and Home opened on
+		# "Last check-out was at 08:17 pm" exactly as before. Deployed 23 Sep
+		# and it was the first thing the owner saw.
+		"state": _state(session, shift, last_out, now),
+		"last_out": last_out,
 	}
 	logger.info(
 		"[now] employee=%s shift=%s open=%s",

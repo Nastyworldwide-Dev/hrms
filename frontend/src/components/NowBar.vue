@@ -1,29 +1,38 @@
 <!--
-  The one line at the top of Home (revamp §2).
+  The line at the top of Home (revamp §2).
 
   What it replaces: "Last check-out was at 08:17 pm". True, and it made the
   reader do the rest of the work — am I on shift, how long have I been in,
   does today's shift start yet. Somebody standing at a door with a phone in
   one hand should not be doing arithmetic.
 
-  THREE FACTS, in the order a person needs them: what shift today is, whether
-  they are currently in, and for how long. Each disappears when it does not
-  apply, so an employee with no shift assigned sees a shorter line rather than
-  "Shift: none".
+  IT ALWAYS RENDERS. The first build made every part conditional, so an
+  employee with no shift assigned and no open punch got an empty bar — and
+  Home opened on the same "Last check-out was at 08:17 pm" it always had.
+  That shipped on 23 September and it was the first thing the owner saw. A
+  status line whose job is to say what is true now does not get to say
+  nothing: "No shift today" is an answer, and an empty space is not.
 
-  THE TIMER TICKS. A session that says "6h 12m" and then stops is worse than
-  no timer — it reads as the app having lost track. It updates once a minute,
-  which is the resolution the number is stated at; a per-second interval would
-  re-render Home sixty times for a digit nobody is watching.
+  THE STATE IS THE SERVER'S WORD. Four of them — working, done, before, off —
+  and the copy lives with the rule that chooses it, so the screen cannot
+  disagree with the reason.
+
+  THE TIMER TICKS once a minute, which is the resolution the number is stated
+  at. A per-second interval would re-render Home sixty times for a digit
+  nobody is watching, and a session that says "6h 12m" and then stops reads
+  as the app having lost track.
 -->
 <template>
-	<div v-if="hasAnything" class="flex flex-col gap-1">
-		<p v-if="sessionText" class="text-panel-title text-inkbase">{{ sessionText }}</p>
-		<p v-if="shiftText" class="text-caption text-ink-600">{{ shiftText }}</p>
+	<div class="g-now" :class="`g-now--${stateKey}`">
+		<div class="g-now__row">
+			<span class="g-now__dot" aria-hidden="true" />
+			<p class="g-now__state">{{ stateLine }}</p>
+		</div>
+		<p v-if="detail" class="g-now__detail">{{ detail }}</p>
 		<!-- The state changes without the employee doing anything — a shift
-		     starts, a session passes an hour. Polite: it is not worth
-		     interrupting a sentence for. -->
-		<p class="sr-only" role="status">{{ sessionText }}</p>
+		     starts, a session passes an hour. Polite: not worth interrupting a
+		     sentence that is already being read. -->
+		<p class="sr-only" role="status">{{ stateLine }}{{ detail ? `. ${detail}` : "" }}</p>
 	</div>
 </template>
 
@@ -33,15 +42,16 @@ import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue"
 import { nowResource } from "@/data/now"
 
 const __ = inject("$translate")
+const $dayjs = inject("$dayjs")
 
 //: Once a minute. The number is stated in minutes, so a faster tick re-renders
 //: Home for a digit that has not changed.
 const TICK_MS = 60_000
 
-//: Bumped by the interval purely to re-run the computed below. The elapsed
-//: time is derived from the session's START, never accumulated — a counter
-//: that adds a minute per tick drifts, and drifts most when the phone sleeps,
-//: which is exactly when somebody is not watching.
+//: Bumped by the interval purely to re-run the elapsed computed. The time is
+//: derived from the session's START, never accumulated — a counter that adds a
+//: minute per tick drifts, and drifts most while the phone is asleep, which is
+//: exactly when nobody can see it going wrong.
 const tick = ref(0)
 let timer = null
 
@@ -49,25 +59,48 @@ const data = computed(() => nowResource.data || {})
 const session = computed(() => data.value.session)
 const shift = computed(() => data.value.shift)
 
-const sessionText = computed(() => {
-	// Read `tick` so the interval re-evaluates this.
-	void tick.value
+//: Falls back to "off" rather than to nothing. While the payload is in flight
+//: the bar still occupies its space, so Home does not jump when it lands —
+//: that jump is a layout shift (CLS) on the first screen of the app.
+const stateKey = computed(() => data.value.state?.key || "off")
+
+const elapsed = computed(() => {
+	void tick.value // read it so the interval re-evaluates this
 	if (!session.value?.since) return ""
+	// Safari parses "2026-09-22 19:00:00" as Invalid Date — the defect
+	// CheckInPanel already carries a note about — and "NaNm" at the top of
+	// Home is worse than no number.
 	const started = new Date(String(session.value.since).replace(" ", "T"))
 	if (Number.isNaN(started.getTime())) return ""
 	const minutes = Math.max(0, Math.floor((Date.now() - started.getTime()) / 60000))
 	const hours = Math.floor(minutes / 60)
-	return hours > 0
-		? __("Working · {0}h {1}m", [hours, minutes % 60])
-		: __("Working · {0}m", [minutes])
+	return hours > 0 ? __("{0}h {1}m", [hours, minutes % 60]) : __("{0}m", [minutes])
 })
 
-const shiftText = computed(() => {
-	if (!shift.value) return ""
-	return __("{0} · {1}–{2}", [shift.value.shift, shift.value.start, shift.value.end])
+const stateLine = computed(() => {
+	const label = data.value.state?.label
+	if (!label) return __("No shift today")
+	// The running time belongs IN the state line, not under it: "Working ·
+	// 3h 12m" is one fact, and splitting it across two lines makes the reader
+	// join them.
+	return stateKey.value === "working" && elapsed.value
+		? __("{0} · {1}", [__(label), elapsed.value])
+		: __(label)
 })
 
-const hasAnything = computed(() => Boolean(sessionText.value || shiftText.value))
+const detail = computed(() => {
+	// The shift window, when there is one — that is the thing a person checks
+	// the bar for after the state itself.
+	if (shift.value) {
+		return __("{0} · {1}–{2}", [shift.value.shift, shift.value.start, shift.value.end])
+	}
+	// No shift, but they finished today: say when, because that is the only
+	// other fact the bar has and it is the one the old line carried.
+	if (stateKey.value === "done" && data.value.last_out) {
+		return __("Checked out at {0}", [$dayjs(data.value.last_out).format("h:mm a")])
+	}
+	return ""
+})
 
 onMounted(() => {
 	nowResource.fetch()

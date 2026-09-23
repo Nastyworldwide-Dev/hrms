@@ -90,7 +90,25 @@ const tooSmall = sizes
 //: is a ramp with rungs 1.05 apart.
 const MIN_RATIO = 1.125;
 const MAX_RATIO = 1.334;
-const distinct = [...new Set(sizes.map((s) => s.px))].sort((a, b) => a - b);
+//: Roles that are a FITTING problem rather than a reading problem, and are
+//: therefore outside the ramp by decision. Each must say so in its own
+//: description, so the exception is on the record next to the value.
+//:
+//: A tab label is the case that forced this: five uppercase words have to fit
+//: one 390px bar beside a 20px icon, and moving it onto the ramp's 12px step
+//: on 22 Sep 2026 made them overlap into "CALENDARREQUESTS" on every screen.
+const RAMP_EXEMPT = new Set(["tab-label"]);
+for (const name of RAMP_EXEMPT) {
+	const step = scale[name];
+	if (!step) continue;
+	if (!/outside it|not a step on the/i.test(step.description || "")) {
+		offGrid.push(`  type.scale.${name} is ramp-exempt but does not say why in its description`);
+	}
+}
+
+const distinct = [...new Set(sizes.filter((s) => !RAMP_EXEMPT.has(s.name)).map((s) => s.px))].sort(
+	(a, b) => a - b
+);
 const badSteps = [];
 for (let i = 1; i < distinct.length; i++) {
 	const ratio = distinct[i] / distinct[i - 1];

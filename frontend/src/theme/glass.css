@@ -216,8 +216,8 @@
 	--g-type-stat-number-weight: 800;
 	--g-type-tab-label-family: var(--g-font-ui);
 	--g-type-tab-label-line-height: 1.2;
-	--g-type-tab-label-size: 0.75rem;
-	--g-type-tab-label-tracking: 0.07em;
+	--g-type-tab-label-size: 0.625rem;
+	--g-type-tab-label-tracking: 0.02em;
 	--g-type-tab-label-weight: 600;
 	/* motion */
 	--g-motion-button-press-duration: 120ms;

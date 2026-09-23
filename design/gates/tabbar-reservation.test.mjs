@@ -34,8 +34,13 @@ const ROOT = dirname(HERE);
 const css = readFileSync(join(ROOT, "..", "frontend", "src", "theme", "glass-components.css"), "utf8");
 const tokens = JSON.parse(readFileSync(join(ROOT, "tokens.json"), "utf8"));
 
+// A selector may be one of SEVERAL in a comma-separated list — the reservation
+// needs a second, more specific selector to beat `.ion-no-padding` (see the
+// specificity test below), and the first version of this matched only a
+// selector standing alone, so adding that second one made the guard report the
+// rule missing entirely.
 const rule = (selector) => {
-	const re = new RegExp(`(?:^|\\n)${selector}\\s*\\{([\\s\\S]*?)\\n\\}`);
+	const re = new RegExp(`(?:^|\\n)${selector}\\s*(?:,[^{]*)?\\{([\\s\\S]*?)\\n\\}`);
 	const m = re.exec(css);
 	assert.ok(m, `glass-components.css has no \`${selector}\` rule`);
 	return m[1];
@@ -97,4 +102,36 @@ test("ion-content reserves the bar's WHOLE rendered box, not just its content he
 		/2\s*\*\s*var\(--g-tabbar-border\)/,
 		"a 1px border adds 2px to rendered height, not 1px: the reservation must count both edges",
 	);
+});
+
+test("the reservation outranks Ionic's .ion-no-padding", () => {
+	// THE DEFECT THIS EXISTS FOR, deployed 23 September 2026.
+	//
+	// BaseLayout puts `.ion-no-padding` on every ion-content, and Ionic's
+	// utility sets `--padding-bottom: 0`. A class beats an element+descendant
+	// selector, so the whole calc() above evaluated to nothing and every tab
+	// screen with content past the fold ended behind the glass — the Calendar's
+	// "Claim Overtime or Leave" row was photographed unreachable under the bar.
+	//
+	// The arithmetic was right the whole time. It simply never applied. So the
+	// reservation must carry a selector that outranks the utility, and this is
+	// the assertion that says so.
+	const re = /ion-tabs \.g-page ion-content[^{]*\{[\s\S]*?--padding-bottom:\s*calc/;
+	const match = re.exec(css);
+	assert.ok(match, "the reservation rule exists");
+	assert.match(
+		match[0],
+		/ion-content\.ion-no-padding/,
+		"the reservation must name .ion-no-padding, or Ionic's utility zeroes it and " +
+			"every tab screen ends under the bar with the calc() looking perfectly correct",
+	);
+});
+
+test("the desktop override is just as specific as the rule it undoes", () => {
+	// Same trap, mirrored: if the lg: override is less specific than the
+	// reservation it cannot switch it off, and every desktop screen keeps 102px
+	// of dead scroll below a bar that is not there.
+	const lg = /@media \(min-width: 1024px\)\s*\{([\s\S]*?)\n\}/.exec(css);
+	assert.ok(lg, "the lg: override exists");
+	assert.match(lg[1], /ion-content\.ion-no-padding/, "and matches the reservation's specificity");
 });

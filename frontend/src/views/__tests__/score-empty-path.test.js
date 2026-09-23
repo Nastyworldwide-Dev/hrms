@@ -36,18 +36,81 @@ function py(text) {
 	return text.replace(/(^|\n)(\s*)#[^\n]*/g, (m, nl, indent) => nl + indent)
 }
 
-test("an employee with no appraisal is told when their review opens", () => {
+test("there is ONE empty path, and it always has something to say", () => {
+	// REWRITTEN 23 September 2026, because the shape this used to assert is the
+	// shape that shipped as a dashed box in a field of black.
+	//
+	// There were two branches: a populated one when a cycle existed, and a
+	// GEmptyState when none did. On the deployed site NO cycle existed for
+	// anybody, so every employee got the empty box — the exact screen 2.0 was
+	// criticised for, rebuilt with better copy and the same outcome.
+	//
+	// `whats_next` always answers now, so there is one branch and it is always
+	// populated.
 	const view = code(read("views/kpi/Dashboard.vue"))
-	// Not the presence of the word — the BRANCH. There are two empty paths now,
-	// and the one that matters is the one that has something to say.
-	assert.match(
+	assert.doesNotMatch(
 		view,
 		/v-else-if="dashboard\.data && !whatsNext"/,
-		"nothing scheduled is its own state"
+		"a second empty branch is how the dashed box came back"
 	)
-	assert.match(view, /v-else-if="dashboard\.data"/, "and a scheduled cycle is another")
+	// The MY-SCORE branch only. The team table further down has its own empty
+	// state and that one is correct — a table with no rows needs to say so.
+	//
+	// Bounded by CODE, not by a comment: `code()` blanks comments, so slicing
+	// to "ONE PERSON'S DETAIL" ran to the end of the file and swept the team
+	// table's legitimate empty state in with it.
+	const mine = view.slice(
+		view.indexOf('v-if="activeTab === MINE"'),
+		view.indexOf('v-else-if="openedName"')
+	)
+	assert.ok(mine.length > 0 && mine.length < view.length, "the branch was actually found")
+	assert.doesNotMatch(mine, /GEmptyState/, "my own score never falls back to an empty card")
+	assert.match(view, /v-else-if="dashboard\.data"/, "one populated path")
 	assert.match(view, /nextCycleTitle/, "the scheduled state states what is coming")
-	assert.match(view, /nextCycleBody/, "and when")
+	assert.match(view, /nextCycleBody/, "and when, or who to ask")
+})
+
+test("with no cycle at all, it says who to ask", () => {
+	// An employee cannot schedule their own review. "There is nothing here" is
+	// true and useless; the name of the person who can is the actionable half,
+	// and it is what turns an empty screen into an answer.
+	const view = code(read("views/kpi/Dashboard.vue"))
+	assert.match(view, /No review scheduled yet/)
+	assert.match(view, /\{0\} scores you when they do/, "the appraiser is named")
+	assert.match(view, /next\.appraiser/, "from the payload, never guessed here")
+})
+
+test("a cycle-less state does not draw a grid of blanks", () => {
+	// Four cells reading "Not set" is worse than no grid: it looks like data
+	// that failed to load rather than a review that has not been scheduled.
+	const view = code(read("views/kpi/Dashboard.vue"))
+	assert.match(view, /v-if="nextCycleFacts\.length"/)
+	const facts = view.slice(view.indexOf("const nextCycleFacts"))
+	assert.match(facts, /if \(!hasCycle\.value\)/, "the cycle-less case returns its own cells")
+})
+
+test("the appraiser is resolved in two hops, not from a field that does not exist", () => {
+	// `reports_to` holds an Employee ID and there is no `reports_to_name` on
+	// Employee in this fork — guessed otherwise and the bench said so on the
+	// first probe.
+	assert.match(api, /def _appraiser_name\(employee: str\)/)
+	assert.match(api, /frappe\.db\.get_value\("Employee", employee, "reports_to"\)/)
+	assert.match(api, /frappe\.db\.get_value\("Employee", manager, "employee_name"\)/)
+	// Not the word anywhere in the file — this test's own reason for existing
+	// names it. What must not appear is a QUERY for it.
+	assert.doesNotMatch(
+		api,
+		/get_value\([^)]*"reports_to_name"/,
+		"that field is not on Employee in this fork"
+	)
+})
+
+test("whats_next never returns None", () => {
+	// The single change that fixes the screen. Returning None put the reader
+	// back on the dashed box, and on the deployed site that was everybody.
+	const fn = api.slice(api.indexOf("def _whats_next_for"), api.indexOf("def _kpi_dashboard"))
+	assert.doesNotMatch(fn, /\n\treturn None\b/, "no path returns nothing")
+	assert.match(fn, /"appraiser": _appraiser_name\(employee\)/, "the cycle-less path still answers")
 })
 
 test("the date is in the sentence, not only in a table", () => {

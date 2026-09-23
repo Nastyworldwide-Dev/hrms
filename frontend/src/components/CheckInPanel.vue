@@ -21,17 +21,15 @@
 		<ResourceError :resource="settings" what="your check-in settings" />
 
 		<template v-if="settings.data?.allow_employee_checkin_from_mobile_app">
+			<!-- The STATE moved to the Now bar above (revamp §2). This line used
+			     to read "Last check-out was at 08:17 pm", which is true and made
+			     the reader work out everything that matters from it. The bar says
+			     it properly; what stays here is the way into the full history,
+			     because that was the only other thing this line offered. -->
 			<div class="text-card-title text-ink-600" v-if="lastLog">
-				<!-- data-visual-mask: formatTimestamp() returns "… yesterday" for one
-				     day and "… on 20 Aug" the next, so the string changes with no
-				     code change. Masked on the span only, not the row. -->
-				<span data-visual-mask>{{
-					__("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time)])
-				}}</span>
-				<span class="whitespace-pre"> &middot; </span>
 				<router-link :to="{ name: 'EmployeeCheckinListView' }" v-slot="{ navigate }">
 					<span @click="navigate" class="g-seclink underline underline-offset-link text-ink-800">{{
-						__("View List")
+						__("View your check-ins")
 					}}</span>
 				</router-link>
 			</div>
@@ -471,9 +469,8 @@ const lastLog = computed(() => {
 	return row
 })
 
-const lastLogType = computed(() => {
-	return lastLog?.value?.log_type === "IN" ? "check-in" : "check-out"
-})
+// `lastLogType` went with the "Last check-out was at …" line: the NOW BAR
+// states what happened last, in words that say what it means (revamp §2).
 
 // Sessions roll over at 06:00 local the day after check-in.
 // If a user checks IN late at night, they can still check OUT during OT

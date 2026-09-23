@@ -156,6 +156,20 @@ def get_my_kpi_dashboard(year: str | int | None = None, cycle: str | None = None
 	return _kpi_dashboard(_get_session_employee(), year, cycle, verify_appraisal_permission=True)
 
 
+def _appraiser_name(employee: str) -> str | None:
+	"""Who scores this person, by name.
+
+	TWO HOPS, because `reports_to` holds an Employee ID and there is no
+	`reports_to_name` on Employee in this fork — guessed otherwise and the
+	bench said so immediately. Their own record and their manager's name: no
+	fence is widened, and a manager's name is already on every request this
+	employee files.
+	"""
+	manager = frappe.db.get_value("Employee", employee, "reports_to")
+	if not manager:
+		return None
+	return frappe.db.get_value("Employee", manager, "employee_name")
+
 
 def _whats_next_for(employee: str) -> dict | None:
 	"""What an employee with no appraisal should be told instead of nothing.
@@ -194,9 +208,28 @@ def _whats_next_for(employee: str) -> dict | None:
 			"start_date": row.start_date,
 			"end_date": row.end_date,
 			"status": row.status,
+			# "Who scores me" is the second question after "when" — the plan
+			# names it, and it costs one field of the employee's own record.
+			"appraiser": _appraiser_name(employee),
 		}
+	# NO CYCLE INCLUDES THIS EMPLOYEE. That is still an answer, and the honest
+	# one — but the screen had nothing to render and fell back to a dashed box
+	# in a field of black, which is what the owner photographed on 23 September.
+	#
+	# So say WHO to ask. An employee whose review has not been scheduled cannot
+	# fix that themselves; what they need is the name of the person who can,
+	# and their own appraiser is the right one. Read from the Employee record —
+	# it is their own row, so no fence is widened.
 	logger.info("[kpi] whats-next employee=%s — no scheduled cycle", employee)
-	return None
+	return {
+		"cycle": None,
+		"cycle_name": None,
+		"start_date": None,
+		"end_date": None,
+		"status": None,
+		# The only actionable fact available when nothing is scheduled.
+		"appraiser": _appraiser_name(employee),
+	}
 
 
 def _kpi_dashboard(

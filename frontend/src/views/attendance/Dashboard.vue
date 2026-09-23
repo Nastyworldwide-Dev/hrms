@@ -61,83 +61,35 @@
 						</GListPanel>
 					</div>
 
+					<!-- THE FOUR LISTS ARE GONE (revamp §4).
+					     This screen carried "Recent attendance requests", "Upcoming
+					     shifts", "Recent shift requests" and "Recent OT requests" —
+					     four stacked sections, three of them usually empty, below a
+					     calendar that already knows every one of those facts. The
+					     prototype's own flow map said to delete them ("one request list
+					     with chips replaces four empty sections") and 2.0 shipped with
+					     them still there; so did the first revamp pass.
+
+					     Nothing was lost. A day's punches, shift and status are in the
+					     DAY SHEET, one tap from any tile. Every request, of every type,
+					     with its chip, is the Requests tab — which is a destination in
+					     the bar now and was not when these lists were added.
+
+					     What stays is this one row: the way to the full punch history,
+					     which is the only thing here the calendar does NOT show. -->
 					<div class="order-3">
-						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="g-eyebrow">{{ __("Recent Attendance Requests") }}</span>
-							<router-link
-								:to="{ name: 'AttendanceRequestListView' }"
-								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
-							>
-								{{ __("View list") }}
-							</router-link>
-						</div>
-						<hr class="h-px border-0 bg-hair" />
-						<RequestList
-							:component="markRaw(AttendanceRequestItem)"
-							:items="myAttendanceRequests?.data?.slice(0, 5)"
-							:resource="myAttendanceRequests"
-							:what="__('your attendance requests')"
-						/>
-					</div>
-
-					<div class="order-4">
-						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="g-eyebrow">{{ __("Upcoming Shifts") }}</span>
-							<router-link
-								:to="{ name: 'ShiftAssignmentListView' }"
-								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
-							>
-								{{ __("View list") }}
-							</router-link>
-						</div>
-						<hr class="h-px border-0 bg-hair" />
-						<RequestList
-							:component="markRaw(ShiftAssignmentItem)"
-							:items="upcomingShifts"
-							:emptyStateMessage="__('You have no upcoming shifts')"
-						/>
-					</div>
-
-					<div class="order-5">
-						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="g-eyebrow">{{ __("Recent Shift Requests") }}</span>
-							<router-link
-								:to="{ name: 'ShiftRequestListView' }"
-								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
-							>
-								{{ __("View list") }}
-							</router-link>
-						</div>
-						<hr class="h-px border-0 bg-hair" />
-						<RequestList
-							:component="markRaw(ShiftRequestItem)"
-							:items="myShiftRequests?.data?.slice(0, 5)"
-							:resource="myShiftRequests"
-							:what="__('your shift requests')"
-						/>
-					</div>
-
-					<!-- OT Request was the only request type you could file and never
-				     browse: OTRequestListView existed, was routed, and had no inbound
-				     link anywhere in the app. -->
-					<div class="order-6">
-						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="g-eyebrow">{{ __("Recent OT Requests") }}</span>
-							<router-link
-								:to="{ name: 'OTRequestListView' }"
-								class="g-seclink text-kra-label text-accent-ink underline underline-offset-link"
-							>
-								{{ __("View list") }}
-							</router-link>
-						</div>
-						<hr class="h-px border-0 bg-hair" />
-						<RequestList
-							:component="markRaw(OTRequestItem)"
-							:items="myOTRequests?.data?.slice(0, 5)"
-							:resource="myOTRequests"
-							:what="__('your OT requests')"
-							:emptyStateMessage="__('You have no OT requests')"
-						/>
+						<GListPanel>
+							<GListRow
+								:label="__('View all your check-ins')"
+								:sublabel="__('Every tap, newest first')"
+								@click="router.push({ name: 'EmployeeCheckinListView' })"
+							/>
+							<GListRow
+								:label="__('Your shifts')"
+								:sublabel="__('Assigned and upcoming')"
+								@click="router.push({ name: 'ShiftAssignmentListView' })"
+							/>
+						</GListPanel>
 					</div>
 				</div>
 			</div>
@@ -148,29 +100,19 @@
 <script setup>
 import { personalCacheKey } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
-import { computed, inject, markRaw, ref } from "vue"
+import { computed, inject, ref } from "vue"
 import { useRouter } from "vue-router"
 import { onIonViewWillEnter } from "@ionic/vue"
 import AttendanceCalendar from "@/components/AttendanceCalendar.vue"
-import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
-import OTRequestItem from "@/components/OTRequestItem.vue"
-import RequestList from "@/components/RequestList.vue"
 import ResourceError from "@/components/ResourceError.vue"
-import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
-import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
 
-import {
-	getShiftDates,
-	getShiftTiming,
-	getTotalShiftDays,
-	myAttendanceRequests,
-	myShiftRequests,
-} from "@/data/attendance"
-import { myOTRequests } from "@/data/overtime"
+// The five request-row components and their three list resources went with the
+// four sections above (revamp §4). Every one of those lists lives on the
+// Requests tab now, which did not exist when they were added here.
 import { settings } from "@/data/settings"
 import { formatHours } from "@/utils/formatters"
 
@@ -181,7 +123,6 @@ const router = useRouter()
 // showed until a full reload. Re-entering the view refreshes the month.
 const calendar = ref(null)
 onIonViewWillEnter(() => calendar.value?.refresh?.())
-const dayjs = inject("$dayjs")
 // This file had never needed `__` in the SCRIPT — every call was in the
 // template, where Vue resolves it from globalProperties. A computed that
 // builds a word needs the real function.
@@ -230,26 +171,13 @@ const hasClaim = computed(() =>
 	isRLClaim.value ? claimLeaveDays.value > 0 : (claimableOt.data?.claimable_hours || 0) > 0
 )
 
+// Still fetched, and only so the screen can SAY when shifts cannot be read —
+// a silent failure here is an employee who thinks they have no shift. The
+// transform that decorated each row for the Upcoming Shifts list went with
+// that list; the shifts screen itself does its own decorating.
 const shifts = createResource({
 	url: "hrms.api.get_shifts",
 	auto: true,
 	cache: personalCacheKey("hrms:shifts"),
-	transform: (data) => {
-		return data.map((assignment) => {
-			assignment.doctype = "Shift Assignment"
-			assignment.is_upcoming = !assignment.end_date || dayjs(assignment.end_date).isAfter(dayjs())
-			assignment.shift_dates = getShiftDates(assignment)
-			assignment.total_shift_days = getTotalShiftDays(assignment)
-			assignment.shift_timing = getShiftTiming(assignment)
-			return assignment
-		})
-	},
-})
-
-const upcomingShifts = computed(() => {
-	const filteredShifts = shifts.data?.filter((shift) => shift.is_upcoming)
-
-	// show only 5 upcoming shifts
-	return filteredShifts?.slice(0, 5)
 })
 </script>

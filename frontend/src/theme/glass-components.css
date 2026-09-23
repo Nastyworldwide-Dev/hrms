@@ -116,7 +116,16 @@
    read 82px, 4px short, and every tab screen came to rest with its last row
    under the glass. Reading the same --g-tabbar-pad-*/--g-tabbar-border tokens
    the bar itself draws from is what tabbar-reservation.test.mjs guards. */
-ion-tabs .g-page ion-content {
+/* `.ion-no-padding` — which BaseLayout puts on EVERY ion-content — sets
+   `--padding-bottom: 0`, and it is a class while this was an element+descendant
+   selector, so it won on specificity and the whole reservation evaluated to
+   nothing. Every tab screen with content past the fold ended behind the glass:
+   on 23 Sep 2026 the Calendar's "Claim Overtime or Leave" row was unreachable
+   under the bar, which is what the owner photographed.
+   The `.ion-no-padding` in this selector is what takes the specificity back —
+   the rest is unchanged, and tabbar-reservation.test.mjs still guards the sum. */
+ion-tabs .g-page ion-content,
+ion-tabs .g-page ion-content.ion-no-padding {
 	--padding-bottom: calc(
 		var(--g-tabbar-height) + var(--g-tabbar-pad-top) + var(--g-tabbar-pad-bottom) +
 			(2 * var(--g-tabbar-border)) + (2 * var(--g-tabbar-gap)) + env(safe-area-inset-bottom, 0px)
@@ -125,7 +134,8 @@ ion-tabs .g-page ion-content {
 /* §20.4 — the bar is lg:hidden and the side nav replaces it, so the reservation
    must come back off or every desktop screen gains 76px of dead scroll. */
 @media (min-width: 1024px) {
-	ion-tabs .g-page ion-content {
+	ion-tabs .g-page ion-content,
+	ion-tabs .g-page ion-content.ion-no-padding {
 		--padding-bottom: 0px;
 	}
 }
@@ -3122,4 +3132,58 @@ ion-router-outlet {
 }
 .g-cal__dot--needs_you {
 	background: var(--g-warn);
+}
+
+/* ---------- the Now bar (revamp §2) ----------------------------------------
+
+   The first line of the app. It states what is true right now, and it is
+   always present: an employee with no shift and no open punch gets "No shift
+   today" rather than an empty space, because a status line that says nothing
+   reads as a screen that failed to load.
+
+   A DOT, not a coloured background. The state is carried by the words; the
+   dot is a second, redundant signal for people who skim (§14.1 — colour is
+   never the only signal, and here it is never the ONLY signal either). */
+.g-now {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.g-now__row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.g-now__dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	flex: none;
+	background: var(--g-ink3);
+}
+.g-now--working .g-now__dot {
+	background: var(--g-brand);
+	/* A gentle presence, not an animation: something IS running, and the bar
+	   is on screen for as long as the shift is. A pulse here would be motion
+	   the reader never asked for, all day. */
+	box-shadow: 0 0 0 4px rgb(var(--g-brand-rgb) / 0.18);
+}
+.g-now--done .g-now__dot {
+	background: var(--g-success);
+}
+.g-now--before .g-now__dot {
+	background: var(--g-warn);
+}
+.g-now__state {
+	font-family: var(--g-type-panel-title-family);
+	font-size: var(--g-type-panel-title-size);
+	font-weight: var(--g-type-panel-title-weight);
+	line-height: var(--g-type-panel-title-line-height);
+	color: var(--g-ink);
+}
+.g-now__detail {
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	line-height: var(--g-type-caption-line-height);
+	color: var(--g-ink2);
 }
