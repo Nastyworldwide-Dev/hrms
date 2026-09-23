@@ -70,7 +70,8 @@ test("the template swaps the two EXISTING lists on the pill", () => {
 	assert.match(template, /<IssuesTab v-if="tab === HR_TAB" \/>/)
 	assert.match(template, /<HelpdeskList v-else \/>/)
 	assert.match(template, /<GSegmented[\s\S]*?@update:modelValue="selectTab"/)
-	assert.match(template, /pageTitle="__\('Helpdesk'\)"/)
+	// "Help" since 23 Sep 2026 (audit-pages §4, W-PLAIN).
+	assert.match(template, /pageTitle="__\('Help'\)"/)
 	// a single-option segment renders nothing, so its row must not leave a spacer
 	assert.match(template, /v-if="tabButtons\.length > 1"[\s\S]*?<GSegmented/)
 })

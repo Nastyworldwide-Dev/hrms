@@ -28,7 +28,7 @@
 				</GListPanel>
 
 				<GModal :is-open="holidaysOpen" @did-dismiss="holidaysOpen = false">
-					<HolidayList v-if="holidaysOpen" />
+					<HolidayList v-if="holidaysOpen && employee.data" />
 				</GModal>
 
 				<!-- Sibling apps on the same site. A row here LEAVES the PWA (full
@@ -76,6 +76,7 @@ import { hasTeam } from "@/data/team"
 import { userResource } from "@/data/user"
 
 const router = useRouter()
+const employee = inject("$employee")
 const holidaysOpen = ref(false)
 const __ = inject("$translate")
 

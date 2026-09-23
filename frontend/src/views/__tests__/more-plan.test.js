@@ -31,3 +31,9 @@ test("public holidays have their own row, opening one list in a sheet", () => {
 test("no eyebrow repeats the page title", () => {
 	assert.doesNotMatch(template, /<span class="g-eyebrow">\{\{ __\("More"\) \}\}<\/span>/)
 })
+
+test("the holiday list waits for the employee before asking", () => {
+	// Review of 40133f8f3: resource params are captured once; opening the sheet
+	// before $employee resolved asked for nobody's holidays.
+	assert.match(more, /<HolidayList v-if="holidaysOpen && employee\.data" \/>/)
+})
