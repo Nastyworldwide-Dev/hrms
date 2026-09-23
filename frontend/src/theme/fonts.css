@@ -2,8 +2,19 @@
    Registered under the family names the design tokens use ('Inter Tight',
    'JetBrains Mono'), NOT fontsource's default '* Variable' names, and NOT via
    fontsource's index.css, which would bundle every subset.
-   Inter itself ships with frappe-ui (src/style.css → InterVar + static Inter);
-   we deliberately do not load a second copy. */
+   Inter is registered HERE, once, from frappe-ui's variable file. frappe-ui's
+   own sheet registered it twice (a variable "InterVar" plus 36 static
+   weights), and pages downloaded both (audit F-11); main.css no longer
+   imports that sheet. Italic is not registered: the interface never sets it
+   (BDA style: bold, not italics, for emphasis). */
+
+@font-face {
+	font-family: "Inter";
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 900;
+	src: url("frappe-ui/src/fonts/Inter/Inter.var.woff2") format("woff2");
+}
 
 @font-face {
 	font-family: "Inter Tight";

@@ -176,7 +176,7 @@
 									>
 										{{ req.employee_remarks }}
 									</div>
-									<div v-else class="text-xs text-ink-500 italic">
+									<div v-else class="text-xs text-ink-500">
 										{{ __("No reason provided.") }}
 									</div>
 									<div class="flex flex-row gap-2.5 mt-1">

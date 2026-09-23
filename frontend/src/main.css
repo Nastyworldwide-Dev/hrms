@@ -1,4 +1,10 @@
-@import "frappe-ui/src/style.css";
+/* frappe-ui's style.css is only its Inter font sheet + the three Tailwind
+   layers. The font sheet registered Inter twice (variable + 36 static weights),
+   so pages downloaded both; Inter is registered once in theme/fonts.css
+   instead (audit F-11). The layers are kept here. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 ion-modal {
 	--height: auto;

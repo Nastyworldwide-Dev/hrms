@@ -87,7 +87,7 @@
 										]"
 										v-html="safeHtml(item.message)"
 									></div>
-									<div v-else class="text-sm leading-5 font-normal text-ink-500 italic">
+									<div v-else class="text-sm leading-5 font-normal text-ink-500">
 										{{ fallbackMessage(item) }}
 									</div>
 									<!-- data-visual-mask: a relative timestamp changes on its own,

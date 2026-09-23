@@ -42,7 +42,7 @@
 					<Phone class="h-3 w-3 shrink-0" />
 					<span>{{ contact.phone }}</span>
 				</a>
-				<div v-if="!contact.email && !contact.phone" class="text-kra-label text-ink-500 italic">
+				<div v-if="!contact.email && !contact.phone" class="text-kra-label text-ink-500">
 					{{ __("No contact details on file") }}
 				</div>
 			</div>
