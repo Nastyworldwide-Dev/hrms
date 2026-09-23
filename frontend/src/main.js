@@ -19,6 +19,7 @@ import { userResource } from "@/data/user"
 import { employeeResource } from "@/data/employee"
 
 import dayjs from "@/utils/dayjs"
+import { isSessionLost } from "@/utils/sessionLost"
 import getIonicConfig from "@/utils/ionicConfig"
 import { employeeGate } from "@/utils/identity"
 
@@ -150,7 +151,14 @@ router.beforeEach(async (to, _, next) => {
 	try {
 		if (isLoggedIn) await userResource.reload()
 	} catch (error) {
-		isLoggedIn = false
+		// Only the server can end a session. Offline, this read fails with a
+		// network error, and treating that as a logout sent people to Login for
+		// changing page without signal (audit P0-6). See utils/sessionLost.js.
+		if (isSessionLost(error)) {
+			isLoggedIn = false
+		} else {
+			console.warn("[router] could not re-check the session; keeping it", error?.message)
+		}
 	}
 
 	if (!isLoggedIn) {
