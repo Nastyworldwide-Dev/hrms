@@ -143,5 +143,5 @@ const APP_ICONS = {
 // phone, SideNav on lg+) render the same list, so the allowlist is applied
 // once here rather than twice in the views — the two cannot drift apart.
 // Pass `get_current_user_info().roles`; an absent payload yields [].
-export const visibleAppItems = (userRoles) =>
-	visibleAppLinks(userRoles).map((link) => ({ ...link, icon: APP_ICONS[link.key] }))
+export const visibleAppItems = (offeredKeys) =>
+	visibleAppLinks(offeredKeys).map((link) => ({ ...link, icon: APP_ICONS[link.key] }))

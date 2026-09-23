@@ -18,7 +18,7 @@ test("visibleAppItems delegates to the allowlist instead of filtering itself", (
 	assert.match(source, /visibleAppLinks/, "navItems must call visibleAppLinks")
 	assert.match(
 		source,
-		/export const visibleAppItems\s*=\s*\(userRoles\)\s*=>\s*\n?\s*visibleAppLinks\(userRoles\)/,
+		/export const visibleAppItems\s*=\s*\(offeredKeys\)\s*=>\s*\n?\s*visibleAppLinks\(offeredKeys\)/,
 		"visibleAppItems must be a thin map over visibleAppLinks"
 	)
 })

@@ -73,7 +73,7 @@ import GListRow from "@/components/glass/GListRow.vue"
 import { MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { isSameOriginPath } from "@/data/appLinks"
 import { hasTeam } from "@/data/team"
-import { userResource } from "@/data/user"
+import { myApps } from "@/data/myApps"
 
 const router = useRouter()
 const employee = inject("$employee")
@@ -92,11 +92,11 @@ const moreItems = computed(() => {
 	return items
 })
 
-// Role-gated (data/appLinks.js). An employee with neither the finance nor the
+// Offered by the server (hrms.api.app_links; audit F-15). An employee with neither the finance nor the
 // projects roles gets no Apps group at all — the heading goes with the rows,
 // because a labelled empty panel reads as a fault rather than as "not for you".
 const appItems = computed(() =>
-	visibleAppItems(userResource.data?.roles).map((item) => ({
+	visibleAppItems(myApps.data).map((item) => ({
 		...item,
 		title: __(item.title),
 		sublabel: __(item.sublabel),

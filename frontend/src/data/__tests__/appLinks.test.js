@@ -1,77 +1,40 @@
-// Role visibility on the Apps rows (P&C brief, 10 Sep 2026).
-//
-// Sibling-app targets and open-redirect safety live in app-links.test.js;
-// this file owns who is OFFERED each row.
-import { test } from "node:test"
+// WHETHER an app row is offered is the server's answer (audit F-15: no role
+// names in the frontend). The role rule and its tests live in
+// hrms/api/app_links.py + test_app_links.py; here, the PWA shows exactly the
+// keys the server offered, and nothing on a bad payload.
+import test from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 
 import { APP_LINKS, visibleAppLinks } from "../appLinks.js"
 
-// Role visibility (P&C brief, 10 Sep 2026). The Apps rows are the only nav
-// entries that leave the PWA, and both targets are department tools rather
-// than staff tools: Approva is purchasing and finance approvals, Project
-// Board is NPD. Everyone saw both rows, so most of the workforce was being
-// offered two doors they cannot open.
-//
-// This gate is presentational — each app enforces its own permissions on the
-// far side. What it buys is that a row is not offered to someone it cannot
-// serve.
-//
-// The role STRINGS are the trap this pins. ERPNext's roles are "Projects
-// User" / "Projects Manager" (plural); "Project Manager" without the s is a
-// Designation on Employee, not a role, so a check written against it matches
-// nobody and the row silently disappears for the people it was meant for.
-
-const rolesFor = (...extra) => ["All", "Employee", ...extra]
-
-test("Approva is offered only to the finance and HR operators", () => {
-	for (const role of [
-		"Accounts Manager",
-		"Accounts User",
-		"System Manager",
-		"HR Manager",
-		"HR User",
-	]) {
-		const keys = visibleAppLinks(rolesFor(role)).map((l) => l.key)
-		assert.ok(keys.includes("approva"), `${role} should see Approva`)
-	}
-})
-
-test("an ordinary employee is offered neither app", () => {
+test("the rows shown are exactly the keys the server offered", () => {
 	assert.deepEqual(
-		visibleAppLinks(rolesFor()).map((l) => l.key),
-		[]
+		visibleAppLinks(["board"]).map((l) => l.key),
+		["board"]
 	)
-})
-
-test("Project Board is offered to the projects roles, not to finance-only users", () => {
-	for (const role of ["Projects User", "Projects Manager", "HR Manager", "System Manager"]) {
-		const keys = visibleAppLinks(rolesFor(role)).map((l) => l.key)
-		assert.ok(keys.includes("board"), `${role} should see Project Board`)
-	}
-	// Accounts User is Approva-only: it is not a projects role.
-	const accounts = visibleAppLinks(rolesFor("Accounts User")).map((l) => l.key)
-	assert.deepEqual(accounts, ["approva"])
-})
-
-test("the singular 'Project Manager' designation grants nothing", () => {
-	// If someone rewrites the allowlist against the designation string, this
-	// is the test that catches it rather than a user reporting a missing row.
 	assert.deepEqual(
-		visibleAppLinks(rolesFor("Project Manager")).map((l) => l.key),
-		[]
+		visibleAppLinks(["approva", "board"]).map((l) => l.key),
+		["approva", "board"]
 	)
+	assert.deepEqual(visibleAppLinks([]), [])
 })
 
-test("every app link declares a non-empty allowlist", () => {
-	for (const link of APP_LINKS) {
-		assert.ok(Array.isArray(link.roles) && link.roles.length, `${link.key} needs roles`)
-	}
+test("an unknown key offers nothing (the PWA only links what it knows)", () => {
+	assert.deepEqual(visibleAppLinks(["somewhere-else"]), [])
 })
 
-test("visibleAppLinks survives a missing or malformed roles payload", () => {
-	// userResource.data is undefined on first paint; the nav must render, not throw.
-	for (const bad of [undefined, null, "HR Manager", {}, 0]) {
+test("a missing or malformed payload renders no rows, never throws", () => {
+	// myApps.data is undefined on first paint.
+	for (const bad of [undefined, null, "board", {}, 0]) {
 		assert.deepEqual(visibleAppLinks(bad), [])
 	}
+})
+
+test("no role names in the frontend's app list", () => {
+	const source = readFileSync(new URL("../appLinks.js", import.meta.url), "utf8")
+	for (const role of ["Accounts User", "HR Manager", "Projects User", "System Manager"]) {
+		assert.ok(!source.includes(`"${role}"`), `appLinks.js must not name the role "${role}"`)
+	}
+	for (const link of APP_LINKS) assert.equal(link.roles, undefined)
 })

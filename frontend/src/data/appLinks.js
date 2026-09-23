@@ -10,35 +10,23 @@
 // are attached in navItems.js (visibleAppItems).
 //
 // `title` and `sublabel` are i18n source strings — wrap with $translate.
-// `roles` is the allowlist that decides whether the row is OFFERED. It is not
-// access control — each app enforces its own permissions on the far side, and
-// a user who reaches /approva without rights meets Approva's wall, not ours.
-// What the allowlist buys is that a row is not dangled in front of someone it
-// cannot serve; before it, every employee saw both.
-//
-// The strings are ERPNext role names and they are easy to get wrong:
-// "Projects User" / "Projects Manager" carry the plural. "Project Manager"
-// (no s) is a Designation on Employee — a check against it matches no role at
-// all, so the row would vanish for exactly the people meant to have it.
-// app-links.test.js pins that.
-//
-// Approva's five match the allowlist ERPNext already uses for the
-// finance-adjacent payroll report (intercompany_salary_cost_allocation.py) —
-// the same operator set, so the two surfaces agree.
+// WHETHER a row is offered is the server's answer (audit F-15: no role names
+// in the frontend): hrms.api.app_links.get_my_apps returns the keys this
+// person may be offered, and the role rule lives there. Offering is not
+// access control; each app enforces its own permissions on the far side.
+
 export const APP_LINKS = [
 	{
 		key: "approva",
 		title: "Approva",
 		sublabel: "Purchase requests & approvals",
 		href: "/approva",
-		roles: ["Accounts Manager", "Accounts User", "System Manager", "HR Manager", "HR User"],
 	},
 	{
 		key: "board",
 		title: "Project Board",
 		sublabel: "NPD kanban & project chat",
 		href: "/board",
-		roles: ["Projects User", "Projects Manager", "HR Manager", "System Manager"],
 	},
 ]
 
@@ -50,10 +38,10 @@ export const APP_LINKS = [
 // throwing: userResource.data is undefined on first paint, and a nav that
 // crashes before the session lands is worse than a nav briefly missing two
 // optional rows. It fails CLOSED — an unknown user is offered nothing.
-export function visibleAppLinks(userRoles) {
-	if (!Array.isArray(userRoles)) return []
-	const held = new Set(userRoles)
-	return APP_LINKS.filter((link) => link.roles.some((role) => held.has(role)))
+export function visibleAppLinks(offeredKeys) {
+	if (!Array.isArray(offeredKeys)) return []
+	const offered = new Set(offeredKeys)
+	return APP_LINKS.filter((link) => offered.has(link.key))
 }
 
 // A same-origin path only. Anything that could name a host (`//evil`, a

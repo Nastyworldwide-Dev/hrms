@@ -152,6 +152,7 @@ import { createAnimation } from "@ionic/core"
 import { markRaw } from "vue"
 
 import { TAB_ITEMS, MORE_ITEMS, visibleAppItems } from "@/data/navItems"
+import { myApps } from "@/data/myApps"
 import { hasTeam } from "@/data/team"
 
 const __ = inject("$translate")
@@ -193,7 +194,7 @@ const moreItems = computed(() => [
 
 // Role-gated (data/appLinks.js); same list the More screen renders.
 const appItems = computed(() =>
-	visibleAppItems(user?.data?.roles).map((item) => ({
+	visibleAppItems(myApps.data).map((item) => ({
 		...item,
 		title: __(item.title),
 		sublabel: __(item.sublabel),
