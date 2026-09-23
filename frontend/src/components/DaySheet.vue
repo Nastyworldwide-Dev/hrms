@@ -45,23 +45,13 @@
 
 				<p v-if="hoursLine" class="text-card-title text-inkbase">{{ hoursLine }}</p>
 
-				<!-- WHO IS OFF — approver and above. Type, never reason. -->
-				<template v-if="teamOff">
-					<div class="g-eyebrow">{{ __("Who is off") }}</div>
-					<GListPanel v-if="teamOff.length">
-						<GListRow
-							v-for="row in teamOff"
-							:key="row.employee"
-							:label="row.name"
-							:sublabel="offLabel(row)"
-							:chevron="false"
-						/>
-					</GListPanel>
-					<GEmptyState v-else :title="__('Everyone is in')" />
-				</template>
-
-				<!-- COVERAGE — the number a manager opens a calendar for. -->
-				<GMetaGrid v-if="coverage" :cells="coverageCells" />
+				<!-- ONE team line for managers and team leads, their direct team
+				     only (owner ruling 1, 23 Sep; AUDIT-PLAN "Team line"). The line
+				     is the door; the Team page, for this date, has the names and the
+				     leave TYPE, never the reason. -->
+				<GListPanel v-if="teamSummary">
+					<GListRow :label="teamSummary" @click="openTeam" />
+				</GListPanel>
 
 				<!-- Exactly one main action, chosen by the day, or one line saying
 				     there is nothing to do (D10: it offered "fix" on every day). -->
@@ -77,11 +67,11 @@
 import { computed, inject, watch } from "vue"
 import { useRouter } from "vue-router"
 
-import GEmptyState from "@/components/glass/GEmptyState.vue"
+import { teamLine } from "@/utils/teamLine"
+
 import GButton from "@/components/glass/GButton.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
-import GMetaGrid from "@/components/glass/GMetaGrid.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import ResourceError from "@/components/ResourceError.vue"
@@ -104,16 +94,12 @@ const $dayjs = inject("$dayjs")
 const router = useRouter()
 
 const me = computed(() => daySheet.data?.me)
-const teamOff = computed(() => daySheet.data?.team_off)
 const coverage = computed(() => daySheet.data?.coverage)
+const teamSummary = computed(() =>
+	teamLine(coverage.value, props.date, $dayjs().format("YYYY-MM-DD"), __)
+)
 
 const heading = computed(() => (props.date ? $dayjs(props.date).format("dddd, D MMMM") : ""))
-
-function offLabel(row) {
-	// The TYPE, never the reason (owner's ruling). Half-day is part of the
-	// type's meaning for anybody planning cover.
-	return row.half_day ? __("{0} · half day", [row.leave_type]) : row.leave_type
-}
 
 //: What the day needs: one action or a note (utils/daySheet.js).
 const action = computed(() =>
@@ -145,19 +131,6 @@ function punchLabel(punch) {
 	return word ? `${__(word)} ${time}` : time
 }
 
-const coverageCells = computed(() => {
-	const row = coverage.value
-	if (!row) return []
-	return [
-		{ k: __("In"), v: String(row.present) },
-		{ k: __("On leave"), v: String(row.on_leave) },
-		{ k: __("Absent"), v: String(row.absent) },
-		// The number that costs money on a past day: nobody has said anything
-		// about these people at all.
-		{ k: __("Not marked"), v: String(row.unmarked) },
-	]
-})
-
 function trimSeconds(value) {
 	return String(value || "").slice(0, 5)
 }
@@ -166,6 +139,11 @@ function fixDay() {
 	// Pre-filled with the date, because the whole reason to open a day sheet
 	// and then a form is that the form already knows which day.
 	router.push({ name: "AttendanceRequestFormView", query: { date: props.date } })
+}
+
+function openTeam() {
+	console.info("[DaySheet] opening team for", props.date)
+	router.push({ name: "TeamView", query: { date: props.date } })
 }
 
 function claimOt() {

@@ -58,17 +58,6 @@
 					</template>
 				</GCalendar>
 
-				<!-- The day's summary: the Attendance stat strip (one glass panel,
-				     4 cells), replacing the flat bordered tiles. -->
-				<GStatPanel :columns="4" :cells="4" :loading="teamStatus.loading && !teamStatus.data">
-					<GStatTile
-						v-for="tile in summaryTiles"
-						:key="tile.label"
-						:value="tile.count"
-						:label="tile.label"
-					/>
-				</GStatPanel>
-
 				<div class="flex flex-row items-center justify-between gap-2">
 					<!-- data-visual-mask: defaults to today, so "TODAY · FRI 21 AUG"
 					     becomes "TODAY · SUN 23 AUG" overnight. -->
@@ -191,10 +180,10 @@ import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GCalendar from "@/components/glass/GCalendar.vue"
-import GStatPanel from "@/components/glass/GStatPanel.vue"
-import GStatTile from "@/components/glass/GStatTile.vue"
 import { Autocomplete } from "frappe-ui"
 import { computed, inject, ref } from "vue"
+import { useRoute } from "vue-router"
+import { dateFromRoute } from "@/utils/dateFromRoute"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import { teamManagers, teamStatus } from "@/data/team"
@@ -203,8 +192,12 @@ import { buildManagerOptions, buildTeamCalendarDays, groupByDepartment } from "@
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
 
-const selectedDate = ref(dayjs().format("YYYY-MM-DD"))
-const firstOfMonth = ref(dayjs().date(1).startOf("D"))
+// ?date= comes from the Calendar day sheet's team line (owner ruling 1):
+// the door opens on the day it summarised.
+const route = useRoute()
+const askedDate = dateFromRoute(route.query)
+const selectedDate = ref(askedDate || dayjs().format("YYYY-MM-DD"))
+const firstOfMonth = ref(dayjs(selectedDate.value).date(1).startOf("D"))
 
 const calendarDays = computed(() =>
 	buildTeamCalendarDays(
@@ -277,17 +270,6 @@ const dayLabel = computed(() => {
 	const day = dayjs(selectedDate.value)
 	const prefix = day.isSame(dayjs(), "day") ? `${__("Today")} · ` : ""
 	return `${prefix}${day.format("ddd D MMM")}`
-})
-
-const summaryTiles = computed(() => {
-	const summary = teamStatus.data?.summary || {}
-	// __("Present"), __("On leave"), __("Not In Yet"), __("Absent")
-	return [
-		{ label: __("Present"), count: summary["Present"] || 0 },
-		{ label: __("On leave"), count: summary["On Leave"] || 0 },
-		{ label: __("Not in yet"), count: summary["Not In Yet"] || 0 },
-		{ label: __("Absent"), count: summary["Absent"] || 0 },
-	]
 })
 
 function formatPunch(value) {

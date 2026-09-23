@@ -83,21 +83,19 @@ test("every flag has a colour of its own", () => {
 })
 
 test("the day sheet holds no role logic", () => {
-	// Persona is the SERVER's answer (revamp P5/KR2). The component renders
-	// the sections that arrive, so there is nothing here to keep in step with
-	// the backend's rules and nothing here that could disagree with them.
+	// Persona is the SERVER's answer (revamp P5/KR2): the team line shows only
+	// when the server sent a coverage section.
 	assert.doesNotMatch(sheet, /HR Manager|HR User|isApprover|hasHRRole|roles/, "no role check")
-	assert.match(sheet, /daySheet\.data\?\.team_off/, "it renders what arrived")
-	assert.match(sheet, /v-if="teamOff"/, "and nothing when a section did not")
+	assert.match(sheet, /daySheet\.data\?\.coverage/, "it renders what arrived")
+	assert.match(sheet, /v-if="teamSummary"/, "and nothing when a section did not")
 })
 
-test("an absent team section renders nothing, not an empty state", () => {
-	// An employee who is nobody's approver does not have a team. A card saying
-	// "everyone is in" would be a false statement about a team they do not
-	// have — different from the approver whose team really is all present.
-	const section = sheet.slice(sheet.indexOf('v-if="teamOff"'), sheet.indexOf("coverage"))
-	assert.match(section, /v-if="teamOff\.length"/, "empty is a state INSIDE the section")
-	assert.match(section, /Everyone is in/, "which the approver does see")
+test("the team is ONE line that opens the Team page on that date (ruling 1)", () => {
+	// The line is the door, the Team page is the room: no names, no tile
+	// strip here (AUDIT-PLAN "Team line", no repeat).
+	assert.match(sheet, /teamLine\(coverage\.value, props\.date/)
+	assert.match(sheet, /name: "TeamView", query: \{ date: props\.date \}/)
+	assert.doesNotMatch(sheet, /GMetaGrid|Who is off/)
 })
 
 test("a manager never sees why somebody is off", () => {

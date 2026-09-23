@@ -1,12 +1,7 @@
-CLASS: the day sheet's team counted people routed for approval, not the
-caller's team (owner ruling 1, 23 Sep 2026): a named approver for a branch
-got the branch as "their team", which the Team page never shows.
+CLASS: the same team summary drawn twice (AUDIT-PLAN "Team line", ruling 1:
+the day sheet's line is the door, the Team page is the room, no repeat).
 
-Callers of get_employees_routed_to for a TEAM view:
-hrms/api/calendar.py:get_day — same-root, fixed here (get_direct_report_employees, the Team page's own test).
-hrms/api/approvals_list.py / needs_you.py — not-affected: they are about APPROVAL work, where routing is the right group.
-hrms/api/team.py has_team — not-affected: already reports_to.
-
-Also (review of 8fc7dbe6a): _event_days swallowed every error; it now
-swallows only "the board is not there" (DoesNotExistError or a DB
-Programming/TableMissing error) and re-raises the rest.
+Surfaces and verdicts:
+frontend/src/components/DaySheet.vue — same-root: names list + four-tile coverage grid replaced by ONE line (utils/teamLine.js) that opens Team for that date.
+frontend/src/views/team/TeamDashboard.vue — same-root: opens on ?date= (dateFromRoute), and its four-tile strip is cut; the page starts with the names.
+frontend/src/utils/teamLine.js — new, pure; words per the plan's table (past / today / future / all in), non-zero parts only.
