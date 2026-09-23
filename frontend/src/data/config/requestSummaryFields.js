@@ -3,11 +3,6 @@
 
 export const LEAVE_FIELDS = [
 	{
-		fieldname: "name",
-		label: "ID",
-		fieldtype: "Data",
-	},
-	{
 		fieldname: "leave_type",
 		label: "Leave Type",
 		fieldtype: "Link",
@@ -55,11 +50,6 @@ export const LEAVE_FIELDS = [
 ]
 
 export const EXPENSE_CLAIM_FIELDS = [
-	{
-		fieldname: "name",
-		label: "ID",
-		fieldtype: "Data",
-	},
 	{
 		fieldname: "posting_date",
 		label: "Posting Date",
@@ -115,11 +105,6 @@ export const EXPENSE_CLAIM_FIELDS = [
 
 export const ATTENDANCE_REQUEST_FIELDS = [
 	{
-		fieldname: "name",
-		label: "ID",
-		fieldtype: "Data",
-	},
-	{
 		fieldname: "attendance_dates",
 		label: "Attendance Dates",
 		fieldtype: "Data",
@@ -153,11 +138,6 @@ export const ATTENDANCE_REQUEST_FIELDS = [
 
 export const SHIFT_FIELDS = [
 	{
-		fieldname: "name",
-		label: "ID",
-		fieldtype: "Data",
-	},
-	{
 		fieldname: "shift_type",
 		label: "Shift Type",
 		fieldtype: "Link",
@@ -186,11 +166,6 @@ export const SHIFT_FIELDS = [
 
 export const SHIFT_REQUEST_FIELDS = [
 	{
-		fieldname: "name",
-		label: "ID",
-		fieldtype: "Data",
-	},
-	{
 		fieldname: "shift_type",
 		label: "Shift Type",
 		fieldtype: "Link",
@@ -218,11 +193,6 @@ export const SHIFT_REQUEST_FIELDS = [
 ]
 
 export const EMPLOYEE_CHECKIN_FIELDS = [
-	{
-		fieldname: "name",
-		label: "ID",
-		fieldtype: "Data",
-	},
 	{
 		fieldname: "log_type",
 		label: "Check-in type",
@@ -256,11 +226,6 @@ export const EMPLOYEE_CHECKIN_FIELDS = [
 ]
 
 export const OT_REQUEST_FIELDS = [
-	{
-		fieldname: "name",
-		label: "ID",
-		fieldtype: "Data",
-	},
 	{
 		fieldname: "employee",
 		label: "Employee",
@@ -305,11 +270,6 @@ export const OT_REQUEST_FIELDS = [
 
 export const REPLACEMENT_LEAVE_CLAIM_FIELDS = [
 	{
-		fieldname: "name",
-		label: "ID",
-		fieldtype: "Data",
-	},
-	{
 		fieldname: "employee",
 		label: "Employee",
 		fieldtype: "Link",
@@ -347,11 +307,6 @@ export const REPLACEMENT_LEAVE_CLAIM_FIELDS = [
 ]
 
 const COMPENSATORY_LEAVE_REQUEST_FIELDS = [
-	{
-		fieldname: "name",
-		label: "ID",
-		fieldtype: "Data",
-	},
 	{
 		fieldname: "employee",
 		label: "Employee",

@@ -1,3 +1,3 @@
-CLASS: "today" read off the server clock in an employee-facing reader.
+CLASS: the system's words (doctype, record id, raw select value) on a sheet people read.
 
-Call sites: announcements._visible_rows — same-root, fixed. requests_summary._leave — same-root, fixed. Pinned by test_api_clean_errors_and_bounds (rule 66a5e6145): now green; grep nowdate in hrms/api shows no other reader outside the exemption list.
+Call sites: RequestActionSheet heading — same-root, fixed (REQUEST_KIND). requestSummaryFields ID rows (all types) — same-root, removed. Status row — same-root, from utils/requestStatus. Approvals list — not-affected (server KIND, same words).

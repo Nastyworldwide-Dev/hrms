@@ -7,7 +7,7 @@
 			<div class="flex flex-col gap-1">
 				<div class="g-eyebrow">{{ __("Request") }}</div>
 				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
-					{{ __(document?.doctype) }}
+					{{ __(kindLabel) }}
 				</span>
 			</div>
 			<ExternalLink
@@ -277,6 +277,7 @@ import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
 import { formatCurrency, formatHours } from "@/utils/formatters"
 import { requestStatus } from "@/utils/requestStatus"
+import { REQUEST_KIND } from "@/utils/requestKind"
 import { firstMessage } from "@/utils/loudRequest"
 import { shownLeaveBalance, shortLeaveNotice } from "@/utils/liveLeaveBalance"
 
@@ -497,6 +498,12 @@ const fieldsWithValues = computed(() => {
 				field.fieldname === "leave_balance" && props.modelValue.doctype === "Leave Application"
 					? shownLeaveBalance(document?.doc, decisionCapability.leaveBalanceNow.value)
 					: document?.doc?.[field.fieldname] || props.modelValue[field.fieldname]
+			// The decision field reads from the one status rule ("Waiting",
+			// "Approved"), never the raw select value ("Open") (plan P1-5).
+			if (field.fieldname === approvalField.value && field.fieldtype === "Select") {
+				field.value = requestStatus(props.modelValue.doctype, document.doc).label
+				return field.value
+			}
 			// punch-derived hours Floats (claimed_hours, hours_cost…) read 5.67, not 5.669444444
 			const isHours = field.fieldtype === "Float" && field.fieldname.includes("hours")
 			field.value = isHours && raw ? formatHours(raw) : raw
@@ -505,6 +512,9 @@ const fieldsWithValues = computed(() => {
 		return field.value
 	})
 })
+
+//: The person's word for this request, not its doctype (plan P1-5).
+const kindLabel = computed(() => REQUEST_KIND[document?.doctype] || document?.doctype || "")
 
 const leaveShortNotice = computed(() =>
 	props.modelValue.doctype === "Leave Application"
