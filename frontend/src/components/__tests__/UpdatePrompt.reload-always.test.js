@@ -26,3 +26,13 @@ test("Reload reloads anyway if the browser never says so", () => {
 test("the bar goes away as soon as Reload is tapped", () => {
 	assert.match(reloadFn, /needRefresh\.value = false/)
 })
+
+test("a build that never takes over is not offered again and again", () => {
+	// Review of 1526e13bb: the fallback reload landed on the same waiting build,
+	// with the dismissal just cleared, so the bar came straight back.
+	assert.match(reloadFn, /remember\(waitingId\)\s*\n\s*once\(\)/)
+})
+
+test("a double tap reloads once", () => {
+	assert.match(source, /if \(reloading\) return\s*\n\s*reloading = true/)
+})

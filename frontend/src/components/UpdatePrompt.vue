@@ -140,7 +140,10 @@ function dismiss() {
 	needRefresh.value = false
 }
 
+let reloading = false
 function reload() {
+	if (reloading) return
+	reloading = true
 	// Always ends in a reload. The library alone waits for the browser to say
 	// the new build took control; on a real phone that never came and the tap
 	// did nothing (hotfix 23 Sep). So: tell the waiting build directly, reload
@@ -166,7 +169,11 @@ function reload() {
 	swRegistration?.waiting?.postMessage({ type: "SKIP_WAITING" })
 	updateServiceWorker?.(true)
 	setTimeout(() => {
+		// The new build did not take over. Remember this one as offered, so the
+		// next load does not ask again for a build that cannot activate (review
+		// of 1526e13bb); a newer build is a new id and is offered normally.
 		console.info("[update] no takeover signal; reloading anyway")
+		remember(waitingId)
 		once()
 	}, RELOAD_FALLBACK_MS)
 }
