@@ -47,3 +47,10 @@ test("the two quiet links stay: all check-ins, your shifts", () => {
 	assert.match(pageTemplate, /EmployeeCheckinListView/)
 	assert.match(pageTemplate, /ShiftAssignmentListView/)
 })
+
+test("D1: the absent legend key matches the day (an outline, not a fill)", () => {
+	const css = read("../../theme/glass-components.css")
+	const key = css.match(/\.g-cal__swatch--absent\s*\{[^}]*\}/)[0]
+	assert.match(key, /inset 0 0 0 1\.5px var\(--g-danger-ink\)/)
+	assert.match(key, /background:\s*transparent/)
+})

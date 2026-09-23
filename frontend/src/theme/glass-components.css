@@ -1792,8 +1792,11 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-cal__swatch--rest {
 	background: var(--g-ink3);
 }
+/* The key matches the day: an outline, not a fill (the absent day is an
+   outline since 8f16f87ed). */
 .g-cal__swatch--absent {
-	background: var(--g-danger);
+	background: transparent;
+	box-shadow: inset 0 0 0 1.5px var(--g-danger-ink);
 }
 
 /* ---------- GScorePanel (§10.2 #15) ---------- */
