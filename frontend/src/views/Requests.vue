@@ -60,14 +60,14 @@ const __ = inject("$translate")
 const router = useRouter()
 
 //: The request types, most used first. Asking HR is not a request (it lives
-//: on Help); fixing a day starts from the day, on Calendar (approved Calendar
-//: plan), so "Fix a day" opens Calendar rather than a blank form.
+//: on Help). "Fix a day" opens the fix form, which asks for the date, so the
+//: person stays in Requests (it used to push Calendar into this tab).
 const ROUTES = {
 	leave: { name: "LeaveApplicationFormView" },
 	overtime: { name: "OTRequestFormView" },
 	expense: { name: "ExpenseClaimFormView" },
 	shift: { name: "ShiftRequestFormView" },
-	fix: { name: "AttendanceDashboard" },
+	fix: { name: "AttendanceRequestFormView" },
 }
 const requestTypes = [
 	{ key: "leave", label: __("Time off") },

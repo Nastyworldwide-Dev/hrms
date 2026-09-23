@@ -4,7 +4,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { dayAction, hoursAsTime, tapWord } from "../daySheet.js"
+import { dayAction, dayStatusWord, hoursAsTime, tapWord } from "../daySheet.js"
 
 const TODAY = "2026-09-23"
 const day = (over = {}) => ({
@@ -54,14 +54,70 @@ test("a past day with punches and no attendance offers the fix", () => {
 	assert.equal(a.label, "Fix this day")
 })
 
-test("today and future days are not asked to be fixed", () => {
+// ------------------------------------------------ claim state (01-calendar §4 rows 3-5)
+
+test("a claim waiting with an approver offers no second claim", () => {
+	const a = dayAction(
+		day({ ot_hours: 1.5, claim: { status: "Open", approver_name: "Hafiz" } }),
+		TODAY
+	)
+	assert.deepEqual(a, { kind: "none", note: "Claim waiting with {0}", noteArgs: ["Hafiz"] })
+})
+
+test("a waiting claim with no named approver still says it is waiting", () => {
+	const a = dayAction(day({ ot_hours: 1.5, claim: { status: "Open", approver_name: "" } }), TODAY)
+	assert.deepEqual(a, { kind: "none", note: "Claim waiting" })
+})
+
+test("an approved claim says the overtime is claimed", () => {
+	const a = dayAction(day({ ot_hours: 1.5, claim: { status: "Approved" } }), TODAY)
+	assert.deepEqual(a, { kind: "none", note: "Overtime claimed" })
+})
+
+test("a rejected claim may be claimed again", () => {
+	const a = dayAction(day({ ot_hours: 1.5, claim: { status: "Rejected" } }), TODAY)
+	assert.deepEqual(a, { kind: "claim", hours: 1.5, label: "Claim again" })
+})
+
+// ------------------------------------------------ future day (01-calendar §4 row 13)
+
+test("a future work day offers to ask for the day off", () => {
+	const a = dayAction(day({ date: "2026-09-30", status: null, punches: [] }), TODAY)
+	assert.deepEqual(a, { kind: "leave", label: "Ask for this day off" })
+})
+
+test("a future day already on leave, or a rest day, asks nothing", () => {
+	const onLeave = day({ date: "2026-09-30", status: "On Leave", punches: [] })
+	const rest = day({ date: "2026-09-30", status: "Holiday", punches: [] })
+	assert.equal(dayAction(onLeave, TODAY).kind, "none")
+	assert.equal(dayAction(rest, TODAY).kind, "none")
+})
+
+// ------------------------------------------------ status word (01-calendar §4 rule 1)
+
+test("the heading's status word follows the day", () => {
+	assert.equal(dayStatusWord(day(), TODAY), "Worked")
+	assert.equal(dayStatusWord(day({ status: "Half Day" }), TODAY), "Worked")
+	assert.equal(dayStatusWord(day({ status: "On Leave", punches: [] }), TODAY), "Leave")
+	assert.equal(dayStatusWord(day({ status: "Holiday", punches: [] }), TODAY), "Rest day")
+	assert.equal(dayStatusWord(day({ status: "Absent", punches: [] }), TODAY), "Absent")
+	assert.equal(dayStatusWord(day({ date: TODAY, status: null }), TODAY), "In progress")
+	const future = day({ date: "2026-09-30", status: null, punches: [] })
+	assert.equal(dayStatusWord(future, TODAY), "Coming up")
+})
+
+test("a past day with nothing recorded has no status word", () => {
+	assert.equal(dayStatusWord(day({ status: null, punches: [] }), TODAY), "")
+})
+
+test("today is not asked to be fixed", () => {
 	assert.equal(
 		dayAction(day({ date: TODAY, status: null, punches: [{ log_type: "IN" }] }), TODAY).kind,
 		"none"
 	)
-	assert.equal(
+	assert.notEqual(
 		dayAction(day({ date: "2026-09-30", status: null, punches: [] }), TODAY).kind,
-		"none"
+		"fix"
 	)
 })
 

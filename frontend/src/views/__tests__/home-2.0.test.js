@@ -58,9 +58,10 @@ test("nothing Home offered became unreachable", () => {
 	// Every destination Home's quick links named must still be named somewhere.
 	// This is the one check that would catch a link quietly lost in the move.
 	const requests = read("views/Requests.vue")
-	// Fix a day starts from the day on Calendar now (approved Calendar plan).
+	// Fix a day opens the fix form in Requests (a5 item 6); Calendar itself is
+	// a tab of its own, so it stays reachable without this link.
 	for (const route of [
-		"AttendanceDashboard",
+		"AttendanceRequestFormView",
 		"ShiftRequestFormView",
 		"LeaveApplicationFormView",
 		"ExpenseClaimFormView",

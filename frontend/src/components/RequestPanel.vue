@@ -154,11 +154,18 @@ function openAll() {
 	allOpen.value = true
 }
 
-if (opensOnAnswered(route.query)) {
-	console.info("[RequestPanel] ?tab=answered: opening See all on Answered")
-	activeTab.value = "answered"
-	allOpen.value = true
-}
+//: The Requests tab stays mounted, so the query is watched, not read once:
+//: a second "Answered by you" tap was ignored (dead tap).
+watch(
+	() => route.query.tab,
+	() => {
+		if (!opensOnAnswered(route.query)) return
+		console.info("[RequestPanel] ?tab=answered: opening See all on Answered")
+		activeTab.value = "answered"
+		allOpen.value = true
+	},
+	{ immediate: true }
+)
 
 // Home shows the first five of whatever the active tab holds, and a control
 // that reveals the rest in place. The fold is a budget, not a length

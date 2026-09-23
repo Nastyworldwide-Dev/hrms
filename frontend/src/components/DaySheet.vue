@@ -57,7 +57,10 @@
 				     there is nothing to do (D10: it offered "fix" on every day). -->
 				<GButton v-if="action.kind === 'claim'" :label="__(action.label)" @click="claimOt" />
 				<GButton v-else-if="action.kind === 'fix'" :label="__(action.label)" @click="fixDay" />
-				<p v-else-if="action.note" class="text-card-title text-ink-600">{{ __(action.note) }}</p>
+				<GButton v-else-if="action.kind === 'leave'" :label="__(action.label)" @click="askDayOff" />
+				<p v-else-if="action.note" class="text-card-title text-ink-600">
+					{{ __(action.note, action.noteArgs) }}
+				</p>
 			</template>
 		</div>
 	</GModal>
@@ -77,7 +80,7 @@ import GSkeleton from "@/components/glass/GSkeleton.vue"
 import ResourceError from "@/components/ResourceError.vue"
 
 import { daySheet } from "@/data/calendar"
-import { dayAction, hoursAsTime, tapWord, clockTime } from "@/utils/daySheet"
+import { dayAction, dayStatusWord, hoursAsTime, tapWord, clockTime } from "@/utils/daySheet"
 
 const props = defineProps({
 	open: { type: Boolean, default: false },
@@ -99,7 +102,14 @@ const teamSummary = computed(() =>
 	teamLine(coverage.value, props.date, $dayjs().format("YYYY-MM-DD"), __)
 )
 
-const heading = computed(() => (props.date ? $dayjs(props.date).format("dddd, D MMMM") : ""))
+//: "Wed 16 Sep · Worked": the date plus one status word (§4 rule 1). Short
+//: date parts keep it on one line; no word until the day has loaded.
+const heading = computed(() => {
+	if (!props.date) return ""
+	const date = $dayjs(props.date).format("ddd D MMM")
+	const word = me.value ? dayStatusWord(me.value, $dayjs().format("YYYY-MM-DD")) : ""
+	return word ? `${date} · ${__(word)}` : date
+})
 
 //: What the day needs: one action or a note (utils/daySheet.js).
 const action = computed(() =>
@@ -140,6 +150,11 @@ function fixDay() {
 function openTeam() {
 	console.info("[DaySheet] opening team for", props.date)
 	router.push({ name: "TeamView", query: { date: props.date } })
+}
+
+//: A future work day: the leave form, already on that date (§4 row 13).
+function askDayOff() {
+	router.push({ name: "LeaveApplicationFormView", query: { date: props.date } })
 }
 
 function claimOt() {

@@ -9,25 +9,61 @@
 //: Statuses that mean the person was not expected to work that day.
 const OFF = new Set(["On Leave", "Holiday"])
 
+//: Attendance statuses that mean the person worked (fully or partly).
+const WORKED = new Set(["Present", "Half Day", "Work From Home"])
+
 export function dayAction(day, today) {
 	const past = day.date < today
 	const taps = day.punches || []
 	const lastTap = taps.at(-1)
 	const loneIn = taps.length > 0 && lastTap?.log_type === "IN"
+	console.info("[daySheet] action for", day.date, day.status, day.claim?.status)
 
-	// Today and future days: nothing is settled yet, so nothing is "wrong".
+	// A future work day: the only thing to do is ask for it off (§4 row 13).
+	if (day.date > today && !OFF.has(day.status)) {
+		return { kind: "leave", label: "Ask for this day off" }
+	}
+	// Today (and future days off): nothing is settled yet, so nothing is "wrong".
 	if (!past) return { kind: "none", note: "" }
 	// A check-in with no check-out: the day cannot be counted without it.
 	if (loneIn) return { kind: "fix", label: "Tell us when you left" }
-	if (day.ot_hours > 0) {
-		return { kind: "claim", hours: day.ot_hours, label: `Claim ${hoursAsTime(day.ot_hours)}` }
-	}
+	if (day.ot_hours > 0) return claimAction(day)
 	if (day.status === "Absent") return { kind: "fix", label: "Fix this day" }
 	if (OFF.has(day.status)) return { kind: "none", note: "" }
 	// Punches and no attendance row: Requests counts it as a day with no
 	// attendance, so the sheet must not say "Nothing to do." (owner, 23 Sep).
 	if (!day.status && taps.length > 0) return { kind: "fix", label: "Fix this day" }
 	return { kind: "none", note: "Nothing to do." }
+}
+
+//: The day's overtime, by the state of its claim (§4 rows 2-5). The sheet
+//: offered "Claim" again on a day already claimed; a waiting or approved claim
+//: now closes the action, and only a refused one opens it again.
+function claimAction(day) {
+	const status = day.claim?.status
+	console.info("[daySheet] overtime claim state", day.date, status || "none")
+	if (status === "Open") {
+		const who = day.claim.approver_name
+		return who
+			? { kind: "none", note: "Claim waiting with {0}", noteArgs: [who] }
+			: { kind: "none", note: "Claim waiting" }
+	}
+	if (status === "Approved") return { kind: "none", note: "Overtime claimed" }
+	if (status === "Rejected") return { kind: "claim", hours: day.ot_hours, label: "Claim again" }
+	return { kind: "claim", hours: day.ot_hours, label: `Claim ${hoursAsTime(day.ot_hours)}` }
+}
+
+//: One word for the heading: "Wed 16 Sep · Worked" (§4 rule 1). Empty when
+//: the day has nothing recorded, rather than a guess.
+export function dayStatusWord(day, today) {
+	console.info("[daySheet] status word for", day.date, day.status)
+	if (day.status === "On Leave") return "Leave"
+	if (day.status === "Holiday") return "Rest day"
+	if (day.status === "Absent") return "Absent"
+	if (WORKED.has(day.status)) return "Worked"
+	if (day.date > today) return "Coming up"
+	if (day.date === today) return (day.punches || []).length ? "In progress" : "Today"
+	return ""
 }
 
 //: "8h 02m", never "8.03 h": people read time in hours and minutes (D11).

@@ -120,6 +120,9 @@ test("tab=answered still reaches the answered list", () => {
 	assert.match(src, /opensOnAnswered\(route\.query\)/)
 	assert.match(src, /activeTab\.value = "answered"/)
 	assert.match(src, /allOpen\.value = true/)
+	// The Requests tab stays mounted, so a SECOND visit with ?tab=answered
+	// must be heard too: read at setup only, "Answered by you" was a dead tap.
+	assert.match(src, /watch\(\s*\(\) => route\.query\.tab/)
 	// Approvals still sends people here with that query.
 	assert.match(read("../../views/Approvals.vue"), /query: \{ tab: "answered" \}/)
 })

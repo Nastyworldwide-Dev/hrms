@@ -518,7 +518,41 @@ def _my_day(employee: str, day) -> dict:
 		"ot_hours": flt(attendance.ot_hours) if attendance else 0.0,
 		"shift": window,
 		"punches": _my_punches(employee, day),
+		"claim": _day_claim(employee, day),
 	}
+
+
+#: A live claim outranks a refused one: a rejected request followed by a new
+#: one is waiting, not rejected.
+_CLAIM_RANK = {"Open": 0, "Approved": 0, "Rejected": 1}
+
+
+def _day_claim(employee: str, day) -> dict | None:
+	"""The caller's own overtime claim for the day, so the sheet stops offering
+	"Claim" on a day already claimed (01-calendar.md §4 rows 3-5). The
+	employee comes from the session, never the request."""
+	claims = frappe.get_all(
+		"OT Request",
+		filters={"employee": employee, "ot_date": day, "docstatus": ("<", 2)},
+		fields=["name", "status"],
+		order_by="creation desc",
+		ignore_permissions=True,
+	)
+	if not claims:
+		return None
+	claim = min(claims, key=lambda row: _CLAIM_RANK.get(row.status, 2))
+	# The first designated approver — the order OT notifications try
+	# (pwa_notifications._get_ot_approver). Blank when none: the sheet then
+	# says "your approver" rather than guess a name.
+	from hrms.hr.utils import get_designated_approvers
+
+	name = ""
+	for approver in get_designated_approvers(employee, "leave_approver", "leave_approvers"):
+		name = frappe.db.get_value("User", approver, "full_name") or ""
+		if name:
+			break
+	logger.info("[calendar] day %s claim %s (%s)", day, claim.name, claim.status)
+	return {"status": claim.status, "approver_name": name}
 
 
 def _who_is_off(employees: list[str], day) -> list[dict]:

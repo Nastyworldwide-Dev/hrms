@@ -12,7 +12,7 @@
 			     width, and it still asks before discarding typed work. -->
 			<ShellHeader
 				bare
-				:title="id ? __(props.doctype) : __('New {0}', [__(doctype)], props.doctype)"
+				:title="__(formTitle(props.doctype, !id))"
 				:back="confirmBack"
 			>
 				<template v-if="id" #actions>
@@ -259,7 +259,11 @@
 	     so the user is never stranded on a detail/edit screen. Only reached for
 	     an existing id (new forms are ready immediately, isFormReady). -->
 	<div v-else class="flex flex-col h-full w-full form-view-root">
-		<ShellHeader bare :title="__(props.doctype)" :back="() => goBackOrHome(router)" />
+		<ShellHeader
+			bare
+			:title="__(formTitle(props.doctype, !id))"
+			:back="() => goBackOrHome(router)"
+		/>
 		<div class="grow overflow-y-auto flex items-center justify-center p-6">
 			<div
 				v-if="documentResource.get.loading"
@@ -309,7 +313,6 @@
 		@cancel="showDeleteDialog = false"
 	>
 		{{ __("Are you sure you want to delete this {0}?", [__(props.noun)]) }}
-		{{ formModel.name }}?
 	</GConfirm>
 
 	<GConfirm
@@ -321,7 +324,6 @@
 		@cancel="showSubmitDialog = false"
 	>
 		{{ __("Send this {0} for approval?", [__(props.noun)]) }}
-		{{ formModel.name }}?
 	</GConfirm>
 
 	<GConfirm
@@ -343,8 +345,6 @@
 		<template #body-content>
 			<p>
 				{{ __("Cancel this {0}?", [__(props.noun)]) }}
-				<span class="font-bold">{{ formModel.name }}</span
-				>?
 			</p>
 		</template>
 		<template #actions>
@@ -396,6 +396,7 @@ import useApprovedCancel from "@/composables/approvedCancel"
 import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
 import { requestStatus } from "@/utils/requestStatus"
+import { formTitle } from "@/utils/formTitle"
 import { firstMessage } from "@/utils/loudRequest"
 import { formatCurrency } from "@/utils/formatters"
 import { useDownloadPDF } from "@/utils/commonUtils"

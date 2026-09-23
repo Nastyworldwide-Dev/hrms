@@ -22,6 +22,9 @@ import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { createResource, toast } from "frappe-ui"
 import { ref, watch, inject, nextTick } from "vue"
+import { useRoute } from "vue-router"
+
+import { dateFromRoute } from "@/utils/dateFromRoute"
 
 import FormView from "@/components/FormView.vue"
 import { firstMessage } from "@/utils/loudRequest"
@@ -40,8 +43,11 @@ const props = defineProps({
 const sessionEmployee = inject("$employee")
 const currEmployee = ref(sessionEmployee.data.name)
 
-// reactive object to store form data
-const leaveApplication = ref({})
+// reactive object to store form data. A Calendar day's "Ask for this day off"
+// opens on that day (?date=, 01-calendar.md §4 row 13).
+const route = useRoute()
+const startDay = props.id ? null : dateFromRoute(route.query)
+const leaveApplication = ref(startDay ? { from_date: startDay, to_date: startDay } : {})
 
 // For existing docs, watchers fire during initial data population from the DB.
 // This flag prevents setLeaveBalance() from overwriting the stored

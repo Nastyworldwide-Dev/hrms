@@ -23,6 +23,9 @@ test("the type sheet lists the request types, and nothing that is not a request"
 	assert.doesNotMatch(src, /HR Issues|Issue board/)
 })
 
-test("Fix a day opens Calendar, where the fix starts from the day", () => {
-	assert.match(src, /key: "fix"[\s\S]{0,120}AttendanceDashboard|fix: \{ name: "AttendanceDashboard" \}/)
+test("Fix a day opens the fix form, so the person stays in Requests", () => {
+	// It pushed the Calendar into the Requests tab (a5 item 6); the form asks
+	// for the date itself.
+	assert.match(src, /fix: \{ name: "AttendanceRequestFormView" \}/)
+	assert.doesNotMatch(src, /fix: \{ name: "AttendanceDashboard" \}/)
 })
