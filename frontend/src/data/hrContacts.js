@@ -7,8 +7,3 @@ export const hrContactsResource = createResource({
 	auto: false,
 })
 
-export const reportingManagerResource = createResource({
-	url: "hrms.api.hr_contacts.get_reporting_manager",
-	cache: personalCacheKey("nsty:reporting-manager"),
-	auto: false,
-})

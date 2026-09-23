@@ -22,7 +22,7 @@ const EXEMPT = {
 	// Browser Notification / push-subscription errors; deliberately calm copy.
 	"src/components/PushNotificationPrompt.vue":
 		"push enable is optional; calm copy by design",
-	"src/views/AppSettings.vue":
+	"src/views/Profile.vue":
 		"browser Notification API errors, not server refusals",
 }
 

@@ -11,14 +11,14 @@
 								<ChevronLeft class="h-5 w-5" />
 							</GIconButton>
 							<h2 class="font-sans font-extrabold text-lg tracking-tight text-inkbase">
-								{{ __("Profile") }}
+								{{ __("You") }}
 							</h2>
 						</div>
 					</header>
 
-					<div class="flex flex-col p-4">
-						<!-- Identity block -->
-						<div class="flex flex-row items-center gap-4 pb-5 border-b-2 border-divider">
+					<div class="flex flex-col gap-5 p-4">
+						<!-- Who I am (audit-pages §4 "You"): name, role, and where. -->
+						<div class="flex flex-row items-center gap-4">
 							<div class="shrink-0">
 								<GAvatar
 									:image="user.data?.user_image"
@@ -28,103 +28,97 @@
 							</div>
 							<div class="flex flex-col gap-1 min-w-0">
 								<span
-									v-if="employee"
-									class="font-sans font-extrabold text-screen-title tracking-tight text-inkbase truncate"
+									class="font-sans font-extrabold text-screen-title tracking-tight text-inkbase break-words"
 									>{{ employee?.data?.employee_name }}</span
 								>
-								<span v-if="employee" class="g-eyebrow truncate">{{
-									employee?.data?.designation
-								}}</span>
+								<span v-if="roleLine" class="text-caption text-ink-600">{{ roleLine }}</span>
 							</div>
 						</div>
 
-						<!-- FOUR GROUPS, not one list (revamp §7).
-						     Profile was a single undifferentiated column of nine
-						     rows, each hand-built with its own padding, border and
-						     hover — 17 of the app's 103 stray pixel values lived
-						     here. A person looking for "change my password" had to
-						     read all nine.
+						<!-- On the page, not in two sheets (PAGE-23); the shift pattern
+						     by owner ruling 3 (23 Sep). Each line only when known. -->
+						<div v-if="managerName || shiftName" class="flex flex-col gap-1">
+							<p v-if="managerName" class="text-card-title font-normal text-ink">
+								{{ __("Your manager is {0}", [managerName]) }}
+							</p>
+							<p v-if="shiftName" class="text-card-title font-normal text-ink">
+								{{ __("Your shift: {0}", [shiftName]) }}
+							</p>
+						</div>
 
-						     The groups answer four different questions: who am I,
-						     where do I work, how does the app behave, and how do I
-						     get out. Nothing was removed; the order is now an
-						     argument rather than an accident.
+						<!-- Details and work: one row, one sheet (was three rows). -->
+						<GListPanel>
+							<GListRow
+								v-for="row in rows"
+								:key="row.key"
+								:label="row.label"
+								:sublabel="row.sublabel"
+								@click="row.go()"
+							>
+								<template #icon>
+									<component :is="row.icon" class="g-row-icon" />
+								</template>
+								<template v-if="row.badge" #badge>
+									<GBadge variant="accent">{{ row.badge }}</GBadge>
+								</template>
+							</GListRow>
+						</GListPanel>
 
-						     GListPanel/GListRow, so the padding, the dividers and
-						     the 44px targets come from the system and cannot drift
-						     again. -->
-						<div class="flex flex-col gap-5 mt-2">
-							<template v-for="group in groups" :key="group.key">
-								<div v-if="group.rows.length" class="flex flex-col gap-2">
-									<span class="g-eyebrow">{{ group.title }}</span>
-									<GListPanel>
-										<GListRow
-											v-for="row in group.rows"
-											:key="row.key"
-											:label="row.label"
-											:sublabel="row.sublabel"
-											@click="row.go()"
-										>
-											<template #icon>
-												<component :is="row.icon" class="g-row-icon" />
-											</template>
-											<template v-if="row.badge" #badge>
-												<GBadge variant="accent">{{ row.badge }}</GBadge>
-											</template>
-										</GListRow>
-									</GListPanel>
-								</div>
-							</template>
+						<!-- How the app behaves: inline, the Settings page is cut (S-DUP). -->
+						<div class="flex flex-col gap-2">
+							<span class="text-card-title text-ink">{{ __("Theme") }}</span>
+							<GSegmented
+								:buttons="THEME_BUTTONS"
+								:model-value="theme.mode"
+								:label="__('Theme')"
+								@update:model-value="setTheme"
+							/>
+						</div>
+
+						<!-- Only where the site can push: a switch that cannot work is
+						     not offered (audit-pages §4, "actionable only"). -->
+						<div v-if="canPush" class="g-switch-row">
+							<Switch
+								size="md"
+								:label="__('Notifications')"
+								:description="__('On this phone')"
+								:model-value="pushOn"
+								:disabled="pushBusy"
+								@update:model-value="togglePush"
+							/>
 						</div>
 
 						<button
 							@click="logout"
-							class="flex items-center justify-center gap-2 w-full bg-transparent border border-divider rounded-action text-inkbase px-4 py-3.5 font-sans font-extrabold text-card-title mt-7 hover:bg-icon-bg"
+							class="g-focusable flex items-center justify-center gap-2 w-full bg-transparent border border-divider rounded-action text-inkbase px-4 py-3.5 font-sans font-extrabold text-card-title hover:bg-icon-bg"
 						>
-							<!-- neutral, not accent (8.14): sign-out wore the same chartreuse the
-						     system reserves for the ONE primary action on a screen, and it
-						     was the only accented element on Profile — so the loudest thing
-						     on the page was the way out of the app. -->
+							<!-- neutral, not accent (8.14): the way out is not the
+							     loudest thing on the page. -->
 							<LogOut class="w-4 h-4" />
 							{{ __("Log out") }}
 						</button>
+
+						<p class="text-caption text-ink-600 text-center">
+							{{ __("Version {0} · {1}", [versionString, buildString]) }}
+						</p>
 					</div>
 				</div>
 			</div>
 
 			<ion-modal
 				ref="modal"
-				:is-open="isInfoModalOpen"
-				@didDismiss="closeInfoModal"
+				:is-open="detailsOpen"
+				@didDismiss="detailsOpen = false"
 				:initial-breakpoint="1"
 				:breakpoints="[0, 1]"
 			>
-				<ContactInfoSheet
-					v-if="selectedItem?.kind === 'contact'"
-					:self-data="
-						selectedItem.fields.map((field) => {
-							const [label, fieldtype] = getFieldInfo(field)
-							return {
-								fieldname: field,
-								value: getFieldValue(field),
-								label: label,
-								fieldtype: fieldtype,
-							}
-						})
-					"
-				/>
 				<ProfileInfoModal
-					v-else-if="selectedItem"
-					:title="selectedItem.title"
+					v-if="detailsOpen"
+					:title="__('Your details')"
 					:data="
-						selectedItem.fields.map((field) => {
+						DETAIL_FIELDS.map((field) => {
 							const [label, fieldtype] = getFieldInfo(field)
-							return {
-								fieldname: field,
-								value: getFieldValue(field),
-								label: label,
-								fieldtype: fieldtype,
-							}
+							return { fieldname: field, value: getFieldValue(field), label, fieldtype }
 						})
 					"
 				/>
@@ -134,39 +128,33 @@
 </template>
 
 <script setup>
-import {
-	Book,
-	ChevronLeft,
-	File,
-	Info,
-	KeyRound,
-	LogOut,
-	Settings,
-	SquareCheck,
-	User,
-	Users,
-} from "lucide-vue-next"
+import { ChevronLeft, KeyRound, LogOut, SquareCheck, User } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from "vue"
 import { useListUpdate } from "@/composables/realtime"
 import { useRouter } from "vue-router"
 import { goBackOrHome } from "@/utils/navigation"
 import { IonContent, IonModal } from "@ionic/vue"
-import { createDocumentResource, createResource } from "frappe-ui"
+import { Switch, createDocumentResource, createResource, toast } from "frappe-ui"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
+import GSegmented from "@/components/glass/GSegmented.vue"
 
 import { showErrorAlert } from "@/utils/dialogs"
 import { formatCurrency } from "@/utils/formatters"
 
 import ProfileInfoModal from "@/components/ProfileInfoModal.vue"
-import ContactInfoSheet from "@/components/ContactInfoSheet.vue"
 
 import { pendingCountResource } from "@/data/remoteCheckin"
 import { isApprover } from "@/data/team"
+import { theme, setTheme, THEME_MODES } from "@/data/theme"
+import {
+	arePushNotificationsEnabled,
+	enablePushNotifications as requestPushEnable,
+} from "@/data/notifications"
 
 const DOCTYPE = "Employee"
 
@@ -178,156 +166,109 @@ const __ = inject("$translate")
 
 const router = useRouter()
 
-const profileLinks = [
-	{
-		icon: User,
-		title: __("Your details"),
-		fields: [
-			"employee_name",
-			"employee_number",
-			"gender",
-			"date_of_birth",
-			"date_of_joining",
-			"blood_group",
-		],
-	},
-	{
-		icon: File,
-		title: __("Company information"),
-		fields: [
-			"company",
-			"department",
-			"designation",
-			"branch",
-			"grade",
-			"reports_to",
-			"employment_type",
-		],
-	},
-	{
-		icon: Book,
-		title: __("Contact information"),
-		kind: "contact",
-		fields: ["cell_number", "personal_email", "company_email", "preferred_email"],
-	},
+//: ONE sheet for the employee record (audit-pages §4: was three rows and
+//: three sheets). The manager is on the page itself, so not repeated here.
+const DETAIL_FIELDS = [
+	"employee_number",
+	"company",
+	"department",
+	"designation",
+	"branch",
+	"employment_type",
+	"date_of_joining",
+	"cell_number",
+	"company_email",
+	"personal_email",
+	"date_of_birth",
+	"gender",
+	"blood_group",
 ]
+const detailsOpen = ref(false)
 
-//: DECLARED BEFORE `groups`, on purpose. A computed's getter does not run at
-//: setup, but the script-setup order gate refuses a read above its
-//: declaration anyway — and it is right to: the moment somebody makes one of
-//: these eager, the screen throws "before initialization" and Ionic is left
-//: holding a view with no element. The KPI dashboard learned this the hard
-//: way and so did two check-in dialogs this morning.
 const pendingApprovalsCount = computed(() => Number(pendingCountResource.data) || 0)
 
-//: Stamped at compile time by vite (`__APP_BUILD__`), the same constant the
-//: diagnostics report carries — so the version a person reads off the screen
-//: is the version in the report they send.
+//: "Version 2.0.0-alpha.2 · 2026-09-23 14:02" — answers "which version are
+//: you on" in the report a person sends.
 const buildString = typeof __APP_BUILD__ === "string" ? __APP_BUILD__ : "dev"
-//: The PWA version (package.json, SemVer), stamped by vite. "Version
-//: 2.0.0-alpha.2 · 2026-09-23 14:02" answers "which version are you on".
 const versionString = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev"
 
-//: FOUR GROUPS. Each answers a different question, which is what makes them
-//: groups rather than a divided list: who am I, where do I work, how does the
-//: app behave, and how do I get out.
-//:
 //: Role-gated rows keep the server as the authority — `isApprover` is a
-//: RESOURCE, answered by the backend, not a role string read here.
-const groups = computed(() => [
+//: RESOURCE answered by the backend, not a role string read here.
+const rows = computed(() => [
 	{
-		key: "you",
-		title: __("You"),
-		rows: [
-			...profileLinks.map((link) => ({
-				key: link.title,
-				icon: link.icon,
-				label: link.title,
-				sublabel: null,
-				go: () => openInfoModal(link),
-			})),
-		],
+		key: "details",
+		icon: User,
+		label: __("Your details"),
+		sublabel: null,
+		go: () => {
+			console.info("[You] opening details")
+			detailsOpen.value = true
+		},
 	},
+	...(isApprover.data
+		? [
+				{
+					key: "approvals",
+					icon: SquareCheck,
+					label: __("Approvals"),
+					sublabel: null,
+					badge: pendingApprovalsCount.value > 0 ? String(pendingApprovalsCount.value) : null,
+					go: () => router.push({ name: "Approvals" }),
+				},
+		  ]
+		: []),
 	{
-		key: "work",
-		title: __("Work"),
-		rows: [
-			{
-				key: "hr-contacts",
-				icon: Users,
-				label: __("HR Contacts"),
-				sublabel: __("Who to ask, and how to reach them"),
-				go: () => router.push({ name: "HRContacts" }),
-			},
-			// Shown to APPROVERS, never gated on the pending COUNT: count-gating
-			// once made this vanish the moment the queue emptied, stranding an
-			// approver away from their own decision history.
-			...(isApprover.data
-				? [
-						{
-							key: "approvals",
-							icon: SquareCheck,
-							label: __("Approvals"),
-							sublabel: null,
-							badge: pendingApprovalsCount.value > 0 ? String(pendingApprovalsCount.value) : null,
-							go: () => router.push({ name: "Approvals" }),
-						},
-				  ]
-				: []),
-		],
-	},
-	{
-		key: "app",
-		title: __("App"),
-		rows: [
-			{
-				key: "settings",
-				icon: Settings,
-				// Never gated: this is the only path to the theme switcher and
-				// to Change Password, and hiding it behind the push-relay check
-				// once locked users out of both.
-				label: __("Settings"),
-				sublabel: __("Theme, notifications, language"),
-				go: () => router.push({ name: "Settings" }),
-			},
-		],
-	},
-	{
-		key: "account",
-		title: __("Account"),
-		rows: [
-			{
-				key: "password",
-				icon: KeyRound,
-				label: __("Change password"),
-				sublabel: null,
-				go: () => router.push({ name: "ChangePassword" }),
-			},
-			{
-				key: "about",
-				icon: Info,
-				// EVERY phone-side defect this month began with "which version
-				// are you on". The answer is now on the screen people are
-				// already looking at when they report one.
-				label: __("About this app"),
-				sublabel: __("Version {0} · {1}", [versionString, buildString]),
-				go: () => {},
-			},
-		],
+		key: "password",
+		icon: KeyRound,
+		label: __("Change password"),
+		sublabel: null,
+		go: () => router.push({ name: "ChangePassword" }),
 	},
 ])
 
-const isInfoModalOpen = ref(false)
-const selectedItem = ref(null)
+// __("Light"), __("Dark"), __("System")
+const THEME_LABELS = { light: "Light", dark: "Dark", system: "System" }
+const THEME_BUTTONS = THEME_MODES.map((mode) => ({ key: mode, label: __(THEME_LABELS[mode]) }))
 
-const openInfoModal = async (request) => {
-	selectedItem.value = request
-	isInfoModalOpen.value = true
-}
+//: Offered only where the site can push (push relay configured and the
+//: server allows it); otherwise there is nothing the switch could do.
+const canPush = computed(
+	() => !!(window.frappe?.boot?.push_relay_server_url && arePushNotificationsEnabled.data)
+)
+const pushOn = ref(!!window.frappePushNotification?.isNotificationEnabled?.())
+const pushBusy = ref(false)
 
-const closeInfoModal = async (_request) => {
-	isInfoModalOpen.value = false
-	selectedItem.value = null
+async function togglePush(on) {
+	pushBusy.value = true
+	try {
+		if (on) {
+			const data = await requestPushEnable()
+			pushOn.value = !!data?.permission_granted
+			if (!pushOn.value)
+				toast({
+					title: __("Notifications are blocked"),
+					text: __("Allow them for this site in your browser settings."),
+					icon: "alert-circle",
+					position: "bottom-center",
+				})
+		} else {
+			await window.frappePushNotification.disableNotification()
+			pushOn.value = false
+		}
+		console.info("[You] notifications", pushOn.value ? "on" : "off")
+	} catch (error) {
+		// Browser Notification API errors, not server refusals: calm copy.
+		console.error("[You] notification toggle failed:", error)
+		toast({
+			title: __("Notifications didn't change"),
+			text: __("Try again in a moment."),
+			icon: "alert-circle",
+			position: "bottom-center",
+		})
+		pushOn.value = !on
+	} finally {
+		pushBusy.value = false
+	}
 }
 
 const employeeDoc = createDocumentResource({
@@ -341,6 +282,13 @@ const employeeDoc = createDocumentResource({
 	},
 })
 
+const roleLine = computed(() => {
+	const doc = employeeDoc.doc || employee.data || {}
+	const where = [doc.department, doc.branch].filter(Boolean).join(" · ")
+	return [doc.designation, where].filter(Boolean).join(" · ")
+})
+const shiftName = computed(() => employeeDoc.doc?.default_shift || null)
+
 const reportsToName = createResource({
 	url: "hrms.api.get_reports_to_employee_name",
 })
@@ -353,6 +301,8 @@ watch(
 		}
 	}
 )
+
+const managerName = computed(() => (employeeDoc.doc?.reports_to ? reportsToName.data : null))
 
 const employeeDocType = createResource({
 	url: "hrms.api.get_doctype_fields",

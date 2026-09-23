@@ -136,9 +136,10 @@ const routes = [
 		component: () => import("@/views/Notifications.vue"),
 	},
 	{
+		// The Settings page is cut; its controls live on You (audit-pages §4).
+		// Kept as a redirect for saved links.
 		path: "/settings",
-		name: "Settings",
-		component: () => import("@/views/AppSettings.vue"),
+		redirect: "/profile",
 	},
 	{
 		path: "/change-password",

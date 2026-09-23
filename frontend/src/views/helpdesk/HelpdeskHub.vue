@@ -17,6 +17,13 @@
 					@update:modelValue="selectTab"
 				/>
 			</div>
+			<!-- "Who to ask" lives with Help (audit-pages §4: HR contacts move
+			     from You to Help, one job per page). -->
+			<div class="px-4 pt-4 w-full lg:px-7 max-w-content-column-lg mx-auto">
+				<GListPanel>
+					<GListRow :label="whoToAsk" @click="router.push({ name: 'HRContacts' })" />
+				</GListPanel>
+			</div>
 			<IssuesTab v-if="tab === HR_TAB" />
 			<HelpdeskList v-else />
 		</template>
@@ -28,6 +35,8 @@ import { computed, inject, onMounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import BaseLayout from "@/components/BaseLayout.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
 import { helpdeskAvailable, myTickets } from "@/data/helpdesk"
 import { myIssuesForCount, openIssueCount, openTicketCount } from "@/data/supportCounts"
@@ -45,6 +54,8 @@ import HelpdeskList from "./HelpdeskList.vue"
 const __ = inject("$translate")
 const route = useRoute()
 const router = useRouter()
+//: HR contacts, reached from Help (audit-pages §4).
+const whoToAsk = __("Who to ask")
 
 // storage is a convenience, never a dependency: private mode or a cleared
 // site throws on access and the page must still open

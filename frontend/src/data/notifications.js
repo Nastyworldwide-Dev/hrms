@@ -39,7 +39,7 @@ export const arePushNotificationsEnabled = createResource({
 })
 
 // Single entry point to the push SDK's enable flow (browser permission ask +
-// FCM token registration) — shared by AppSettings and PushNotificationPrompt.
+// FCM token registration) — shared by the You page and PushNotificationPrompt.
 // Resolves {permission_granted, token}; callers own their toasts/state.
 export const enablePushNotifications = () => {
 	console.info("[PushNotifications] Requesting push enable via SDK")
