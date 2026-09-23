@@ -5,7 +5,7 @@
 				<GAppHeader
 					:title="props.pageTitle || __('Nadi')"
 					:unread="unreadNotificationsCount.data || 0"
-					:kicker="dateKicker"
+					:kicker="props.pageTitle ? undefined : dateKicker"
 					:avatar-url="user.data?.user_image"
 					:avatar-label="user.data?.first_name"
 					@notifications="router.push({ name: 'Notifications' })"

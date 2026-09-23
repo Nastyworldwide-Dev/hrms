@@ -19,7 +19,7 @@
 			     Sized against the SMALLEST budget, every larger phone gains
 			     list rows instead of needing its own layout. Invariant F1 and
 			     the arithmetic: src/views/__tests__/home-fold-budget.test.js. -->
-			<GPullRefresh @refresh="refreshRequests" />
+			<GPullRefresh @refresh="refresh" />
 			<div
 				class="flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
 			>
@@ -48,7 +48,9 @@
 <script setup>
 import { computed, inject } from "vue"
 
-import { reloadRequestLists } from "@/data/requestLists"
+import { homeAnnouncements } from "@/data/announcements"
+import { needsYouResource } from "@/data/needsYou"
+import { nowResource } from "@/data/now"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
 import NowBar from "@/components/NowBar.vue"
@@ -62,9 +64,15 @@ const $dayjs = inject("$dayjs")
 //: plan, H2/H3): "Wed 23 Sep". A fixed length, so it never crowds the bell.
 const todayTitle = computed(() => $dayjs().format("ddd D MMM"))
 
-async function refreshRequests(event) {
+//: Pull to refresh reloads what HOME shows. It reloaded the request lists,
+//: which left Home with the Requests panel (review of 1cdd9ff56).
+async function refresh(event) {
 	console.info("[Home] pull-to-refresh")
-	await reloadRequestLists("pull")
+	await Promise.allSettled([
+		nowResource.reload(),
+		needsYouResource.reload(),
+		homeAnnouncements.reload(),
+	])
 	event.target?.complete?.()
 }
 </script>

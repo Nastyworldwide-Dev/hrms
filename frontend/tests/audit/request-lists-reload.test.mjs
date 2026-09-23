@@ -11,7 +11,8 @@ import { SRC, read, sourceFiles } from "./_lib.mjs"
 
 const registry = read(join(SRC, "data", "requestLists.js"))
 const panel = read(join(SRC, "components", "RequestPanel.vue"))
-const home = read(join(SRC, "views", "Home.vue"))
+// The lists live on Requests since the Home plan (1cdd9ff56); its pull reloads them.
+const home = read(join(SRC, "views", "Requests.vue"))
 
 function cachedResources(prefix) {
 	const found = []
@@ -74,7 +75,7 @@ test("the registry is reached from mount, pull-to-refresh, reconnect and resume"
 	assert.match(
 		home,
 		/<GPullRefresh @refresh="refreshRequests"/,
-		"Home has pull-to-refresh"
+		"Requests has pull-to-refresh"
 	)
 	assert.match(home, /await reloadRequestLists\("pull"\)/)
 })

@@ -35,3 +35,16 @@ test("H7: the permission ask comes after a check-in, from the check-in panel", (
 	assert.match(checkinTemplate, /<PushNotificationPrompt v-if="askForNotifications"/)
 	assert.match(checkin, /askForNotifications\.value = true/)
 })
+
+test("pulling down refreshes what Home shows: the Now bar, what waits on you, announcements", () => {
+	const body = home.slice(home.indexOf("async function refresh"), home.indexOf("</script>"))
+	for (const resource of ["nowResource", "needsYouResource", "homeAnnouncements"]) {
+		assert.match(body, new RegExp(`${resource}\\.reload\\(`), resource)
+	}
+	assert.doesNotMatch(body, /reloadRequestLists/)
+})
+
+test("on desktop the date is not said twice (the title already says it)", () => {
+	const layout = read("../../components/BaseLayout.vue")
+	assert.match(layout, /:kicker="props\.pageTitle \? undefined : dateKicker"/)
+})
