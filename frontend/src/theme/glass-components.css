@@ -2218,13 +2218,12 @@ html[data-theme="dark"] .g-cal__day--present {
 }
 /* GModal focuses the sheet itself when it opens (tabindex -1), so focus moves
    into the dialog. It takes the app's ring like every other focus target —
-   inset, because the sheet is clipped by its own radius and overflow. */
+   inset, because the sheet is clipped by its own radius and overflow.
+   :focus-visible only: browsers draw no ring for pointer focus by default,
+   the convention every other focus target in this file follows. */
 .g-sheet:focus-visible {
 	outline: none;
 	box-shadow: var(--g-shadow-focus-ring-inset);
-}
-.g-sheet:focus:not(:focus-visible) {
-	outline: none;
 }
 .g-sheet {
 	/* absorbed in phase 3.2: the sheet ceiling was an arbitrary viewport

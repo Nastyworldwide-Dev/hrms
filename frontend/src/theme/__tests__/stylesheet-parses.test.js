@@ -56,7 +56,6 @@ test("the sheet, now focused when it opens, uses the app's focus ring, not the b
 	}
 	assert.equal(decls(".g-sheet:focus-visible").outline, "none")
 	assert.match(decls(".g-sheet:focus-visible")["box-shadow"] || "", /--g-shadow-focus-ring-inset/)
-	assert.equal(decls(".g-sheet:focus:not(:focus-visible)").outline, "none")
 })
 
 test("no grid column refuses to shrink below its content (reflow at 320px / 200% text)", () => {
