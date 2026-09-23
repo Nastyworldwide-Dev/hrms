@@ -33,7 +33,10 @@ test("Approvals links to it, and Requests opens on it from ?tab=answered", () =>
 		read("../src/views/Approvals.vue"),
 		/name: "Requests", query: \{ tab: "answered" \}/
 	)
-	assert.match(source, /route\.query\.tab === "answered"/)
+	// Since the one-screen Requests page (23 Sep), ?tab=answered opens See all
+	// on Answered through utils/requestsPage.opensOnAnswered.
+	assert.match(source, /opensOnAnswered\(route\.query\)/)
+	assert.match(read("../src/utils/requestsPage.js"), /tab === "answered"/)
 })
 
 test("no eyebrow repeats the page title (S-EYEBROW)", () => {

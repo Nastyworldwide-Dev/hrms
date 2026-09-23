@@ -15,11 +15,9 @@ const source = readFileSync(
 const template = source.slice(0, source.indexOf("<script"))
 
 test("the first load holds its place with a skeleton grid", () => {
-	// Sized like the typical finished strip: a leave grid and two door rows.
-	assert.match(
-		template,
-		/v-else-if="firstLoad"[\s\S]*?<GBalanceGrid loading :cells="4" \/>[\s\S]*?<GListPanel loading :rows="2" \/>/
-	)
+	// Sized like the finished strip. Owner ruling 23 Sep 2026 (one-screen
+	// Requests): the leave grid became one line, so the skeleton is one row.
+	assert.match(template, /v-else-if="firstLoad"[\s\S]*?<GListPanel loading :rows="1" \/>/)
 	assert.match(
 		source,
 		/const firstLoad = computed\(\(\) => requestsSummary\.loading && !requestsSummary\.data\)/

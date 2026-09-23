@@ -11,7 +11,20 @@
 			@keydown.enter.prevent="openRequestModal(link)"
 			@keydown.space.prevent="openRequestModal(link)"
 		>
+			<!-- One line per request (one-screen Requests, 23 Sep): what it is,
+			     when it was filed, and its status. The full row is in See all. -->
+			<template v-if="props.compact">
+				<span class="text-sm text-ink truncate">
+					{{ __(REQUEST_KIND[link.doctype] || link.doctype) }}
+					<span class="text-ink-600"> · {{ filedOn(link) }}</span>
+				</span>
+				<GStatusChip
+					:status="requestStatus(link.doctype, link).label"
+					:label="__(requestStatus(link.doctype, link).label)"
+				/>
+			</template>
 			<component
+				v-else
 				:is="props.component || link.component"
 				:doc="link"
 				:workflowStateField="link.workflow_state_field"
@@ -54,6 +67,10 @@
 
 <script setup>
 import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GStatusChip from "@/components/glass/GStatusChip.vue"
+import { REQUEST_KIND } from "@/utils/requestKind"
+import { requestStatus } from "@/utils/requestStatus"
+import { siteTime } from "@/utils/siteTime"
 import { ref, inject } from "vue"
 import { IonModal } from "@ionic/vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
@@ -77,6 +94,11 @@ const props = defineProps({
 		type: Array,
 	},
 	teamRequests: {
+		type: Boolean,
+		default: false,
+	},
+	// One line per row: kind, date filed, status (the Requests page's last 5).
+	compact: {
 		type: Boolean,
 		default: false,
 	},
@@ -118,6 +140,12 @@ const fieldsMap = {
 	"Shift Assignment": SHIFT_FIELDS,
 	"OT Request": OT_REQUEST_FIELDS,
 	"Replacement Leave Claim": REPLACEMENT_LEAVE_CLAIM_FIELDS,
+}
+
+//: "21 Sep" on the site clock (the Date constructor rejects these strings on
+//: Safari, I-F3).
+function filedOn(request) {
+	return request.creation ? siteTime(request.creation).format("D MMM") : ""
 }
 
 const isRequestModalOpen = ref(false)

@@ -1,10 +1,29 @@
 <template>
+	<!-- YOUR LAST 5 (owner-approved one-screen Requests, 23 Sep 2026): own
+	     requests, newest first, one line each, then See all. No tabs and no
+	     filter chips here — they moved, unchanged, into the See all sheet. -->
 	<div class="w-full">
-		<GSegmented :buttons="TAB_BUTTONS" v-model="activeTab" :label="__('Requests')" />
-		<p v-if="refreshing" class="text-xs text-ink-500 mt-2" role="status">
+		<div class="g-eyebrow mb-2">{{ __("Your last 5") }}</div>
+		<p v-if="refreshing" class="text-xs text-ink-500 mb-2" role="status">
 			{{ __("Refreshing…") }}
 		</p>
-		<!-- FILTER CHIPS (mockup 4 gap #3). The question somebody brings to this
+		<RequestList :items="lastFive" compact />
+		<button
+			type="button"
+			class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
+			@click="openAll"
+		>
+			{{ __("See all") }} ›
+		</button>
+	</div>
+
+	<GModal :is-open="allOpen" :title="__('All your requests')" @did-dismiss="allOpen = false">
+		<div class="w-full">
+			<GSegmented :buttons="TAB_BUTTONS" v-model="activeTab" :label="__('Requests')" />
+			<p v-if="refreshing" class="text-xs text-ink-500 mt-2" role="status">
+				{{ __("Refreshing…") }}
+			</p>
+			<!-- FILTER CHIPS (mockup 4 gap #3). The question somebody brings to this
 		     screen is almost always one of three: what is still out, what came
 		     back yes, what came back no. A list with no filter is a list you
 		     scroll.
@@ -12,56 +31,61 @@
 		     `aria-pressed` toggles in a group, NOT role="tab": these do not move
 		     between panels, they narrow one list — the distinction mockup 4's
 		     own notes make and the reason its nav is aria-current. -->
-		<div class="g-chips" role="group" :aria-label="__('Filter requests')">
-			<button
-				v-for="chip in FILTERS"
-				:key="chip.key"
-				type="button"
-				class="g-chip g-focusable"
-				:class="{ 'g-chip--on': filter === chip.key }"
-				:aria-pressed="filter === chip.key"
-				@click="filter = chip.key"
-			>
-				{{ __(chip.label) }}
-				<span v-if="filterCounts[chip.key]" class="g-chip__count">{{
-					filterCounts[chip.key]
-				}}</span>
-			</button>
-		</div>
+			<div class="g-chips" role="group" :aria-label="__('Filter requests')">
+				<button
+					v-for="chip in FILTERS"
+					:key="chip.key"
+					type="button"
+					class="g-chip g-focusable"
+					:class="{ 'g-chip--on': filter === chip.key }"
+					:aria-pressed="filter === chip.key"
+					@click="filter = chip.key"
+				>
+					{{ __(chip.label) }}
+					<span v-if="filterCounts[chip.key]" class="g-chip__count">{{
+						filterCounts[chip.key]
+					}}</span>
+				</button>
+			</div>
 
-		<div ref="listRegion" id="request-panel-list" tabindex="-1" class="g-focusable">
-			<!-- TWO PILES while the filter is ALL (mockup 4 gap #2): work in
+			<div ref="listRegion" id="request-panel-list" tabindex="-1" class="g-focusable">
+				<!-- TWO PILES while the filter is ALL (mockup 4 gap #2): work in
 			     flight, then the record. Mixing them makes the reader sort by
 			     eye on every open. -->
-			<template v-if="splitting">
-				<template v-if="waitingGroup.length">
-					<div class="g-eyebrow mt-4 mb-2">{{ __("Waiting on someone") }}</div>
+				<template v-if="splitting">
+					<template v-if="waitingGroup.length">
+						<div class="g-eyebrow mt-4 mb-2">{{ __("Waiting on someone") }}</div>
+						<RequestList
+							:items="waitingGroup"
+							:teamRequests="activeTab !== 'mine'"
+							v-bind="emptyCopy"
+						/>
+					</template>
+					<template v-if="finishedGroup.length">
+						<div class="g-eyebrow mt-4 mb-2">{{ __("Finished") }}</div>
+						<RequestList
+							:items="finishedGroup"
+							:teamRequests="activeTab !== 'mine'"
+							v-bind="emptyCopy"
+						/>
+					</template>
 					<RequestList
-						:items="waitingGroup"
-						:teamRequests="activeTab !== 'mine'"
-						v-bind="emptyCopy"
-					/>
-				</template>
-				<template v-if="finishedGroup.length">
-					<div class="g-eyebrow mt-4 mb-2">{{ __("Finished") }}</div>
-					<RequestList
-						:items="finishedGroup"
+						v-if="!waitingGroup.length && !finishedGroup.length"
+						:items="shown"
 						:teamRequests="activeTab !== 'mine'"
 						v-bind="emptyCopy"
 					/>
 				</template>
 				<RequestList
-					v-if="!waitingGroup.length && !finishedGroup.length"
+					v-else
 					:items="shown"
 					:teamRequests="activeTab !== 'mine'"
 					v-bind="emptyCopy"
 				/>
-			</template>
-			<RequestList v-else :items="shown" :teamRequests="activeTab !== 'mine'" v-bind="emptyCopy" />
-		</div>
-		<p class="sr-only" role="status">{{ revealed }}</p>
+			</div>
+			<p class="sr-only" role="status">{{ revealed }}</p>
 
-		<!-- Not a GGhostButton: that is a glass surface and Home already spends
+			<!-- Not a GGhostButton: that is a glass surface and Home already spends
 		     4 of its 6 (§15.1). A text control under a list costs none, and the
 		     row it reveals is the one the person came for.
 		     min-h, not padding arithmetic: py-3 + text-sm computes to exactly
@@ -71,24 +95,27 @@
 		     with an explicit minimum; so does this — through the token that
 		     defines the floor (--g-touch-target-min), not a literal 44px, so
 		     one value governs every target in the app. -->
-		<button
-			v-if="hidden > 0"
-			type="button"
-			class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
-			aria-expanded="false"
-			aria-controls="request-panel-list"
-			@click="expand"
-		>
-			{{ __("Show more ({0} left)", [hidden]) }}
-		</button>
-	</div>
+			<button
+				v-if="hidden > 0"
+				type="button"
+				class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
+				aria-expanded="false"
+				aria-controls="request-panel-list"
+				@click="expand"
+			>
+				{{ __("Show more ({0} left)", [hidden]) }}
+			</button>
+		</div>
+	</GModal>
 </template>
 
 <script setup>
 import { ref, inject, onMounted, computed, markRaw, watch, nextTick } from "vue"
 import { useRoute } from "vue-router"
 
+import GModal from "@/components/glass/GModal.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
+import { lastRequests, opensOnAnswered } from "@/utils/requestsPage"
 import RequestList from "@/components/RequestList.vue"
 import { myRequestCounts } from "@/data/requestCounts"
 import { requestStatus } from "@/utils/requestStatus"
@@ -118,7 +145,20 @@ import { siteTime } from "@/utils/siteTime"
 const HISTORY_LISTS = [historyLeaves, historyClaims, historyShiftRequests]
 const route = useRoute()
 //: ?tab=answered opens what the approver already decided (Approvals links it).
-const activeTab = ref(route.query.tab === "answered" ? "answered" : "mine")
+//: The tabs live in See all now, so the query opens that sheet on Answered.
+const activeTab = ref("mine")
+const allOpen = ref(false)
+
+function openAll() {
+	console.info("[RequestPanel] see all", activeTab.value)
+	allOpen.value = true
+}
+
+if (opensOnAnswered(route.query)) {
+	console.info("[RequestPanel] ?tab=answered: opening See all on Answered")
+	activeTab.value = "answered"
+	allOpen.value = true
+}
 
 // Home shows the first five of whatever the active tab holds, and a control
 // that reveals the rest in place. The fold is a budget, not a length
@@ -201,6 +241,9 @@ const myRequests = computed(() =>
 		myReplacementLeaveClaims
 	)
 )
+
+//: The page's list: your own five newest, whatever tab See all was left on.
+const lastFive = computed(() => lastRequests(myRequests.value))
 
 // Attendance Request, OT Request and Replacement Leave Claim are all
 // docstatus-driven (no status/approver field), so the history trail — which is

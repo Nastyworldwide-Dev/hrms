@@ -11,9 +11,10 @@
   already filtered — a number you cannot act on is a number that makes the
   reader do the work of finding what it refers to.
 
-  Leave uses GBalanceGrid/GBalanceCard, which already exist and already handle
-  the pro-rated denominator: a mid-year joiner with 7 of 14 has used none of
-  it, and a bar reading 7 of 7 would say the opposite.
+  Leave is ONE line of what is left (owner ruling, 23 Sep 2026: the Requests
+  page fits one phone screen). The pro-rated denominator — a mid-year joiner
+  with 7 of 14 has used none of it — and any expiry are in the All balances
+  sheet, one tap away.
 
   A SECTION THE SERVER COULD NOT READ IS ABSENT, not zero. A zero is an
   answer, and the wrong one — "you have no overtime to claim" when the truth
@@ -34,50 +35,24 @@
 		     means (review of 111402a6d). -->
 		<span class="sr-only" role="status">{{ __("Loading your balances") }}</span>
 		<div class="flex flex-col gap-4" aria-hidden="true">
-			<GBalanceGrid loading :cells="4" />
-			<GListPanel loading :rows="2" />
+			<GListPanel loading :rows="1" />
 		</div>
 	</div>
 	<div v-else-if="hasAnything" class="flex flex-col gap-4">
-		<GBalanceGrid
-			v-if="shownLeave.length"
-			:count="shownLeave.length"
-			:loading="loading && !shownLeave.length"
-		>
-			<GBalanceCard
-				v-for="row in shownLeave"
-				:key="row.leave_type"
-				:label="row.leave_type"
-				:remaining="row.balance"
-				:allocated="row.total"
-				:entitlement="row.total"
+		<!-- Owner ruling (23 Sep, one-screen Requests): the balances are ONE
+		     line, "Annual 6 · Medical 13 · All balances ›" — the two cards took
+		     a third of the phone. The numbers are what is LEFT; the "of 14" and
+		     any expiry are one tap away, in the All balances sheet. -->
+		<div v-if="shownLeave.length" class="flex items-center justify-between gap-3">
+			<p class="text-sm text-ink" data-testid="balances-line">{{ line }}</p>
+			<button
+				type="button"
+				class="g-focusable g-list-more px-2 text-sm text-ink-600 bg-transparent border-none"
+				@click="openAll"
 			>
-				<!-- "12.5 of 16", not a bare "60". The plan asks for the
-				     DENOMINATOR because a number with no scale is not a balance:
-				     60 hospitalization days reads as alarming until you know it
-				     is 60 of 60, untouched. An expiry replaces it when there is
-				     one, because a date is the more urgent of the two. -->
-				<template #note>
-					<template v-if="row.expiring_soon">{{
-						__("Expires {0}", [formatDate(row.expires_on)])
-					}}</template>
-					<template v-else>{{ __("of {0}", [trim(row.total)]) }}</template>
-				</template>
-			</GBalanceCard>
-		</GBalanceGrid>
-
-		<!-- Owner ruling R2 (23 Sep): Annual and Medical on the strip, then every
-		     balance behind one tap, in the SAME compact rows ("even on expand can
-		     be better compact so we stay consistent"). A sheet, not an unfolding
-		     wall of cards, so Requests stays one screen. -->
-		<button
-			v-if="hiddenLeave.length"
-			type="button"
-			class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
-			@click="allOpen = true"
-		>
-			{{ __("All balances") }} ›
-		</button>
+				{{ __("All balances") }} ›
+			</button>
+		</div>
 		<GModal :is-open="allOpen" :title="__('All balances')" @did-dismiss="allOpen = false">
 			<GListPanel>
 				<GListRow
@@ -90,19 +65,24 @@
 			</GListPanel>
 		</GModal>
 
-		<GListPanel v-if="rows.length">
-			<GListRow
-				v-for="row in rows"
-				:key="row.key"
-				:label="row.label"
-				:sublabel="row.sublabel"
-				@click="row.go()"
-			>
-				<template #icon>
-					<component :is="row.icon" class="g-row-icon" />
-				</template>
-			</GListRow>
-		</GListPanel>
+		<!-- Needs attention: one line each, and only what is non-zero. The
+		     eyebrow goes with them — a heading over nothing is noise. -->
+		<template v-if="rows.length">
+			<div class="g-eyebrow">{{ __("Needs attention") }}</div>
+			<GListPanel>
+				<GListRow
+					v-for="row in rows"
+					:key="row.key"
+					:label="row.label"
+					:amount="row.amount"
+					@click="row.go()"
+				>
+					<template #icon>
+						<component :is="row.icon" class="g-row-icon" />
+					</template>
+				</GListRow>
+			</GListPanel>
+		</template>
 	</div>
 </template>
 
@@ -113,26 +93,22 @@ import { computed, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { CircleDollarSign, Receipt, UserCheck } from "lucide-vue-next"
 
-import GBalanceCard from "@/components/glass/GBalanceCard.vue"
 import GBanner from "@/components/glass/GBanner.vue"
-import GBalanceGrid from "@/components/glass/GBalanceGrid.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
 
 import { requestsSummary } from "@/data/requestsSummary"
+import { balancesLine, trimNumber as trim } from "@/utils/requestsPage"
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
 const router = useRouter()
 
-const loading = computed(() => Boolean(requestsSummary.loading))
 const firstLoad = computed(() => requestsSummary.loading && !requestsSummary.data)
 const data = computed(() => requestsSummary.data || {})
 const leave = computed(() => data.value.leave || [])
-//: Four cards fit a phone without wrapping; seven do not. Measured against
-//: the deployed screenshot, where "Compassionate Leave (Immediate Family)"
-//: took three lines and pushed everything actionable below the fold.
+//: Two names fit the one balances line on a phone; the rest are in the sheet.
 const LEAVE_SHOWN = 2
 //: Annual and Medical lead the strip (owner ruling R2), matched by name
 //: because every site names its leave types its own way.
@@ -161,13 +137,12 @@ const rankedLeave = computed(() =>
 )
 
 const shownLeave = computed(() => rankedLeave.value.slice(0, LEAVE_SHOWN))
-const hiddenLeave = computed(() => rankedLeave.value.slice(LEAVE_SHOWN))
+//: "Annual 6 · Medical 13" — the pinned pair, remaining balance, trimmed.
+const line = computed(() => balancesLine(shownLeave.value))
 
-//: A whole number reads as a count; 12.5 days is a real half-day balance.
-//: Trailing ".0" on every card is noise.
-function trim(value) {
-	const n = Number(value)
-	return Number.isInteger(n) ? String(n) : n.toFixed(1)
+function openAll() {
+	console.info("[RequestBalances] opening all balances", leave.value.length)
+	allOpen.value = true
 }
 
 //: "6 of 14 left" — or the expiry, when there is one, as on the cards.
@@ -201,10 +176,11 @@ const rows = computed(() => {
 			key: "ot-unclaimed",
 			icon: Receipt,
 			label: __("{0} of overtime to claim", [countOf(overtime.unclaimed_days, __("day"))]),
-			// The hours are what decides whether it is worth doing now.
-			sublabel: overtime.unclaimed_hours
+			// The hours are what decides whether it is worth doing now; they sit
+			// on the right so the row stays one line (one-screen Requests).
+			amount: overtime.unclaimed_hours
 				? __("{0} hours", [Number(overtime.unclaimed_hours).toFixed(2)])
-				: null,
+				: "",
 			go: () => router.push({ name: "OTRequestFormView" }),
 		})
 	}
@@ -219,7 +195,7 @@ const rows = computed(() => {
 			label: __("{0} approved, not yet paid", [
 				money(expenses.approved_unpaid_amount, expenses.currency),
 			]),
-			sublabel: null,
+			amount: "",
 			go: () => router.push({ name: "ExpenseClaimListView" }),
 		})
 	}
@@ -232,7 +208,7 @@ const rows = computed(() => {
 			// until payroll — by which time the window to fix it has usually
 			// closed.
 			label: __("{0} with no attendance", [countOf(attendance.days, __("day"))]),
-			sublabel: __("Fix these before payroll"),
+			amount: "",
 			go: () => router.push({ name: "AttendanceRequestFormView" }),
 		})
 	}

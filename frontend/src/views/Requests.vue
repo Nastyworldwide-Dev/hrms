@@ -24,15 +24,13 @@
 			<div
 				class="flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
 			>
-				<!-- FIRST, above the tiles. §5: the numbers belong where the
-				     decision is made, not on the screen that stores them — an
-				     employee deciding how much leave to take should not have to
-				     remember a figure from another screen. The strip renders
-				     nothing when there is nothing to say. -->
-				<RequestBalances />
-				<!-- ONE button, one type sheet (audit P1-B, prototype + mockup 4): the
-				     six-tile grid pushed the list below the fold. -->
+				<!-- Owner-approved one-screen layout (23 Sep 2026): the action
+				     first, then the numbers as one line, then what needs you, then
+				     your last five. ONE button, one type sheet (audit P1-B). -->
 				<GButton :label="__('New request')" @click="typeSheetOpen = true" />
+				<!-- §5: the numbers sit where the decision is made. The strip
+				     renders nothing when there is nothing to say. -->
+				<RequestBalances />
 				<RequestPanel />
 				<GActionSheet
 					:is-open="typeSheetOpen"

@@ -1,3 +1,3 @@
-CLASS: a Home that read as broken — blocks missing or vanishing.
+CLASS: a Requests page that scrolled a screen past what people came for.
 
-Call sites: Home.vue order — same-root. HomeWeek/HomeComingUp + hrms/api/home.py — same-root (own employee only). Announcements first-load skeleton — same-root. BaseLayout Nadi word beside the mark — same-root, fixed.
+Call sites: Requests.vue order — same-root. RequestBalances one line — same-root. RequestPanel last 5 + See all sheet (chips/paging moved) — same-root. RequestList compact — same-root. ?tab=answered — same-root, via opensOnAnswered.

@@ -91,7 +91,9 @@ test("the leave denominator is the annual entitlement", () => {
 	// A mid-year joiner with 7 of 14 has used none of it. "7 of 7" says the
 	// opposite, and it is what reading `allocated_leaves` as the total gives.
 	assert.match(api, /flt\(entry\.get\("annual_entitlement"\)\) or allocated/)
-	assert.match(component, /:entitlement="row\.total"/)
+	// Owner ruling 23 Sep 2026 (one-screen Requests): the cards are gone; the
+	// denominator is printed in the All balances sheet as "{0} of {1} left".
+	assert.match(component, /__\("\{0\} of \{1\} left", \[trim\(row\.balance\), trim\(row\.total\)\]\)/)
 })
 
 test("expiry comes from the allocation, not from a key that is not there", () => {
@@ -108,7 +110,8 @@ test("only a near expiry is news", () => {
 	// is a prompt, and showing both as prompts makes neither one.
 	assert.match(api, /EXPIRY_HORIZON_DAYS = 45/)
 	assert.match(api, /0 <= days_left <= EXPIRY_HORIZON_DAYS and balance > 0/)
-	assert.match(component, /v-if="row\.expiring_soon"/)
+	// Owner ruling 23 Sep 2026: the expiry shows in the All balances sheet row.
+	assert.match(component, /if \(row\.expiring_soon\)/)
 })
 
 test("an unmarked day means a day somebody actually worked", () => {
@@ -118,12 +121,13 @@ test("an unmarked day means a day somebody actually worked", () => {
 	assert.match(api, /worked_days if day not in marked/)
 })
 
-test("the strip is the first thing on Requests", () => {
-	// Above New request: the numbers inform the decision the button acts on.
+test("the strip comes straight after New request", () => {
+	// REVERSED by the owner-approved one-screen layout (23 Sep 2026): the
+	// button is first, the one balances line right under it.
 	const view = code(read("views/Requests.vue"))
 	assert.ok(
-		view.indexOf("<RequestBalances") < view.indexOf("__('New request')"),
-		"balances before the action they inform"
+		view.indexOf("__('New request')") < view.indexOf("<RequestBalances"),
+		"New request first, then balances"
 	)
 })
 
@@ -136,22 +140,25 @@ test("the strip is the first thing on Requests", () => {
 test("a balance states what it is out of", () => {
 	// The plan's words are "12.5 of 16 left". A number with no scale is not a
 	// balance, it is a number.
-	assert.match(component, /__\("of \{0\}", \[trim\(row\.total\)\]\)/)
+	// Owner ruling 23 Sep 2026: the page line is the remaining number only
+	// ("Annual 6"); the scale lives in the All balances sheet.
+	assert.match(component, /__\("\{0\} of \{1\} left"/)
 })
 
 test("a whole number does not render a trailing .0", () => {
 	// "of 16" reads as a count; "of 16.0" reads as a measurement. Half-days
-	// are real, so the decimal stays when it means something.
-	const fn = component.slice(component.indexOf("function trim"))
+	// are real, so the decimal stays when it means something. The trim now
+	// lives in utils/requestsPage.js (tested by running it there).
+	assert.match(component, /trimNumber as trim/)
+	const fn = read("utils/requestsPage.js")
 	assert.match(fn, /Number\.isInteger\(n\) \? String\(n\) : n\.toFixed\(1\)/)
 })
 
 test("an expiry replaces the denominator rather than joining it", () => {
-	// Two notes on one card is the wrap that made the wall. A date is the more
-	// urgent of the two, so it wins the line.
-	const note = component.slice(component.indexOf("#note"), component.indexOf("</GBalanceCard>"))
-	assert.match(note, /v-if="row\.expiring_soon"/)
-	assert.match(note, /v-else/)
+	// A date is the more urgent of the two, so it wins the line (sheet row,
+	// since the cards went — owner ruling 23 Sep 2026).
+	const fn = component.slice(component.indexOf("function balanceLine"))
+	assert.match(fn, /if \(row\.expiring_soon\)[\s\S]*?return[\s\S]*?return __\("\{0\} of \{1\} left"/)
 })
 
 test("owner ruling R2: Annual and Medical, then All balances; the full list is compact too", () => {
