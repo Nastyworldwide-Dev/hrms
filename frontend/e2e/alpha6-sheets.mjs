@@ -4,7 +4,13 @@
 // and it closes again with Close. The first audit never opened a sheet.
 //   cd frontend && set -a && . ../.env && set +a && node e2e/alpha6-sheets.mjs
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs"
-import { chromium } from "playwright"
+import { chromium, webkit } from "playwright"
+
+//: ENGINE=webkit runs the same checks in Safari's engine (alpha.7). The phone
+//: contexts then identify as an iPhone, as the owner's Safari does, so iOS-only
+//: code paths (install prompt, date pills) are exercised.
+const ENGINE = process.env.ENGINE === "webkit" ? webkit : chromium
+const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
 import { BASE, PW } from "./screens.mjs"
 
 const OUT = process.env.OUT || "/tmp/alpha6/sheets"
@@ -30,7 +36,7 @@ const SHEETS = [
 ]
 
 async function session(browser, usr) {
-	const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+	const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: ENGINE === chromium, hasTouch: true, ...(ENGINE === webkit ? { userAgent: IPHONE_UA } : {}) })
 	const res = await ctx.request.post(`${BASE}/api/method/login`, { form: { usr, pwd: PW } })
 	if (res.status() !== 200) throw new Error(`login ${usr}: ${res.status()}`)
 	return ctx
@@ -57,7 +63,7 @@ function measure(banned) {
 	}
 }
 
-const browser = await chromium.launch()
+const browser = await ENGINE.launch()
 const who = { staff: "nadi.w0.employee@example.invalid", approver: "nadi.w0.approver@example.invalid" }
 const ctxs = {}
 let n = 0

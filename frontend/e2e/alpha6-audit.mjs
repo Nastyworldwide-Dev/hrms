@@ -3,7 +3,13 @@
 // JSON line per screen and a full-page screenshot per staff/approver phone view.
 //   cd frontend && set -a && . ../.env && set +a && node e2e/alpha6-audit.mjs
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs"
-import { chromium } from "playwright"
+import { chromium, webkit } from "playwright"
+
+//: ENGINE=webkit runs the same checks in Safari's engine (alpha.7). The phone
+//: contexts then identify as an iPhone, as the owner's Safari does, so iOS-only
+//: code paths (install prompt, date pills) are exercised.
+const ENGINE = process.env.ENGINE === "webkit" ? webkit : chromium
+const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
 import { BASE, PW, screens, settle } from "./screens.mjs"
 
 const OUT = process.env.OUT || "/tmp/alpha6/shots"
@@ -199,7 +205,7 @@ function audit() {
 	}
 }
 
-const browser = await chromium.launch()
+const browser = await ENGINE.launch()
 let n = 0
 for (const [who, usr] of PERSONAS) {
 	const state = await loginAs(browser, usr)
@@ -209,7 +215,7 @@ for (const [who, usr] of PERSONAS) {
 	}
 	for (const [vp, W, H, theme] of RUNS) {
 		if (vp === "desktop" && who !== "staff") continue
-		const ctx = await browser.newContext({ storageState: state, viewport: { width: W, height: H }, colorScheme: theme, deviceScaleFactor: 1, isMobile: vp === "phone", hasTouch: vp === "phone" })
+		const ctx = await browser.newContext({ storageState: state, viewport: { width: W, height: H }, colorScheme: theme, deviceScaleFactor: 1, isMobile: vp === "phone" && ENGINE === chromium, hasTouch: vp === "phone", ...(ENGINE === webkit && vp === "phone" ? { userAgent: IPHONE_UA } : {}) })
 		await ctx.addInitScript((t) => localStorage.setItem("hrms:theme", t), theme)
 		const page = await ctx.newPage()
 		const errors = []
