@@ -18,13 +18,13 @@
 <script setup>
 import { computed } from "vue"
 
-// accent/neutral reuse the GStatusChip variant treatments rather than
-// duplicating them — same measured pairs, one definition
+// accent/neutral are label capsules; statuses (GStatusChip) became plain
+// coloured text in alpha.7, so the two no longer share classes.
 const VARIANTS = {
 	open: "g-badge--open",
 	resolved: "g-badge--resolved",
-	accent: "g-chip--progress",
-	neutral: "g-chip--neutral",
+	accent: "g-badge--label",
+	neutral: "g-badge--label-muted",
 }
 
 const props = defineProps({

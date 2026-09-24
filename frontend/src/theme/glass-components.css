@@ -677,34 +677,47 @@ html[data-theme="dark"] .g-badge--open {
 /* Six VARIANTS, not five states. Real Frappe workflow states are composite and
    open-ended ("Approved & Unpaid", "Partially Paid"), so GStatusChip maps many
    states onto these few treatments. Every pair measured over glass, light/dark. */
+/* A status is COLOURED TEXT, as iOS draws it (alpha.7 §5.2, review A3):
+   no fill, no outline. The word always carries the meaning; colour only
+   adds to it (§14.1). Inks are Apple's system colours (tokens.json). */
+.g-chip--neutral,
+.g-chip--progress,
+.g-chip--success,
+.g-chip--danger,
+.g-chip--muted,
+.g-chip--attention {
+	padding-left: 0;
+	padding-right: 0;
+}
 .g-chip--neutral {
-	background: var(--g-icon-bg);
 	color: var(--g-ink2);
-} /* 5.75 / 5.85 */
-/* In flight, not an action: a neutral ink chip, not the lime that means
-   "tap here" (alpha.6 B5; HIG Color). */
+}
 .g-chip--progress {
+	color: var(--g-ink2);
+}
+.g-chip--success {
+	color: var(--g-success-ink);
+}
+.g-chip--danger {
+	color: var(--g-danger-ink);
+}
+.g-chip--muted {
+	color: var(--g-ink-muted);
+}
+.g-chip--attention {
+	color: var(--g-warn-ink);
+}
+
+/* Label badges (a grade, a count, "New") are not statuses: a small filled
+   capsule, as iOS draws a tag (GBadge accent/neutral). */
+.g-badge--label {
 	background: var(--g-icon-bg);
 	color: var(--g-ink);
 }
-.g-chip--success {
-	background: rgba(var(--g-success-rgb) / 0.2);
-	color: var(--g-success-ink);
-} /* 4.60 / 6.88 */
-.g-chip--danger {
-	background: var(--g-danger);
-	color: var(--g-on-brand);
-} /* 7.11 both — a danger TINT cannot clear 4.5 on light, so this one is solid */
-.g-chip--muted {
-	background: transparent;
-	border: 1px solid var(--g-hair);
-	color: var(--g-ink-muted);
-} /* 4.56 / 4.58 */
-.g-chip--attention {
-	background: transparent;
-	border: 1px solid var(--g-warn);
-	color: var(--g-warn-ink);
-} /* 4.72 / 8.12 — outline, because warn-ink on a warn tint measures 4.27 on light */
+.g-badge--label-muted {
+	background: var(--g-icon-bg);
+	color: var(--g-ink2);
+}
 
 /* ---------- GEmptyState (§10.1 #11, copy §11.1) ---------- */
 
