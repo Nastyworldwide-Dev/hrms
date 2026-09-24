@@ -41,13 +41,13 @@ Status: ✅ done (commit) · ▶ next · ◻ to do. "Evidence" = how we know it'
 | # | Step | Evidence it's broken | Source | Status |
 |---|---|---|---|---|
 | A0 | Approval sheet shows the date | screen journey: Fix a day sheet had no date | W6, owner "correctly" | ✅ 45f1d5efb |
-| A1 | Overtime through the screens | 10/10: all 5 types, both decisions each way | 0.5 gap | ✅ |
-| A2 | Home "No shift today" when Profile shows a shift | Home reads only assignments (`api/now.py:65`), Profile the default shift (`Profile.vue:321`) | your screenshot | ◻ |
-| A3 | Time off page drags sideways on iPhone | Safari ignores a date field's width without `appearance:none; min-width:0`, and Chrome can't show it | WebKit bug, 3 sources | ◻ |
-| A4 | Empty section headings (6 on Expense, "Other details" on Time off) | audit §F | R7, W1 | ◻ |
-| A5 | Approver pickers show emails ("x@y.com : Name") | screenshots | K3, W10 | ◻ |
-| A6 | Expense sheet shows 2 statuses (Draft + Waiting) and ERP totals | screen journey shot 17 | W1, R2 | ◻ |
-| A7 | HR setup check for the 4 gaps Nadi doesn't detect (expense account, payable account, leave year, shift overtime) | alpha6-readiness.md; each one broke a request on the test site | "never ask employees to diagnose" | ◻ |
+| A1 | Overtime through the screens | 10/10: all 5 types, both decisions each way | 0.5 gap | ✅ fb716211b |
+| A2 | Home "No shift today" when Profile shows a shift | Home reads only assignments (`api/now.py:65`), Profile the default shift (`Profile.vue:321`) | your screenshot | ✅ 1d0a08320 |
+| A3 | Time off page drags sideways on iPhone | Safari ignores a date field's width without `appearance:none; min-width:0`, and Chrome can't show it | WebKit bug, 3 sources | ✅ c501578fc |
+| A4 | Empty section headings (6 on Expense, "Other details" on Time off) | audit §F | R7, W1 | ✅ 88bc8706f |
+| A5 | Approver pickers show emails ("x@y.com : Name") | screenshots | K3, W10 | ✅ 175028d53 |
+| A6 | Expense sheet shows 2 statuses (Draft + Waiting) and ERP totals | screen journey shot 17 | W1, R2 | ✅ d9457d894 |
+| A7 | HR setup check for the 4 gaps Nadi doesn't detect (expense account, payable account, leave year, shift overtime) | alpha6-readiness.md; each one broke a request on the test site | "never ask employees to diagnose" | ✅ a6dc6dc29 |
 
 ### Phase B — One Apple look (UI)
 | # | Step | Evidence | Rule | Status |
@@ -90,4 +90,4 @@ Status: ✅ done (commit) · ▶ next · ◻ to do. "Evidence" = how we know it'
 - **Only 2 real test people** (staff + one approver) plus the W0 manager and HR on the local site. Live data may show cases these don't.
 
 ## Order and size
-A (8 steps) → B (8) → C (5) → D (2) → E (4) = **27 steps. 6 done.** One commit each, tested before it lands.
+A (8 steps) → B (8) → C (5) → D (2) → E (4) = **27 steps. 13 done.** One commit each, tested before it lands.
