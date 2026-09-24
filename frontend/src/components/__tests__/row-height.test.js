@@ -18,8 +18,11 @@ const rule = (selector) => {
 	return css.slice(at, css.indexOf("}", at))
 }
 
-test("a list row is 56px tall", () => {
-	assert.match(rule(".g-row"), /min-height: 56px;/)
+test("a list row is iOS's height: 54 with an icon, 44 plain", () => {
+	// SUPERSEDED 25 Sep (alpha.7 §5.3, owner: "exact 1:1 iOS 26"): P5's 56 px
+	// becomes iOS's measured 54 with an icon tile; a plain row is the 44 floor.
+	assert.match(rule(".g-row"), /min-height: var\(--g-touch-target-min\);/)
+	assert.match(rule(".g-row:has(.g-row__well)"), /min-height: var\(--g-row-height-icon\);/)
 })
 
 test("Home keeps 44px rows through one modifier on its column", () => {

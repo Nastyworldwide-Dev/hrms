@@ -38,6 +38,9 @@ const GRID_EXEMPT = {
 	"layout.viewport-height": "the reference device's real height",
 	"layout.touch-target-min": "44px is the platform floor (HIG); it is not ours to round",
 	"layout.content-column-lg": "720px — signed off by the owner as a measured column width",
+	"radius.radius-group": "26px — iOS 26 inset-grouped list corner, measured on the owner's iPhone (alpha.7 §5.3); Apple's number, not ours to round",
+	"layout.row-height-icon": "54px — iOS 26 list row with an icon, measured (alpha.7 §5.3)",
+	"layout.group-gap": "35px — gap between iOS inset groups, measured (alpha.7 §5.3)",
 };
 
 //: Blur radii are optical, not layout: a grid buys nothing. Excluded as a
@@ -145,6 +148,11 @@ const CSS_PROPS = new Set([
 const CSS_EXEMPT = new Map([
 	[2.5, "the notification dot's rim curve — a 4px radius on a 5px dot is a square"],
 	[22, "the 44px compact button's capsule: radius = half the height (WWDC25 356)"],
+	[26, "iOS 26 inset-grouped list corner, measured (alpha.7 §5.3)"],
+	[54, "iOS 26 list row with an icon, measured (alpha.7 §5.3)"],
+	[35, "gap between iOS inset groups, measured (alpha.7 §5.3)"],
+	[29, "iOS Settings icon tile, measured 29 pt (alpha.7 §5.3)"],
+	[57, "separator start past an icon tile: 16 inset + 29 tile + 12 gap (alpha.7 §5.3)"],
 ]);
 
 const cssPath = join(ROOT, "frontend/src/theme/glass-components.css");

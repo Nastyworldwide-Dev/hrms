@@ -12,6 +12,7 @@ module.exports = {
 		action: "var(--g-radius-action)",
 		banner: "var(--g-radius-banner)",
 		card: "var(--g-radius-card)",
+		group: "var(--g-radius-group)",
 		input: "var(--g-radius-input)",
 		panel: "var(--g-radius-panel)",
 		pill: "var(--g-radius-pill)",

@@ -80,6 +80,7 @@
 	--g-radius-action: 20px;
 	--g-radius-banner: 16px;
 	--g-radius-card: 16px;
+	--g-radius-group: 26px;
 	--g-radius-input: 12px;
 	--g-radius-panel: 20px;
 	--g-radius-pill: 8px;
@@ -101,6 +102,8 @@
 	--g-content-column: calc(100% - 32px);
 	--g-content-column-lg: 720px;
 	--g-content-column-read: 720px;
+	--g-group-gap: 35px;
+	--g-row-height-icon: 54px;
 	--g-sheet-max-height: calc(100vh - 5rem);
 	--g-sheet-max-height: calc(100dvh - 5rem);
 	--g-tabbar-border: 1px;
