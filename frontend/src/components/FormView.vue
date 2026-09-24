@@ -27,26 +27,17 @@
 						class="whitespace-nowrap"
 					/>
 
-					<Dropdown
-						class="ml-auto"
-						:options="[
-							{
-								label: __('Delete'),
-								condition: showDeleteButton,
-								onClick: () => (showDeleteDialog = true),
-							},
-							{ label: __('Reload'), onClick: () => reloadDoc() },
-							{
-								label: __('Download PDF'),
-								condition: () => props.showDownloadPDFButton,
-								onClick: () => handleDownload(),
-							},
-						]"
-						:button="{
-							label: __('Menu'),
-							icon: 'more-horizontal',
-							variant: 'ghost',
-						}"
+					<!-- The ⋯ menu: the Glass action sheet (alpha.7 §5.6), Delete in red
+					     and last, as iOS lists a destructive choice. -->
+					<GIconButton :label="__('More')" @click="menuOpen = true">
+						<Ellipsis class="h-5 w-5" aria-hidden="true" />
+					</GIconButton>
+					<GActionSheet
+						:is-open="menuOpen"
+						:title="__(formTitle(props.doctype, !id))"
+						:actions="menuActions"
+						@select="onMenu"
+						@did-dismiss="menuOpen = false"
 					/>
 				</template>
 			</ShellHeader>
@@ -381,26 +372,18 @@
 		{{ __("You have unsaved changes. Leave without saving?") }}
 	</GConfirm>
 
-	<Dialog v-model="showCancelDialog">
-		<template #body-title>
-			<h2 class="text-xl font-bold">{{ __("Confirm") }}</h2>
-		</template>
-		<template #body-content>
-			<p>
-				{{ __("Cancel this {0}?", [__(props.noun)]) }}
-			</p>
-		</template>
-		<template #actions>
-			<div class="flex flex-row gap-4">
-				<Button variant="outline" class="py-5 w-full" @click="showCancelDialog = false">
-					{{ __("No") }}
-				</Button>
-				<Button variant="solid" @click="handleDocUpdate('cancel')" class="py-5 w-full">
-					{{ __("Yes") }}
-				</Button>
-			</div>
-		</template>
-	</Dialog>
+	<GConfirm
+		:is-open="showCancelDialog"
+		:title="__('Cancel this {0}?', [__(props.noun)])"
+		:confirm-label="__('Cancel request')"
+		:cancel-label="__('Keep request')"
+		destructive
+		:pending="finalize.loading || documentResource?.setValue?.loading"
+		@confirm="handleDocUpdate('cancel')"
+		@cancel="showCancelDialog = false"
+	>
+		{{ __("This takes the {0} back. It cannot be undone.", [__(props.noun)]) }}
+	</GConfirm>
 </template>
 
 <script setup>
@@ -414,7 +397,10 @@ import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 
 import { goBackOrHome } from "@/utils/navigation"
-import { ErrorMessage, createListResource, createDocumentResource, createResource, Dropdown, Dialog } from "frappe-ui"
+import { ErrorMessage, createListResource, createDocumentResource, createResource } from "frappe-ui"
+import { Ellipsis } from "lucide-vue-next"
+import GActionSheet from "@/components/glass/GActionSheet.vue"
+import GIconButton from "@/components/glass/GIconButton.vue"
 import { gToast } from "@/components/glass/toast"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import FormField from "@/components/FormField.vue"
@@ -547,6 +533,24 @@ function discardAndLeave() {
 let isFormUpdated = ref(false)
 let showDeleteDialog = ref(false)
 let showSubmitDialog = ref(false)
+
+//: The ⋯ menu's choices (alpha.7 §5.6). Delete only where the old menu's
+//: condition allowed it, and last.
+const menuOpen = ref(false)
+const menuActions = computed(() =>
+	[
+		{ key: "reload", label: __("Reload") },
+		props.showDownloadPDFButton && { key: "pdf", label: __("Download PDF") },
+		showDeleteButton() && { key: "delete", label: __("Delete"), destructive: true },
+	].filter(Boolean)
+)
+function onMenu(key) {
+	menuOpen.value = false
+	console.info("[FormView] menu", key)
+	if (key === "reload") reloadDoc()
+	else if (key === "pdf") handleDownload()
+	else if (key === "delete") showDeleteDialog.value = true
+}
 let showCancelDialog = ref(false)
 //: A clean sent request whose only action is Cancel shows it as a red row in
 //: the form, not a footer capsule (alpha.7 B6).
