@@ -53,50 +53,68 @@
 							</GListRow>
 						</GListPanel>
 
-						<!-- How the app behaves: inline, the Settings page is cut (S-DUP). -->
-						<div class="flex flex-col gap-2">
-							<span class="text-card-title text-ink">{{ __("Theme") }}</span>
-							<GSegmented
-								:buttons="THEME_BUTTONS"
-								:model-value="theme.mode"
-								:label="__('Theme')"
-								@update:model-value="setTheme"
-							/>
-						</div>
+						<!-- How the app behaves (alpha.6 B3): ONE grouped list, iOS Settings
+						     style. Appearance is a menu row (HIG Pickers: a short list is a
+						     pop-up button); each on/off is a switch TRAILING its row (HIG
+						     Toggles); what they do is the group footer, not a floating line. -->
+						<section class="g-form-section">
+							<div class="g-form-group g-you-settings">
+								<label class="g-form-row">
+									<span class="g-form-row__label">{{ __("Appearance") }}</span>
+									<GSelect
+										:options="THEME_OPTIONS"
+										:model-value="theme.mode"
+										:aria-label="__('Appearance')"
+										@update:model-value="setTheme"
+									/>
+								</label>
+								<!-- Only where the site can push: a switch that cannot work is
+								     not offered (audit-pages §4, "actionable only"). -->
+								<div v-if="canPush" class="g-form-row">
+									<span class="g-form-row__label">{{ __("Notifications") }}</span>
+									<GSwitch
+										class="g-form-row__switch"
+										:aria-label="__('Notifications')"
+										:model-value="pushOn"
+										:disabled="pushBusy"
+										@update:model-value="togglePush"
+									/>
+								</div>
+								<!-- Owner ruling, 23 Sep 2026: check-in / check-out reminders,
+								     the person's own on/off, ON by default. -->
+								<div class="g-form-row">
+									<span class="g-form-row__label">{{ __("Shift reminders") }}</span>
+									<GSwitch
+										class="g-form-row__switch"
+										:aria-label="__('Shift reminders')"
+										:model-value="remindersOn"
+										:disabled="setReminders.loading"
+										@update:model-value="toggleReminders"
+									/>
+								</div>
+							</div>
+							<p class="g-form-footer">
+								{{
+									canPush
+										? __(
+												"Notifications arrive on this phone. Shift reminders nudge you if you forget to check in or out."
+										  )
+										: __("Shift reminders nudge you if you forget to check in or out.")
+								}}
+							</p>
+						</section>
 
-						<!-- Only where the site can push: a switch that cannot work is
-						     not offered (audit-pages §4, "actionable only"). -->
-						<div v-if="canPush" class="g-switch-row">
-							<GSwitch
-								:label="__('Notifications')"
-								:model-value="pushOn"
-								:disabled="pushBusy"
-								@update:model-value="togglePush"
-							/>
-							<p class="text-caption text-ink-600">{{ __("On this phone") }}</p>
+						<!-- The way out: a destructive row, red text (HIG Buttons), never
+						     the loudest thing on the page. -->
+						<div class="g-form-group">
+							<button
+								type="button"
+								class="g-form-row g-form-row--action g-form-row--destructive"
+								@click="logout"
+							>
+								{{ __("Log out") }}
+							</button>
 						</div>
-
-						<!-- Owner ruling, 23 Sep 2026: check-in / check-out reminders,
-						     the person's own on/off, ON by default. -->
-						<div class="g-switch-row">
-							<GSwitch
-								:label="__('Shift reminders')"
-								:model-value="remindersOn"
-								:disabled="setReminders.loading"
-								@update:model-value="toggleReminders"
-							/>
-							<p class="text-caption text-ink-600">{{ __("A nudge if you forget to check in or out") }}</p>
-						</div>
-
-						<button
-							@click="logout"
-							class="g-focusable flex items-center justify-center gap-2 w-full bg-transparent border border-divider rounded-action text-inkbase px-4 py-3.5 font-sans font-extrabold text-card-title hover:bg-icon-bg"
-						>
-							<!-- neutral, not accent (8.14): the way out is not the
-							     loudest thing on the page. -->
-							<LogOut class="w-4 h-4" />
-							{{ __("Log out") }}
-						</button>
 
 						<p class="text-caption text-ink-600 text-center">
 							{{ __("Version {0} · {1}", [versionString, buildString]) }}
@@ -105,7 +123,11 @@
 				</div>
 			</div>
 
-			<GModal :is-open="detailsOpen" :title="__('Your details')" @did-dismiss="detailsOpen = false">
+			<GModal
+				:is-open="detailsOpen"
+				:title="__('Your details')"
+				@did-dismiss="detailsOpen = false"
+			>
 				<ProfileInfoModal v-if="detailsOpen" :data="detailRows" />
 			</GModal>
 		</ion-content>
@@ -113,7 +135,7 @@
 </template>
 
 <script setup>
-import { KeyRound, LogOut, SquareCheck, User } from "lucide-vue-next"
+import { KeyRound, SquareCheck, User } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from "vue"
 import { useListUpdate } from "@/composables/realtime"
@@ -127,7 +149,7 @@ import GAvatar from "@/components/glass/GAvatar.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
-import GSegmented from "@/components/glass/GSegmented.vue"
+import GSelect from "@/components/glass/GSelect.vue"
 
 import { showErrorAlert } from "@/utils/dialogs"
 import { formatCurrency } from "@/utils/formatters"
@@ -220,8 +242,9 @@ const rows = computed(() => [
 ])
 
 // __("Light"), __("Dark"), __("System")
-const THEME_LABELS = { light: "Light", dark: "Dark", system: "System" }
-const THEME_BUTTONS = THEME_MODES.map((mode) => ({ key: mode, label: __(THEME_LABELS[mode]) }))
+const THEME_LABELS = { light: "Light", dark: "Dark", system: "Automatic" }
+//: iOS names this "Appearance: Light / Dark / Automatic".
+const THEME_OPTIONS = THEME_MODES.map((mode) => ({ value: mode, label: __(THEME_LABELS[mode]) }))
 
 //: Offered only where the site can push (push relay configured and the
 //: server allows it); otherwise there is nothing the switch could do.

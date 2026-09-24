@@ -33,7 +33,8 @@ test("one details row, one sheet", () => {
 })
 
 test("theme and notifications are on the page; Settings is gone", () => {
-	assert.match(template, /<GSegmented[\s\S]*?THEME/)
+	// alpha.6 B3: Appearance is a menu row (HIG Pickers), not a segmented bar.
+	assert.match(template, /<GSelect[\s\S]*?THEME_OPTIONS/)
 	assert.match(template, /__\(['"]Notifications['"]\)/)
 	assert.doesNotMatch(view, /name: "Settings"/)
 	assert.ok(!existsSync(at("../AppSettings.vue")), "the Settings page is deleted")

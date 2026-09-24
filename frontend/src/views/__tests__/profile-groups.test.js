@@ -69,3 +69,28 @@ test("the role gate is still the server's verdict", () => {
 	assert.match(view, /isApprover\.data/)
 	assert.doesNotMatch(view, /"HR Manager"|"HR User"/, "no role literal")
 })
+
+// alpha.6 B3 (owner screenshot, 24 Sep 2026): "the Switch button, notification
+// and shift reminders are odd design and placement. Doesnt follow how ios 26
+// does." The switches sat on the LEFT, outside any group, with their hints
+// floating underneath. Apple HIG Toggles: a switch lives in a list row, the
+// row text is its label, the switch trails; guidance goes in the group footer.
+// Appearance is a pop-up menu row (HIG Pickers: short list -> menu button).
+test("app settings are one grouped list: Appearance menu, then switch rows", () => {
+	const group = view.slice(view.indexOf('class="g-form-group g-you-settings"'))
+	assert.ok(group.length > 0, "the settings group exists")
+	const block = group.slice(0, group.indexOf("</div>\n"))
+	assert.match(block, /Appearance/)
+	assert.match(block, /<GSelect/)
+	assert.match(view, /class="g-form-row__switch"[\s\S]*?Notifications|Notifications[\s\S]*?class="g-form-row__switch"/)
+	assert.doesNotMatch(view, /<GSegmented/, "no three-button theme bar")
+	assert.doesNotMatch(view, /g-switch-row/, "no floating switch rows")
+})
+
+test("the hint is the group footer, not a line under a switch", () => {
+	assert.match(view, /class="g-form-footer"/)
+})
+
+test("log out is a red row, not a bordered button (HIG: destructive = red text)", () => {
+	assert.match(view, /class="g-form-row g-form-row--action g-form-row--destructive"/)
+})

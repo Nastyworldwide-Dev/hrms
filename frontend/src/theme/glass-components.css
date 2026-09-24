@@ -3604,3 +3604,30 @@ ion-router-outlet {
 	-webkit-text-fill-color: var(--g-ink2);
 	opacity: 1;
 }
+
+/* Group footer: guidance under a group (HIG Lists and tables; rulebook R4). */
+.g-form-footer {
+	margin: 0;
+	padding: 0 16px;
+	font-family: var(--g-font-ui);
+	font-size: 13px;
+	line-height: 18px;
+	color: var(--g-ink2);
+}
+/* A row that IS the action (Log out): the whole row is the button. */
+.g-form-row--action {
+	width: 100%;
+	justify-content: center;
+	border: 0;
+	background: transparent;
+	font-family: var(--g-font-ui);
+	font-size: 17px;
+	line-height: 22px;
+	cursor: pointer;
+}
+.g-form-row--action:active {
+	background: var(--g-icon-bg);
+}
+.g-form-row--destructive {
+	color: var(--g-danger-ink);
+}

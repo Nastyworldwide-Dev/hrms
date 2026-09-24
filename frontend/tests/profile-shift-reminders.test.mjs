@@ -21,7 +21,8 @@ test("flipping the switch saves it through the own-setting endpoint", () => {
 })
 
 test("the switch is bound to the setting and ON until the server says otherwise", () => {
-	assert.match(source, /:label="__\('Shift reminders'\)"/)
+	// alpha.6 B3: the row text is the label; the switch is named by aria-label.
+	assert.match(source, /:aria-label="__\('Shift reminders'\)"/)
 	assert.match(source, /:model-value="remindersOn"/)
 	assert.match(source, /@update:model-value="toggleReminders"/)
 	assert.match(source, /const remindersOn = ref\(true\)/)
