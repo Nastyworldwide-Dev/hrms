@@ -144,6 +144,7 @@ const CSS_PROPS = new Set([
 //: Values a component is allowed to hold off-grid, each with its reason.
 const CSS_EXEMPT = new Map([
 	[2.5, "the notification dot's rim curve — a 4px radius on a 5px dot is a square"],
+	[22, "the 44px compact button's capsule: radius = half the height (WWDC25 356)"],
 ]);
 
 const cssPath = join(ROOT, "frontend/src/theme/glass-components.css");

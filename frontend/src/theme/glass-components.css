@@ -406,7 +406,9 @@ html[data-transparency="reduce"] .g-sidenav {
    a title and must not take the row. Same fill, same component, same role. */
 .g-btn--compact {
 	width: auto;
+	height: 44px; /* the iOS regular control, the 44pt minimum target */
 	padding: 0 16px;
+	border-radius: 22px; /* half of 44 */
 	white-space: nowrap;
 }
 
@@ -478,10 +480,15 @@ html[data-transparency="reduce"] .g-sidenav {
 	align-items: center;
 	justify-content: center;
 	width: 100%;
-	min-height: 44px;
-	padding: var(--g-pad-action);
+	/* ONE height (alpha.6 B6). It was padding + line-height, so it moved with
+	   every type change (41-61px measured). 48 is the large control on the 4pt
+	   grid (Apple's current HIG text publishes no fixed button height). A
+	   capsule: radius = half the height (WWDC25 356), drawn as a pill so it
+	   stays a capsule at any height. */
+	height: 48px;
+	padding: 0 20px;
 	border: 0;
-	border-radius: var(--g-radius-action);
+	border-radius: 24px; /* half of 48: a capsule */
 	/* A flat brand fill, no gradient and no coloured glow (audit F-10, S-DECO):
 	   the button is the one thing on the screen to press, and colour alone
 	   says so. The inset rims keep its edge on the glass. */
