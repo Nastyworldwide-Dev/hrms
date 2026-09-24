@@ -3991,3 +3991,46 @@ html {
 	max-width: none;
 	flex: 1 1 auto;
 }
+/* The forgotten check-out, as a row of the Today card (alpha.7 §3). */
+.g-today__issue {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	min-height: var(--g-touch-target-min);
+	padding: 8px 0;
+	border: 0;
+	border-top: 1px solid var(--g-hair);
+	background: transparent;
+	text-align: left;
+	cursor: pointer;
+}
+.g-today__issue-icon {
+	flex: none;
+	width: 20px;
+	height: 20px;
+	color: var(--g-warn-ink);
+}
+.g-today__issue-text {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-width: 0;
+}
+.g-today__issue-title {
+	font-size: 15px;
+	line-height: 20px;
+	font-weight: 600;
+	color: var(--g-ink);
+}
+.g-today__issue-hint {
+	font-size: 13px;
+	line-height: 18px;
+	color: var(--g-ink2);
+}
+.g-today__issue-chevron {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	color: var(--g-ink3);
+}

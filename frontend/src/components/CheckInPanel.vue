@@ -17,46 +17,40 @@
 			     chartreuse block — text at a MEASURED 1.00 contrast ratio,
 			     present in the DOM and completely invisible. It is a warning
 			     banner, and the system already had one. -->
-			<GBanner
+			<!-- A STATE of the Today card (alpha.7 §3), not a glass banner stacked
+			     on it: one row, warning glyph, what happened, what to do. -->
+			<button
 				v-if="hasStaleOpenIn"
-				variant="warning"
-				interactive
-				class="g-banner--tappable mt-3.5"
+				type="button"
+				class="g-today__issue g-focusable"
 				@click="lateCheckoutOpen = true"
 			>
-				<div class="flex flex-row items-center gap-3">
-					<component :is="isAbandoned ? TriangleAlert : Clock" class="h-4 w-4 shrink-0" />
-					<div class="flex flex-col flex-1 min-w-0">
-						<!-- data-visual-mask: both branches embed formatTimestamp(), whose
-						     wording changes as the check-in ages. -->
-						<span class="g-banner__title" data-visual-mask>
-							<template v-if="isAbandoned">
-								{{
-									__("HR flagged your {0} check-in as abandoned", [
-										formatTimestamp(unresolvedStaleIn.data?.time),
-									])
-								}}
-							</template>
-							<template v-else>
-								{{
-									__("Forgot to check out from {0}?", [
-										formatTimestamp(unresolvedStaleIn.data?.time),
-									])
-								}}
-							</template>
-						</span>
-						<span class="g-banner__hint">
-							<template v-if="isAbandoned">
-								{{ __("Submit a late check-out now to resolve.") }}
-							</template>
-							<template v-else>
-								{{ __("Tap to submit a late check-out for approval.") }}
-							</template>
-						</span>
-					</div>
-					<GBadge variant="open" class="shrink-0">{{ __("Resolve") }}</GBadge>
-				</div>
-			</GBanner>
+				<component :is="isAbandoned ? TriangleAlert : Clock" class="g-today__issue-icon" aria-hidden="true" />
+				<span class="g-today__issue-text">
+					<!-- data-visual-mask: both branches embed formatTimestamp(), whose
+					     wording changes as the check-in ages. -->
+					<span class="g-today__issue-title" data-visual-mask>
+						<template v-if="isAbandoned">
+							{{
+								__("HR flagged your {0} check-in as abandoned", [
+									formatTimestamp(unresolvedStaleIn.data?.time),
+								])
+							}}
+						</template>
+						<template v-else>
+							{{
+								__("Forgot to check out from {0}?", [
+									formatTimestamp(unresolvedStaleIn.data?.time),
+								])
+							}}
+						</template>
+					</span>
+					<span class="g-today__issue-hint">
+						{{ __("Tap to send the time you left.") }}
+					</span>
+				</span>
+				<ChevronRight class="g-today__issue-chevron" aria-hidden="true" />
+			</button>
 
 			<GButton
 				id="open-checkin-modal"
@@ -199,12 +193,10 @@
 </template>
 
 <script setup>
-import { Check, Clock, TriangleAlert } from "lucide-vue-next"
+import { Check, ChevronRight, Clock, TriangleAlert } from "lucide-vue-next"
 import GSelfiePanel from "@/components/glass/GSelfiePanel.vue"
 import GClock from "@/components/glass/GClock.vue"
 import GModal from "@/components/glass/GModal.vue"
-import GBadge from "@/components/glass/GBadge.vue"
-import GBanner from "@/components/glass/GBanner.vue"
 import { useOnline } from "@/composables/useOnline"
 import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
 import GButton from "@/components/glass/GButton.vue"
