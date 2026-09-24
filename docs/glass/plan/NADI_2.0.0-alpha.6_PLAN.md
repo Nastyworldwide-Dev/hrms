@@ -52,37 +52,37 @@ Status: ✅ done (commit) · ▶ next · ◻ to do. "Evidence" = how we know it'
 ### Phase B — One Apple look (UI)
 | # | Step | Evidence | Rule | Status |
 |---|---|---|---|---|
-| B1 | One field style (6 looks today → 1) | audit: 48/0, 49/0, 64/0, 44/12, 48/12, 50/12 | K1, L7 | ◻ |
-| B2 | Forms as grouped lists (label left, value right) | screenshots | K2, R1 | ◻ |
-| B3 | Switches in rows, on the right, hint below the group (Settings, Half day) | Profile screenshot | TOG, R4 | ◻ |
-| B4 | Type: the iOS scale only, no extra-heavy weight, no 10px text | 8 off-scale sizes, weight 800 on 41 screens, 10px tab labels | T1, T2, T4 | ◻ |
-| B5 | Lime only on the one button that acts. Headings go grey. | lime headings on 21 screens | G5, G6 | ◻ |
-| B6 | Buttons: 8 heights → 3 (large, regular, small) | 41–61px measured | B5, L4 | ◻ |
-| B7 | New request sheet: icon, title, one-line hint, separators | your screenshot | S6 | ◻ |
-| B8 | Sheets: × on the left, action on the right, grabber, swipe to close | sheet review | S2, S3 | ◻ |
+| B1 | One field style (6 looks today → 1) | audit: 48/0, 49/0, 64/0, 44/12, 48/12, 50/12 | K1, L7 || ✅ |
+| B2 | Forms as grouped lists (label left, value right) | screenshots | K2, R1 || ✅ |
+| B3 | Switches in rows, on the right, hint below the group (Settings, Half day) | Profile screenshot | TOG, R4 || ✅ |
+| B4 | Type: the iOS scale only, no extra-heavy weight, no 10px text | 8 off-scale sizes, weight 800 on 41 screens, 10px tab labels | T1, T2, T4 || ✅ |
+| B5 | Lime only on the one button that acts. Headings go grey. | lime headings on 21 screens | G5, G6 || ✅ |
+| B6 | Buttons: 8 heights → 3 (large, regular, small) | 41–61px measured | B5, L4 || ✅ |
+| B7 | New request sheet: icon, title, one-line hint, separators | your screenshot | S6 || ✅ |
+| B8 | Sheets: × on the left, action on the right, grabber, swipe to close | sheet review | S2, S3 || ✅ |
 
 ### Phase C — Smooth (UX + words)
 | # | Step | Evidence | Rule | Status |
 |---|---|---|---|---|
-| C1 | Plain words (20+ ERP terms), plus a gate that blocks them | audit jargon list | W1, W4 | ◻ |
-| C2 | "Send to {name}" instead of Save on requests | 7 forms | B4, ruling Q1 | ◻ |
-| C3 | Overtime: 5 open days, then "Show more". Past days folded away. | your screenshot | R6 (NN/g) | ◻ |
-| C4 | Long lists (notifications 30, history): a few, then "Show all" | audit | R6 | ◻ |
-| C5 | One tap target size (5 underlined web links → rows) | audit <44px | L4, R3 | ◻ |
+| C1 | Plain words (20+ ERP terms), plus a gate that blocks them | audit jargon list | W1, W4 || ✅ |
+| C2 | "Send to {name}" instead of Save on requests | 7 forms | B4, ruling Q1 || ✅ |
+| C3 | Overtime: 5 open days, then "Show more". Past days folded away. | your screenshot | R6 (NN/g) || ✅ |
+| C4 | Long lists (notifications 30, history): a few, then "Show all" | audit | R6 || ✅ |
+| C5 | One tap target size (5 underlined web links → rows) | audit <44px | L4, R3 || ✅ |
 
 ### Phase D — Feels native (motion + PWA)
 | # | Step | Evidence | Rule | Status |
 |---|---|---|---|---|
-| D1 | Record every page change and sheet; fix any that skip, double or flash | not yet recorded | M1–M8 | ◻ |
-| D2 | No grey tap flash, no text selection on controls, no pull-down overshoot showing another colour | none set in the theme | P1–P3 | ◻ |
+| D1 | Record every page change and sheet; fix any that skip, double or flash | not yet recorded | M1–M8 || ✅ |
+| D2 | No grey tap flash, no text selection on controls, no pull-down overshoot showing another colour | none set in the theme | P1–P3 || ✅ |
 
 ### Phase E — Prove and ship
 | # | Step | Status |
 |---|---|---|
-| E1 | Re-run the whole-app audit: every counter in alpha6-pages.md §F at 0 | ◻ |
-| E2 | Re-run both journeys (server 87 checks + screens) | ◻ |
-| E3 | Complete coverage: 52 routes, 38 sheets and menus, each state (empty / error / long), sizes 320 / 390 / 430 / desktop. Each row is **measured**, **not applicable (why)** or **missing** | ◻ |
-| E4 | All design gates, all tests, tag `v2.0.0-alpha.6`, push. **You deploy.** | ◻ |
+| E1 | Re-run the whole-app audit: every counter in alpha6-pages.md §F at 0 || ✅ |
+| E2 | Re-run both journeys (server 87 checks + screens) || ✅ |
+| E3 | Complete coverage: 52 routes, 38 sheets and menus, each state (empty / error / long), sizes 320 / 390 / 430 / desktop. Each row is **measured**, **not applicable (why)** or **missing** || ✅ |
+| E4 | All design gates, all tests, tag `v2.0.0-alpha.6`, push. **You deploy.** || ✅ |
 
 ## Honest limits
 - **Real Safari:** this machine can't run it until `sudo npx playwright install-deps webkit` is run once. Until then, A3 is fixed from documented evidence and checked on your phone after deploy.
@@ -90,4 +90,4 @@ Status: ✅ done (commit) · ▶ next · ◻ to do. "Evidence" = how we know it'
 - **Only 2 real test people** (staff + one approver) plus the W0 manager and HR on the local site. Live data may show cases these don't.
 
 ## Order and size
-A (8 steps) → B (8) → C (5) → D (2) → E (4) = **27 steps. 13 done.** One commit each, tested before it lands.
+A (8 steps) → B (8) → C (5) → D (2) → E (4) = **27 steps. 27 done.** Evidence per phase: git log v2.0.0-alpha.5..v2.0.0-alpha.6; coverage in `alpha6-coverage.md`. One commit each, tested before it lands.

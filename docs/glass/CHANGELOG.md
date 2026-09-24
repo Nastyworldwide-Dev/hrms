@@ -10,6 +10,54 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.6] — 2026-09-25
+
+Nadi follows Apple's own rules now: one look, plain words, and every request
+works for both sides. Plan, rulebook and evidence: `docs/glass/plan/`
+(`NADI_2.0.0-alpha.6_PLAN.md`, `alpha6-standard.md`, `alpha6-coverage.md`).
+
+### Fixed
+- **"No shift today" for people on a usual shift.** Home and the Calendar day
+  now use your default shift when no roster covers the day (holidays and rest
+  days stay "No shift").
+- **The Time off page could be dragged sideways on iPhone.** Every date and
+  time field now fits the screen on Safari.
+- **The approval sheet never said which day.** The date now sits under the
+  title on every request sheet.
+- **Approver pickers showed an email address.** They show the person's name.
+- **Empty headings** on the expense and time off forms are gone (9 → 2 on a
+  new expense). Posting date and the three repeated totals are gone too.
+- **The expense approval sheet showed two statuses** ("Draft" and "Waiting")
+  and five accounting totals. It shows who, the items, the total, one status.
+
+### Changed
+- **Every form is an iPhone-style grouped list**: label on the left, value on
+  the right, one field look everywhere (six looks before). Empty rows say
+  "Required" or "Optional".
+- **Switches sit on the right of their row**, as in iPhone Settings. Half day
+  is a switch. On You: Appearance is a menu (Light / Dark / Automatic) and
+  Log out is a red row.
+- **Text follows Apple's size scale**, with no extra-heavy weight. Tab labels
+  are 11pt (were 10). Calendar day numbers are larger.
+- **Lime means "tap here"**: section headings are grey; only the main button
+  is lime.
+- **One button height**, a capsule (eight heights before).
+- **Sheets have Close on the left**, as iPhone sheets do.
+- **The New request sheet** shows an icon and a one-line hint for each choice.
+- **Overtime shows up to 5 open days**, then "Show more"; claimed and
+  can't-claim-yet days are folded away.
+- **Plain words**: "Send to {name}" instead of Save; "Kind of leave", "Goes
+  to", "From / To", "Note", "Day you worked", "Hours", "See all".
+- **Pressing and holding** a button no longer selects its text; a page can't
+  be pulled sideways.
+
+### Added
+- **HR setup check**: System Readiness now warns HR about four Desk gaps
+  that stopped staff from sending requests (no expense account, no payable
+  account, no leave year, overtime off on a shift).
+
+No update steps and no schema change.
+
 ## [2.0.0-alpha.5] — 2026-09-24
 
 One design across the whole app. Plan with evidence:
