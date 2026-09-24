@@ -732,23 +732,35 @@ html[data-theme="dark"] .g-badge--open {
 /* ---------- GEmptyState (§10.1 #11, copy §11.1) ---------- */
 
 .g-empty {
-	padding: 24px 16px;
-	border: 1px dashed var(--g-glass-rim);
-	border-radius: var(--g-radius-banner);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 48px 24px;
 	text-align: center;
 }
+.g-empty__icon {
+	width: 48px;
+	height: 48px;
+	margin-bottom: 12px;
+	color: var(--g-ink3);
+	stroke-width: 1.5;
+}
 .g-empty__title {
-	font-family: var(--g-font-display);
-	font-size: 13px;
+	font-family: var(--g-font-ui);
+	font-size: 22px;
+	line-height: 28px;
 	font-weight: 700;
 	color: var(--g-ink);
+	text-wrap: balance;
 }
 .g-empty__body {
 	margin-top: 4px;
+	max-width: 320px;
 	font-family: var(--g-font-ui);
-	font-size: 11px;
-	line-height: 1.45;
+	font-size: 15px;
+	line-height: 20px;
 	color: var(--g-ink2);
+	text-wrap: balance;
 }
 /* Section-header links ("View list", "View Claims"). Bare inline text measured
    56×15 — the smallest interactive element in the app. The hit area is expanded

@@ -13,7 +13,9 @@
              action, put the action in this slot.
 -->
 <template>
+	<!-- iOS ContentUnavailableView (alpha.7 §5.3): symbol, title, one line. -->
 	<div class="g-empty" role="status">
+		<component :is="icon || Inbox" class="g-empty__icon" aria-hidden="true" />
 		<p class="g-empty__title">{{ title }}</p>
 		<p class="g-empty__body">{{ body }}</p>
 		<div v-if="$slots.action" class="g-empty__action"><slot name="action" /></div>
@@ -21,7 +23,11 @@
 </template>
 
 <script setup>
+import { Inbox } from "lucide-vue-next"
+
 defineProps({
+	//: The symbol above the title (a lucide component); a tray by default.
+	icon: { type: [Object, Function], default: null },
 	title: { type: String, required: true },
 	body: { type: String, required: true },
 })

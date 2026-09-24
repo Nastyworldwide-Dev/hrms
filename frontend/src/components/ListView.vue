@@ -132,7 +132,13 @@
 				     create action is now a GButton too, so an action here made
 				     "New" appear twice on the same screen. The copy references it
 				     instead. -->
-				<GEmptyState v-else class="mt-5" :title="emptyCopy.title" :body="emptyCopy.body" />
+				<GEmptyState
+					v-else
+					class="mt-5"
+					:icon="EMPTY_ICON[props.doctype]"
+					:title="emptyCopy.title"
+					:body="emptyCopy.body"
+				/>
 			</div>
 		</div>
 
@@ -164,7 +170,16 @@
 </template>
 
 <script setup>
-import { Funnel, Plus } from "lucide-vue-next"
+import {
+	CalendarCheck,
+	CalendarClock,
+	Clock,
+	Funnel,
+	MapPin,
+	Palmtree,
+	Plus,
+	Receipt,
+} from "lucide-vue-next"
 import { IonContent, modalController } from "@ionic/vue"
 import ShellHeader from "@/components/ShellHeader.vue"
 import { createResource, debounce } from "frappe-ui"
@@ -282,6 +297,18 @@ const emptyCopy = computed(
 			body: __("New records will appear here once they are created"),
 		}
 )
+
+//: The kind's own symbol on its empty list (alpha.7 §5.3), the same one the
+//: New request sheet and Needs you use.
+const EMPTY_ICON = {
+	"Leave Application": markRaw(Palmtree),
+	"OT Request": markRaw(Clock),
+	"Expense Claim": markRaw(Receipt),
+	"Shift Request": markRaw(CalendarClock),
+	"Attendance Request": markRaw(CalendarCheck),
+	"Employee Checkin": markRaw(MapPin),
+	"Shift Assignment": markRaw(CalendarClock),
+}
 
 const getButtonKey = (tab) => tab?.key ?? tab
 
