@@ -17,7 +17,7 @@
 							</div>
 							<div class="flex flex-col gap-1 min-w-0">
 								<span
-									class="font-sans font-extrabold text-screen-title tracking-tight text-inkbase break-words"
+									class="font-sans font-bold text-screen-title tracking-tight text-inkbase break-words"
 									>{{ employee?.data?.employee_name }}</span
 								>
 								<span v-if="roleLine" class="text-caption text-ink-600">{{ roleLine }}</span>

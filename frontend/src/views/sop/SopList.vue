@@ -35,7 +35,7 @@
 								<PenLine class="h-icon-sm w-icon-sm" />
 							</button>
 							<span class="flex flex-col gap-0.5">
-								<span class="font-extrabold text-card-title leading-tight">
+								<span class="font-bold text-card-title leading-tight">
 									{{ sop.title }}
 								</span>
 								<span class="g-eyebrow font-bold opacity-75">
@@ -83,7 +83,7 @@
 							>
 								<span class="flex flex-col gap-0.5 flex-1 min-w-0">
 									<span class="flex items-center gap-1.5 min-w-0">
-										<span class="font-extrabold text-card-title text-inkbase truncate">
+										<span class="font-bold text-card-title text-inkbase truncate">
 											{{ sop.title }}
 										</span>
 										<GBadge
@@ -127,7 +127,7 @@
 				<ResourceError v-else-if="sops.error" :resource="sops" what="the SOP list" />
 				<GEmptyState
 					v-else-if="!sops.loading"
-					:title="__('No documents yet')"
+					:title="__('No SOPs yet')"
 					:body="__('Procedures for your role will appear here')"
 				/>
 			</div>

@@ -87,6 +87,6 @@ test("no results and nothing yet stay two different states", () => {
 	// Conflating them is why an empty search box reads as a broken app. This
 	// screen already had it right; the assertion keeps it that way.
 	assert.match(view, /No SOPs match/, "a search that found nothing")
-	assert.match(view, /No documents yet/, "a library with nothing in it")
+	assert.match(view, /No SOPs yet/, "a library with nothing in it (alpha.6: plain word, was \"documents\")")
 	assert.match(view, /v-else-if="query"/, "and the search state is checked first")
 })

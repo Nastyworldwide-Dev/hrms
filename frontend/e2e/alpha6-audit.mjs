@@ -98,7 +98,8 @@ function audit() {
 		.map((e) => ownText(e).slice(0, 24))
 
 	// G — glass only on chrome.
-	const CHROME = ".g-header, .g-tabbar, ion-tab-bar, .g-modal, ion-modal, .g-toast, .g-sidenav, [role=dialog], .g-tabbar-fade"
+	// frappe-ui toasts render in #frappeui-toast-root: chrome, not content.
+	const CHROME = ".g-header, .g-tabbar, ion-tab-bar, .g-modal, ion-modal, .g-toast, .g-sidenav, [role=dialog], .g-tabbar-fade, #frappeui-toast-root"
 	const glassOnContent = all
 		.filter((e) => {
 			const cs = getComputedStyle(e)

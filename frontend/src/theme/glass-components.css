@@ -739,7 +739,7 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-empty__title {
 	font-family: var(--g-font-display);
-	font-size: 13.5px;
+	font-size: 13px;
 	font-weight: 700;
 	color: var(--g-ink);
 }
@@ -1431,7 +1431,7 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
 .g-datenav__label {
 	font-family: var(--g-type-card-title-family);
 	font-size: var(--g-type-card-title-size);
-	font-weight: 800;
+	font-weight: 700;
 	letter-spacing: var(--g-type-card-title-tracking);
 	line-height: var(--g-type-card-title-line-height);
 	color: var(--g-ink);
@@ -1637,7 +1637,9 @@ svg.lucide {
 	border-radius: 8px;
 	background: transparent;
 	font-family: var(--g-type-caption-family);
-	font-size: 10.5px; /* §10.2 #18 states the size; §4.2 has no 10.5px UI step */
+	/* 15 = iOS Subhead (alpha.6 T1/T4). It was 10.5px, under Apple's 11pt
+	   minimum; iOS Calendar draws day numbers large. Fits 7 columns at 320px. */
+	font-size: 15px;
 	font-weight: var(--g-type-card-title-weight);
 	font-variant-numeric: tabular-nums;
 	/* day numbers use --ink-muted (§14.4 exception 2) */
@@ -1695,7 +1697,7 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-cal__day--selected {
 	border-color: var(--g-ink);
 	color: var(--g-ink);
-	font-weight: 800;
+	font-weight: 700;
 }
 /* Today is an INNER ring (approved Calendar plan, D6), its own channel: as a
    border-color it had equal specificity with the state borders and took the

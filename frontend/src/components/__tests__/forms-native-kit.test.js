@@ -52,3 +52,13 @@ test("FormField routes each fieldtype to its Glass control", () => {
 	assert.match(src, /<p[^>]*class="g-field-error"/, "error is a plain Glass line")
 	assert.match(src, /sentenceCase\(/, "labels go through sentenceCase")
 })
+
+// alpha.6 E1 (audit): the search picker labelled every option "Title : id",
+// so a sent Shift change read "W0 approver : nadi.w0.approver@example.invalid".
+// Rulebook K3 / W10: people and things are shown by NAME; the id stays the
+// value, never the words (ruling L4: ids never reach users).
+test("the search picker shows the title only, never 'title : id'", () => {
+	const src = read("../Link.vue")
+	assert.doesNotMatch(src, /`\$\{title\} : \$\{doc\.value\}`/)
+	assert.match(src, /label: title \|\| doc\.value/)
+})

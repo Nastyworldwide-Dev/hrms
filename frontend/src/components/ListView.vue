@@ -217,7 +217,7 @@ const props = defineProps({
 const EMPTY_COPY = {
 	"Leave Application": {
 		title: __("No leave taken this year"),
-		body: __("Your applications will appear here once submitted"),
+		body: __("Time off you ask for shows up here."),
 	},
 	"OT Request": {
 		title: __("No overtime claims yet"),

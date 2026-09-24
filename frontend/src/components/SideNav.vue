@@ -11,7 +11,7 @@
 			<GLogo :label="collapsed ? __('Nadi') : ''" />
 			<span
 				v-show="!collapsed"
-				class="font-extrabold text-button-label tracking-tight whitespace-nowrap text-inkbase"
+				class="font-bold text-button-label tracking-tight whitespace-nowrap text-inkbase"
 			>
 				{{ __("Nadi") }}
 			</span>
@@ -126,12 +126,12 @@
 			/>
 			<div
 				v-else
-				class="w-icon-xl h-icon-xl flex-none grayscale bg-surface flex items-center justify-center font-extrabold text-inkbase"
+				class="w-icon-xl h-icon-xl flex-none grayscale bg-surface flex items-center justify-center font-bold text-inkbase"
 			>
 				{{ employeeName ? employeeName[0] : "?" }}
 			</div>
 			<div v-show="!collapsed" class="flex flex-col gap-px min-w-0">
-				<span class="font-extrabold text-card-title whitespace-nowrap truncate text-inkbase">
+				<span class="font-bold text-card-title whitespace-nowrap truncate text-inkbase">
 					{{ employeeName }}
 				</span>
 				<span class="g-eyebrow whitespace-nowrap truncate">

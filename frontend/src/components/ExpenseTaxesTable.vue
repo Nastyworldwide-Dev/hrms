@@ -3,7 +3,7 @@
 		<div class="flex flex-row justify-between items-center pt-4 pb-2 border-b-2 border-divider">
 			<h2 class="g-eyebrow">{{ __("Taxes and charges") }}</h2>
 			<div class="flex flex-row gap-3 items-center">
-				<span class="text-base font-extrabold text-inkbase">
+				<span class="text-base font-bold text-inkbase">
 					{{ formatCurrency(expenseClaim.total_taxes_and_charges, expenseClaim.currency) }}
 				</span>
 				<GIconButton
@@ -244,7 +244,7 @@ function calculateTotalTax() {
 	background-color: var(--g-glass-fill-fallback);
 	border: 1px solid var(--g-hair);
 	border-radius: 0;
-	font-size: 14px;
+	font-size: 15px;
 	color: var(--g-ink);
 }
 .expense-fields :deep(input:not([type="checkbox"]):not([type="radio"]):focus),

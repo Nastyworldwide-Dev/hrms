@@ -37,6 +37,12 @@ export const PLAIN_LABELS = {
 	"work from date": "Worked from",
 	"work end date": "Worked to",
 	employee: "Who",
+	"employee name": "Name",
+	"from employee": "Who",
+	"employee details": "Who",
+	"posting date": "Date",
+	"total amount reimbursed": "Paid back",
+	"total claimed amount": "Total",
 }
 
 export function plainLabel(label) {

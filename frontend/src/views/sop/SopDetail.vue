@@ -141,7 +141,7 @@ const attachmentKind = computed(() => {
 /* document-grade rendering for the Text Editor body — headings, lists,
    tables and quotes read like a print format, not chat text */
 .sop-prose {
-	font-size: 13.5px;
+	font-size: 13px;
 	line-height: 1.75;
 	color: var(--g-ink2);
 }
@@ -171,7 +171,7 @@ const attachmentKind = computed(() => {
 .sop-prose :deep(h4),
 .sop-prose :deep(h5),
 .sop-prose :deep(h6) {
-	font-size: 13.5px;
+	font-size: 13px;
 	letter-spacing: 0.04em;
 }
 .sop-prose :deep(h1:first-child),

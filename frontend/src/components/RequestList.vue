@@ -63,7 +63,7 @@
 	<GEmptyState
 		v-else
 		:title="emptyStateTitle || __('Nothing here yet')"
-		:body="emptyStateMessage || __('New requests will appear here once submitted')"
+		:body="emptyStateMessage || __('Requests you send show up here.')"
 	/>
 
 	<GModal :is-open="isRequestModalOpen" @did-dismiss="closeRequestModal">

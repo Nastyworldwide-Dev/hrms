@@ -42,14 +42,14 @@
 
 			<div class="flex flex-row gap-2.5 px-4 pt-2">
 				<button
-					class="flex-1 bg-transparent border border-hair text-ink px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-ink/[0.07] disabled:opacity-60"
+					class="flex-1 bg-transparent border border-hair text-ink px-3.5 py-3 font-sans font-bold text-card-title cursor-pointer text-left hover:bg-ink/[0.07] disabled:opacity-60"
 					@click="cancel"
 					:disabled="submitting"
 				>
 					{{ __("Cancel") }}
 				</button>
 				<button
-					class="flex-1 bg-brand text-on-brand border-none px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-brand disabled:opacity-60"
+					class="flex-1 bg-brand text-on-brand border-none px-3.5 py-3 font-sans font-bold text-card-title cursor-pointer text-left hover:bg-brand disabled:opacity-60"
 					@click="submit"
 					:disabled="submitting || !remarks.trim() || !online"
 				>

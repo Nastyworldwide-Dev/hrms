@@ -32,7 +32,7 @@
 
 			<div class="flex flex-col gap-2 px-4 pt-4">
 				<button
-					class="w-full bg-accent-ink text-ground border-none px-3.5 py-3 font-sans font-extrabold text-card-title cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60 flex justify-between items-center"
+					class="w-full bg-accent-ink text-ground border-none px-3.5 py-3 font-sans font-bold text-card-title cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60 flex justify-between items-center"
 					@click="enable"
 					:disabled="enabling"
 				>
@@ -40,7 +40,7 @@
 					<span aria-hidden="true">→</span>
 				</button>
 				<button
-					class="w-full bg-transparent text-ink-700 px-3.5 py-2.5 font-sans font-extrabold text-xs tracking-wide cursor-pointer hover:text-ink disabled:opacity-60"
+					class="w-full bg-transparent text-ink-700 px-3.5 py-2.5 font-sans font-bold text-xs tracking-wide cursor-pointer hover:text-ink disabled:opacity-60"
 					@click="decline"
 					:disabled="enabling"
 				>

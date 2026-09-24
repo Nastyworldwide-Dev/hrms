@@ -47,7 +47,7 @@
 								:what="__('your leave')"
 								:emptyStateMessage="
 									__(
-										'No leave taken this year. Your applications will appear here once submitted.'
+										'No time off taken this year. Time off you ask for shows up here.'
 									)
 								"
 							/>

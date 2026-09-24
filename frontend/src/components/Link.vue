@@ -159,7 +159,9 @@ const options = createResource({
 				title = doc.description.split(",")[0]
 			}
 			return {
-				label: title ? `${title} : ${doc.value}` : doc.value,
+				// The title alone (K3 / ruling L4): "W0 approver", not
+				// "W0 approver : nadi.w0.approver@…". The id stays the value.
+				label: title || doc.value,
 				value: doc.value,
 			}
 		})
@@ -171,7 +173,7 @@ const options = createResource({
 	},
 })
 
-// the trigger shows the option's full label ("Title : name") when it is loaded
+// the trigger shows the option's title when it is loaded
 const selectedLabel = computed(() => {
 	if (!props.modelValue) return ""
 	const hit = (options.data || []).find((o) => o.value === props.modelValue)

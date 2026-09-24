@@ -14,7 +14,7 @@
 				class="mt-[calc(100dvh-15rem)] flex flex-col gap-3 mx-2 py-5 bg-accent-100 border border-accent-200 drop-shadow-xl"
 			>
 				<div class="flex flex-row text-center items-center justify-between mb-1 px-3">
-					<span class="text-base text-inkbase font-extrabold">
+					<span class="text-base text-inkbase font-bold">
 						{{ __("Install Nadi") }}
 					</span>
 					<span class="inline-flex items-baseline">

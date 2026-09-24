@@ -63,7 +63,7 @@
 						@click="openIssue(issue.name)"
 					>
 						<span class="flex justify-between items-center mb-1.5">
-							<span class="text-caption font-extrabold tracking-wide text-ink-600">
+							<span class="text-caption font-bold tracking-wide text-ink-600">
 								{{ issue.name }} · {{ dayjs(issue.creation).format("D MMM, HH:mm") }}
 							</span>
 							<span
@@ -73,7 +73,7 @@
 								{{ __(issue.urgency) }}
 							</span>
 						</span>
-						<span class="block text-card-title font-extrabold text-inkbase mb-0.5">
+						<span class="block text-card-title font-bold text-inkbase mb-0.5">
 							{{ issue.employee_name }}
 							<span class="text-ink-600 font-semibold"
 								>· {{ departmentLabel(issue.department) || "—" }}</span
@@ -120,7 +120,7 @@
 				</div>
 
 				<div class="px-4 mt-4">
-					<label class="text-xs text-ink-700 tracking-wide font-extrabold">
+					<label class="text-xs text-ink-700 tracking-wide font-bold">
 						{{ __("Status") }}
 					</label>
 					<div class="flex gap-1.5 mt-1.5">
@@ -140,7 +140,7 @@
 						</button>
 					</div>
 
-					<label class="block text-xs text-ink-700 tracking-wide font-extrabold mt-4">
+					<label class="block text-xs text-ink-700 tracking-wide font-bold mt-4">
 						{{ __("Internal HR notes") }}
 						<span class="text-ink-500 normal-case font-semibold">
 							({{ __("never shown to the employee") }})

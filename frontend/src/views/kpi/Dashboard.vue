@@ -244,7 +244,7 @@
 									width="150px"
 									height="var(--g-type-clock-size)"
 								/>
-								<div v-else class="font-sans font-extrabold text-clock leading-none tabular-nums">
+								<div v-else class="font-sans font-bold text-clock leading-none tabular-nums">
 									{{ score1(teamSummary.average_score)
 									}}<span class="text-button-label text-ink-500 font-normal"> / 100</span>
 								</div>
@@ -256,7 +256,7 @@
 									<GBadge variant="accent">
 										{{ __("{0} appraised", [teamSummary.headcount]) }}
 									</GBadge>
-									<span class="text-xs font-sans font-extrabold text-ink-700">
+									<span class="text-xs font-sans font-bold text-ink-700">
 										{{ __("Top") }} {{ score1(teamSummary.top_score) }}
 									</span>
 								</div>

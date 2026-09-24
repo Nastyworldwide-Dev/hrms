@@ -25,7 +25,7 @@
 			v-if="heading"
 			ref="headingEl"
 			tabindex="-1"
-			class="font-sans font-extrabold text-screen-title kpi-detail__heading"
+			class="font-sans font-bold text-screen-title kpi-detail__heading"
 		>
 			{{ heading }}
 		</h2>
@@ -42,7 +42,7 @@
 					</div>
 					<div class="flex items-center justify-between mt-3 border-t-2 border-divider pt-4">
 						<div class="flex flex-col gap-2">
-							<div class="font-sans font-extrabold text-clock leading-none tabular-nums">
+							<div class="font-sans font-bold text-clock leading-none tabular-nums">
 								{{ formatScore(current.total_score)
 								}}<span class="text-button-label text-ink-500 font-normal"> / 100</span>
 							</div>
@@ -53,7 +53,7 @@
 								<GBadge v-if="current.is_average" variant="accent">
 									{{ __("Avg of {0} cycles", [current.cycles_count]) }}
 								</GBadge>
-								<span v-if="delta !== null" class="text-xs font-sans font-extrabold text-ink-700">
+								<span v-if="delta !== null" class="text-xs font-sans font-bold text-ink-700">
 									{{ delta >= 0 ? "+" : "−" }}{{ Math.abs(delta).toFixed(1) }}
 									{{ __("vs last cycle") }}
 								</span>
@@ -163,7 +163,7 @@
 										:style="{ width: `${Math.min(barValue(row), 100)}%` }"
 									/>
 								</div>
-								<span class="font-sans font-extrabold text-kra-label tabular-nums w-12 text-right">
+								<span class="font-sans font-bold text-kra-label tabular-nums w-12 text-right">
 									{{ formatScore(barValue(row)) }}%
 								</span>
 							</div>
@@ -194,7 +194,7 @@
 										: __("Feedback received this cycle")
 								}}
 							</span>
-							<span class="font-sans font-extrabold text-base tabular-nums">
+							<span class="font-sans font-bold text-base tabular-nums">
 								{{ data.feedback.count }}
 							</span>
 						</div>

@@ -77,7 +77,7 @@
 										class="inline-block py-4 px-2 border-b-2 border-transparent"
 										:class="[
 											activeTab === tab.name
-												? '!text-accent-ink !border-accent-ink !font-extrabold'
+												? '!text-accent-ink !border-accent-ink !font-bold'
 												: 'hover:text-inkbase hover:border-divider',
 										]"
 									>
