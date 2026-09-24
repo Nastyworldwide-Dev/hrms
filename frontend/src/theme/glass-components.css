@@ -4237,3 +4237,15 @@ ion-modal.g-mustread {
 	color: var(--g-ink2);
 	cursor: pointer;
 }
+
+/* An announcement's cover as the row's thumbnail (alpha.7 §10.1). */
+.g-ann-thumb {
+	width: 29px;
+	height: 29px;
+	border-radius: 8px;
+	object-fit: cover;
+}
+.g-row__well:has(.g-ann-thumb) {
+	background: transparent;
+	overflow: hidden;
+}

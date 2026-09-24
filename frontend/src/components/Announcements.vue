@@ -56,17 +56,30 @@
 				:key="card.name"
 				:label="card.title"
 				:sublabel="subtitle(card)"
+				:tint="card.cover_image ? '' : TILE.announcement"
 				@click="open(card)"
 			>
 				<template #icon>
-					<component :is="iconFor(card.category)" class="g-row-icon" />
+					<!-- HR's cover as a small thumbnail (alpha.7 §10.1); the red
+					     announcement tile when there is none. -->
+					<img
+						v-if="card.cover_image"
+						:src="card.cover_image"
+						alt=""
+						class="g-ann-thumb"
+						loading="lazy"
+					/>
+					<component :is="iconFor(card.category)" v-else class="g-row-icon" />
 				</template>
 				<template v-if="badgeFor(card)" #badge>
 					<!-- A WORD, not a coloured dot. §14.1: colour may never be the
 					     only signal, and "New" is also what a person would say. One
 					     badge at a time — an unread policy is both new and waiting,
 					     and the confirmation is the one that needs doing. -->
-					<GBadge :variant="badgeFor(card).variant">{{ badgeFor(card).text }}</GBadge>
+					<span v-if="badgeFor(card).variant === 'urgent'" class="g-badge g-chip--danger">
+						{{ badgeFor(card).text }}
+					</span>
+					<GBadge v-else :variant="badgeFor(card).variant">{{ badgeFor(card).text }}</GBadge>
 				</template>
 			</GListRow>
 		</GListPanel>
@@ -103,6 +116,7 @@ import GListRow from "@/components/glass/GListRow.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 
 import { homeAnnouncements } from "@/data/announcements"
+import { TILE } from "@/utils/iconTile"
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
@@ -128,6 +142,8 @@ function iconFor(category) {
 }
 
 function badgeFor(card) {
+	// Red status text, as iOS marks urgency; lime is only the primary action (Q1).
+	if (card.urgent && !card.read) return { variant: "urgent", text: __("Urgent") }
 	if (card.needs_acknowledgement) return { variant: "open", text: __("Confirm") }
 	if (!card.read) return { variant: "accent", text: __("New") }
 	return null
@@ -137,6 +153,8 @@ function subtitle(card) {
 	// What the reader needs to decide whether to open it: whether it wants
 	// something from them, and how old it is. Not the category — the icon
 	// already says that, and saying it twice spends the line.
+	// HR's own one-line Summary (alpha.7 §10.1), never text cut from the body.
+	if (card.summary) return card.summary
 	if (card.needs_acknowledgement) return __("Needs your confirmation")
 	return card.publish_from ? $dayjs(card.publish_from).fromNow() : ""
 }
