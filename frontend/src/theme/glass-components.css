@@ -3757,3 +3757,30 @@ ion-router-outlet {
 	line-height: 20px;
 	color: var(--g-ink2);
 }
+
+/* Native feel (alpha.6 D2; rulebook P1–P3). A long-press on a control selects
+   no text and pops no "Copy / Look Up" callout, as native controls behave.
+   Content text (notes, addresses) stays selectable. */
+button,
+[role="button"],
+[role="switch"],
+[role="tab"],
+.g-row,
+.g-form-row__label,
+.g-btn,
+.g-sheet__action,
+ion-tab-bar,
+.g-tabbar,
+.g-header {
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+}
+/* A page moves only vertically (L1): nothing can pan it sideways, and pulling
+   past either end shows the page's own colour, never white. */
+html,
+body {
+	overflow-x: hidden;
+	overscroll-behavior-x: none;
+	background-color: var(--g-bg);
+}
