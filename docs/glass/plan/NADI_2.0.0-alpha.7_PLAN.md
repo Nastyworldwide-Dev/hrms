@@ -1,142 +1,211 @@
-# Nadi 2.0.0-alpha.7 — plan: from "follows Apple's rules" to "looks and behaves like Apple built it"
+# Nadi 2.0.0-alpha.7 — plan: an app that looks and behaves like Apple built it
 
-**Status:** proposal, for the owner's go. Nothing is coded.
-**Owner's ask (25 Sep 2026):** exact 1:1 with iOS 26/27 Liquid Glass, small to big; UI and UX; what an
-Apple engineer would do; broaden alpha.6's list; no hand-rolled "AI slop"; new features allowed if backed.
+**Status:** proposal for the owner's go. Nothing is coded.
+**Owner's ask (25 Sep 2026):** exact 1:1 with iOS 26/27 Liquid Glass, smallest to biggest detail, UI and UX;
+a Home overhaul; announcements with preview and required acknowledgement (research first, no hand-rolling);
+fix the live defects in the new screenshots; a deep dive per page; a better-calculated score.
 
-## Evidence this plan stands on (all in `docs/glass/plan/`)
+## 0. Where Nadi stands — the honest number
 
-| File | What |
+| Measure | Result |
 |---|---|
-| `alpha7-ios26-spec.md` | Apple's own numbers (HIG JSON, SwiftUI/UIKit docs, WWDC25 219/356/323/284 transcripts). Marks every "not published". |
-| `alpha7-web-native.md` | What Safari / iOS Home Screen web apps can do, per version (MDN compat data 17 Sep 2026, WebKit blog 18.0 → 27.0, caniuse). |
-| `alpha7-handrolled.md` | Nadi code sweep, file:line: frappe-ui leftovers, hand-built lists, fonts, animations. |
-| `alpha7-nadi-measure.json` | Nadi measured at iPhone size (402 pt, 3×). |
-| Owner's screenshots | iOS 26 **Settings** and **App Store**, measured pixel by pixel below. |
+| My first estimate (25 Sep) | "about 60%" — **too generous** |
+| Review A: 19 tab roots and list screens, each scored vs iOS 26 | **48 / 100** |
+| Review B: every form, detail screen and sheet, plus the owner's 7 live shots | **48 / 100** |
+| Method | Every screen photographed at iPhone size (402 pt, both personas); iOS 26 numbers measured from the owner's own Settings + App Store screenshots; Apple's HIG/WWDC25 for rules; each difference scored P1 (visible at a glance) / P2 (on inspection) / P3 (pixel) |
 
-**Honesty rule.** Apple publishes colours, type, springs and behaviour — but NOT most component sizes (tab bar,
-list radius, sheet radius, switch). Where Apple is silent, the number here is **measured from the owner's own
-iPhone screenshots** and says so. Nothing is invented.
+**Target for alpha.7: ≥ 90 / 100 on the same scoring, re-measured by the same reviewers' checklist.**
+
+## 1. Evidence (all committed in `docs/glass/plan/`)
+
+| File | What it holds |
+|---|---|
+| `alpha7-review-A.md` | 19 screens: difference tables, SwiftUI "how Apple would build it", scores |
+| `alpha7-review-B.md` | 9 details, 7 forms, profile/settings, sheets, the owner's live shots; top 25 fixes |
+| `alpha7-home.md` | What Home shows today (code-traced), Apple's Wallet/Fitness/Live Activity/Widget rules, 6 workforce apps' clock-in screens, proposed Home |
+| `alpha7-announcements.md` | Current announcement model (code-traced), what Frappe already provides, how Connecteam/Deputy/Staffbase/Workvivo/Viva do "read and acknowledge", accessibility of scroll-gated buttons |
+| `alpha7-ot-bug.md` | The live Overtime failure: CSS cause measured; server call probed |
+| `alpha7-ios26-spec.md` | Apple's exact numbers (colours, type, tracking, springs) and what Apple does NOT publish |
+| `alpha7-web-native.md` | What an iPhone Home Screen web app can do, per Safari version (MDN compat data, WebKit blog to Safari 27) |
+| `alpha7-handrolled.md` | Code sweep: frappe-ui leftovers (53 toasts), fonts, hand-built lists |
 
 ---
 
-## 1. How close is alpha.6? Measured, side by side
+## 2. Live defects from the owner's screenshots (fix first — phase 0)
 
-iOS numbers: owner's iPhone screenshots (1206×2622 = 402×874 pt at 3×) unless marked Apple.
-Nadi numbers: the alpha.6 build, same viewport.
-
-| Detail | iOS 26 (measured / Apple) | Nadi alpha.6 | Match |
+| # | Defect | Cause (evidence) | Fix |
 |---|---|---|---|
-| Page background, dark | #000000 pure black (Settings) | #07070A | ✗ close |
-| Grouped cell, dark | #1C1C1E (28,28,30) (Settings; = Apple systemGray6 dark) | #15171D (21,23,29), bluish | ✗ |
-| Cell label | #FFFFFF, 17 pt | #FFFFFF, **15 pt** (lists) / 17 (forms) | ✗ lists |
-| Value text ("On", "NASTY Guest") | (158,157,164) ≈ secondaryLabel | ink2 #A8AEB8 | ~ |
-| Separator | (56,55,59) 1 px, starts at **74 pt** (after 30 pt icon tile) | hair rgba(255,255,255,.075), inset 16 | ✗ |
-| Group corner radius | **26 pt** (measured; Apple: not published) | 16 pt (forms), 20 (list panel) | ✗ |
-| Group side margin | 16 pt | 16 pt | ✓ |
-| Gap between groups | **35 pt** | 24 pt (forms) | ✗ |
-| Row height (with icon) | **54 pt** | 56 (lists) / 44 (forms) | ✗ |
-| Icon tile | **29×28 pt**, filled colour tile, white glyph | 32 pt grey tile, grey outline glyph | ✗ |
-| Large title | **34 pt bold**, left 17 pt, under the status bar, scrolls away | **20 pt** semibold inline title beside a logo | ✗ biggest gap |
-| Account row (avatar + name + subtitle) | 44 pt circle avatar, name 20 pt semibold, subtitle secondary | square 72 pt tile, name bold | ✗ |
-| Avatar button top-right | circle, tinted gradient initials (App Store) | rounded square, flat | ✗ |
-| Tab bar | floating glass capsule, **~61 pt** tall, inset **~20 pt**, selected tab = **glass "lens" pill** behind icon+label, blue tint | capsule 66 pt, inset 16, selected = bold white label, no lens | ~ |
-| Search | bottom glass capsule with mic (Settings), or search tab | none | ✗ missing |
-| Buttons | capsule; "Get" = tinted glass capsule (App Store) | lime filled capsule 48 | ~ |
-| Accent | system blue #0088FF (iOS 26 dark #0091FF) | lime #C8FF00 | ✗ by design (brand) — see Q1 |
-| Switch | iOS 26 wider track, white knob, green when on | hand-built button, lime track, BLACK knob | ✗ |
-| Chevron | grey (≈158) thin | grey thin | ✓ |
-| Text font | SF Pro (system) | -apple-system first, but Inter / Inter Tight / JetBrains Mono also downloaded | ~ |
+| 0.1 | Overtime: the red "Could not check overtime…" / "Checking…" text wraps one word per line **inside** the Hours row (row grows 43 → 87 pt) | CSS: `.g-form-row > :not(…):not(…)` (specificity 0,3,0) beats `.g-form-row--error .g-field-error` (0,2,0), so the error gets `flex-basis: 0` and a 22 px column (measured, `alpha7-ot-bug.md`) | Error moves UNDER the row, full width: `.g-form-row.g-form-row--error > .g-field-error { flex: 0 0 100% }`. Affects every form row with an error. |
+| 0.2 | Overtime: "Could not check overtime" on a day the list offered | **Not reproducible locally**: every employee × claimable day passes, server and browser. The app throws the real server error away (no `onError`) | Record and show the real reason (`exc_type` + message) — the next report names the cause. No blind backend change. |
+| 0.3 | Overtime: "Checking…" shows as red error text | loading and error share one channel | Loading = a spinner in the row (iOS `ProgressView`), not red text |
+| 0.4 | Overtime: the picked day is shown twice ("Wed, 23 Sep" and "Day you worked 23 Sep 2026") | the date field stays visible after a pick | Hide "Day you worked" once a day is picked (show it only for a day not in the list) |
+| 0.5 | "Paid as overtime", the hint line and "Try again" float between groups at different indents | free text outside any group | They become a row or a group footer |
+| 0.6 | Filters sheet: labels above empty boxed selects; a black footer band with two mismatched buttons | ListFiltersActionSheet predates the grouped form | Filters = grouped rows with menu pickers ("All" default); Reset leading / Done trailing in the sheet bar; apply live |
+| 0.7 | Appearance menu: opaque, a blank slot above "Light", covers the row labels | custom menu | iOS pull-down menu (glass, anchored to the value, no blank slot) — see D2 |
+| 0.8 | Check-ins list: time as a bold title, In/Out as chips, filter as a boxed square | list row predates alpha.6 | Rows "In / Out" + time trailing, grouped by day (Today / Yesterday / Mon 22 Sep); filter = a glass bar button |
+| 0.9 | Staff see **"₹ 50"** on expenses; the approver sees "RM 12.50" | a claim can carry the employee's salary currency; the list formats with it | Show money in the company currency everywhere; flag claims whose currency differs from the company's in readiness |
 
-**Verdict: about 60% of the way.** The structure (groups, rows, sheets, words, sizes on the ramp) is right since
-alpha.6. What still gives it away: no large titles, the wrong greys, rows and icon tiles off by a few points,
-a hand-built switch, no search, no selected "lens" in the tab bar, and the lime brand used where iOS uses its accent.
+## 3. Home overhaul (owner's request; research: `alpha7-home.md`)
 
----
+**Rule that shapes it:** Apple HIG Materials — glass is for controls and navigation, **not content**. So the
+check-in card is a solid, raised content card (like a Wallet pass or the Fitness summary card), and only its
+button is the prominent glass button. That delivers the owner's "a card that clearly holds the clock-in" without
+breaking Apple's rule.
 
-## 2. What an Apple engineer would do — the alpha.7 work
+**What the research says to do (sources in the file):** every workforce app studied (Deputy, Teams Shifts,
+Connecteam, When I Work, Homebase, Workday) leads with **the shift + one big clock button**; once in, the
+**running time becomes the headline**; a disabled button must **say why**. None puts routine news above the clock;
+NN/g: people skip banner-like blocks at the top ("banner blindness").
 
-Grouped by what the person notices first. Each line: change · evidence · how we prove it.
+**Proposed Home, top to bottom (staff):**
+1. **Large title** "Today" with the date under it (34 pt bold; collapses on scroll).
+2. **Required announcement** — only one, and only if it must be read or is urgent (compact row with a preview line).
+   Routine news goes lower. *(This adjusts the owner's "announcement on top": it follows the research above.)*
+3. **Today card** (solid content card, 26 pt corners):
+   - top: shift line "Day shift · 9:00–18:00"
+   - middle, the headline: "Not checked in" / "Checked in · 3h 12m" (live) / "Done · 8h 41m" / "Rest day" / "On leave"
+   - a hairline, then details: location "HQ · in range" or "1.2 km away — needs approval", last punch "In 9:02"
+   - bottom: **one** prominent button, "Check in" / "Check out"; when it can't be used, it says why
+   - the forgotten check-out becomes a state of this card, not a separate banner
+4. **Announcements** — 2 rows, each title + one-line preview + unread dot; "See all".
+5. **This week** — "3 of 5 days · 1h 00m overtime to claim", next leave or holiday.
+6. **No quick-action grid** (the Requests tab does that; HIG Widgets: avoid app-like grids on glanceable screens).
 
-### A. The frame of every screen (biggest visible gap)
-| # | Change | Evidence | Proof |
+**Approver:** the same, plus **"Needs you"** (counts by kind, e.g. "Time off 2 · Overtime 1") right after the
+Today card when anything waits; one quiet line at the bottom when nothing does.
+
+**Removed:** the separate Now bar, the separate open-check-in banner, the logo in the title position, "No news."
+
+## 4. Announcements with preview and required acknowledgement (research: `alpha7-announcements.md`)
+
+**Finding: most of it already exists** — HR writes in Desk with the rich-text editor, audience targeting,
+publish dates, pinning; every open and "I've read and understood" is recorded per employee with a time; HR sees
+"Read by X of Y · Z confirmed". **Add nothing new as a library**: Frappe's editor for HR, the app's own HTML
+sanitiser for staff, the browser's IntersectionObserver for "reached the end", Ionic's non-dismissible modal.
+
+| # | Gap | Change | Evidence |
 |---|---|---|---|
-| A1 | **Large title** on every tab root (34 pt bold, left 16), scrolling away into a centred 17 pt inline title in the glass bar | HIG Toolbars/Navigation; WWDC25 284 ("large title sits at the top of the scroll view"); Settings/App Store screenshots | measure: title 34 pt at rest, inline after 44 pt scroll |
-| A2 | Nadi logo leaves the title position (the title IS the header); logo lives on the login and splash only | HIG: title is never the app name | screenshot |
-| A3 | Avatar: **circle**, 36 pt in the bar, initials on a subtle gradient, opts out of glass | App Store screenshot; `sharedBackgroundVisibility` (ios26-spec) | measure |
-| A4 | Tab bar: the **selected-tab lens** (a glass pill behind the selected icon+label); height 61, inset 20; minimise on scroll down | App Store screenshot; `tabBarMinimizeBehavior(.onScrollDown)` (SUI, WWDC25 323) | measure + scroll test |
-| A5 | **Search**: a trailing search control in the tab bar that opens app-wide search (people, requests, SOPs, days) | HIG Search tab (June 2026 update); Settings/App Store both have it | journey: find a request by name |
+| 4.1 | **Images HR pastes do not show for staff** (Frappe stores them private) | set the doctype's `make_attachments_public` + a guarded patch (a site Property Setter can override the JSON) | Frappe file permissions; our memory note "Property Setter shadows doctype JSON" |
+| 4.2 | HR has no true preview | "Preview as staff" button in Desk → opens the real app screen, marked "Preview — not published", records no read | owner's ask |
+| 4.3 | Editing does not ask for re-acknowledgement | `version` on the announcement, raised when a published required notice's title/body changes; "Minor fix" skips it; the read record stores the version acknowledged | Deputy / Read-and-Understood re-ack on change |
+| 4.4 | The "I've read this" button is always active | Required notices open **full-screen** on app open, oldest first; the confirm button enables when the end is reached; before that it stays focusable, says "Read to the end to confirm", and a tap scrolls to the end (VoiceOver users can confirm) | HIG Modality (full-screen for long required tasks); NN/g (a disabled button must say why); WCAG 2.1.1 |
+| 4.5 | No escape hatch | "Remind me later" on non-urgent required notices (not on urgent ones) | Connecteam pattern; HIG (always an obvious way out) |
+| 4.6 | HR cannot chase | "Remind those who haven't confirmed" (existing push path) + a who-has/hasn't list with export | Connecteam/Staffbase/Workvivo |
+| 4.7 | Two taps could record twice | unique (announcement, employee) | race seen in code review |
 
-### B. Colours and materials to Apple's semantic set
-| # | Change | Evidence |
+**Needs the owner:** (a) the confirmation report is a new Desk report (you deferred report work on 13 Sep —
+is this one OK?); (b) public images are reachable by anyone with the link — fine for normal notices; say if some
+notices are sensitive.
+
+## 5. Every page — the full alpha.7 list
+
+Numbers = fixes from the two reviews (`A#` = review A's top-20, `B#` = review B's top-25). The per-screen tables
+with every P1/P2/P3 difference are in the review files.
+
+### 5.1 The frame (every screen)
+- **Large titles** on the 5 tab roots, collapsing to a centred 17 pt inline title (A1). Home gets a title (it has none).
+- **Pushed screens**: back chevron + centred inline title + contextual actions only; **bell and avatar only on tab roots** (B24).
+- **Bar buttons** are 44 pt round glass buttons with a monochrome symbol; "New" = a `+` button, not a lime capsule (A8, A9); filter = `line.3.horizontal.decrease.circle` (B20).
+- **Avatar**: a circle, gradient initials (A10).
+- **Tab bar**: selected-tab lens, height 61, inset 20, minimise on scroll (A5).
+- **Search**: a search button at the end of the tab bar → searches requests, people (names), SOPs, days (owner: yes).
+
+### 5.2 Colour and surface
+- Page #000 dark / #F2F2F7 light; content cells **flat** #1C1C1E / #FFFFFF — no gradient, rim or border on content (A2, A7).
+- Status as **coloured text** in Apple's iOS 26 colours (orange #FF9230, green #30D158, red #FF4245), not pills (A3).
+- One currency, from the company (0.9).
+
+### 5.3 Lists
+- Everything is an inset grouped list; rows never sit loose on the page (A6).
+- Group radius 26, gap 35, rows 54 with an icon / 44 without (A11).
+- Icon tiles: **coloured tile + white symbol** (owner: yes) — see §7 for the example set (A12).
+- Row title 17 regular, subtitle 15 secondary, SF tracking (A13).
+- Section headers attached to their group (A14); "See all" as the last row of the group (A15).
+- Dates the iOS way: Today / Yesterday / Wed 23 Sep; durations "Half day" / "3 days", never "0d" (A16, B4).
+- Tabular digits for times, money, counts (A17).
+- **Empty states** = centred icon + title + one line (ContentUnavailableView); no dashed boxes, no top-left grey sentence (A4, B25).
+- Calendar legend moves to an info sheet; one dot style on the grid (A19).
+
+### 5.4 Forms
+- Errors under the row, loading in the row (0.1, 0.3; B2, B3).
+- No red asterisks — the Send button stays disabled until the form is complete (B14).
+- No section header over a single row (B13); guidance in group footers (B11).
+- Dates and times as **compact pills** ("23 Sep 2026"), nothing before a value is set (B15).
+- Menu picker glyph = up/down chevron, value in secondary colour (B16).
+- A **sheet's** primary action sits in the sheet bar: Cancel left, Add/Done right (B21); no card inside a sheet (B22).
+
+### 5.5 Detail screens (a sent request)
+- Read-only rows as label/value (`LabeledContent`), no chevrons, pickers or switches (B1).
+- Status shown once (B7); person by name (B5).
+- Cancel a request = red text row at the end + confirmation, not a salmon capsule (B6).
+
+### 5.6 Controls
+- **Switch = Safari's native switch** (`<input type=checkbox switch>`): Apple's look, VoiceOver role, and the only haptic a web app gets (Safari 18) (B17).
+- **Menus** (Appearance, "⋯" on a request): iOS pull-down, glass, anchored to the button (0.7, B18).
+- **Notification banners** replace all 53 frappe-ui toasts (top glass capsule, VoiceOver live region).
+- **Alerts** (Delete / Discard?): one centred glass alert, Cancel always "Cancel".
+
+### 5.7 Type, motion, native feel
+- Dynamic Type: the app follows the iPhone's Text Size setting (`-apple-system-body`, rem).
+- Apple's default spring for push, sheets and the tab lens (response 0.5, damping 0.825).
+- Stop downloading Inter / Inter Tight / JetBrains Mono on Apple devices.
+- **App icon badge** = approvals waiting / unread (Home Screen apps, iOS 16.4+).
+- **Tapping a notification opens that exact request** (Declarative Web Push). Approve/Reject buttons *on* the notification are impossible on iPhone.
+- **Check-in without signal**: kept on the phone and sent when back online (iOS has no background sync).
+- **Screen stays on** during the selfie (Wake Lock, iOS 18.4+).
+- **Share** (iOS share sheet) on a request or an announcement.
+- Face ID sign-in: **later** (owner, 25 Sep).
+
+## 6. How alpha.7 is proven
+1. **Parity check**: a script measures Nadi at 402 pt against fixed numbers from the owner's iOS screenshots (group radius 26, gap 35, row 54/44, separator at the text, title 34, colours) — fails on > 1 pt or > 2 RGB units.
+2. **The two reviews re-run** with the same checklist → the score must reach ≥ 90.
+3. alpha.6's gates stay: audit (205 views), journeys (87 server + 10 screens), sheet crawler, a11y, coherence, visual.
+4. **Real Safari**: once `sudo npx playwright install-deps webkit` is run (owner will do it after this plan) — the
+   WebKit-only checks (date pills, switch, menus, safe areas, Dynamic Type) run in the real engine.
+
+## 7. Recommendation for Q2 (coloured icon tiles) — example
+
+Like iOS Settings: a small rounded tile in one colour with a white symbol. One colour per *kind*, reused
+everywhere that kind appears (More, New request sheet, notifications, Needs you):
+
+| Kind | Tile colour (iOS system) | Symbol |
 |---|---|---|
-| B1 | Dark: page #000, grouped cell #1C1C1E, elevated #2C2C2E; light: page #F2F2F7, cell #FFFFFF (Apple system background set) | ios26-spec §4; Settings pixels (28,28,30) |
-| B2 | Text: label white / secondaryLabel (235,235,245,0.6) / tertiary 0.3; separator (84,84,88,0.6) | ios26-spec §4 |
-| B3 | Status colours = Apple system colours iOS 26 (green #30D158 dark, red #FF4245, orange #FF9230, blue #0091FF) instead of custom chip inks | ios26-spec §3 (HIG Color, iOS 26 values) |
-| B4 | **Accent decision (Q1)** — see §4 | HIG Color: one tint colour for the app |
+| Time off | green #30D158 | palm tree / sun |
+| Overtime | orange #FF9230 | clock |
+| Expense | blue #0091FF | receipt |
+| Shift change | indigo #6D7CFF | calendar with clock |
+| Fix a day | teal #40C8E0 | calendar with check |
+| Help | blue #0091FF | lifebuoy |
+| SOPs | brown #B78A66 | book |
+| Announcements | red #FF4245 | megaphone |
+| Public holidays | red #FF4245 | calendar |
 
-### C. Lists and forms to the pixel
-| # | Change | Evidence |
+Evidence: Settings uses exactly this (owner's screenshot: orange Airplane, blue Wi-Fi, green Mobile Service);
+colour carries the kind, the word carries the meaning (never colour alone — HIG Accessibility).
+
+## 8. Order and size
+
+| Phase | What | Steps |
 |---|---|---|
-| C1 | Group radius 26, gap between groups 35, row 54 with icon / 44 plain, separator starting at the text (74 with icon) | Settings screenshot measurements |
-| C2 | Icon tiles: 29 pt, **filled colour tile with a white glyph** (Settings style), one colour per kind (time off green, overtime orange, expense blue…) | Settings screenshot; HIG Icons |
-| C3 | Row label 17 pt everywhere (lists were 15) | HIG Typography (Body 17) |
-| C4 | The remaining 20+ hand-built `border-b` lists → the one list component | alpha7-handrolled.md §3 |
-| C5 | Account/"You" header as the Settings account row: circle avatar 44, name 20 semibold, subtitle "Manager · Shift" | Settings screenshot |
+| 0 | Live defects (§2) | 9 |
+| 1 | The frame + colour (5.1, 5.2) | 10 |
+| 2 | Home overhaul (§3) | 6 |
+| 3 | Lists, forms, details (5.3–5.5) | 16 |
+| 4 | Controls (5.6) | 4 |
+| 5 | Announcements (§4) | 7 |
+| 6 | Type, motion, native features (5.7) | 8 |
+| 7 | Prove (§6) + release | 4 |
+| | **Total** | **64** |
 
-### D. Controls: native where the platform has them
-| # | Change | Evidence |
-|---|---|---|
-| D1 | **Switch = Safari's native `<input type=checkbox switch>`** — Apple's own switch, VoiceOver role, and the ONLY haptic a web app gets on iOS (iOS 18+) | WebKit 17.4 blog / 18.0 notes (web-native.md) |
-| D2 | Menus (the "⋯" on a request, Appearance) → popover + `commandfor` + anchor positioning, glass, morphing from the button; frappe-ui Dropdown goes | web-native.md (Safari 26.2/27); HIG Menus |
-| D3 | **Notification banner** replacing all 53 frappe-ui `toast()` calls: one component, top, glass capsule, auto-dismiss, VoiceOver live region | alpha7-handrolled.md (verified 53 calls); HIG Notifications |
-| D4 | Alerts (Delete, Discard changes?) → one centred glass alert, ≤3 buttons, Cancel always "Cancel" | HIG Alerts |
-| D5 | Sheets: part-height sheets **inset on glass**, full height opaque; ✓ (checkmark, tinted) top-right for confirm | ios26-spec §6 |
-| D6 | Buttons: primary = `.glassProminent` look (tinted glass capsule) rather than a flat fill; secondary = `.glass` | WWDC25 323; App Store "Get" |
+## 9. Owner decisions (from 25 Sep, and what is still open)
 
-### E. Type, font, motion
-| # | Change | Evidence |
-|---|---|---|
-| E1 | **Dynamic Type**: root font `-apple-system-body`, every size in rem → the app follows the iPhone's Text Size setting | WebKit "Using the System Font" (web-native.md §1) |
-| E2 | SF tracking table applied per size (17 → −0.43, 13 → −0.08, 34 → +0.40) | ios26-spec §12 |
-| E3 | Stop downloading Inter / Inter Tight / JetBrains Mono on Apple devices (system font only); keep Inter as the non-Apple fallback | handrolled.md §9; verified fonts.css |
-| E4 | Motion = Apple's default spring (response 0.5, damping 0.825) for push, sheet and lens; View Transitions for push/pop | ios26-spec §10; web-native (View Transitions 18.0) |
-| E5 | Scroll-driven animations (Safari 26) for the large title and tab-bar minimise; static fallback before 26 | web-native.md §11 |
-
-### F. The app outside the app (native-feel features)
-| # | Feature | Why / evidence |
-|---|---|---|
-| F1 | **App icon badge** = your pending approvals (approvers) or unread notifications | Badging API, Home Screen apps iOS 16.4+ |
-| F2 | **Push that lands on the exact screen** (Declarative Web Push, `navigate` + badge in one message). Buttons ON the notification are impossible on iOS — the tap opens the approval sheet directly | web-native.md: notification actions unsupported; Declarative Web Push 18.4 |
-| F3 | **Log in with Face ID** (passkeys, autofill sign-in, password→passkey upgrade). Needs a backend endpoint → owner's word required (Q3) | WebAuthn in Safari 16/18/26 |
-| F4 | **Offline check-in queue**: if there is no signal at the door, the check-in is kept on the phone and sent on reconnect (iOS has no Background Sync) | web-native.md §9 |
-| F5 | **Keep the screen awake** during the selfie (Wake Lock, Home Screen 18.4+); keep one camera stream (WebKit bug 215884 re-prompt) | web-native.md §8 |
-| F6 | **Share** a request/payslip via the iOS share sheet (Web Share) | Safari 12.2+ |
-| F7 | Launch screen and 180×180 icon per iOS; theme-color per theme | ios26-spec §11 |
-
-### G. Leftovers from alpha.6 (carried)
-- The "⋯" menu and delete dialog on a sent request (frappe-ui) → D2/D4.
-- Not measured in alpha.6: real Safari, 430 pt and tablet, install/push/out-of-area dialogs → alpha.7 adds WebKit
-  runs if `sudo npx playwright install-deps webkit` is run once (Q4), and a 430 pt pass.
-
----
-
-## 3. How alpha.7 is proven (same discipline as alpha.6)
-1. A **pixel-parity script**: renders Nadi's Settings-like screen (You) and a list screen at 402 pt / 3×, measures the
-   same points as the iOS screenshots (group radius, row pitch, separator x, title size, colours) and fails on any
-   difference > 1 pt / > 2 RGB units. The iOS figures are fixed constants from the owner's screenshots.
-2. The alpha.6 audit, journeys (87 server + 10 screens), sheet crawler and all gates re-run at the end.
-3. One commit per change, test first.
-
-## 4. Decisions only the owner can make
-- **Q1 — Accent colour.** iOS apps have ONE tint. Nadi's is lime. Keep lime as Nadi's tint (brand; Apple allows an
-  app tint) — or use system blue like Settings/App Store? *Recommendation: keep lime as the tint, but only on the
-  primary action, switches and the tab lens, exactly where iOS uses its tint.*
-- **Q2 — Icon tiles in colour** (Settings style) — yes/no?
-- **Q3 — Face ID sign-in (F3)** needs a new server endpoint for passkeys (auth change). Yes/no?
-- **Q4 — Real Safari testing**: run `! sudo npx playwright install-deps webkit` once? Without it, iPhone-only
-  behaviour is checked on your phone after deploy.
-- **Q5 — Search (A5)**: what should it find? *Recommendation: requests, people (name only), SOPs, days.*
-
-## 5. Size and order
-A (5) → B (4) → C (5) → D (6) → E (5) → F (7) → proof = **32 steps**. F3 waits on Q3.
+| Q | Answer / status |
+|---|---|
+| Q1 accent | **Yes** — keep lime as the one tint; only on the primary action, switches ON, the tab lens |
+| Q2 coloured icon tiles | Recommended — example set in §7; needs a yes |
+| Q3 Face ID sign-in | **Later** |
+| Q4 real Safari | Owner will run `! sudo npx playwright install-deps webkit` after this plan |
+| Q5 search | **Yes** — requests, people's names, SOPs, days |
+| Q6 new | Announcement confirmation report in Desk — OK despite the 13 Sep report deferral? |
+| Q7 new | Announcement images public-by-link — OK, or are some notices sensitive? |
+| Q8 new | Home: required/urgent announcement above the Today card, routine news below it (research) — OK vs "announcement on top"? |
