@@ -5,7 +5,9 @@
 // it splits the rows around it. Empty groups are dropped (visibleSections has
 // already removed headings with nothing shown under them).
 
-export function groupFields(fields) {
+//: `shown(field)` says whether a row actually draws (FormView passes its own
+//: rule), so a one-row section is judged by what the person sees.
+export function groupFields(fields, shown = (f) => !f.hidden) {
 	const groups = []
 	let current = { key: "top", label: "", segments: [] }
 	const push = () => {
@@ -29,5 +31,10 @@ export function groupFields(fields) {
 		}
 	}
 	push()
+	// A one-row section keeps no header (alpha.7 B13): the row's label names it.
+	for (const g of groups) {
+		const only = g.segments.length === 1 && g.segments[0].kind === "rows" ? g.segments[0].fields : null
+		if (only && only.filter(shown).length === 1) g.label = ""
+	}
 	return groups
 }

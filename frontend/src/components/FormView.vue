@@ -97,7 +97,7 @@
 								<!-- Each section is ONE inset group (alpha.6 B2, Apple HIG Lists and
 								     tables): a small grey heading, then the rows on one rounded surface. -->
 								<section
-									v-for="group in groupFields(fieldList)"
+									v-for="group in groupFields(fieldList, rowShown)"
 									:key="group.key"
 									class="g-form-section"
 								>
@@ -156,7 +156,7 @@
 						<!-- Each section is ONE inset group (alpha.6 B2, Apple HIG Lists and
 						     tables): a small grey heading, then the rows on one rounded surface. -->
 						<section
-							v-for="group in groupFields(shownFields)"
+							v-for="group in groupFields(shownFields, rowShown)"
 							:key="group.key"
 							class="g-form-section"
 						>
@@ -411,7 +411,7 @@ import {
 } from "frappe-ui"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import FormField from "@/components/FormField.vue"
-import { dropEmptySections } from "@/utils/visibleSections"
+import { dropEmptySections, isShown } from "@/utils/visibleSections"
 import { groupFields } from "@/utils/formGroups"
 import { sentenceCase } from "@/utils/sentenceCase"
 import { sendLabel } from "@/utils/sendLabel"
@@ -614,6 +614,8 @@ const shownFields = computed(() =>
 	dropEmptySections(props.fields, formModel.value, isFieldReadOnly)
 )
 const tabFields = computed(() => splitFieldsByTab(shownFields.value, props.tabs))
+//: Whether a row draws, for the one-row-section rule (alpha.7 B13).
+const rowShown = (field) => isShown(field, formModel.value, isFieldReadOnly)
 
 const attachedFiles = createResource({
 	url: "hrms.api.get_attachments",

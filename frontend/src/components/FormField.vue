@@ -10,7 +10,6 @@
 		<span
 			v-if="!['Check', 'Section Break', 'Column Break'].includes(props.fieldtype)"
 			class="g-form-row__label"
-			:class="{ 'g-form-row__label--required': props.reqd }"
 		>
 			{{ label }}
 		</span>
@@ -23,6 +22,7 @@
 			v-if="props.fieldtype === 'Select' || props.documentList"
 			:options="selectionList"
 			:model-value="modelValue"
+			:placeholder="$attrs.placeholder || rowPlaceholder"
 			:aria-label="label"
 			v-bind="$attrs"
 			:disabled="isReadOnly"
@@ -40,7 +40,7 @@
 			:doctype="props.options"
 			:modelValue="modelValue"
 			:filters="props.linkFilters"
-			:placeholder="$attrs.placeholder"
+			:placeholder="$attrs.placeholder || rowPlaceholder"
 			:disabled="isReadOnly"
 			:aria-label="label"
 			@update:modelValue="(v) => emit('update:modelValue', v)"

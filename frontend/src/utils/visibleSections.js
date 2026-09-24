@@ -9,7 +9,7 @@
 
 const LAYOUT = new Set(["Section Break", "Column Break", "Tab Break"])
 
-function isShown(field, model, readOnly) {
+export function isShown(field, model, readOnly = (f) => Boolean(f.read_only)) {
 	if (LAYOUT.has(field.fieldtype)) return false
 	if (field.fieldtype === "Table") return true
 	if (field.hidden) return false

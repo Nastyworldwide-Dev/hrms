@@ -30,10 +30,42 @@ test("a table splits its group: rows before, the table, rows after", () => {
 })
 
 test("a heading with nothing under it makes no group", () => {
-	assert.deepEqual(shape(groupFields([sec("Empty"), sec("Real"), f("a")])), [["Real", [["a"]]]])
+	assert.deepEqual(shape(groupFields([sec("Empty"), sec("Real"), f("a"), f("b")])), [["Real", [["a", "b"]]]])
 })
 
 test("nothing in, nothing out", () => {
 	assert.deepEqual(groupFields([]), [])
 	assert.deepEqual(groupFields(undefined), [])
+})
+
+// alpha.7 B13: a section header over a single row is noise (iOS Settings
+// never titles a one-row group); the row's own label already names it.
+test("a section with one row loses its header", () => {
+	const groups = groupFields([
+		{ fieldtype: "Data", fieldname: "a", label: "A" },
+		{ fieldtype: "Section Break", fieldname: "s1", label: "Approval" },
+		{ fieldtype: "Link", fieldname: "b", label: "Goes to" },
+		{ fieldtype: "Section Break", fieldname: "s2", label: "Dates" },
+		{ fieldtype: "Date", fieldname: "c", label: "From" },
+		{ fieldtype: "Date", fieldname: "d", label: "To" },
+	])
+	assert.equal(groups.find((g) => g.key === "s1").label, "")
+	assert.equal(groups.find((g) => g.key === "s2").label, "Dates")
+})
+
+test("a one-row section with a table keeps its header", () => {
+	const groups = groupFields([
+		{ fieldtype: "Section Break", fieldname: "s", label: "Items" },
+		{ fieldtype: "Table", fieldname: "t", label: "Items" },
+	])
+	assert.equal(groups[0].label, "Items")
+})
+
+test("a hidden field does not count as a second row", () => {
+	const groups = groupFields([
+		{ fieldtype: "Section Break", fieldname: "s", label: "Approval" },
+		{ fieldtype: "Link", fieldname: "leave_approver", label: "Goes to" },
+		{ fieldtype: "Data", fieldname: "leave_approver_name", label: "Name", hidden: 1 },
+	])
+	assert.equal(groups[0].label, "")
 })

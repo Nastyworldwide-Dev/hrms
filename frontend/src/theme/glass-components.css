@@ -3536,10 +3536,6 @@ ion-router-outlet {
 	font-weight: 400;
 	color: var(--g-ink);
 }
-.g-form-row__label--required::after {
-	content: " *";
-	color: var(--g-danger-ink);
-}
 /* The control takes the rest of the row, its value trailing. */
 .g-form-row > :not(.g-form-row__label):not(.g-form-row__switch) {
 	flex: 1 1 0;
