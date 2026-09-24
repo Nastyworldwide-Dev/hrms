@@ -72,44 +72,55 @@
 	/>
 
 	<GModal :is-open="isModalOpen" :title="modalTitle" @did-dismiss="resetSelectedItem()">
-			<!-- Add Expense Action Sheet -->
-			<div class="bg-ground w-full flex flex-col pb-5">
-				<div class="w-full flex flex-col items-center justify-center gap-5 p-4 max-h-[80vh]">
-					<div class="flex flex-col w-full space-y-4 overflow-y-auto expense-fields">
-						<FormField
-							v-for="field in expenseFields"
-							:key="field.fieldname"
-							class="w-full"
-							:label="__(field.label, null, 'Expense Claim Detail')"
-							:fieldtype="field.fieldtype"
-							:fieldname="field.fieldname"
-							:options="field.options"
-							:documentList="field.documentList"
-							:hidden="field.hidden"
-							:reqd="field.reqd"
-							:default="field.default"
-							:readOnly="field.read_only || isReadOnly"
-							v-model="expenseItem[field.fieldname]"
-						/>
-					</div>
+		<!-- Add Expense Action Sheet -->
+		<div class="bg-ground w-full flex flex-col pb-5">
+			<div class="w-full flex flex-col items-center justify-center gap-5 p-4 max-h-[80vh]">
+				<div class="w-full overflow-y-auto expense-fields">
+					<section
+						v-for="group in groupFields(expenseFields)"
+						:key="group.key"
+						class="g-form-section mb-4"
+					>
+						<h2 v-if="group.label" class="g-form-section__title">
+							{{ sentenceCase(__(group.label, null, "Expense Claim Detail")) }}
+						</h2>
+						<div v-for="(segment, s) in group.segments" :key="s" class="g-form-group">
+							<FormField
+								v-for="field in segment.fields"
+								:key="field.fieldname"
+								class="w-full"
+								:label="__(field.label, null, 'Expense Claim Detail')"
+								:fieldtype="field.fieldtype"
+								:fieldname="field.fieldname"
+								:options="field.options"
+								:documentList="field.documentList"
+								:hidden="field.hidden"
+								:reqd="field.reqd"
+								:default="field.default"
+								:readOnly="field.read_only || isReadOnly"
+								v-model="expenseItem[field.fieldname]"
+							/>
+						</div>
+					</section>
+				</div>
 
-					<div v-if="!isReadOnly" class="flex w-full flex-row items-center justify-between gap-3">
-						<GButton
-							v-if="editingIdx !== null"
-							class="g-btn--compact"
-							danger
-							:label="__('Delete')"
-							@click="deleteExpenseItem()"
-						/>
-						<GButton
-							:label="editingIdx === null ? __('Add expense') : __('Update expense')"
-							:disabled="addButtonDisabled"
-							@click="updateExpenseItem()"
-						/>
-					</div>
+				<div v-if="!isReadOnly" class="flex w-full flex-row items-center justify-between gap-3">
+					<GButton
+						v-if="editingIdx !== null"
+						class="g-btn--compact"
+						danger
+						:label="__('Delete')"
+						@click="deleteExpenseItem()"
+					/>
+					<GButton
+						:label="editingIdx === null ? __('Add expense') : __('Update expense')"
+						:disabled="addButtonDisabled"
+						@click="updateExpenseItem()"
+					/>
 				</div>
 			</div>
-		</GModal>
+		</div>
+	</GModal>
 </template>
 
 <script setup>
@@ -125,6 +136,8 @@ import GModal from "@/components/glass/GModal.vue"
 
 import { claimTypesByID, claimTypesResource } from "@/data/claims"
 import { formatCurrency } from "@/utils/formatters"
+import { groupFields } from "@/utils/formGroups"
+import { sentenceCase } from "@/utils/sentenceCase"
 import { withCostTagFields } from "@/utils/expenseCostTags"
 
 import { useCurrencyConversion } from "@/composables/useCurrencyConversion"
@@ -182,21 +195,16 @@ const expensesTableFields = createResource({
 	url: "hrms.api.get_doctype_fields",
 	params: { doctype: "Expense Claim Detail" },
 	transform(data) {
-		// alpha.6: the employee enters what they paid. "Sanctioned amount" is
-		// the approver's number (it follows the amount, watch below), and cost
-		// center / department / location are accounting tags the claim stamps
-		// from the company (Form.vue); none is a question for the employee.
+		// alpha.6: "Sanctioned amount" is the approver's number (it follows the
+		// amount, watch below), not a question for the employee. The cost tags
+		// (cost center, dimensions) are NOT hidden: withCostTagFields rebuilds
+		// them on purpose so staff can tag a row (d00699e3d, 15 Sep).
 		const excludeFields = [
 			"description_sb",
 			"amounts_sb",
 			"base_amount",
 			"base_sanctioned_amount",
 			"sanctioned_amount",
-			"cost_center",
-			"department",
-			"location",
-			"project",
-			"accounting_dimensions_section",
 		]
 		return data
 			.filter((field) => !excludeFields.includes(field.fieldname))

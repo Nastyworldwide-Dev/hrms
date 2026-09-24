@@ -80,7 +80,7 @@ async function settle(page) {
 
 // ---- field helpers: find controls by their accessible name, as a screen reader does
 function control(scope, label) {
-	return scope.getByLabel(label, { exact: false }).first()
+	return scope.getByLabel(label, { exact: true }).first()
 }
 async function pickSelect(scope, label, optionMatch) {
 	const el = control(scope, label)
@@ -128,10 +128,10 @@ const JOURNEYS = [
 		path: "/ot-requests/new",
 		async fill(page) {
 			// Tap an open day from "Days you can claim", as a person does.
-			const day = page.locator("button[aria-pressed]").first()
+			const day = page.getByRole("radio").first()
 			await day.click()
 			await page.waitForTimeout(800)
-			await fillText(page, "Explanation", "screen journey")
+			await fillText(page, "Note", "screen journey")
 		},
 	},
 	{
@@ -139,9 +139,9 @@ const JOURNEYS = [
 		doctype: "Leave Application",
 		path: "/leave-applications/new",
 		async fill(page) {
-			await pickSelect(page, "Leave type", /Annual/)
-			await fillDate(page, "From date", ahead(20))
-			await fillDate(page, "To date", ahead(20))
+			await pickSelect(page, "Kind of leave", /Annual/)
+			await fillDate(page, "From", ahead(20))
+			await fillDate(page, "To", ahead(20))
 			await fillText(page, "Reason", "screen journey")
 		},
 	},
@@ -150,10 +150,10 @@ const JOURNEYS = [
 		doctype: "Attendance Request",
 		path: "/attendance-requests/new",
 		async fill(page) {
-			await fillDate(page, "From date", ago(6))
-			await fillDate(page, "To date", ago(6))
+			await fillDate(page, "From", ago(6))
+			await fillDate(page, "To", ago(6))
 			await pickSelect(page, "Reason", /On Duty/)
-			await fillText(page, "Explanation", "screen journey")
+			await fillText(page, "Note", "screen journey")
 		},
 	},
 	{
@@ -161,10 +161,10 @@ const JOURNEYS = [
 		doctype: "Shift Request",
 		path: "/shift-requests/new",
 		async fill(page) {
-			await pickSelect(page, "Shift type", /Night/)
-			await pickSelect(page, "Approver", /approver/i)
-			await fillDate(page, "From date", ahead(25))
-			await fillDate(page, "To date", ahead(25))
+			await pickSelect(page, "New shift", /Night/)
+			await pickSelect(page, "Goes to", /approver/i)
+			await fillDate(page, "From", ahead(25))
+			await fillDate(page, "To", ahead(25))
 		},
 	},
 	{
@@ -176,8 +176,8 @@ const JOURNEYS = [
 			await page.waitForTimeout(600)
 			await snap(page, "expense-item-sheet")
 			const sheet = page.locator("ion-modal").last()
-			await sheet.getByLabel("Expense claim type").selectOption({ label: "Travel" })
-			await sheet.getByLabel("Expense date").fill(ago(3))
+			await sheet.getByLabel("Type", { exact: true }).selectOption({ label: "Travel" })
+			await sheet.getByLabel("Date", { exact: true }).fill(ago(3))
 			await sheet.getByLabel(/^Amount/).fill("12.50")
 			await sheet.getByRole("button", { name: /^add expense$/i }).click()
 			await page.waitForTimeout(500)
