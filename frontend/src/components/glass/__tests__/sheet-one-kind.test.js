@@ -25,6 +25,9 @@ const files = vueFiles(SRC).map((path) => ({ rel: relative(SRC, path), src: read
 const RAW_MODAL_ALLOWED = new Set([
 	// the one door
 	"components/glass/GModal.vue",
+	// a full-screen, non-dismissible page (alpha.7 §4.4), not a sheet: no
+	// grabber, no Close, cannot be swiped away (HIG Modality, full screen)
+	"components/MustReadNotice.vue",
 ])
 const UNTITLED_ALLOWED = new Set([
 	// the check-in sheet: the title IS the live clock + next action, drawn
