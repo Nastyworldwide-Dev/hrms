@@ -248,15 +248,16 @@ class TestAnnouncementBoard(FrappeTestCase):
 
 	# --- home block --------------------------------------------------------
 
-	def test_home_shows_two_and_counts_the_rest(self):
+	def test_home_shows_three_and_counts_the_rest(self):
 		"""Home is not a noticeboard. A block that grows without bound pushes
-		the check-in button below the fold."""
+		the check-in button below the fold. Up to three (alpha.7 §10.2, owner
+		25 Sep: a short vertical list, no carousel)."""
 		for i in range(5):
 			self._announce(title=f"Notice {i}")
 		frappe.set_user(self.user)
 		home = home_announcements()
-		self.assertEqual(len(home["announcements"]), 2)
-		self.assertEqual(home["more"], 3)
+		self.assertEqual(len(home["announcements"]), 3)
+		self.assertEqual(home["more"], 2)
 
 	def test_unread_leads(self):
 		read_one = self._announce(title="Already read")

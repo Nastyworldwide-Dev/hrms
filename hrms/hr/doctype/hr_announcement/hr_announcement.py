@@ -124,9 +124,66 @@ class HRAnnouncement(Document):
 				# other things, re-enforce this same rule and recurse.
 				frappe.db.set_value("HR Announcement", name, "pinned", 0, update_modified=False)
 
+	def on_update(self):
+		"""Notify once, when it is first published (alpha.7 §10.1). An edit to
+		a published notice does not buzz everybody's phone again."""
+		before = self.get_doc_before_save()
+		just_published = self.published and not (before and before.published)
+		if not (just_published and cint(self.notify_on_publish)):
+			return
+		frappe.enqueue(
+			"hrms.hr.doctype.hr_announcement.hr_announcement.send_publish_push",
+			name=self.name,
+			enqueue_after_commit=True,
+			job_id=f"announcement_publish_push::{self.name}",
+			deduplicate=True,
+		)
+		logger.info("[announcement] %s published; push queued", self.name)
+
 	def on_trash(self):
 		"""The read rows are about a thing that no longer exists. Left behind
 		they become an unreadable audit trail — a name, a date and a dangling
 		link."""
 		deleted = frappe.db.delete("HR Announcement Read", {"announcement": self.name})
 		logger.info("[announcement] %s deleted, read rows removed: %s", self.name, deleted)
+
+
+def send_publish_push(name: str) -> None:
+	"""Background job: one push per person in the notice's audience, title and
+	Summary, opening the notice in the app. Re-reads the committed row; a notice
+	unpublished or deleted before the worker ran sends nothing."""
+	if not frappe.db.exists("HR Announcement", name):
+		return
+	doc = frappe.get_doc("HR Announcement", name)
+	if not doc.published:
+		logger.info("[announcement] %s no longer published; no push", name)
+		return
+	try:
+		from frappe.push_notification import PushNotification
+
+		from hrms.utils.push_relay import relay_call
+	except ImportError:
+		return
+	push = PushNotification("hrms")
+	if not push.is_enabled():
+		logger.info("[announcement] push relay off; %s not sent", name)
+		return
+
+	from hrms.api.announcements import _audience_employees
+
+	employees = _audience_employees(doc)
+	users = frappe.get_all(
+		"Employee", filters={"name": ("in", employees), "user_id": ("is", "set")}, pluck="user_id"
+	)
+	link = f"{frappe.utils.get_url()}/hrms/announcements/{doc.name}"
+	icon = f"{frappe.utils.get_url()}/assets/hrms/manifest/favicon-196.png"
+	sent = 0
+	for user in users:
+		try:
+			relay_call(
+				push.send_notification_to_user, user, doc.title, doc.summary or "", link=link, icon=icon
+			)
+			sent += 1
+		except Exception:
+			frappe.log_error(f"Announcement push failed: {name} -> {user}")
+	logger.info("[announcement] %s pushed to %d of %d", name, sent, len(users))

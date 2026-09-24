@@ -39,12 +39,17 @@ LIST_FIELDS = (
 	"publish_from",
 	"publish_until",
 	"modified",
+	# alpha.7 §10.1: what the Home card shows, and whether it asks again.
+	"summary",
+	"cover_image",
+	"urgent",
+	"version",
 )
 
 #: Home shows at most this many. A home screen is not a noticeboard — §2 of the
 #: revamp puts announcements third, under the check-in, and a block that can
 #: grow without bound pushes everything an employee came for below the fold.
-HOME_LIMIT = 2
+HOME_LIMIT = 3  # alpha.7 §10.2: a short vertical list of up to three
 
 
 def _reader():
@@ -129,7 +134,7 @@ def _read_state(employee: str, names: list[str]) -> dict[str, dict]:
 	rows = frappe.get_all(
 		"HR Announcement Read",
 		filters={"employee": employee, "announcement": ("in", names)},
-		fields=["announcement", "read_on", "acknowledged"],
+		fields=["announcement", "read_on", "acknowledged", "acknowledged_version"],
 		ignore_permissions=True,
 	)
 	return {row.announcement: row for row in rows}
@@ -140,7 +145,11 @@ def _decorate(rows, employee):
 	for row in rows:
 		seen = state.get(row.name)
 		row["read"] = bool(seen and seen.read_on)
-		row["acknowledged"] = bool(seen and seen.acknowledged)
+		# Confirmed means confirmed THIS wording (alpha.7 4.3): a changed
+		# must-read asks again. A row from before versions counts as version 1.
+		row["acknowledged"] = bool(
+			seen and seen.acknowledged and (seen.acknowledged_version or 1) >= (row.version or 1)
+		)
 		# The one thing the card's behaviour turns on: an announcement that
 		# asks for acknowledgement and has not had it stays put.
 		row["needs_acknowledgement"] = bool(row.acknowledge_required) and not row["acknowledged"]
@@ -225,14 +234,35 @@ def get_announcement(name: str) -> dict:
 		"acknowledge_required": bool(doc.acknowledge_required),
 		"publish_from": doc.publish_from,
 		"publish_until": doc.publish_until,
-		"acknowledged": bool(
-			frappe.db.get_value(
-				"HR Announcement Read",
-				{"announcement": name, "employee": reader.name},
-				"acknowledged",
-			)
-		),
+		"summary": doc.summary,
+		"cover_image": doc.cover_image,
+		"urgent": bool(doc.urgent),
+		"version": doc.version or 1,
+		"acknowledged": _confirmed(name, reader.name, doc.version),
 	}
+
+
+def _confirmed(announcement: str, employee: str, version) -> bool:
+	row = frappe.db.get_value(
+		"HR Announcement Read",
+		{"announcement": announcement, "employee": employee},
+		["acknowledged", "acknowledged_version"],
+		as_dict=True,
+	)
+	return bool(row and row.acknowledged and (row.acknowledged_version or 1) >= (version or 1))
+
+
+@frappe.whitelist(methods=["GET", "POST"])
+def must_read() -> list[dict]:
+	"""The notices this person must still confirm, in the order the app opens
+	them full screen on launch (alpha.7 4.4): urgent first, then oldest."""
+	reader = _reader()
+	if not reader:
+		return []
+	rows = [r for r in _decorate(_visible_rows(reader), reader.name) if r["needs_acknowledgement"]]
+	rows.sort(key=lambda r: (not r.urgent, str(r.publish_from), str(r.modified)))
+	logger.info("[announcements] must_read %s: %d", reader.name, len(rows))
+	return rows
 
 
 def _record_read(announcement: str, employee: str):
@@ -282,7 +312,11 @@ def acknowledge(name: str) -> dict:
 	frappe.db.set_value(
 		"HR Announcement Read",
 		row,
-		{"acknowledged": 1, "acknowledged_on": now_datetime()},
+		{
+			"acknowledged": 1,
+			"acknowledged_on": now_datetime(),
+			"acknowledged_version": frappe.db.get_value("HR Announcement", name, "version") or 1,
+		},
 		update_modified=False,
 	)
 	logger.info("[announcements] %s acknowledged by %s", name, reader.name)
