@@ -3363,9 +3363,35 @@ ion-router-outlet {
 	font-size: var(--g-type-row-label-size);
 	cursor: pointer;
 }
-.g-switch:disabled {
+.g-switch:has(:disabled) {
 	color: var(--g-ink3);
 	cursor: not-allowed;
+}
+/* Native switch (Safari 17.4+): Apple draws it; we only tint it (owner Q1:
+   lime is the switch-on colour). */
+.g-switch__input {
+	margin: 0;
+	accent-color: var(--g-brand);
+}
+/* Drawn fallback: the input stays for focus and screen readers, invisible,
+   covering the track so a tap still toggles it. */
+.g-switch--drawn {
+	position: relative;
+}
+.g-switch--drawn .g-switch__input {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	cursor: pointer;
+	z-index: 1;
+}
+.g-switch--drawn .g-switch__track {
+	pointer-events: none;
+}
+.g-switch--drawn:has(.g-switch__input:focus-visible) .g-switch__track {
+	box-shadow: var(--g-shadow-focus-ring);
 }
 .g-switch__track {
 	position: relative;
@@ -3384,7 +3410,7 @@ ion-router-outlet {
 	width: 24px;
 	height: 24px;
 	border-radius: var(--g-radius-pill);
-	background: var(--g-bg);
+	background: var(--g-tile-on-tile); /* iOS: the thumb is always white */
 	box-shadow: 0 1px 3px rgba(var(--g-on-brand-rgb) / 0.2);
 	transition: transform var(--g-motion-state-change-duration) var(--g-motion-state-change-easing);
 }

@@ -38,11 +38,15 @@ test("GCheckbox is a native checkbox whose labelled row is the 44px target", () 
 	assert.match(rule(".g-check"), /min-height: var\(--g-touch-target-min\)/)
 })
 
-test("GSwitch is a button with role=switch, aria-checked, 44px", () => {
+test("GSwitch is a native switch input in a 44px label (alpha.7 B17)", () => {
+	// Safari 17.4+ draws Apple's own switch, announces it as a switch and, on
+	// iOS 18, gives the only haptic a web app gets (webkit.org/blog/15865).
 	const src = read("../GSwitch.vue")
-	assert.match(src, /<button[\s\S]*type="button"[\s\S]*role="switch"/)
-	assert.match(src, /:aria-checked="on \? 'true' : 'false'"/)
-	assert.match(src, /class="g-switch g-focusable"/)
+	assert.match(src, /<input\s+type="checkbox"\s+switch/)
+	assert.match(src, /role="switch"/)
+	assert.match(src, /:checked="on"/)
+	assert.match(src, /<label\s+class="g-switch"/)
+	assert.match(src, /'g-switch--drawn': !NATIVE_SWITCH/)
 	assert.match(src, /toggleValue\(props\.modelValue/)
 	const r = rule(".g-switch")
 	assert.match(r, /min-height: var\(--g-touch-target-min\)/)
