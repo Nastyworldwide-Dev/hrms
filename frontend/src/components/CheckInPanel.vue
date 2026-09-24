@@ -193,6 +193,7 @@
 </template>
 
 <script setup>
+import { holdScreen, releaseScreen } from "@/utils/wakeLock"
 import { Check, ChevronRight, Clock, TriangleAlert } from "lucide-vue-next"
 import GSelfiePanel from "@/components/glass/GSelfiePanel.vue"
 import GClock from "@/components/glass/GClock.vue"
@@ -1323,6 +1324,7 @@ async function startCamera() {
 		}
 		cameraStream = stream
 		cameraStatus.value = "live"
+		holdScreen()
 		await nextTick()
 		if (generation !== cameraGeneration) return
 		if (videoEl.value) {
@@ -1341,6 +1343,7 @@ async function startCamera() {
 
 function stopCamera() {
 	cameraGeneration += 1
+	releaseScreen()
 	if (cameraStream) {
 		cameraStream.getTracks().forEach((t) => t.stop())
 		cameraStream = null

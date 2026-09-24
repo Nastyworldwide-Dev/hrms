@@ -122,6 +122,8 @@ function panel({ employee = "EMP", storage = new Map(), start = 1_800_000_000_00
 			},
 		},
 		gToast: (notice) => notices.push(notice),
+		holdScreen: () => {},
+		releaseScreen: () => {},
 		formatTimestamp: () => "",
 		window,
 		navigator,

@@ -1,6 +1,7 @@
 import { personalCacheKey } from "@/utils/personalCache"
 import { createResource, createListResource } from "frappe-ui"
 import { userResource } from "./user"
+import { setBadge } from "@/utils/appBadge"
 
 // No localStorage cache: this is a live counter. Caching it restored a stale
 // non-zero value on load and lit the bell dot even after every notification was
@@ -10,6 +11,8 @@ export const unreadNotificationsCount = createResource({
 	url: "hrms.api.get_unread_notifications_count",
 	initialData: 0,
 	auto: true,
+	// The Home Screen icon carries the same number (alpha.7 §5.7).
+	onSuccess: (count) => setBadge(count),
 })
 
 export const notifications = createListResource({
