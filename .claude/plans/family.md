@@ -1,15 +1,11 @@
-CLASS: "today's shift" read from Shift Assignment only, ignoring Employee.default_shift (HRMS's own fallback, get_employee_shift consider_default_shift=True)
+CLASS: native temporal input keeps WebKit's native appearance, so iOS Safari sizes it from its content and ignores width:100% (page drags sideways)
 
-Instance: Home said "No shift today" while Profile said "Your shift: 9AM - 6PM" (owner screenshot, 24 Sep 2026).
+Instance: Time off form (from/to date) could be dragged sideways on the owner's iPhone, 24 Sep 2026.
 
-Readers of a day's shift:
-- hrms/api/now.py:_shift_window — same-root (fixed: assignment, else default_shift_on)
-- hrms/api/calendar.py:_day_shift — same-root (fixed: attendance, check-ins, roster, then default_shift_on)
-- hrms/api/team.py:261 — not-affected: already `(att and att.shift) or member.default_shift`
-- hrms/api/geofence.py:131,199 — not-affected: the geofence POLICY lives on the assignment row (location, strict flag); a default shift carries no geofence, and the check-in path resolves it separately
-- hrms/overrides/employee_checkin_override.py:592 — not-affected: same geofence-policy lookup, narrowed to the punch's resolved shift
-- frontend/src/views/Profile.vue:321 — not-affected: reads default_shift (the correct half of the disagreement)
+Temporal inputs in the app (all now covered by ONE global rule in theme/glass-components.css):
+- frontend/src/components/glass/GDatePicker.vue (type=date) — same-root
+- frontend/src/components/glass/GDateTimePicker.vue (type=datetime-local) — same-root
+- frontend/src/components/FormField.vue Time branch (type=time; Fix a day in/out time) — same-root
+- any future input[type=date|time|datetime-local|month] — same-root (rule is by type, not by component)
 
-Rest days: a default shift never makes a holiday or weekly off a workday (default_shift_on checks the employee's holiday list); an assignment on a rest day still counts.
-
-Locked: hrms/api/test_now_default_shift.py (5), hrms/api/test_calendar_day_shift.py (+2).
+Locked: theme/__tests__/temporal-inputs-fit.test.js (4 types). Verified in Chromium at 320px, light+dark: fields 288px wide, scrollWidth 320. Real-device check after deploy (WebKit cannot run on this machine).

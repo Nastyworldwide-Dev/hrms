@@ -1097,6 +1097,31 @@ html[data-theme="dark"] .g-badge--open {
 	line-height: var(--g-type-row-label-line-height);
 	font-variant-numeric: tabular-nums;
 }
+/* iOS Safari: a native date/time input ignores `width: 100%` while it keeps its
+   native appearance, sizes itself from its formatted text and pushes the page
+   sideways (owner, Time off, 24 Sep 2026; WebKit-only, invisible in Chromium).
+   `appearance: none` returns sizing to this stylesheet; `min-width: 0` stops the
+   flex default from re-growing it. The native picker still opens on tap.
+   Locked by theme/__tests__/temporal-inputs-fit.test.js. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"] {
+	-webkit-appearance: none;
+	appearance: none;
+	min-width: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+	text-align: left;
+}
+/* Without native appearance WebKit centres the value and can collapse the
+   empty field's height; keep it one line, left-aligned, like every other field. */
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value {
+	text-align: left;
+	min-height: 1.4em;
+}
 .g-datefield input::placeholder {
 	color: var(--g-ink-muted);
 	opacity: 1;
