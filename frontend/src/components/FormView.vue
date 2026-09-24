@@ -147,7 +147,7 @@
 						@click.capture="touchForm"
 					>
 						<FormField
-							v-for="field in props.fields"
+							v-for="field in shownFields"
 							:key="field.name"
 							:fieldtype="field.fieldtype"
 							:fieldname="field.fieldname"
@@ -384,6 +384,7 @@ import {
 } from "frappe-ui"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import FormField from "@/components/FormField.vue"
+import { dropEmptySections } from "@/utils/visibleSections"
 import FileUploaderView from "@/components/FileUploaderView.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
@@ -579,7 +580,9 @@ watch(
 	{ deep: true }
 )
 
-const tabFields = computed(() => splitFieldsByTab(props.fields, props.tabs))
+//: The fields as drawn: a section heading only when something under it shows.
+const shownFields = computed(() => dropEmptySections(props.fields, formModel.value, isFieldReadOnly))
+const tabFields = computed(() => splitFieldsByTab(shownFields.value, props.tabs))
 
 const attachedFiles = createResource({
 	url: "hrms.api.get_attachments",

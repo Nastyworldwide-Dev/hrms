@@ -1,11 +1,11 @@
-CLASS: native temporal input keeps WebKit's native appearance, so iOS Safari sizes it from its content and ignores width:100% (page drags sideways)
+CLASS: layout fields kept by kind survive when every data field under them is filtered out (empty section headings)
 
-Instance: Time off form (from/to date) could be dragged sideways on the owner's iPhone, 24 Sep 2026.
+Instance: New expense showed 9 section headings, 6 empty (Currency, Taxes & charges, Advance payments, Totals, Exchange gain/loss, Accounting dimensions); Time off showed an empty "Other details" (alpha.6 audit §F, 24 Sep 2026).
 
-Temporal inputs in the app (all now covered by ONE global rule in theme/glass-components.css):
-- frontend/src/components/glass/GDatePicker.vue (type=date) — same-root
-- frontend/src/components/glass/GDateTimePicker.vue (type=datetime-local) — same-root
-- frontend/src/components/FormField.vue Time branch (type=time; Fix a day in/out time) — same-root
-- any future input[type=date|time|datetime-local|month] — same-root (rule is by type, not by component)
+Where section headings are drawn:
+- frontend/src/components/FormView.vue tabbed branch (tabFields) — same-root (fixed: tabFields built from shownFields)
+- frontend/src/components/FormView.vue flat branch (props.fields) — same-root (fixed: v-for over shownFields)
+- frontend/src/components/FormField.vue Section Break branch — not-affected: draws what it is given; the decision is upstream
+- each screen's getFilteredFields (leave, expense, attendance, shift, OT) — not-affected: allowlists are right to keep layout by kind; FormView now decides visibility once for all
 
-Locked: theme/__tests__/temporal-inputs-fit.test.js (4 types). Verified in Chromium at 320px, light+dark: fields 288px wide, scrollWidth 320. Real-device check after deploy (WebKit cannot run on this machine).
+Locked: utils/__tests__/visibleSections.test.js (8). Measured after build: expense 9 -> 3 headings, time off "Other details" gone.
