@@ -1,13 +1,12 @@
-CLASS: a sheet built before the grouped form (labels above boxed controls, "=/>/<" pickers, a footer band of mismatched buttons)
+CLASS: a native <select> that always has a value still drew an empty first <option> (iOS shows it as a blank menu slot)
 
-Instance: plan §2 0.6 — Filters sheet on every list (owner's alpha.6 shots).
+Instance: plan §2 0.7 — Profile > Appearance menu, a blank slot above "Light".
 
 Sites:
-- frontend/src/components/ListFiltersActionSheet.vue — same-root (one inset group of FormField rows, "All" when empty, Reset as a row)
-- frontend/src/components/ListView.vue — same-root (Done in the sheet bar applies; condition from utils/listFilters.js)
-- frontend/src/components/Link.vue placeholder — same-root (empty Link row reads "All" in a filter; forms pass nothing, unchanged)
-- frontend/src/components/FormField.vue — same-root (forwards placeholder to Link)
-- the 7 list views' FILTER_CONFIG — not-affected: their fields and options are unchanged; the old "=" default is kept for every field except from/to/start/end dates, which now keep a range (>= / <=) instead of an exact day
-- frontend/src/components/glass/GModal.vue confirm slot — not-affected: already existed (alpha.6 B8); first caller
+- frontend/src/components/glass/GSelect.vue — same-root (empty option only with a placeholder or while unset)
+- frontend/src/views/Profile.vue Appearance — same-root (always has a mode; now no blank slot)
+- frontend/src/components/FormField.vue Select rows — not-affected: an unset form field still gets its empty option; a set one no longer offers "" (Frappe Select with a leading "\n" still lists "" as its own option)
+- frontend/src/components/ListFiltersActionSheet.vue — not-affected: passes placeholder "All", so the empty option stays and reads "All"
+- the menu's look (glass, position) — not-affected: it is iOS's own native picker; not ours to draw
 
-Locked: utils/__tests__/listFilters.test.js (3). Verified in WebKit: rows 44 pt, "All" trailing, Done applies + closes + lights the filter button.
+Locked: native-controls.test.js (+1).

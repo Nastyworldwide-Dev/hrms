@@ -22,7 +22,7 @@ function rule(selector) {
 test("GSelect is a native <select> in the input skin with a visible focus ring", () => {
 	const src = read("../GSelect.vue")
 	assert.match(src, /<select[\s\S]*class="g-input g-select__native g-focusable"/)
-	assert.match(src, /<option value="">\{\{ placeholder \}\}<\/option>/, "empty first option")
+	assert.match(src, /value="">\{\{ placeholder \}\}<\/option>/, "empty first option")
 	assert.match(src, /\$emit\('update:modelValue', \$event\.target\.value\)/)
 	assert.doesNotMatch(src, /frappe-ui/)
 	// .g-input carries min-height 44px
@@ -75,4 +75,15 @@ test("Link opens a Glass sheet of 44px rows, not frappe-ui's Autocomplete", () =
 	assert.match(src, /role="option"[\s\S]*class="g-row g-row--tappable/)
 	assert.match(src, /frappe\.desk\.search\.search_link/, "data fetching unchanged")
 	assert.doesNotMatch(src, /<Autocomplete|import[^\n]*Autocomplete/)
+})
+
+// alpha.7 0.7: Appearance always has a value, yet iOS drew the empty option
+// as a blank first slot above "Light". The empty option exists only when it
+// says something (a placeholder such as "All") or nothing is chosen yet.
+test("GSelect draws the empty option only when it means something", () => {
+	const src = read("../GSelect.vue")
+	assert.match(
+		src,
+		/<option v-if="placeholder \|\| modelValue === '' \|\| modelValue == null" value="">\{\{ placeholder \}\}<\/option>/
+	)
 })

@@ -29,7 +29,9 @@
 				:aria-label="!label && ariaLabel ? ariaLabel : undefined"
 				@change="$emit('update:modelValue', $event.target.value)"
 			>
-				<option value="">{{ placeholder }}</option>
+				<!-- No blank first slot on a select that always has a value (iOS
+				     draws it as an empty row above the choices, alpha.7 0.7). -->
+				<option v-if="placeholder || modelValue === '' || modelValue == null" value="">{{ placeholder }}</option>
 				<template v-for="option in options" :key="option.items ? `g:${option.group}` : String(option.value)">
 					<optgroup v-if="option.items && !option.hideLabel" :label="option.group">
 						<option v-for="item in option.items" :key="String(item.value)" :value="item.value">
