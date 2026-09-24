@@ -1,13 +1,15 @@
 # HANDOFF
-prompt:   alpha.6 — Apple's rules everywhere, plain words, staff + approver both work ("finish them all")
-status:   done (deploy only)
-commit:   v2.0.0-alpha.6 (a3b02ead0) on nz-glass
-files:    frontend/src/components/FormView.vue, FormField.vue (grouped forms)
-          frontend/src/utils/plainLabel.js, sendLabel.js, requestDates.js, approverOptions.js
-          frontend/src/theme/glass-components.css, design/tokens.json (iOS type ramp)
-          hrms/api/now.py + calendar.py (default shift), hrms/utils/readiness.py (4 HR checks)
-          scripts/journey_every_request.py, frontend/e2e/alpha6-{audit,journey,sheets}.mjs
-          docs/glass/plan/alpha6-*.md, docs/glass/CHANGELOG.md
-verify:   after deploy: Home shows your shift; Time off on iPhone does not drag sideways; approve one request
-flags:    No patch, no schema change. Delegated: headings grey (Q2), expense posting date hidden (Q4). Not measured here: real Safari, 430px/tablet, install/push/remote-punch dialogs (alpha6-coverage.md). Ticket: FormView "⋯" menu still frappe-ui.
-next:     deploy 2.0.0-alpha.6
+prompt:   alpha.7 (go till finish)
+status:   done
+commit:   68869d581 on nz-glass (tag v2.0.0-alpha.7)
+files:    frontend/src/theme/glass-components.css
+          frontend/src/views/Home.vue
+          frontend/src/components/MustReadNotice.vue
+          hrms/api/announcements.py
+          hrms/hr/doctype/hr_announcement/hr_announcement.json
+          hrms/hr/report/announcement_confirmations/
+          hrms/patches/v16_0/announcement_alpha7_fields.py
+          docs/glass/CHANGELOG.md
+verify:   deploy nz-glass; open Nadi on iPhone Safari; Desk > HR Announcement > Preview as staff
+flags:    moved to alpha.8: Dynamic Type, Search (needs who-finds-whom ruling), spring motion; offline check-in never (owner rule)
+next:     owner deploys; answer the Search ruling before alpha.8
