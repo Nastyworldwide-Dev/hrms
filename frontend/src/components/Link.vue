@@ -24,7 +24,7 @@
 			@click="openSheet"
 		>
 			<span class="g-linkpick__value">{{ selectedLabel || placeholder }}</span>
-			<ChevronDown class="g-linkpick__chevron" aria-hidden="true" />
+			<ChevronsUpDown class="g-linkpick__chevron" aria-hidden="true" />
 		</button>
 
 		<GModal :is-open="open" :title="__(doctype)" @did-dismiss="open = false">
@@ -77,7 +77,7 @@
 
 <script setup>
 import { createResource, debounce } from "frappe-ui"
-import { Check, ChevronDown } from "lucide-vue-next"
+import { Check, ChevronsUpDown } from "lucide-vue-next"
 import { ref, computed, watch } from "vue"
 
 import GModal from "@/components/glass/GModal.vue"

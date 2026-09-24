@@ -18,7 +18,7 @@
   Emits: update:modelValue ("YYYY-MM-DD", or "" when cleared)
 -->
 <template>
-	<label class="g-field g-datefield">
+	<label class="g-field g-datefield" :class="{ 'g-datefield--empty': !modelValue }">
 		<span v-if="label" class="g-field__label">{{ label }}</span>
 		<input
 			type="date"

@@ -53,13 +53,13 @@
 					</option>
 				</template>
 			</select>
-			<ChevronDown class="g-select__chevron" aria-hidden="true" />
+			<ChevronsUpDown class="g-select__chevron" aria-hidden="true" />
 		</span>
 	</label>
 </template>
 
 <script setup>
-import { ChevronDown } from "lucide-vue-next"
+import { ChevronsUpDown } from "lucide-vue-next"
 
 defineProps({
 	modelValue: { type: [String, Number], default: "" },

@@ -4057,3 +4057,19 @@ html {
 	color: var(--g-tile-on-tile);
 	border-radius: 8px;
 }
+
+/* alpha.7 B15: a date/time in a form row is iOS's compact pill — the value
+   in a small grey capsule, trailing; the native picker is kept. */
+.g-form-group .g-datefield input {
+	width: auto;
+	min-height: 36px;
+	padding: 8px 12px;
+	border-radius: 8px;
+	background: var(--g-icon-bg);
+	color: var(--g-ink);
+}
+/* Before a date is chosen there is no pill (plan §5.4). */
+.g-form-group .g-datefield--empty input {
+	background: transparent;
+	color: var(--g-ink2);
+}
