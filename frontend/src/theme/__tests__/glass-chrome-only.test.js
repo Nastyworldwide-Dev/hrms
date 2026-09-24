@@ -32,17 +32,3 @@ test("only chrome blurs what is behind it (D3: content surfaces are solid)", () 
 	const content = [...new Set(blurring.filter((s) => !CHROME.test(s)))]
 	assert.deepEqual(content, [], "content surfaces with a backdrop-filter")
 })
-
-test("a content panel keeps its shape when it goes solid (rim, radius, gloss)", () => {
-	const decls = {}
-	root.walkRules((rule) => {
-		if (rule.parent.type !== "root" || !rule.selectors.includes(".g-glass")) return
-		rule.walkDecls((d) => {
-			decls[d.prop] = d.value
-		})
-	})
-	assert.equal(decls.background, "var(--g-glass-fill-fallback)")
-	assert.match(decls.border, /--g-glass-rim/)
-	assert.equal(decls["border-radius"], "var(--g-radius-panel)")
-	assert.match(css, /\.g-glass::after/)
-})

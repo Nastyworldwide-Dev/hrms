@@ -21,7 +21,7 @@
 		<meta name="apple-mobile-web-app-title" content="Nadi" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<!-- required for setting the status bar bg as white -->
-		<meta name="theme-color" content="#EDEFF3" />
+		<meta name="theme-color" content="#F2F2F7" />
 
 		<!-- PWA -->
 		<link
@@ -202,7 +202,7 @@
 				el.classList.toggle("dark", dark)
 				el.setAttribute("data-theme", dark ? "dark" : "light")
 				var meta = document.querySelector('meta[name="theme-color"]')
-				if (meta) meta.setAttribute("content", dark ? "#07070A" : "#EDEFF3")
+				if (meta) meta.setAttribute("content", dark ? "#000000" : "#F2F2F7")
 			} catch (e) {
 				/* storage/matchMedia unavailable — fall through to CSS default */
 			}

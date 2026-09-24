@@ -285,38 +285,13 @@ html[data-transparency="reduce"] .g-sidenav {
 .g-glass-ghost {
 	position: relative;
 	background: var(--g-glass-fill-fallback);
-	border: 1px solid var(--g-glass-rim);
 	border-radius: var(--g-radius-panel);
-	box-shadow: inset 0 1px 0 var(--g-rim-hi), inset 0 -1px 0 var(--g-rim-lo), var(--g-lift);
-	/* Holds the gloss below: without a backdrop-filter nothing else makes this
-	   a stacking context, and a z-index -1 pseudo would escape behind the page
-	   ground. */
 	isolation: isolate;
 }
 
-/* diagonal gloss (§6) — BENEATH the panel's content, never over it.
-   This carried no z-index until 17 Sep 2026. A positioned element with
-   `z-index: auto` paints in the positioned-descendants layer, ABOVE the
-   in-flow, unpositioned children of the same box — which is every cell, number
-   and label on the panel. Up to 55% white (--g-sheen, light mode) was washed
-   over the panel's top-left corner, fading out by 40% across it, so the FIRST
-   tile of every glass panel lost its contrast and the rest kept it. An
-   employee reported it about her own leave balance: "annual leave tu nape dia
-   mcm samar samar".
-   For the next person: `isolation: isolate` above makes the panel a stacking
-   context unconditionally, so a CHILD you also give `z-index: -1` would tie
-   with this gloss and lose on document order — the gloss paints last and would
-   wash it. Put such a child at z-index 0 with the gloss left where it is. */
-.g-glass::after,
-.g-glass-ghost::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-	z-index: -1;
-	border-radius: inherit;
-	background: linear-gradient(155deg, var(--g-sheen), transparent 40%);
-	pointer-events: none;
-}
+/* alpha.7 (plan §5.2): content cells are FLAT, as iOS 26 draws them — no
+   rim, inner highlight, drop shadow or diagonal gloss. The gloss (§6) and the
+   17 Sep "samar samar" defect it caused are gone with it. */
 
 /* the ghost variant is standalone — never combined with .g-glass in markup,
    or the surface counter double-counts. Both are solid now (D3); §6.1/§6.2

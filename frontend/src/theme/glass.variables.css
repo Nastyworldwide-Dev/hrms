@@ -6,7 +6,7 @@
    and are deliberately not generated here. */
 
 :root {
-	--ion-background-color: #EDEFF3;
+	--ion-background-color: #F2F2F7;
 	--ion-font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 	--ion-tab-bar-background-focused: rgba(16,22,34,.05);
 	--ion-tab-bar-color-selected: #3F5C00;
@@ -14,7 +14,7 @@
 }
 
 html[data-theme="dark"] {
-	--ion-background-color: #07070A;
+	--ion-background-color: #000000;
 	--ion-font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 	--ion-tab-bar-background-focused: rgba(255,255,255,.10);
 	--ion-tab-bar-color-selected: #C8FF00;

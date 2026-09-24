@@ -60,7 +60,7 @@ export default defineConfig({
 				// after data-theme is set and writes it onto <meta name="theme-color">,
 				// so that half already follows the token and must keep exactly one
 				// such meta tag to query.
-				theme_color: "#07070A",
+				theme_color: "#000000",
 				icons: [
 					{
 						src: "/assets/hrms/manifest/manifest-icon-192.maskable.png",
