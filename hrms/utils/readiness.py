@@ -261,6 +261,63 @@ def evaluate(facts: dict) -> list[dict]:
 			)
 		)
 
+	# alpha.6, 24 Sep 2026: each of the next four made a Nadi request fail for an
+	# employee who did nothing wrong, with an error only Desk can fix. HR sees
+	# them here first; staff are never asked to diagnose.
+	# Nadi already hides an expense type with no account for the employee's
+	# company (api.configured_expense_claim_types), so one missing row is HR's
+	# choice, not a failure. The failure is a company where NO type is set up:
+	# its staff open Expense and have nothing to pick.
+	no_types = facts.get("companies_without_expense_types") or []
+	if no_types:
+		out.append(
+			_finding(
+				"expense_types",
+				FAIL,
+				f"{', '.join(no_types)} has no Expense Claim Type with an account for it. "
+				"Staff there open Expense in Nadi and find nothing to claim.",
+				"Expense Claim Type -> Accounts: add a row for this company on each type "
+				"its staff may claim.",
+			)
+		)
+
+	no_payable = facts.get("companies_without_payable_account") or []
+	if no_payable:
+		out.append(
+			_finding(
+				"expense_payable",
+				FAIL,
+				f"{', '.join(no_payable)} has no Default Expense Claim Payable Account. "
+				"An approver who approves an expense there gets an error, and the claim stays waiting.",
+				"Company -> Accounts -> Default Expense Claim Payable Account.",
+			)
+		)
+
+	no_period = facts.get("companies_without_leave_period") or []
+	if no_period:
+		out.append(
+			_finding(
+				"leave_period",
+				FAIL,
+				f"{', '.join(no_period)} has no active Leave Period covering today. Approving "
+				"time off in lieu there fails, because the days have nowhere to be added.",
+				"Leave Period: create one for this year for each company listed, and tick Is Active.",
+			)
+		)
+
+	no_ot = facts.get("shifts_without_overtime") or []
+	if no_ot:
+		out.append(
+			_finding(
+				"shift_overtime",
+				WARN,
+				f"Overtime is not enabled on {len(no_ot)} shift(s) in use: {', '.join(no_ot)}. "
+				"Staff on them see 0 hours to claim, whatever they worked.",
+				"Fine if those shifts never earn overtime. Otherwise Shift Type -> Overtime tab: "
+				"tick Enable Overtime and add the rates.",
+			)
+		)
+
 	# Everything below is about the geofence, which only means anything when
 	# location is being collected at all.
 	if not facts.get("geo_enabled"):
@@ -393,6 +450,7 @@ def collect_facts() -> dict:
 	)
 
 	no_calendar, ending = _holiday_calendar_facts(active)
+	nadi_request_facts = _nadi_request_facts()
 
 	push = (
 		frappe.get_single("Push Notification Settings")
@@ -430,6 +488,73 @@ def collect_facts() -> dict:
 		if frappe.db.table_exists("Remote Checkin Request")
 		else 0,
 		"series_behind": behind,
+		**nadi_request_facts,
+	}
+
+
+def _nadi_request_facts() -> dict:
+	"""Desk setup a Nadi request needs, per company that has active staff.
+
+	Read-only. Only companies with active employees and only shifts actually in
+	use are asked about, so an empty test company or a retired shift type never
+	raises a finding nobody can act on.
+	"""
+	from frappe.utils import today
+
+	companies = sorted(
+		set(frappe.get_all("Employee", filters={"status": "Active"}, pluck="company", distinct=True)) - {None}
+	)
+
+	configured = set(
+		frappe.get_all(
+			"Expense Claim Account",
+			filters={"parenttype": "Expense Claim Type", "default_account": ("is", "set")},
+			pluck="company",
+		)
+	)
+	no_types = [c for c in companies if c not in configured]
+
+	no_payable = [
+		c for c in companies if not frappe.db.get_value("Company", c, "default_expense_claim_payable_account")
+	]
+
+	now = today()
+	no_period = [
+		c
+		for c in companies
+		if not frappe.db.exists(
+			"Leave Period",
+			{"company": c, "is_active": 1, "from_date": ("<=", now), "to_date": (">=", now)},
+		)
+	]
+
+	in_use = set(
+		frappe.get_all("Employee", filters={"status": "Active"}, pluck="default_shift", distinct=True)
+	)
+	in_use |= set(
+		frappe.get_all(
+			"Shift Assignment",
+			filters={"docstatus": 1, "status": "Active"},
+			pluck="shift_type",
+			distinct=True,
+		)
+	)
+	in_use.discard(None)
+	no_overtime = sorted(s for s in in_use if not frappe.db.get_value("Shift Type", s, "enable_overtime"))
+
+	logger.info(
+		"[readiness] nadi requests: %d company(ies) without expense types, %d without "
+		"payable account, %d without leave period, %d shift(s) without overtime",
+		len(no_types),
+		len(no_payable),
+		len(no_period),
+		len(no_overtime),
+	)
+	return {
+		"companies_without_expense_types": no_types,
+		"companies_without_payable_account": no_payable,
+		"companies_without_leave_period": no_period,
+		"shifts_without_overtime": no_overtime,
 	}
 
 

@@ -81,6 +81,10 @@ HEALTHY = {
 	"employees_without_leave_allocation": 0,
 	"employees_without_holiday_calendar": [],
 	"holiday_calendars_ending": {},
+	"companies_without_expense_types": [],
+	"companies_without_payable_account": [],
+	"companies_without_leave_period": [],
+	"shifts_without_overtime": [],
 }
 
 
@@ -382,6 +386,38 @@ class TestEveryFindingIsActionable(unittest.TestCase):
 		evaluate = _evaluate()
 		found = evaluate(facts(scheduler_inactive=True, geo_enabled=False))
 		self.assertEqual([f["status"] for f in found], ["fail", "warn"])
+
+
+class TestNadiRequestsCannotFail(unittest.TestCase):
+	"""alpha.6 (24 Sep 2026): each gap below made a Nadi request FAIL for a
+	correctly-behaving employee on a test site, with an error only Desk could
+	fix. HR must see them before staff do; staff are never asked to diagnose."""
+
+	def test_a_company_whose_staff_have_no_expense_type_to_pick(self):
+		f = by_id(_evaluate()(facts(companies_without_expense_types=["Nadi A"])), "expense_types")
+		self.assertEqual(f["status"], "fail")
+		self.assertIn("Nadi A", f["detail"])
+
+	def test_a_company_with_no_expense_payable_account(self):
+		f = by_id(_evaluate()(facts(companies_without_payable_account=["Nadi A"])), "expense_payable")
+		self.assertEqual(f["status"], "fail")
+		self.assertIn("Nadi A", f["detail"])
+
+	def test_a_company_with_no_active_leave_period(self):
+		f = by_id(_evaluate()(facts(companies_without_leave_period=["Nadi A"])), "leave_period")
+		self.assertEqual(f["status"], "fail")
+		self.assertIn("Nadi A", f["detail"])
+
+	def test_reported_even_when_geolocation_is_off(self):
+		"""The geofence block returns early when location is off. These are not
+		geofence findings and must not vanish with it."""
+		findings = _evaluate()(facts(geo_enabled=False, companies_without_leave_period=["Nadi A"]))
+		self.assertIn("leave_period", ids(findings))
+
+	def test_a_shift_with_overtime_off_is_a_choice_so_a_warning(self):
+		f = by_id(_evaluate()(facts(shifts_without_overtime=["Day"])), "shift_overtime")
+		self.assertEqual(f["status"], "warn")
+		self.assertIn("Day", f["detail"])
 
 
 if __name__ == "__main__":

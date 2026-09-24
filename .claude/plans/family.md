@@ -1,12 +1,14 @@
-CLASS: accounting-only and duplicate fields shown to people who do not act on them (expense form + approval sheet)
+CLASS: Desk setup a Nadi request depends on, with no readiness finding (the request fails for staff first)
 
-Instance: New expense asked for "Posting date" and repeated the total in three read-only boxes; the approver's sheet listed Posting Date, five totals (taxes/advances always 0) and TWO statuses ("Draft" + "Waiting") — alpha.6 screen journey, 24 Sep 2026.
+Instance: on the test site each of these broke a request an employee filed correctly (alpha.6 journey, 24 Sep 2026): no expense account for the company, no Default Expense Claim Payable Account, no active Leave Period, shift overtime off.
 
-Readers of the field lists:
-- frontend/src/views/expense_claim/Form.vue FIELDS — same-root (posting_date and the three totals removed; still computed/seeded on the model)
-- frontend/src/data/config/requestSummaryFields.js EXPENSE_CLAIM_FIELDS — same-root (employee, items, Total, one Status)
-  used by components/RequestList.vue:144 (requester's sheet) and the approval sheet — same list, same fix
-- frontend/src/views/expense_claim/List.vue EXPENSE_CLAIM_FIELDS — not-affected: a separate local list-view column set (ticket C1 for its "Posting Date" label)
-- other request sheets (Leave/Attendance/Shift/OT/CLR) — ticket alpha6 C1 (words) / B (sheet redesign); none shows two statuses (checked: each lists one of status|approval_status)
+Checks in hrms/utils/readiness.py evaluate():
+- expense_types (company with NO usable type) — same-root (new). A single type without an account is not reported: Nadi already hides it (api.configured_expense_claim_types)
+- expense_payable — same-root (new)
+- leave_period — same-root (new)
+- shift_overtime (WARN: a choice) — same-root (new)
+- holiday calendar, leave allocation — not-affected: already reported
+- approver chain / login — not-affected: Request Access Health report covers them
+Also: the geofence block RETURNS EARLY when geolocation is off; the new checks sit before it (locked by test_reported_even_when_geolocation_is_off).
 
-Locked: data/config/__tests__/expenseSheet.test.js (3), views/expense_claim/__tests__/Form.test.js (+2); forms-allowlist guard updated with the ruling.
+Locked: hrms/utils/test_readiness.py TestNadiRequestsCannotFail (5). Live on fresh.local: all four fire for the companies/shifts actually missing setup.
