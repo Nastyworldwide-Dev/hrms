@@ -23,6 +23,24 @@
 	--g-rest-rgb: 182 189 201;
 	--g-success: #00E5C0;
 	--g-success-rgb: 0 229 192;
+	--g-tile-announcement: #FF4245;
+	--g-tile-announcement-rgb: 255 66 69;
+	--g-tile-expense: #0091FF;
+	--g-tile-expense-rgb: 0 145 255;
+	--g-tile-fix: #40C8E0;
+	--g-tile-fix-rgb: 64 200 224;
+	--g-tile-leave: #30D158;
+	--g-tile-leave-rgb: 48 209 88;
+	--g-tile-neutral: #8E8E93;
+	--g-tile-neutral-rgb: 142 142 147;
+	--g-tile-on-tile: #FFFFFF;
+	--g-tile-on-tile-rgb: 255 255 255;
+	--g-tile-overtime: #FF9230;
+	--g-tile-overtime-rgb: 255 146 48;
+	--g-tile-shift: #6D7CFF;
+	--g-tile-shift-rgb: 109 124 255;
+	--g-tile-sop: #B78A66;
+	--g-tile-sop-rgb: 183 138 102;
 	--g-warn: #F59E0B;
 	--g-warn-rgb: 245 158 11;
 	/* color-themed (light) */

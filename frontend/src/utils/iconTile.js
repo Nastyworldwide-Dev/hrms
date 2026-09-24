@@ -1,21 +1,22 @@
 // The coloured icon tile per kind (alpha.7 plan §7, owner Q2): iOS Settings
-// style, one colour per kind, reused wherever that kind appears. Colours are
-// Apple's iOS system colours (dark variants). The white glyph is decorative
-// (aria-hidden; the row's words carry the meaning), so it is not held to
-// WCAG 1.4.11's 3:1, and some tiles (green, teal) do not reach it, as in iOS.
+// style, one colour per kind, reused wherever that kind appears. The colours
+// are tokens (design/tokens.json, tile-*): Apple's iOS system colours. The
+// white glyph is decorative (aria-hidden; the row's words carry the meaning).
+const tile = (name) => `var(--g-tile-${name})`
+
 export const TILE = {
-	leave: "#30D158",
-	overtime: "#FF9230",
-	expense: "#0091FF",
-	shift: "#6D7CFF",
-	fix: "#40C8E0",
-	help: "#0091FF",
-	sop: "#B78A66",
-	announcement: "#FF4245",
-	holiday: "#FF4245",
-	team: "#6D7CFF",
-	checkin: "#30D158",
-	neutral: "#8E8E93",
+	leave: tile("leave"),
+	overtime: tile("overtime"),
+	expense: tile("expense"),
+	shift: tile("shift"),
+	fix: tile("fix"),
+	help: tile("expense"),
+	sop: tile("sop"),
+	announcement: tile("announcement"),
+	holiday: tile("announcement"),
+	team: tile("shift"),
+	checkin: tile("leave"),
+	neutral: tile("neutral"),
 }
 
 const BY_KEY = {

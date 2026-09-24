@@ -4,18 +4,25 @@
 // the kind; the word carries the meaning (never colour alone).
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 import { TILE, tileFor } from "../iconTile.js"
 
+const tokens = JSON.parse(
+	readFileSync(fileURLToPath(new URL("../../../../design/tokens.json", import.meta.url)), "utf8")
+)["color-constant"]
+const hex = (v) => tokens[v.match(/--g-(tile-[a-z-]+)/)[1]].value
+
 test("the §7 palette, Apple's iOS system colours", () => {
-	assert.equal(TILE.leave, "#30D158")
-	assert.equal(TILE.overtime, "#FF9230")
-	assert.equal(TILE.expense, "#0091FF")
-	assert.equal(TILE.shift, "#6D7CFF")
-	assert.equal(TILE.fix, "#40C8E0")
-	assert.equal(TILE.help, "#0091FF")
-	assert.equal(TILE.sop, "#B78A66")
-	assert.equal(TILE.announcement, "#FF4245")
-	assert.equal(TILE.holiday, "#FF4245")
+	assert.equal(hex(TILE.leave), "#30D158")
+	assert.equal(hex(TILE.overtime), "#FF9230")
+	assert.equal(hex(TILE.expense), "#0091FF")
+	assert.equal(hex(TILE.shift), "#6D7CFF")
+	assert.equal(hex(TILE.fix), "#40C8E0")
+	assert.equal(hex(TILE.help), "#0091FF")
+	assert.equal(hex(TILE.sop), "#B78A66")
+	assert.equal(hex(TILE.announcement), "#FF4245")
+	assert.equal(hex(TILE.holiday), "#FF4245")
 })
 
 test("a doctype resolves to its kind's tile", () => {

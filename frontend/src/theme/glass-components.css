@@ -4046,6 +4046,6 @@ html {
 /* alpha.7 §7: a kind's coloured tile with a white symbol (iOS Settings). */
 .g-row__well--tile,
 .g-sheet__icon--tile {
-	color: #fff;
+	color: var(--g-tile-on-tile);
 	border-radius: 8px;
 }
