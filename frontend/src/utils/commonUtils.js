@@ -1,4 +1,4 @@
-import { toast } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import { inject } from "vue"
 import { firstMessage } from "@/utils/loudRequest"
 
@@ -31,13 +31,10 @@ export function useDownloadPDF() {
 				if (response.ok) {
 					return response.blob()
 				} else {
-					toast({
+					gToast({
 						title: "Download Failed",
 						text: `Error downloading PDF`,
-						type: "error",
-						icon: "alert-circle",
-						position: "bottom-center",
-						iconClasses: "text-red-500",
+						variant: "error",
 					})
 				}
 			})
@@ -53,12 +50,10 @@ export function useDownloadPDF() {
 				}, 3000)
 			})
 			.catch((error) => {
-				toast({
+				gToast({
 					title: __("Error"),
 					text: __("Error downloading PDF: {0}", [firstMessage(error)]),
-					icon: "alert-circle",
-					position: "bottom-center",
-					iconClasses: "text-red-500",
+					variant: "error",
 				})
 			})
 	}

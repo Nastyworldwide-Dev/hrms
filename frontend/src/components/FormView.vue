@@ -414,15 +414,8 @@ import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 
 import { goBackOrHome } from "@/utils/navigation"
-import {
-	ErrorMessage,
-	createListResource,
-	createDocumentResource,
-	toast,
-	createResource,
-	Dropdown,
-	Dialog,
-} from "frappe-ui"
+import { ErrorMessage, createListResource, createDocumentResource, createResource, Dropdown, Dialog } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import FormField from "@/components/FormField.vue"
 import { dropEmptySections, isShown } from "@/utils/visibleSections"
@@ -696,12 +689,10 @@ const docList = createListResource({
 	doctype: props.doctype,
 	insert: {
 		async onSuccess(data) {
-			toast({
+			gToast({
 				title: __("Success"),
 				text: __("Your {0} was created.", [__(props.noun)]),
-				icon: "check-circle",
-				position: "bottom-center",
-				iconClasses: "text-green-500",
+				variant: "success",
 			})
 			await uploadAllAttachments(data.doctype, data.name, fileAttachments.value)
 
@@ -713,12 +704,10 @@ const docList = createListResource({
 		onError(error) {
 			// The server names the refusal (balance, allocation period, approver,
 			// holiday list). Dropping it left the employee with "unknown error".
-			toast({
+			gToast({
 				title: __("Error"),
 				text: __("Could not save this {0}. {1}", [__(props.noun), firstMessage(error)]),
-				icon: "alert-circle",
-				position: "bottom-center",
-				iconClasses: "text-red-500",
+				variant: "error",
 			})
 			console.log(`Error creating ${props.doctype}`, firstMessage(error))
 		},
@@ -730,21 +719,17 @@ const documentResource = createDocumentResource({
 	name: props.id,
 	setValue: {
 		onSuccess() {
-			toast({
+			gToast({
 				title: __("Success"),
 				text: __("Your {0} was updated.", [__(props.noun)]),
-				icon: "check-circle",
-				position: "bottom-center",
-				iconClasses: "text-green-500",
+				variant: "success",
 			})
 		},
 		onError(error) {
-			toast({
+			gToast({
 				title: __("Error"),
 				text: __("Could not save this {0}. {1}", [__(props.noun), firstMessage(error)]),
-				icon: "alert-circle",
-				position: "bottom-center",
-				iconClasses: "text-red-500",
+				variant: "error",
 			})
 			console.log(`Error updating ${props.doctype}`, firstMessage(error))
 		},
@@ -752,21 +737,17 @@ const documentResource = createDocumentResource({
 	delete: {
 		onSuccess() {
 			goBackOrHome(router)
-			toast({
+			gToast({
 				title: __("Success"),
 				text: __("Your {0} was deleted.", [__(props.noun)]),
-				icon: "check-circle",
-				position: "bottom-center",
-				iconClasses: "text-green-500",
+				variant: "success",
 			})
 		},
 		onError(error) {
-			toast({
+			gToast({
 				title: __("Error"),
 				text: __("Could not save this {0}. {1}", [__(props.noun), firstMessage(error)]),
-				icon: "alert-circle",
-				position: "bottom-center",
-				iconClasses: "text-red-500",
+				variant: "error",
 			})
 			console.log(`Error deleting ${props.doctype}`, firstMessage(error))
 		},
@@ -780,22 +761,18 @@ const documentResource = createDocumentResource({
 const finalize = createResource({
 	url: "hrms.api.approval.finalize",
 	onSuccess() {
-		toast({
+		gToast({
 			title: __("Success"),
 			text: __("Your {0} was updated.", [__(props.noun)]),
-			icon: "check-circle",
-			position: "bottom-center",
-			iconClasses: "text-green-500",
+			variant: "success",
 		})
 	},
 	onError(error) {
 		console.warn(`[FormView] ${props.doctype} transition failed:`, error)
-		toast({
+		gToast({
 			title: __("Error"),
 			text: firstMessage(error, __("Could not save this {0}.", [__(props.noun)])),
-			icon: "alert-circle",
-			position: "bottom-center",
-			iconClasses: "text-red-500",
+			variant: "error",
 		})
 	},
 })
@@ -860,10 +837,10 @@ const decisionCapability = useDecisionCapability(
 	() => documentResource,
 	() => ({ doctype: props.doctype, name: props.id }),
 	() =>
-		toast({
+		gToast({
 			title: __("Request changed"),
 			text: __("This request changed. Reload it before deciding."),
-			icon: "alert-circle",
+			variant: "error",
 		})
 )
 const canReview = computed(() => {

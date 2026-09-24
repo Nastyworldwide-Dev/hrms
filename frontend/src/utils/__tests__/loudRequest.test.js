@@ -14,8 +14,8 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 
 const source = readFileSync(new URL("../loudRequest.js", import.meta.url), "utf8").replace(
-	'import { toast } from "frappe-ui"',
-	"const toast = () => {}"
+	'import { gToast } from "@/components/glass/toast"',
+	"const gToast = () => {}"
 )
 const { makeLoudRequest, firstMessage } = new Function(
 	`${source.replace(/export function/g, "function")}\nreturn { makeLoudRequest, firstMessage }`

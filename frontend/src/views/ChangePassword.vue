@@ -76,7 +76,8 @@ import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { useRouter } from "vue-router"
 import { goBackOrHome } from "@/utils/navigation"
-import { toast, createResource } from "frappe-ui"
+import { createResource } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 
 import { inject, ref } from "vue"
 
@@ -92,12 +93,10 @@ const updatePasswordResource = createResource({
 	url: "frappe.core.doctype.user.user.update_password",
 	method: "POST",
 	onSuccess() {
-		toast({
+		gToast({
 			title: __("Success"),
 			text: __("Your password has been updated."),
-			icon: "check-circle",
-			position: "bottom-center",
-			iconClasses: "text-green-500",
+			variant: "success",
 		})
 		resetForm()
 		goBackOrHome(router)

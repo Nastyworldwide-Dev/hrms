@@ -142,7 +142,8 @@ import { useListUpdate } from "@/composables/realtime"
 import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
 import GModal from "@/components/glass/GModal.vue"
-import { createDocumentResource, createResource, toast } from "frappe-ui"
+import { createDocumentResource, createResource } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import GSwitch from "@/components/glass/GSwitch.vue"
 import ShellHeader from "@/components/ShellHeader.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"
@@ -261,32 +262,29 @@ async function togglePush(on) {
 			const data = await requestPushEnable()
 			pushOn.value = !!data?.permission_granted
 			if (!pushOn.value)
-				toast({
+				gToast({
 					title: __("Notifications are blocked"),
 					text: __("Allow them for this site in your browser settings."),
-					icon: "alert-circle",
-					position: "bottom-center",
+					variant: "error",
 				})
 		} else {
 			await window.frappePushNotification.disableNotification()
 			pushOn.value = false
 			// Parity with the Settings page this replaced (review of 518a541e7).
-			toast({
+			gToast({
 				title: __("Notifications are off"),
 				text: __("This phone won't be sent any."),
-				icon: "check-circle",
-				position: "bottom-center",
+				variant: "success",
 			})
 		}
 		console.info("[You] notifications", pushOn.value ? "on" : "off")
 	} catch (error) {
 		// Browser Notification API errors, not server refusals: calm copy.
 		console.error("[You] notification toggle failed:", error)
-		toast({
+		gToast({
 			title: __("Notifications didn't change"),
 			text: __("Try again in a moment."),
-			icon: "alert-circle",
-			position: "bottom-center",
+			variant: "error",
 		})
 		pushOn.value = !on
 	} finally {
@@ -311,11 +309,10 @@ const setReminders = createResource({
 	onError(error) {
 		console.error("[You] shift reminders toggle failed:", error)
 		remindersOn.value = !remindersOn.value
-		toast({
+		gToast({
 			title: __("Reminders didn't change"),
 			text: __("Try again in a moment."),
-			icon: "alert-circle",
-			position: "bottom-center",
+			variant: "error",
 		})
 	},
 })

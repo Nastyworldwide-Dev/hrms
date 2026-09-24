@@ -21,7 +21,8 @@
 import { approverOptions } from "@/utils/approverOptions"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
-import { createResource, toast } from "frappe-ui"
+import { createResource } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import { ref, watch, inject, nextTick } from "vue"
 import { useRoute } from "vue-router"
 
@@ -114,12 +115,10 @@ const leaveTypes = createResource({
 			currEmployee.value,
 			firstMessage(error)
 		)
-		toast({
+		gToast({
 			title: __("Error"),
 			text: __("Could not load leave types: {0}. Please contact HR.", [firstMessage(error)]),
-			icon: "alert-circle",
-			position: "bottom-center",
-			iconClasses: "text-red-500",
+			variant: "error",
 		})
 	},
 })

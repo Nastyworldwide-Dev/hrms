@@ -126,3 +126,19 @@ test("an unknown variant falls back to info rather than throwing", async () => {
 	const region = created.find((el) => el.getAttribute("aria-live") === "polite")
 	assert.equal(region.textContent, "Something happened")
 })
+
+// alpha.7 Phase 4: two requests failing together stacked two identical
+// "Something didn't load" banners. iOS shows one; the same message again
+// within a few seconds is the same news.
+test("the same message twice in a row shows once", async () => {
+	const { gToast, __resetRecent } = await import("../src/components/glass/toast.js")
+	__resetRecent()
+	shown.length = 0
+	gToast({ title: "Something didn't load", text: "Try again", variant: "error" })
+	gToast({ title: "Something didn't load", text: "Try again", variant: "error" })
+	gToast({ title: "Saved", variant: "success" })
+	assert.deepEqual(
+		shown.map((s) => s.title),
+		["Something didn't load", "Saved"]
+	)
+})

@@ -2382,42 +2382,46 @@ html[data-transparency="reduce"] .g-modal::part(content) {
    re-verify on the 0.1.278 upgrade (DECISION 6). */
 /* Glass: toasts are chrome (owner ruling D3), same recipe and fallbacks as
    the tab bar. */
-#frappeui-toast-root > div > div {
+#frappeui-toast-root .pointer-events-auto > div {
 	background: var(--g-glass-fill) !important;
 	-webkit-backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
 	backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
 	border-color: var(--g-glass-rim) !important;
-	border-radius: var(--g-radius-banner) !important;
+	/* iOS banner (alpha.7 §5.6): from the top, wide, a rounded capsule. */
+	width: calc(100vw - 2 * var(--g-screen-gutter));
+	max-width: 480px;
+	border-radius: var(--g-radius-group) !important;
 	box-shadow: inset 0 1px 0 var(--g-rim-hi), var(--g-lift) !important;
 	color: var(--g-ink);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-	#frappeui-toast-root > div > div {
+	#frappeui-toast-root .pointer-events-auto > div {
 		background: var(--g-glass-fill-fallback) !important;
 	}
 }
 @media (prefers-reduced-transparency: reduce) {
-	#frappeui-toast-root > div > div {
+	#frappeui-toast-root .pointer-events-auto > div {
 		background: var(--g-glass-fill-fallback) !important;
 		-webkit-backdrop-filter: none;
 		backdrop-filter: none;
 	}
 }
-html[data-transparency="reduce"] #frappeui-toast-root > div > div {
+html[data-transparency="reduce"] #frappeui-toast-root .pointer-events-auto > div {
 	background: var(--g-glass-fill-fallback) !important;
 	-webkit-backdrop-filter: none;
 	backdrop-filter: none;
 }
 #frappeui-toast-root p:first-child {
-	font-family: var(--g-type-card-title-family);
-	font-size: var(--g-type-card-title-size);
-	font-weight: var(--g-type-card-title-weight);
+	font-family: var(--g-font-ui);
+	font-size: 15px;
+	line-height: 20px;
+	font-weight: 600;
 	color: var(--g-ink);
 }
 #frappeui-toast-root p + p {
-	font-family: var(--g-type-caption-family);
-	font-size: var(--g-type-caption-size);
-	line-height: var(--g-type-caption-line-height);
+	font-family: var(--g-font-ui);
+	font-size: 15px;
+	line-height: 20px;
 	color: var(--g-ink2);
 }
 
@@ -4147,4 +4151,9 @@ html {
 .g-sheet .g-list,
 .g-sheet .g-sheet__group {
 	background: var(--g-sheet-cell);
+}
+
+/* The banner column is centred and spans the screen minus the gutters. */
+#frappeui-toast-root .pointer-events-auto {
+	justify-content: center;
 }

@@ -229,7 +229,8 @@
 <script setup>
 import { ExternalLink } from "lucide-vue-next"
 import { modalController } from "@ionic/vue"
-import { createDocumentResource, createResource, toast } from "frappe-ui"
+import { createDocumentResource, createResource } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import GButton from "@/components/glass/GButton.vue"
 import { computed, defineAsyncComponent, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
@@ -327,10 +328,10 @@ const decisionCapability = useDecisionCapability(
 	() => document,
 	() => ({ doctype: props.modelValue.doctype, name: props.modelValue.name }),
 	() =>
-		toast({
+		gToast({
 			title: __("Request changed"),
 			text: __("This request changed. Close and reopen it before deciding."),
-			icon: "alert-circle",
+			variant: "error",
 		})
 )
 
@@ -411,22 +412,18 @@ function withdrawDraft() {
 			onSuccess() {
 				showWithdrawDialog.value = false
 				modalController.dismiss()
-				toast({
+				gToast({
 					title: __("Withdrawn"),
 					text: __("Request withdrawn."),
-					icon: "check-circle",
-					position: "bottom-center",
-					iconClasses: "text-success-ink",
+					variant: "success",
 				})
 			},
 			onError(err) {
 				showWithdrawDialog.value = false
-				toast({
+				gToast({
 					title: __("Error"),
 					text: firstMessage(err, __("Could not withdraw the request.")),
-					icon: "alert-circle",
-					position: "bottom-center",
-					iconClasses: "text-danger-ink",
+					variant: "error",
 				})
 			},
 		}
@@ -525,12 +522,10 @@ const getFailureMessage = ({ status = "", docstatus = 0 }) => {
 
 const onActionSuccess = ({ status, docstatus, dismiss }) => {
 	if (dismiss) modalController.dismiss()
-	toast({
+	gToast({
 		title: __("Success"),
 		text: getSuccessMessage({ status, docstatus }),
-		icon: "check-circle",
-		position: "bottom-center",
-		iconClasses: "text-success-ink",
+		variant: "success",
 	})
 }
 
@@ -541,12 +536,10 @@ const onActionError =
 		// the server's message says WHY (permissions, validation) —
 		// a bare "Approval failed!" is undebuggable from the field
 		console.warn("[RequestActionSheet] action failed:", error)
-		toast({
+		gToast({
 			title: __("Error"),
 			text: firstMessage(error, getFailureMessage({ status, docstatus })),
-			icon: "alert-circle",
-			position: "bottom-center",
-			iconClasses: "text-danger-ink",
+			variant: "error",
 		})
 	}
 

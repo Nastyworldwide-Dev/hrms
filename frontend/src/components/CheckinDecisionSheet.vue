@@ -60,7 +60,7 @@
 
 <script setup>
 import { inject, ref } from "vue"
-import { toast } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 
 import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
@@ -86,11 +86,10 @@ async function decide(kind, submit) {
 	try {
 		const result = await submit()
 		const shown = decisionToast(kind, result?.attendance_repair, __)
-		toast({
+		gToast({
 			title: shown.title,
 			text: shown.text,
-			icon: shown.tone === "warning" ? "alert-triangle" : "check-circle",
-			position: "bottom-center",
+			variant: "info",
 		})
 		console.info("[CheckinDecisionSheet] decided", kind)
 		askingWhy.value = false
@@ -98,11 +97,10 @@ async function decide(kind, submit) {
 		emit("decided")
 	} catch (err) {
 		console.error("[CheckinDecisionSheet] decision failed:", err)
-		toast({
+		gToast({
 			title: __("Could not save"),
 			text: firstMessage(err, __("Try again.")),
-			icon: "alert-circle",
-			position: "bottom-center",
+			variant: "error",
 		})
 	} finally {
 		submitting.value = false

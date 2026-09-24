@@ -1,5 +1,6 @@
 import { personalCacheKey } from "@/utils/personalCache"
-import { createResource, toast } from "frappe-ui"
+import { createResource } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import { computed } from "vue"
 import { userResource } from "@/data/user"
 import { firstMessage } from "@/utils/loudRequest"
@@ -61,21 +62,17 @@ export default function useWorkflow(doctype) {
 			url: "frappe.model.workflow.apply_workflow",
 			params: { doc: doc, action: action },
 			onSuccess() {
-				toast({
+				gToast({
 					title: "Success",
 					text: `Workflow action '${action}' applied successfully`,
-					icon: "check-circle",
-					position: "bottom-center",
-					iconClasses: "text-green-500",
+					variant: "success",
 				})
 			},
 			onError(error) {
-				toast({
+				gToast({
 					title: "Error",
 					text: `Error applying workflow action: ${action}. ${firstMessage(error)}`,
-					icon: "alert-circle",
-					position: "bottom-center",
-					iconClasses: "text-red-500",
+					variant: "error",
 				})
 				console.log(`Error applying workflow action: ${action}`)
 			},

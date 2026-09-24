@@ -169,7 +169,8 @@ import GSearchBar from "@/components/glass/GSearchBar.vue"
 import GStatTile from "@/components/glass/GStatTile.vue"
 import GStatPanel from "@/components/glass/GStatPanel.vue"
 import GModal from "@/components/glass/GModal.vue"
-import { createListResource, createResource, toast } from "frappe-ui"
+import { createListResource, createResource } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import { computed, inject, ref } from "vue"
 
 import { ISSUE_STATUSES, countByStatus, filterIssues } from "@/utils/issueBoard"
@@ -251,12 +252,10 @@ const detail = createResource({
 	},
 	onError(error) {
 		console.error("[HRIssueBoard] failed to load issue detail:", error)
-		toast({
+		gToast({
 			title: __("Error"),
 			text: __("Could not load the issue: {0}", [firstMessage(error)]),
-			icon: "alert-circle",
-			position: "bottom-center",
-			iconClasses: "text-red-500",
+			variant: "error",
 		})
 	},
 })
@@ -298,12 +297,10 @@ const updateIssue = createResource({
 	url: "frappe.client.set_value",
 	onError(error) {
 		console.error("[HRIssueBoard] failed to update issue:", error)
-		toast({
+		gToast({
 			title: __("Error"),
 			text: firstMessage(error, __("Update failed")),
-			icon: "alert-circle",
-			position: "bottom-center",
-			iconClasses: "text-red-500",
+			variant: "error",
 		})
 	},
 })
@@ -319,12 +316,10 @@ const setStatus = async (status) => {
 		})
 		detail.data.status = status
 		issues.reload()
-		toast({
+		gToast({
 			title: __("Success"),
 			text: __("{0} → {1} — the employee has been notified", [detail.data.name, __(status)]),
-			icon: "check-circle",
-			position: "bottom-center",
-			iconClasses: "text-green-500",
+			variant: "success",
 		})
 	} finally {
 		saving.value = false
@@ -341,12 +336,10 @@ const saveNotes = async () => {
 			fieldname: { hr_notes: hrNotes.value },
 		})
 		sheetOpen.value = false
-		toast({
+		gToast({
 			title: __("Success"),
 			text: __("Saved"),
-			icon: "check-circle",
-			position: "bottom-center",
-			iconClasses: "text-green-500",
+			variant: "success",
 		})
 	} finally {
 		saving.value = false

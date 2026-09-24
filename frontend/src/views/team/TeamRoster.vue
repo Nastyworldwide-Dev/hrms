@@ -130,7 +130,7 @@
 import { departmentLabel } from "@/utils/departmentLabel"
 import { ChevronLeft, ChevronRight } from "lucide-vue-next"
 import { computed, inject, reactive, ref, onMounted } from "vue"
-import { toast } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import GSelect from "@/components/glass/GSelect.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 
@@ -233,10 +233,11 @@ function submitAssign() {
 		{
 			onSuccess: () => {
 				assignOpen.value = false
-				toast.success(__("Shift assigned"))
+				gToast({ title: __("Shift assigned"), variant: "success" })
 				load()
 			},
-			onError: (e) => toast.error(e?.messages?.[0] || __("Could not assign shift")),
+			onError: (e) =>
+				gToast({ title: e?.messages?.[0] || __("Could not assign shift"), variant: "error" }),
 		}
 	)
 }

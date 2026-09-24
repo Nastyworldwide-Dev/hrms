@@ -184,7 +184,8 @@ import { departmentLabel } from "@/utils/departmentLabel"
 import { Paperclip, X } from "lucide-vue-next"
 import { personalCacheKey } from "@/utils/personalCache"
 import GModal from "@/components/glass/GModal.vue"
-import { createListResource, createResource, toast } from "frappe-ui"
+import { createListResource, createResource } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import { computed, inject, reactive, ref, watch } from "vue"
 import { firstMessage } from "@/utils/loudRequest"
 
@@ -398,15 +399,13 @@ const save = async () => {
 				// report it; on create the draft exists and must stay unpublished
 				if (!isCreate) throw error
 				console.warn("[SOP] Attachment upload failed after create:", error)
-				toast({
+				gToast({
 					title: __("Attachment failed"),
 					text: __(
 						"Saved as an unpublished draft without the attachment — open it to retry. ({0})",
 						[firstMessage(error)]
 					),
-					icon: "alert-circle",
-					position: "bottom-center",
-					iconClasses: "text-red-500",
+					variant: "error",
 				})
 				emit("saved")
 				close()
@@ -419,23 +418,19 @@ const save = async () => {
 			})
 		}
 
-		toast({
+		gToast({
 			title: __("Success"),
 			text: props.sopName ? __("SOP updated") : __("SOP created"),
-			icon: "check-circle",
-			position: "bottom-center",
-			iconClasses: "text-green-500",
+			variant: "success",
 		})
 		emit("saved")
 		close()
 	} catch (error) {
 		console.warn("[SOP] Save failed:", error)
-		toast({
+		gToast({
 			title: __("Error"),
 			text: firstMessage(error, __("Could not save the SOP")),
-			icon: "alert-circle",
-			position: "bottom-center",
-			iconClasses: "text-red-500",
+			variant: "error",
 		})
 	} finally {
 		saving.value = false

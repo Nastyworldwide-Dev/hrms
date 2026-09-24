@@ -27,9 +27,25 @@ const VARIANTS = {
  * @param {string} options.title   what happened, in plain language (§11.3)
  * @param {string} [options.text]  what to do about it
  * @param {"success"|"error"|"warning"|"info"} [options.variant]
- * @param {string} [options.position] frappe-ui position, default bottom-center
+ * @param {string} [options.position] frappe-ui position; default top-center, where
+ *   iOS drops a banner (alpha.7 §5.6), clear of the tab bar
  */
-export function gToast({ title, text = "", variant = "info", position = "bottom-center" }) {
+//: The same banner again within this window is the same news (two requests
+//: failing together stacked two identical "Something didn't load").
+const REPEAT_MS = 4000
+let recent = { key: "", at: 0 }
+export function __resetRecent() {
+	recent = { key: "", at: 0 }
+}
+
+export function gToast({ title, text = "", variant = "info", position = "top-center" }) {
+	const key = `${variant}|${title}|${text}`
+	const now = Date.now()
+	if (key === recent.key && now - recent.at < REPEAT_MS) {
+		console.info("[GToast] repeat suppressed", { variant, title })
+		return null
+	}
+	recent = { key, at: now }
 	const mapped = VARIANTS[variant] ?? VARIANTS.info
 	console.info("[GToast]", { variant, title })
 	// frappe-ui's Toast.vue carries no role and no aria-live, and a toast takes

@@ -34,8 +34,8 @@ nodeModule.registerHooks?.({
 const { createResource } = await import("frappe-ui/src/resources/resources.js")
 
 const source = readFileSync(new URL("../utils/loudRequest.js", import.meta.url), "utf8").replace(
-	'import { toast } from "frappe-ui"',
-	"const toast = () => {}"
+	'import { gToast } from "@/components/glass/toast"',
+	"const gToast = () => {}"
 )
 const loudModule = new Function(
 	`${source.replace(/export function/g, "function")}

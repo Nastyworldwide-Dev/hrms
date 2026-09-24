@@ -200,7 +200,8 @@ import GModal from "@/components/glass/GModal.vue"
 import { useOnline } from "@/composables/useOnline"
 import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
 import GButton from "@/components/glass/GButton.vue"
-import { createResource, createListResource, toast } from "frappe-ui"
+import { createResource, createListResource } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import { computed, inject, nextTick, ref, shallowRef, watch, onBeforeUnmount } from "vue"
 import { useListUpdate } from "@/composables/realtime"
 import { modalController } from "@ionic/vue"
@@ -1084,10 +1085,10 @@ const runSubmitLog = async (logType) => {
 				startCamera()
 			}
 			handleEmployeeCheckin()
-			toast({
+			gToast({
 				title: __("Location needed"),
 				text: __("Wait for a fresh location reading, then try again."),
-				icon: "map-pin",
+				variant: "info",
 			})
 		}
 		return false
@@ -1157,12 +1158,10 @@ const runSubmitLog = async (logType) => {
 			}
 		} catch (err) {
 			console.error("[Selfie] Capture/upload error:", err)
-			toast({
+			gToast({
 				title: __("Selfie failed"),
 				text: firstMessage(err, __("Could not attach selfie — proceeding without it.")),
-				icon: "alert-circle",
-				position: "bottom-center",
-				iconClasses: "text-red-500",
+				variant: "error",
 			})
 		} finally {
 			// Free only the camera belonging to this submission.
@@ -1237,22 +1236,18 @@ const runSubmitLog = async (logType) => {
 						return
 					}
 					if (req && req.status === "Approved") {
-						toast({
+						gToast({
 							title: __("{0} approved", [actionLabel]),
 							text: __("Inherited from your earlier approved check-in."),
-							icon: "check-circle",
-							position: "bottom-center",
-							iconClasses: "text-green-500",
+							variant: "success",
 						})
 						return
 					}
 					if (req && req.status === "Rejected") {
-						toast({
+						gToast({
 							title: __("{0} blocked", [actionLabel]),
 							text: __("A prior remote check-in request today was rejected — please contact HR."),
-							icon: "alert-circle",
-							position: "bottom-center",
-							iconClasses: "text-red-500",
+							variant: "error",
 						})
 						return
 					}
@@ -1261,16 +1256,14 @@ const runSubmitLog = async (logType) => {
 				}
 			}
 
-			toast({
+			gToast({
 				title: __("Success"),
 				// The STORED type, not the requested one. The server records an
 				// OUT when an IN arrives on a session that is still open, so
 				// telling the user "Check-in successful!" after storing a
 				// check-out is the same lie this whole fix exists to end.
 				text: __("{0} successful!", [doc?.log_type === "OUT" ? __("Check-out") : __("Check-in")]),
-				icon: "check-circle",
-				position: "bottom-center",
-				iconClasses: "text-green-500",
+				variant: "success",
 			})
 		},
 		onError(error) {
@@ -1294,13 +1287,11 @@ const runSubmitLog = async (logType) => {
 				? error.messages
 				: [__("{0} failed. Check your connection and try again.", [actionLabel])]
 			for (const message of messages) {
-				toast({
+				gToast({
 					title: __("Error"),
 					// one toast per server message, each stripped of Desk markup
 					text: firstMessage({ messages: [message] }),
-					icon: "alert-circle",
-					position: "bottom-center",
-					iconClasses: "text-red-500",
+					variant: "error",
 				})
 			}
 		},

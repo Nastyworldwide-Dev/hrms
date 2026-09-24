@@ -138,7 +138,7 @@ function liveSheet(doctype = "OT Request", nativeDocument = false) {
 		shallowRef,
 		watch,
 		Event,
-		toast: (value) => alerts.push(value),
+		gToast: (value) => alerts.push(value),
 		__: (text) => text,
 		console: { debug() {}, warn() {} },
 		getConfig: () => undefined,
@@ -442,7 +442,7 @@ test("an own Leave reject-only response opens FormView's actual Review entry", a
 		isFormDirty: ref(false),
 		workflow: ref(null),
 		REQUEST_SUMMARY_FIELDS: { "Leave Application": [] },
-		toast() {},
+		gToast() {},
 		__: (text) => text,
 	})
 	context.documentResource.originalDoc = JSON.parse(

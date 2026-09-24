@@ -78,7 +78,7 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 		"geoGeneration",
 		"cameraStatus",
 		"startCamera",
-		"toast",
+		"gToast",
 		"__",
 		"actionLabel",
 		"firstMessage",

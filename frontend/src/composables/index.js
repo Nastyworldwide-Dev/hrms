@@ -1,4 +1,5 @@
-import { createResource, toast } from "frappe-ui"
+import { createResource } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 import { firstMessage } from "@/utils/loudRequest"
 
 function getFileReader() {
@@ -24,12 +25,10 @@ export class FileAttachment {
 				url: "hrms.api.upload_base64_file",
 				onSuccess: (fileDoc) => resolve(fileDoc),
 				onError: (error) => {
-					toast({
+					gToast({
 						title: "Error",
 						text: `File upload failed for ${this.fileName}. ${firstMessage(error, "")}`,
-						icon: "alert-circle",
-						position: "bottom-center",
-						iconClasses: "text-red-500",
+						variant: "error",
 					})
 					reject(error)
 				},
@@ -58,12 +57,10 @@ export class FileAttachment {
 				console.log("Deleted successfully ✅")
 			},
 			onError: (error) => {
-				toast({
+				gToast({
 					title: "Error",
 					text: `File deletion failed. ${firstMessage(error, "")}`,
-					icon: "alert-circle",
-					position: "bottom-center",
-					iconClasses: "text-red-500",
+					variant: "error",
 				})
 			},
 		}).submit({

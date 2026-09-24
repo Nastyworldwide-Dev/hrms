@@ -71,7 +71,7 @@
 import GModal from "@/components/glass/GModal.vue"
 import { useOnline } from "@/composables/useOnline"
 import { computed, inject, ref, watch } from "vue"
-import { toast } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 
 import { formatTimestamp } from "@/utils/formatters"
 import { submitLateCheckoutResource } from "@/data/remoteCheckin"
@@ -164,23 +164,19 @@ const submit = async () => {
 			checkout_datetime: isoLocal,
 			reason: reason.value.trim(),
 		})
-		toast({
+		gToast({
 			title: __("Late check-out submitted"),
 			text: __("Pending approval from your reporting manager."),
-			icon: "check-circle",
-			position: "bottom-center",
-			iconClasses: "text-success-ink",
+			variant: "success",
 		})
 		emit("submitted", result)
 		emit("close")
 	} catch (err) {
 		console.error("[LateCheckout] submit failed:", err)
-		toast({
+		gToast({
 			title: __("Could not submit"),
 			text: firstMessage(err, __("Try again in a moment.")),
-			icon: "alert-circle",
-			position: "bottom-center",
-			iconClasses: "text-danger-ink",
+			variant: "error",
 		})
 	} finally {
 		submitting.value = false

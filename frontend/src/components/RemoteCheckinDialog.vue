@@ -69,7 +69,7 @@ import { isReadingCoarse } from "@/utils/geolocation"
 import GModal from "@/components/glass/GModal.vue"
 import { useOnline } from "@/composables/useOnline"
 import { computed, inject, ref, watch } from "vue"
-import { toast } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 
 import { submitRemarksResource } from "@/data/remoteCheckin"
 import { firstMessage } from "@/utils/loudRequest"
@@ -138,12 +138,10 @@ const submit = async () => {
 		return
 	}
 	if (!props.requestName) {
-		toast({
+		gToast({
 			title: __("Error"),
 			text: __("Request reference missing — try checking in again."),
-			icon: "alert-circle",
-			position: "bottom-center",
-			iconClasses: "text-danger-ink",
+			variant: "error",
 		})
 		return
 	}
@@ -153,25 +151,21 @@ const submit = async () => {
 			request: props.requestName,
 			employee_remarks: remarks.value.trim(),
 		})
-		toast({
+		gToast({
 			title: __("Request submitted"),
 			text: props.approverName
 				? __("Pending approval from {0}", [props.approverName])
 				: __("Pending approval from your reporting manager"),
-			icon: "check-circle",
-			position: "bottom-center",
-			iconClasses: "text-success-ink",
+			variant: "success",
 		})
 		emit("submitted", { request: props.requestName, remarks: remarks.value })
 		emit("close")
 	} catch (err) {
 		console.error("[RemoteCheckin] submit failed:", err)
-		toast({
+		gToast({
 			title: __("Could not submit"),
 			text: firstMessage(err, __("Try again in a moment.")),
-			icon: "alert-circle",
-			position: "bottom-center",
-			iconClasses: "text-danger-ink",
+			variant: "error",
 		})
 	} finally {
 		submitting.value = false

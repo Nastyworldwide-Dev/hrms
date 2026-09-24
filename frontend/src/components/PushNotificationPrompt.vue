@@ -54,7 +54,7 @@
 <script setup>
 import GModal from "@/components/glass/GModal.vue"
 import { computed, inject, onMounted, onUnmounted, ref } from "vue"
-import { toast } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 
 import { arePushNotificationsEnabled, enablePushNotifications } from "@/data/notifications"
 import {
@@ -137,22 +137,18 @@ const enable = () => {
 		.then((data) => {
 			isOpen.value = false
 			if (data.permission_granted) {
-				toast({
+				gToast({
 					title: __("Success"),
 					text: __("Notifications enabled — you're all set"),
-					icon: "check-circle",
-					position: "bottom-center",
-					iconClasses: "text-green-500",
+					variant: "success",
 				})
 			} else {
-				toast({
+				gToast({
 					title: __("Error"),
 					text: __(
 						"Blocked by the browser — allow notifications for this site in your browser settings, then retry from Settings → Notifications"
 					),
-					icon: "alert-circle",
-					position: "bottom-center",
-					iconClasses: "text-red-500",
+					variant: "error",
 				})
 			}
 		})
@@ -164,14 +160,12 @@ const enable = () => {
 			// exactly what alarmed the senior. Keep the detail in the console; tell the
 			// user something calm and optional instead.
 			console.warn("[PushPrompt] enable failed:", error?.message)
-			toast({
+			gToast({
 				title: __("Notifications not turned on"),
 				text: __(
 					"We couldn't turn on notifications right now — you can try again anytime in Settings → Notifications."
 				),
-				icon: "info",
-				position: "bottom-center",
-				iconClasses: "text-ink-600",
+				variant: "info",
 			})
 		})
 		.finally(() => {
@@ -187,12 +181,10 @@ const decline = () => {
 	decided = true
 	recordDecline()
 	isOpen.value = false
-	toast({
+	gToast({
 		title: __("Okay"),
 		text: __("Enable anytime in Settings → Notifications"),
-		icon: "info",
-		position: "bottom-center",
-		iconClasses: "text-ink-600",
+		variant: "info",
 	})
 }
 

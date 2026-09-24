@@ -1,4 +1,4 @@
-import { toast } from "frappe-ui"
+import { gToast } from "@/components/glass/toast"
 
 // Every request the PWA makes, made audible.
 //
@@ -123,7 +123,7 @@ function isRepeat(endpoint, now) {
  * callbacks, and every `try`/`catch` around a `.submit()`, still run exactly as
  * before. This adds a report; it does not take over handling.
  */
-export function makeLoudRequest(request, { notify = toast, now = () => Date.now() } = {}) {
+export function makeLoudRequest(request, { notify = gToast, now = () => Date.now() } = {}) {
 	return function loudRequest(options) {
 		return request(options).catch((error) => {
 			const endpoint = endpointOf(options)
@@ -144,9 +144,7 @@ export function makeLoudRequest(request, { notify = toast, now = () => Date.now(
 				notify({
 					title: "Something didn't load",
 					text: "Try again in a moment.",
-					icon: "alert-circle",
-					position: "bottom-center",
-					iconClasses: "text-red-500",
+					variant: "error",
 				})
 			}
 

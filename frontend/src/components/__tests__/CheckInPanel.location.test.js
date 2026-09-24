@@ -121,7 +121,7 @@ function panel({ employee = "EMP", storage = new Map(), start = 1_800_000_000_00
 				counters.dismiss += 1
 			},
 		},
-		toast: (notice) => notices.push(notice),
+		gToast: (notice) => notices.push(notice),
 		formatTimestamp: () => "",
 		window,
 		navigator,
