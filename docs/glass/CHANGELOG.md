@@ -10,6 +10,58 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.7] — 2026-09-25
+
+Nadi now looks and behaves like an iPhone app: the same colours, sizes,
+titles, lists, switches and banners iOS 26 uses. Home puts announcements
+first, and a must-read notice cannot be skipped. Plan and evidence:
+`docs/glass/plan/NADI_2.0.0-alpha.7_PLAN.md` (§11 Safari results, §12 what moved).
+
+### Added
+- **Must-read notices open full screen** when the app opens, until the person
+  scrolls to the end and taps "I have read this". Urgent ones cannot be put
+  off; others have "Remind me later". Changing the words asks again (HR can
+  tick "Minor fix" for a typo).
+- **In Desk, each announcement has:** a Summary (the Home line and the phone
+  notification), an optional cover picture, Urgent, Notify on publish,
+  "Preview as staff", "Remind who has not confirmed", and a new
+  **Announcement Confirmations** report (who opened, who confirmed, when).
+  Pictures pasted into a notice now show for staff.
+- **Home Screen icon badge** with the unread count.
+- **The screen stays on** while the selfie camera is open.
+
+### Changed
+- **Home:** large title "Today"; announcements first, always in the same
+  place (one line on a quiet day); the check-in card right under it, still on
+  the first screen; the forgotten check-out is a row of that card.
+- **The iOS frame:** large titles on the five tabs that fold into the bar as
+  you scroll; pushed screens have Back, a centred title and round buttons;
+  a 62 pt tab bar with a lens behind the selected tab.
+- **The iOS look:** true black / light grey page, flat cells, 26 pt corners,
+  17 pt rows, coloured icon tiles per kind, status as coloured text.
+- **Forms:** no red asterisks ("Required" in the row instead); dates as small
+  pills; no heading over a single row; the Filters sheet is a list with Done.
+- **A sent request** reads as label and value, says its status once, and
+  Cancel is a red row that asks first ("Keep request" / "Cancel request").
+- **Sheets** are grey with white groups; the ⋯ menu is a proper action sheet.
+- **Switches** are Safari's own iPhone switch (with the haptic on iOS 18).
+- **Messages** drop from the top as one banner and never stack twice.
+- **Check-ins** are grouped by day; durations say "1 day", "Half day".
+- **Empty lists** show a symbol, a title and one line, no dashed box.
+
+### Fixed
+- **iPhone text was drawn in Inter**, not the iPhone's own font.
+- **The Safari "Install Nadi" banner covered every page** in unreadable
+  white-on-lime; it is one small row on Home, once a month.
+- **Overtime:** the error crammed into the Hours row, a red "Checking…", and
+  the day asked twice.
+- **Appearance menu** had a blank first line.
+
+### Not in this release (why)
+- Offline check-in: never (owner's rule).
+- Following the iPhone's Text Size, Search, spring motion: alpha.8 (plan §12).
+  Search needs a ruling first: who may find whom by name.
+
 ## [2.0.0-alpha.6] — 2026-09-25
 
 Nadi follows Apple's own rules now: one look, plain words, and every request
