@@ -16,8 +16,43 @@ frappe.ui.form.on("HR Announcement", {
 		if (frm.is_new()) return;
 		render_reach(frm);
 		add_acknowledgement_button(frm);
+		add_alpha7_buttons(frm);
 	},
 });
+
+// alpha.7 4.2 / 4.6 / Q6: see it as staff do, chase who has not confirmed,
+// and the per-person confirmation report.
+function add_alpha7_buttons(frm) {
+	frm.add_custom_button(__("Preview as staff"), () => {
+		window.open(`/hrms/announcements/${encodeURIComponent(frm.doc.name)}?preview=1`, "_blank");
+	});
+	frm.add_custom_button(__("Confirmation report"), () => {
+		frappe.set_route("query-report", "Announcement Confirmations", {
+			announcement: frm.doc.name,
+		});
+	});
+	if (!frm.doc.acknowledge_required || !frm.doc.published) return;
+	frm.add_custom_button(__("Remind who has not confirmed"), () => {
+		frappe.confirm(
+			__("Send a reminder to everyone who has not confirmed this notice yet?"),
+			() => {
+				frappe.call({
+					method: "hrms.api.announcements.remind_outstanding",
+					args: { name: frm.doc.name },
+					callback(r) {
+						const n = r.message?.reminded || 0;
+						frappe.show_alert({
+							message: n
+								? __("Reminder sent to {0} people.", [n])
+								: __("Everybody has confirmed; nobody to remind."),
+							indicator: n ? "green" : "blue",
+						});
+					},
+				});
+			}
+		);
+	});
+}
 
 function render_reach(frm) {
 	frappe.call({

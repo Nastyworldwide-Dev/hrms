@@ -90,7 +90,7 @@ test("opening the detail is what marks it read", () => {
 	// Fetching on every open, not only when the payload is missing: coming
 	// back to re-read a policy is a read, and a cached resource would never
 	// reach the server to record it.
-	assert.match(detail, /announcementDetail\.fetch\(\{ name: id \}\)/)
+	assert.match(detail, /announcementDetail\.fetch\(\{ name: id, preview: preview\.value \? 1 : 0 \}\)/)
 	assert.match(detail, /\{ immediate: true \}/, "including the first open")
 	const data = code(read("data/announcements.js"))
 	const block_ = data.slice(

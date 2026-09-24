@@ -197,7 +197,7 @@ def home_announcements() -> dict:
 
 
 @frappe.whitelist(methods=["GET", "POST"])
-def get_announcement(name: str) -> dict:
+def get_announcement(name: str, preview: int | str = 0) -> dict:
 	"""One announcement WITH its body, and it is marked read as a side effect.
 
 	Opening a card is the read event — there is no separate "mark read" door,
@@ -210,6 +210,14 @@ def get_announcement(name: str) -> dict:
 	if not isinstance(name, str) or not name.strip():
 		frappe.throw(_("An announcement must be named."), frappe.PermissionError)
 	name = name.strip()
+
+	# "Preview as staff" (alpha.7 4.2): HR sees the real screen for any notice,
+	# drafts included, and nothing is recorded. HR-only, checked first.
+	if str(preview) in ("1", "true", "True"):
+		_require_hr()
+		doc = frappe.get_doc("HR Announcement", name)
+		logger.info("[announcements] %s previewed %s", frappe.session.user, name)
+		return {**_payload(doc), "acknowledged": False, "preview": True}
 
 	reader = _reader()
 	if not reader:
@@ -225,6 +233,10 @@ def get_announcement(name: str) -> dict:
 
 	doc = frappe.get_doc("HR Announcement", name)
 	_record_read(name, reader.name)
+	return {**_payload(doc), "acknowledged": _confirmed(name, reader.name, doc.version)}
+
+
+def _payload(doc) -> dict:
 	return {
 		"name": doc.name,
 		"title": doc.title,
@@ -238,7 +250,7 @@ def get_announcement(name: str) -> dict:
 		"cover_image": doc.cover_image,
 		"urgent": bool(doc.urgent),
 		"version": doc.version or 1,
-		"acknowledged": _confirmed(name, reader.name, doc.version),
+		"published": bool(doc.published),
 	}
 
 
@@ -427,3 +439,66 @@ def get_outstanding(name: str) -> list[str]:
 		order_by="employee_name asc",
 		ignore_permissions=True,
 	)
+
+
+def _push_to_users(doc, users: list[str], title: str | None = None) -> int:
+	"""One push each: the notice's title (or `title`) and Summary, opening it
+	in the app. Shared by publish and remind so both send the same thing."""
+	try:
+		from frappe.push_notification import PushNotification
+
+		from hrms.utils.push_relay import relay_call
+	except ImportError:
+		return 0
+	push = PushNotification("hrms")
+	if not push.is_enabled():
+		logger.info("[announcements] push relay off; %s not sent", doc.name)
+		return 0
+	link = f"{frappe.utils.get_url()}/hrms/announcements/{doc.name}"
+	icon = f"{frappe.utils.get_url()}/assets/hrms/manifest/favicon-196.png"
+	sent = 0
+	for user in users:
+		try:
+			relay_call(
+				push.send_notification_to_user,
+				user,
+				title or doc.title,
+				doc.summary or "",
+				link=link,
+				icon=icon,
+			)
+			sent += 1
+		except Exception:
+			frappe.log_error(f"Announcement push failed: {doc.name} -> {user}")
+	logger.info("[announcements] %s pushed to %d of %d", doc.name, sent, len(users))
+	return sent
+
+
+@frappe.whitelist(methods=["POST"])
+def remind_outstanding(name: str) -> dict:
+	"""HR: push a reminder to everyone in the audience who has not confirmed
+	the current wording (alpha.7 4.6). HR-only, like the reach numbers."""
+	_require_hr()
+	if not isinstance(name, str) or not name.strip():
+		frappe.throw(_("An announcement must be named."), frappe.PermissionError)
+	doc = frappe.get_doc("HR Announcement", name.strip())
+	if not doc.acknowledge_required or not doc.published:
+		frappe.throw(_("Only a published notice that asks for confirmation can be chased."))
+	version = doc.version or 1
+	confirmed = {
+		r.employee
+		for r in frappe.get_all(
+			"HR Announcement Read",
+			filters={"announcement": doc.name, "acknowledged": 1},
+			fields=["employee", "acknowledged_version"],
+			ignore_permissions=True,
+		)
+		if (r.acknowledged_version or 1) >= version
+	}
+	outstanding = [e for e in _audience_employees(doc) if e not in confirmed]
+	users = frappe.get_all(
+		"Employee", filters={"name": ("in", outstanding or [""]), "user_id": ("is", "set")}, pluck="user_id"
+	)
+	_push_to_users(doc, users, title=_("Reminder: {0}").format(doc.title))
+	logger.info("[announcements] %s reminded %d by %s", doc.name, len(users), frappe.session.user)
+	return {"reminded": len(users)}

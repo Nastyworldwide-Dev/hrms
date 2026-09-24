@@ -26,6 +26,15 @@
 				</template>
 
 				<template v-else-if="doc">
+					<!-- HR's "Preview as staff" (alpha.7 4.2): the real screen,
+					     marked, and nothing is recorded. -->
+					<GBanner v-if="preview" variant="warning">
+						{{
+							doc.published === false
+								? __("Preview — not published to anyone yet")
+								: __("Preview — as staff will see it")
+						}}
+					</GBanner>
 					<div class="flex items-center gap-3">
 						<component :is="iconFor(doc.category)" class="h-icon-lg w-icon-lg text-ink-600" />
 						<span class="g-eyebrow">{{ categoryLabel(doc.category) }}</span>
@@ -47,7 +56,7 @@
 					     is a statement a person makes; a dialog dismissal is not,
 					     and for a safety notice that difference is the feature. -->
 					<GButton
-						v-else-if="doc.acknowledge_required"
+						v-else-if="doc.acknowledge_required && !preview"
 						:label="__(`I've read and understood this`)"
 						:pending="acknowledgeAnnouncement.loading"
 						:pending-label="__('Recording…')"
@@ -61,6 +70,7 @@
 
 <script setup>
 import { computed, inject, ref, watch } from "vue"
+import { useRoute } from "vue-router"
 import { CalendarDays, Megaphone, ShieldAlert, TriangleAlert } from "lucide-vue-next"
 
 import BaseLayout from "@/components/BaseLayout.vue"
@@ -78,6 +88,8 @@ import {
 } from "@/data/announcements"
 
 const props = defineProps({ id: { type: String, required: true } })
+const route = useRoute()
+const preview = computed(() => route.query.preview === "1")
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
@@ -142,7 +154,7 @@ watch(
 		justAcknowledged.value = false
 		// Fetching is what marks it read, which is why this runs on every
 		// open rather than only when the payload is missing.
-		announcementDetail.fetch({ name: id })
+		announcementDetail.fetch({ name: id, preview: preview.value ? 1 : 0 })
 	},
 	{ immediate: true }
 )

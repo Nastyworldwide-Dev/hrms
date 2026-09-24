@@ -158,32 +158,11 @@ def send_publish_push(name: str) -> None:
 	if not doc.published:
 		logger.info("[announcement] %s no longer published; no push", name)
 		return
-	try:
-		from frappe.push_notification import PushNotification
+	from hrms.api.announcements import _audience_employees, _push_to_users
 
-		from hrms.utils.push_relay import relay_call
-	except ImportError:
-		return
-	push = PushNotification("hrms")
-	if not push.is_enabled():
-		logger.info("[announcement] push relay off; %s not sent", name)
-		return
-
-	from hrms.api.announcements import _audience_employees
-
-	employees = _audience_employees(doc)
 	users = frappe.get_all(
-		"Employee", filters={"name": ("in", employees), "user_id": ("is", "set")}, pluck="user_id"
+		"Employee",
+		filters={"name": ("in", _audience_employees(doc) or [""]), "user_id": ("is", "set")},
+		pluck="user_id",
 	)
-	link = f"{frappe.utils.get_url()}/hrms/announcements/{doc.name}"
-	icon = f"{frappe.utils.get_url()}/assets/hrms/manifest/favicon-196.png"
-	sent = 0
-	for user in users:
-		try:
-			relay_call(
-				push.send_notification_to_user, user, doc.title, doc.summary or "", link=link, icon=icon
-			)
-			sent += 1
-		except Exception:
-			frappe.log_error(f"Announcement push failed: {name} -> {user}")
-	logger.info("[announcement] %s pushed to %d of %d", name, sent, len(users))
+	_push_to_users(doc, users)
