@@ -54,7 +54,7 @@ def _open_session(employee, now):
 
 
 def _shift_window(employee, on_date):
-	"""Today's assigned shift, as a window a person can read."""
+	"""Today's shift (assignment, else the default shift), as a window a person can read."""
 	# hrms.utils.GEOFENCE, not shift_resolution — that module holds the punch
 	# pairing rules (choose_shift, continues_session) and has no
 	# resolve_assignment. Guessed wrong first and the bench said so
@@ -68,22 +68,46 @@ def _shift_window(employee, on_date):
 		# it. The rest of the bar is still true.
 		logger.exception("[now] could not resolve the shift for %s", employee)
 		return None
-	if not assignment or not assignment.shift_type:
+	# No assignment covering today: the employee's default shift IS their shift,
+	# as HRMS itself reads it (get_employee_shift, consider_default_shift=True).
+	# Home said "No shift today" while Profile showed the default (owner, 24 Sep).
+	shift_type = (assignment and assignment.shift_type) or default_shift_on(employee, on_date)
+	if not shift_type:
+		logger.info("[now] employee=%s has no assignment and no default shift", employee)
 		return None
-	start, end = frappe.db.get_value("Shift Type", assignment.shift_type, ["start_time", "end_time"]) or (
+	start, end = frappe.db.get_value("Shift Type", shift_type, ["start_time", "end_time"]) or (
 		None,
 		None,
 	)
 	if not start or not end:
 		return None
 	return {
-		"shift": assignment.shift_type,
+		"shift": shift_type,
 		# Trimmed to HH:MM here rather than on the screen: a shift window is
 		# read, not computed with, and "19:00:00" is three characters of noise
 		# in a line that has to fit a phone.
 		"start": _hhmm(start),
 		"end": _hhmm(end),
 	}
+
+
+def default_shift_on(employee, on_date) -> str | None:
+	"""The employee's default shift, on a working day. The one rule Home and the
+	Calendar day sheet share for "no roster covers this day".
+
+	A default shift does not make a rest day a workday: on a holiday or weekly
+	off the answer is no shift, not "Not checked in · 09:00 to 18:00".
+	"""
+	if _is_rest_day(employee, on_date):
+		return None
+	return frappe.db.get_value("Employee", employee, "default_shift")
+
+
+def _is_rest_day(employee, on_date) -> bool:
+	"""On the employee's holiday list for `on_date` (holiday or weekly off)."""
+	from erpnext.setup.doctype.employee.employee import is_holiday
+
+	return bool(is_holiday(employee, on_date, raise_exception=False))
 
 
 def _hhmm(value) -> str:

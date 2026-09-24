@@ -1,14 +1,15 @@
-CLASS: display-only field computed by a caller's list transform, missing when the same view loads the raw document
+CLASS: "today's shift" read from Shift Assignment only, ignoring Employee.default_shift (HRMS's own fallback, get_employee_shift consider_default_shift=True)
 
-Instance: RequestActionSheet showed no date for Fix a day / Shift change / Time off when opened from Approvals (attendance_dates, shift_dates, leave_dates are set only by data/attendance.js and data/leaves.js list transforms).
+Instance: Home said "No shift today" while Profile said "Your shift: 9AM - 6PM" (owner screenshot, 24 Sep 2026).
 
-Call sites of RequestActionSheet:
-- frontend/src/views/Approvals.vue:159 — same-root (raw doc: dates were missing; fixed by the header date line)
-- frontend/src/components/RequestList.vue:70 — same-root (same sheet; the header line now shows there too)
-- frontend/src/components/ListView.vue:138 — same-root (same sheet)
-- frontend/src/components/FormView.vue:300 — same-root (same sheet)
+Readers of a day's shift:
+- hrms/api/now.py:_shift_window — same-root (fixed: assignment, else default_shift_on)
+- hrms/api/calendar.py:_day_shift — same-root (fixed: attendance, check-ins, roster, then default_shift_on)
+- hrms/api/team.py:261 — not-affected: already `(att and att.shift) or member.default_shift`
+- hrms/api/geofence.py:131,199 — not-affected: the geofence POLICY lives on the assignment row (location, strict flag); a default shift carries no geofence, and the check-in path resolves it separately
+- hrms/overrides/employee_checkin_override.py:592 — not-affected: same geofence-policy lookup, narrowed to the punch's resolved shift
+- frontend/src/views/Profile.vue:321 — not-affected: reads default_shift (the correct half of the disagreement)
 
-Other computed-by-transform fields in requestSummaryFields.js:
-- total_attendance_days / total_shift_days — ticket alpha6-B (the sheet redesign replaces the field list; no wrong value is shown, the row is simply absent)
+Rest days: a default shift never makes a holiday or weekly off a workday (default_shift_on checks the employee's holiday list); an assignment on a rest day still counts.
 
-Locked: utils/__tests__/requestDates.test.js (instance), RequestActionSheet.reject-reason.test.js "the sheet says which day(s)" (the sheet reads the document, not a transform).
+Locked: hrms/api/test_now_default_shift.py (5), hrms/api/test_calendar_day_shift.py (+2).

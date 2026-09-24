@@ -462,7 +462,8 @@ def _my_punches(employee: str, day) -> list[dict]:
 def _day_shift(employee: str, day, attendance) -> str | None:
 	"""The shift the day was actually worked on (owner, 23 Sep: "No shift" on
 	a worked day). The day's attendance first, then its check-ins, then the
-	roster; the roster alone missed every day worked off-roster."""
+	roster, then the default shift; the roster alone missed every day worked
+	off-roster."""
 	if attendance and attendance.get("shift"):
 		return attendance.shift
 	checkin_shift = frappe.get_all(
@@ -492,7 +493,11 @@ def _day_shift(employee: str, day, attendance) -> str | None:
 	):
 		if not row.end_date or getdate(row.end_date) >= day:
 			return row.shift_type
-	return None
+	# No roster: the default shift, on a working day (owner, 24 Sep: Profile
+	# showed a shift and the day sheet said "No shift").
+	from hrms.api.now import default_shift_on
+
+	return default_shift_on(employee, day)
 
 
 def _my_day(employee: str, day) -> dict:

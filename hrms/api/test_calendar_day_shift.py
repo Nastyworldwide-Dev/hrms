@@ -24,7 +24,9 @@ import frappe
 from hrms.api import calendar
 
 
-def _values(attendance_shift=None, checkin_shift=None, roster_shift=None, roster_ended=False):
+def _values(
+	attendance_shift=None, checkin_shift=None, roster_shift=None, roster_ended=False, default_shift=None
+):
 	calls = []
 	roster = (
 		[frappe._dict(shift_type=roster_shift, end_date="2026-09-01" if roster_ended else None)]
@@ -44,6 +46,8 @@ def _values(attendance_shift=None, checkin_shift=None, roster_shift=None, roster
 			)
 		if doctype == "Shift Type":
 			return ("09:00:00", "18:00:00")
+		if doctype == "Employee" and filters and fieldname == "default_shift":
+			return default_shift
 		return None
 
 	def get_all(doctype, filters=None, **kw):
@@ -58,9 +62,10 @@ def _values(attendance_shift=None, checkin_shift=None, roster_shift=None, roster
 
 
 class TestDayShift(unittest.TestCase):
-	def _day(self, **shifts):
+	def _day(self, rest_day=False, **shifts):
 		get_value, get_all, self.calls = _values(**shifts)
 		with (
+			patch("hrms.api.now._is_rest_day", return_value=rest_day),
 			patch.object(frappe.db, "get_value", side_effect=get_value),
 			patch.object(frappe, "get_all", side_effect=get_all, create=True),
 			patch.object(calendar, "_my_punches", return_value=[]),
@@ -80,6 +85,13 @@ class TestDayShift(unittest.TestCase):
 
 	def test_an_ended_roster_is_not_the_days_shift(self):
 		self.assertIsNone(self._day(roster_shift="Old shift", roster_ended=True)["shift"])
+
+	def test_the_default_shift_when_nothing_else(self):
+		# Owner, 24 Sep: Profile showed "9AM - 6PM" and every other screen "No shift".
+		self.assertEqual(self._day(default_shift="Day shift")["shift"]["shift"], "Day shift")
+
+	def test_a_default_shift_does_not_cover_a_rest_day(self):
+		self.assertIsNone(self._day(default_shift="Day shift", rest_day=True)["shift"])
 
 	def test_no_shift_anywhere_is_no_shift(self):
 		self.assertIsNone(self._day()["shift"])
