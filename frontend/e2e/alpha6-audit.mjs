@@ -137,7 +137,7 @@ function audit() {
 			.map((e) => getComputedStyle(e).borderTopLeftRadius)
 	)
 	const buttonHeights = hist(
-		[...document.querySelectorAll("button, .g-btn")].filter(vis).filter((b) => ownText(b) || b.querySelector("span")).map((b) => Math.round(b.getBoundingClientRect().height))
+		[...document.querySelectorAll("button, .g-btn")].filter(vis).filter((b) => !b.closest(".g-row, .g-form-row, .g-sheet__action, ion-tab-bar, .g-tabbar, .g-cal") && (ownText(b) || b.querySelector("span"))).map((b) => Math.round(b.getBoundingClientRect().height))
 	)
 
 	// W — words.

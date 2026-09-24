@@ -62,6 +62,7 @@
 			v-else-if="['Small Text', 'Text', 'Long Text'].includes(props.fieldtype)"
 			:model-value="modelValue"
 			:aria-label="label"
+			:placeholder="rowPlaceholder"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
 			@update:model-value="
@@ -92,6 +93,7 @@
 			v-else-if="props.fieldtype === 'Data'"
 			:model-value="modelValue"
 			:aria-label="label"
+			:placeholder="rowPlaceholder"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
 			@update:model-value="
@@ -124,6 +126,7 @@
 			type="number"
 			:model-value="modelValue"
 			:aria-label="label"
+			:placeholder="rowPlaceholder"
 			:disabled="isReadOnly"
 			v-bind="$attrs"
 			@update:model-value="
@@ -280,6 +283,12 @@ const isNumberType = computed(() => {
 const isReadOnly = computed(() => {
 	return Boolean(props.readOnly)
 })
+
+//: An empty entry row says what it wants, as iOS forms do (alpha.6 B2):
+//: without it the trailing half of the row is blank and reads as nothing.
+const rowPlaceholder = computed(() =>
+	isReadOnly.value ? "" : props.reqd ? __("Required") : __("Optional")
+)
 
 const selectionList = computed(() => {
 	if (props.fieldtype === "Link" && props.documentList) {
