@@ -102,7 +102,7 @@
 									class="g-form-section"
 								>
 									<h2 v-if="group.label" class="g-form-section__title">
-										{{ sentenceCase(__(group.label, null, props.doctype)) }}
+										{{ sentenceCase(__(plainLabel(group.label), null, props.doctype)) }}
 									</h2>
 									<template v-for="(segment, s) in group.segments" :key="s">
 										<div v-if="segment.kind === 'rows'" class="g-form-group">
@@ -161,7 +161,7 @@
 							class="g-form-section"
 						>
 							<h2 v-if="group.label" class="g-form-section__title">
-								{{ sentenceCase(__(group.label, null, props.doctype)) }}
+								{{ sentenceCase(__(plainLabel(group.label), null, props.doctype)) }}
 							</h2>
 							<template v-for="(segment, s) in group.segments" :key="s">
 								<div v-if="segment.kind === 'rows'" class="g-form-group">
@@ -415,6 +415,7 @@ import { dropEmptySections } from "@/utils/visibleSections"
 import { groupFields } from "@/utils/formGroups"
 import { sentenceCase } from "@/utils/sentenceCase"
 import { sendLabel } from "@/utils/sendLabel"
+import { plainLabel } from "@/utils/plainLabel"
 import FileUploaderView from "@/components/FileUploaderView.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"

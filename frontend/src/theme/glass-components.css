@@ -706,10 +706,12 @@ html[data-theme="dark"] .g-badge--open {
 	background: var(--g-icon-bg);
 	color: var(--g-ink2);
 } /* 5.75 / 5.85 */
+/* In flight, not an action: a neutral ink chip, not the lime that means
+   "tap here" (alpha.6 B5; HIG Color). */
 .g-chip--progress {
-	background: rgba(var(--g-brand-rgb) / 0.14);
-	color: var(--g-accent-ink);
-} /* 7.02 / 10.16 */
+	background: var(--g-icon-bg);
+	color: var(--g-ink);
+}
 .g-chip--success {
 	background: rgba(var(--g-success-rgb) / 0.2);
 	color: var(--g-success-ink);

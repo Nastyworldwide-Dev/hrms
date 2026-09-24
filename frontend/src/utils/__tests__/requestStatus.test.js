@@ -72,7 +72,8 @@ test("Expense Claim keeps its payment state after approval", () => {
 	assert.equal(
 		requestStatus("Expense Claim", { approval_status: "Approved", status: "Unpaid", docstatus: 1 })
 			.label,
-		"Approved & Unpaid"
+		// alpha.6 W1: the person's words, not finance's "Approved & Unpaid".
+		"Approved, not paid yet"
 	)
 	assert.equal(
 		requestStatus("Expense Claim", { approval_status: "Approved", status: "Paid", docstatus: 1 })
@@ -86,7 +87,7 @@ test("Expense Claim keeps its payment state after approval", () => {
 	)
 	assert.equal(
 		requestStatus("Expense Claim", { approval_status: "Approved", status: "Unpaid" }).label,
-		"Approved & Unpaid"
+		"Approved, not paid yet"
 	)
 })
 

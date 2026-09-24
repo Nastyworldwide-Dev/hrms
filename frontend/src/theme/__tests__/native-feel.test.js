@@ -28,3 +28,10 @@ test("no page can be dragged sideways", () => {
 test("the overscroll area is the page colour", () => {
 	assert.match(css, /html,\s*body\s*{[^}]*background(-color)?:\s*var\(--g-bg\)/s)
 })
+
+// alpha.6 B5 / HIG Color: lime means "act". An in-flight status chip is not an
+// action, so it is not painted in the action colour.
+test("the progress chip is not the action colour", () => {
+	const rule = css.slice(css.indexOf(".g-chip--progress {"), css.indexOf("}", css.indexOf(".g-chip--progress {")))
+	assert.doesNotMatch(rule, /--g-brand|--g-accent-ink/)
+})

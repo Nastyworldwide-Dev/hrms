@@ -21,6 +21,7 @@ const STATUS_VARIANTS = {
 	"approved & draft": "progress",
 	"approved & unpaid": "progress",
 	"approved & submitted": "progress",
+	"approved, not paid yet": "progress",
 	approved: "success",
 	paid: "success",
 	rejected: "danger",
@@ -77,8 +78,9 @@ const REQUEST_TYPES = {
 		// A second axis after approval: payment. Finance reads "Approved & Unpaid".
 		submitted(doc) {
 			if (doc.approval_status === "Rejected") return "Rejected"
+			// The person's words (alpha.6 W1): approved, money not yet paid out.
 			if (doc.approval_status === "Approved" && ["Unpaid", "Submitted"].includes(doc.status)) {
-				return `${doc.approval_status} & ${doc.status}`
+				return "Approved, not paid yet"
 			}
 			return doc.status || "Approved"
 		},
