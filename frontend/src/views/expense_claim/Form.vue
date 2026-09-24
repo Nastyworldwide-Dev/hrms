@@ -186,14 +186,13 @@ watch(
 //: `vehicle_log`, `amended_from`, `bank_or_cash_account`, `location`,
 //: `branch`, and the Accounting and Dashboard tabs — 36 of the doctype's 61
 //: fields reached an employee filing a receipt.
-const FIELDS = [
-	"expenses",
-	"posting_date",
-	"expense_approver",
-	"total_claimed_amount",
-	"total_sanctioned_amount",
-	"grand_total",
-]
+//: No posting_date (owner ruling Q4, 24 Sep 2026): it is the claim's
+//: accounting date, seeded with today on the model below; each expense line
+//: carries its own date. No total fields either: the Expenses header already
+//: shows the running total, and three read-only boxes repeating it ("12.5",
+//: "12.5", "12.5" under "Totals") were noise. calculateTotals() still sets
+//: them on the model, so the server receives them as before.
+const FIELDS = ["expenses", "expense_approver"]
 
 //: Shown only when READING an existing claim, as the blacklist also did: on a
 //: new one these come from the session or are not yet meaningful.

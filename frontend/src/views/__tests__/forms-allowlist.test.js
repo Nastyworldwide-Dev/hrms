@@ -116,7 +116,9 @@ test("what the employee could fill in before, they still can", () => {
 		assert.match(leave, new RegExp(`"${field}"`), `leave form still offers ${field}`)
 	}
 	const claim = listOf("views/expense_claim/Form.vue")
-	for (const field of ["expenses", "posting_date", "expense_approver"]) {
+	// posting_date left on purpose (owner ruling Q4, 24 Sep 2026): it is the
+	// claim's accounting date, seeded with today; each line has its own date.
+	for (const field of ["expenses", "expense_approver"]) {
 		assert.match(claim, new RegExp(`"${field}"`), `expense form still offers ${field}`)
 	}
 })

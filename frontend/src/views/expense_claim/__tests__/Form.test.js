@@ -38,3 +38,19 @@ test("cost tags picked on an expense line survive the claim-level stamp", () => 
 		"the claim-level cost center only fills an empty row"
 	)
 })
+
+// Owner ruling Q4 (delegated, 24 Sep 2026): the employee is not asked for a
+// "Posting date". It is the accounting date of the claim; each expense line
+// carries its own date, and the model is seeded with today (above).
+test("the form does not ask for a posting date", () => {
+	const fields = src.slice(src.indexOf("const FIELDS = ["), src.indexOf("]", src.indexOf("const FIELDS = [")))
+	assert.doesNotMatch(fields, /"posting_date"/)
+})
+
+test("the running total is shown once (the Expenses header), not in three boxes", () => {
+	const fields = src.slice(src.indexOf("const FIELDS = ["), src.indexOf("]", src.indexOf("const FIELDS = [")))
+	for (const f of ["total_claimed_amount", "total_sanctioned_amount", "grand_total"]) {
+		assert.doesNotMatch(fields, new RegExp(`"${f}"`))
+	}
+	assert.match(src, /expenseClaim\.value\.total_claimed_amount = total_claimed_amount/, "still computed for the server")
+})
