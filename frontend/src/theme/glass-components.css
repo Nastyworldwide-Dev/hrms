@@ -2187,34 +2187,24 @@ html[data-theme="dark"] .g-cal__day--present {
    sheet is solid glass-free content and nothing nests (WWDC25: avoid glass on
    glass). Same recipe and fallbacks as the tab bar. */
 .g-modal {
-	--background: var(--g-glass-fill);
+	/* alpha.7 B21/B22: a full-height form sheet is iOS's grouped background,
+	   opaque, its groups a step lighter (sheet-cell). */
+	--background: var(--g-sheet-bg);
 	--border-radius: var(--g-radius-panel);
-	--box-shadow: inset 0 1px 0 var(--g-rim-hi), var(--g-lift);
+	--box-shadow: var(--g-lift);
 	/* the built-in backdrop is disabled by backdrop-breakpoint=1 (the
 	   focus-trap workaround); .g-scrim below does the dimming instead */
 	--backdrop-opacity: 0;
 }
 .g-modal::part(content) {
-	border: 1px solid var(--g-glass-rim);
 	-webkit-backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
 	backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
 }
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-	.g-modal {
-		--background: var(--g-glass-fill-fallback);
-	}
-}
 @media (prefers-reduced-transparency: reduce) {
-	.g-modal {
-		--background: var(--g-glass-fill-fallback);
-	}
 	.g-modal::part(content) {
 		-webkit-backdrop-filter: none;
 		backdrop-filter: none;
 	}
-}
-html[data-transparency="reduce"] .g-modal {
-	--background: var(--g-glass-fill-fallback);
 }
 html[data-transparency="reduce"] .g-modal::part(content) {
 	-webkit-backdrop-filter: none;
@@ -2290,7 +2280,7 @@ html[data-transparency="reduce"] .g-modal::part(content) {
 	align-items: center;
 	margin: 0 calc(-1 * var(--g-pad-panel)) var(--g-stack-sm);
 	padding: 8px 8px 0;
-	background: var(--g-glass-fill-fallback);
+	background: var(--g-sheet-bg);
 }
 .g-sheet__grabber {
 	width: 36px;
@@ -4111,4 +4101,11 @@ html {
 }
 .g-seeall {
 	color: var(--g-ink2);
+}
+
+/* A group inside a sheet is the elevated cell (alpha.7 B22). */
+.g-sheet .g-form-group,
+.g-sheet .g-list,
+.g-sheet .g-sheet__group {
+	background: var(--g-sheet-cell);
 }

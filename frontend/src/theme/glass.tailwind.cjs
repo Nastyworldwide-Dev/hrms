@@ -53,6 +53,8 @@ module.exports = {
 		"rim-lo": "var(--g-rim-lo)",
 		scrim: "var(--g-scrim)",
 		sheen: "var(--g-sheen)",
+		"sheet-bg": "rgb(var(--g-sheet-bg-rgb) / <alpha-value>)",
+		"sheet-cell": "rgb(var(--g-sheet-cell-rgb) / <alpha-value>)",
 		success: "rgb(var(--g-success-rgb) / <alpha-value>)",
 		"success-ink": "rgb(var(--g-success-ink-rgb) / <alpha-value>)",
 		surface: "rgb(var(--g-surface-rgb) / <alpha-value>)",

@@ -68,6 +68,10 @@
 	--g-rim-lo: rgba(16,22,34,.06);
 	--g-scrim: rgba(11,12,16,.32);
 	--g-sheen: rgba(255,255,255,.55);
+	--g-sheet-bg: #F2F2F7;
+	--g-sheet-bg-rgb: 242 242 247;
+	--g-sheet-cell: #FFFFFF;
+	--g-sheet-cell-rgb: 255 255 255;
 	--g-surface: #FFFFFF;
 	--g-surface-rgb: 255 255 255;
 	--g-track-solid: #ECEDEF;
@@ -268,6 +272,10 @@ html[data-theme="dark"] {
 	--g-rim-lo: rgba(0,0,0,.28);
 	--g-scrim: rgba(0,0,0,.56);
 	--g-sheen: rgba(255,255,255,.13);
+	--g-sheet-bg: #1C1C1E;
+	--g-sheet-bg-rgb: 28 28 30;
+	--g-sheet-cell: #2C2C2E;
+	--g-sheet-cell-rgb: 44 44 46;
 	--g-surface: #1C1C1E;
 	--g-surface-rgb: 28 28 30;
 	--g-track-solid: #313133;

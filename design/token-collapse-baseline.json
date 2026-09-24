@@ -1,11 +1,17 @@
 [
+	"bg|sheet-bg|light",
 	"brand|accent-ink|dark",
+	"glass-fill-fallback|sheet-bg|dark",
+	"glass-fill-fallback|sheet-cell|light",
 	"glass-fill|hair|dark",
+	"sheet-bg|surface|dark",
+	"sheet-cell|surface|light",
 	"tile-announcement|danger-ink|dark",
 	"tile-leave|success-ink|dark",
 	"tile-neutral|ink-muted|dark",
 	"tile-on-tile|glass-fill-fallback|light",
 	"tile-on-tile|ink|dark",
+	"tile-on-tile|sheet-cell|light",
 	"tile-on-tile|surface|light",
 	"tile-overtime|warn-ink|dark"
 ]

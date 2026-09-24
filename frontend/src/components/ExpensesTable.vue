@@ -73,7 +73,7 @@
 
 	<GModal :is-open="isModalOpen" :title="modalTitle" @did-dismiss="resetSelectedItem()">
 		<!-- Add Expense Action Sheet -->
-		<div class="bg-ground w-full flex flex-col pb-5">
+		<div class="w-full flex flex-col pb-5">
 			<div class="w-full flex flex-col items-center justify-center gap-5 p-4 max-h-[80vh]">
 				<div class="w-full overflow-y-auto expense-fields">
 					<section
@@ -297,22 +297,3 @@ watch(
 	}
 )
 </script>
-
-<style scoped>
-.expense-fields :deep(input:not([type="checkbox"]):not([type="radio"])),
-.expense-fields :deep(textarea),
-.expense-fields :deep(select) {
-	background-color: var(--g-glass-fill-fallback);
-	border: 1px solid var(--g-hair);
-	border-radius: 0;
-	font-size: 15px;
-	color: var(--g-ink);
-}
-.expense-fields :deep(input:not([type="checkbox"]):not([type="radio"]):focus),
-.expense-fields :deep(textarea:focus),
-.expense-fields :deep(select:focus) {
-	border-color: var(--g-accent-ink);
-	box-shadow: none;
-	outline: none;
-}
-</style>
