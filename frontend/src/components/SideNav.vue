@@ -21,7 +21,7 @@
 		<div class="flex flex-col py-3.5 flex-1">
 			<button
 				type="button"
-				class="g-eyebrow flex items-center gap-3 px-4 py-3 mb-1.5 border-l-4 border-transparent text-ink-500 hover:text-inkbase text-left"
+				class="g-eyebrow flex items-center gap-3 px-4 py-3 mb-1.5 g-touch border-l-4 border-transparent text-ink-500 hover:text-inkbase text-left"
 				:aria-label="collapsed ? __('Expand sidebar') : __('Collapse sidebar')"
 				:aria-expanded="String(!collapsed)"
 				@click="toggleCollapse"

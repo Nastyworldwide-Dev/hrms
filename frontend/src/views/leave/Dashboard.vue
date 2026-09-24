@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :pageTitle="__('Leave and holidays')">
+	<BaseLayout :pageTitle="__('Time off')">
 		<template #body>
 			<!-- §20.3: one 720px column, left-aligned (7.3 ruling). Was
 			     lg:grid-cols-[1fr_280px] over the balance band and lg:grid-cols-2 over

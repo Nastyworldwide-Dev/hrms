@@ -125,7 +125,11 @@ function audit() {
 	const under44 = tappables
 		.filter((e) => {
 			const r = e.getBoundingClientRect()
-			return (r.width < 44 || r.height < 44) && !e.closest(".g-cal") && e.type !== "hidden"
+			// .g-seclink / .g-touch-area draw an invisible 44px ::before around
+			// small text links; that IS the target (WCAG 2.5.8 counts it).
+			const ex = getComputedStyle(e, "::before")
+			const expanded = ex.content !== "none" && parseFloat(ex.height) >= 44 && parseFloat(ex.width) >= 44
+			return (r.width < 44 || r.height < 44) && !expanded && !e.closest(".g-cal") && e.type !== "hidden"
 		})
 		.map((e) => (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 20))
 	const radii = hist(

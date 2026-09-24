@@ -3786,3 +3786,12 @@ body {
 	overscroll-behavior-x: none;
 	background-color: var(--g-bg);
 }
+
+/* The header "⋯" menu (frappe-ui Dropdown, ghost button) renders 28px. It is
+   a 44px target now (HIG / WCAG 2.5.8); the menu's own redesign is ticketed
+   (.claude/plans/ticket-formview-restructure.md). */
+.g-header button[aria-haspopup],
+.g-header [aria-label="Menu"] {
+	min-width: var(--g-touch-target-min);
+	min-height: var(--g-touch-target-min);
+}
