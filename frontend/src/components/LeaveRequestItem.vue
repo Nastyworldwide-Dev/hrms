@@ -12,7 +12,7 @@
 				<div class="text-xs text-ink-600">
 					<span>{{ props.doc.leave_dates || getLeaveDates(props.doc) }}</span>
 					<span class="whitespace-pre"> &middot; </span>
-					<span class="whitespace-nowrap">{{ __("{0}d", [props.doc.total_leave_days]) }}</span>
+					<span class="whitespace-nowrap">{{ daysWords(props.doc.total_leave_days) }}</span>
 				</div>
 				<!-- WHO it is with, and since when. A chip reading "Waiting" does
 				     not say on whom, and the employee looking at their own list is
@@ -28,6 +28,7 @@
 </template>
 
 <script setup>
+import { daysWords } from "@/utils/countWords"
 import { siteTime } from "@/utils/siteTime"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed, inject } from "vue"

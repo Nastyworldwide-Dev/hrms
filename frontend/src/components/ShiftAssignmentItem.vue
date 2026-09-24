@@ -9,7 +9,7 @@
 					<span>{{ props.doc.shift_dates || getShiftDates(props.doc) }}</span>
 					<span v-if="props.doc.end_date" class="whitespace-pre"> &middot; </span>
 					<span v-if="props.doc.end_date" class="whitespace-nowrap">{{
-						__("{0}d", [props.doc.total_shift_days || getTotalShiftDays(props.doc)])
+						daysWords(props.doc.total_shift_days || getTotalShiftDays(props.doc))
 					}}</span>
 				</div>
 				<div v-if="props.doc.shift_location" class="text-xs text-ink-600 whitespace-nowrap">
@@ -27,6 +27,7 @@
 </template>
 
 <script setup>
+import { daysWords } from "@/utils/countWords"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed, inject } from "vue"
 

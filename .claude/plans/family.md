@@ -1,12 +1,12 @@
-CLASS: a list row that predates alpha.6 (bold time as the title, In/Out as coloured chips, the day repeated on every row)
+CLASS: a duration written as a unit abbreviation ("1d", "0.5d") instead of words
 
-Instance: plan §2 0.8 — Your check-ins list.
+Instance: plan §5.3 A16/B4 — list rows read "15 Sep · 1d".
 
 Sites:
-- frontend/src/components/EmployeeCheckinItem.vue — same-root (a grouped row: In/Out leading, time trailing grey, chevron)
-- frontend/src/components/ListView.vue Employee Checkin branch — same-root (groups by site day under Today/Yesterday/Tue 22 Sep headings)
-- frontend/src/utils/dayGroups.js — new (groupByDay keeps server order; dayHeading)
-- the other ListView doctypes — not-affected: they keep GListPanel rows; their redesign is Phase 3 (lists)
-- the filter as a glass bar button — ticket Phase 1 (every bar button changes there, not one screen alone)
+- frontend/src/components/LeaveRequestItem.vue — same-root
+- frontend/src/components/AttendanceRequestItem.vue — same-root
+- frontend/src/components/ShiftRequestItem.vue — same-root
+- frontend/src/components/ShiftAssignmentItem.vue — same-root
+- frontend/src/utils/countWords.js countOf — not-affected: already words; daysWords added beside it
 
-Locked: utils/__tests__/dayGroups.test.js (3). Verified in WebKit: headings by day, rows 44 pt, tap opens the check-in sheet, no page errors.
+Locked: utils/__tests__/daysWords.test.js (3).

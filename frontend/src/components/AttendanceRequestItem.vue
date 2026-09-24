@@ -13,7 +13,7 @@
 					<span>{{ props.doc.attendance_dates || getDates(props.doc) }}</span>
 					<span v-if="getTotalDays(props.doc) > 0">
 						<span class="whitespace-pre"> &middot; </span>
-						<span class="whitespace-nowrap">{{ __("{0}d", [getTotalDays(props.doc)]) }}</span>
+						<span class="whitespace-nowrap">{{ daysWords(getTotalDays(props.doc)) }}</span>
 					</span>
 				</div>
 				<!-- WHO it is with, and since when. A chip reading "Waiting"
@@ -29,6 +29,7 @@
 </template>
 
 <script setup>
+import { daysWords } from "@/utils/countWords"
 import { siteTime } from "@/utils/siteTime"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { computed, inject } from "vue"
