@@ -38,7 +38,18 @@
 	     empty states). While loading it waits, so nothing jumps. -->
 	<div v-else-if="homeAnnouncements.data" class="w-full">
 		<div class="g-eyebrow mb-4">{{ __("Announcements") }}</div>
-		<p v-if="!cards.length" class="g-empty-line text-caption text-ink-600">{{ __("No news.") }}</p>
+		<!-- A quiet day is ONE line in the same place (alpha.7 §10.3): the
+		     section never moves or vanishes, so people learn to glance here. -->
+		<div v-if="!cards.length" class="g-form-group">
+			<button
+				type="button"
+				class="g-form-row g-form-row--action g-ann-quiet"
+				@click="router.push({ name: 'Announcements' })"
+			>
+				<span class="g-form-row__label">{{ __("No new announcements") }}</span>
+				<span class="g-ann-quiet__all">{{ __("See all") }}</span>
+			</button>
+		</div>
 		<GListPanel v-else>
 			<GListRow
 				v-for="card in cards"

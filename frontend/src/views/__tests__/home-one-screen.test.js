@@ -19,7 +19,8 @@ const data = read("../../data/home.js")
 
 test("Home reads Today, News, This week, Coming up, Waiting on you", () => {
 	const body = templateOf(home)
-	const order = ["NowBar", "CheckInPanel", "Announcements", "HomeWeek", "HomeComingUp", "NeedsYou"]
+	// alpha.7 (25 Sep): Announcements first, then Today, Needs you, Your week.
+	const order = ["Announcements", "NowBar", "CheckInPanel", "NeedsYou", "HomeWeek", "HomeComingUp"]
 	const at = order.map((name) => body.indexOf(`<${name}`))
 	for (const [i, name] of order.entries()) {
 		assert.ok(at[i] > 0, `${name} should be on Home`)

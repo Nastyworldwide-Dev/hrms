@@ -40,7 +40,7 @@ test("Home reads in the plan's order", () => {
 	// under Today "so everyone will notice… kinda like news", then This week,
 	// Coming up, and Waiting on you last. Full order: home-one-screen.test.js.
 	const body = template("views/Home.vue")
-	const order = ["NowBar", "CheckInPanel", "Announcements", "NeedsYou"]
+	const order = ["Announcements", "NowBar", "CheckInPanel", "NeedsYou"]
 	const at = order.map((name) => body.indexOf(`<${name}`))
 	for (const [i, name] of order.entries()) {
 		assert.ok(at[i] > 0, `${name} should be on Home`)

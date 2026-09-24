@@ -30,7 +30,7 @@ function code(text) {
 //: literal search cannot see through one — the same trap that made an earlier
 //: guard report a route missing when it was present.
 const TAB_SCREENS = {
-	"/home": null, // Home draws no pageTitle; its greeting is the heading
+	"/home": null, // Home's large title is "Today" (alpha.7), not the tab word
 	"/dashboard/attendance": "views/attendance/Dashboard.vue",
 	"/requests": "views/Requests.vue",
 	"/dashboard/kpi": "views/kpi/Dashboard.vue",

@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout>
+	<BaseLayout :pageTitle="__('Today')">
 		<template #body>
 			<!-- §20.3: ONE content column, 720px, left-aligned against the side nav.
 			     Until the 7.3 ruling this split into lg:grid-cols-2 — measured 550px
@@ -23,26 +23,22 @@
 			<div
 				class="g-rows--compact flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
 			>
-				<!-- §3.1's order, and the order is the argument: what is
-				     happening now, what is waiting on you, what you already
-				     asked for. The quick links that used to sit in the middle
-				     answered "how do I start a request?" — a question the
-				     Requests tab now answers in one tap from anywhere, which
-				     is why Home's largest block could go. -->
-				<!-- FIRST, above the check-in button: what is true right now,
-				     so the button underneath is a decision rather than a guess
-				     (§2). Renders nothing when there is no shift and no open
-				     session, which is most of a day off. -->
+				<!-- alpha.7 Home (plan §3, §10.3; owner + senior, 25 Sep).
+				     1. Announcements FIRST, the same place every day, never gone:
+				        the senior's goal is that people read them. A quiet day
+				        is one line. Must-read notices open full screen (§4.4).
+				     2. The Today card directly under it, still on the first
+				        screen: the status and the one button on ONE solid card
+				        (Wallet / Fitness style; glass stays on controls).
+				     3. Needs you (approvers), 4. Your week. -->
 				<!-- iPhone Safari only, once per 30 days (alpha.7 0.10). -->
 				<InstallHint />
-				<NowBar />
-				<CheckInPanel />
-				<!-- Owner-approved Home (23 Sep 2026): News sits right under
-				     Today "so everyone will notice… kinda like news". Every block
-				     below ALWAYS renders and says why it is empty. -->
 				<Announcements />
-				<!-- ONE panel for the two one-line blocks (§15.2, surfaces gate:
-				     Home was 8/6). Each keeps its own title and empty line. -->
+				<section class="g-today" :aria-label="__('Check in')">
+					<NowBar />
+					<CheckInPanel />
+				</section>
+				<NeedsYou />
 				<div class="w-full">
 					<div class="g-eyebrow mb-4">{{ __("Your week") }}</div>
 					<GListPanel
@@ -53,7 +49,6 @@
 						<HomeComingUp />
 					</GListPanel>
 				</div>
-				<NeedsYou />
 			</div>
 		</template>
 	</BaseLayout>

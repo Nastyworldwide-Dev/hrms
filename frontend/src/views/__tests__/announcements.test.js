@@ -35,7 +35,8 @@ test("an empty board says so in one line on Home", () => {
 	// Once loaded, the block always shows, with "No news." when it is empty —
 	// one line, not a standing card.
 	assert.match(block, /v-else-if="homeAnnouncements\.data"/, "shown once loaded")
-	assert.match(block, /__\("No news\."\)/, "an empty board says so")
+	// alpha.7 (25 Sep): the line reads "No new announcements · See all".
+	assert.match(block, /__\("No new announcements"\)/, "an empty board says so")
 	assert.doesNotMatch(block, /GEmptyState/, "no standing empty card on Home")
 	// The full board DOES have one, because arriving at a screen that renders
 	// nothing reads as broken.

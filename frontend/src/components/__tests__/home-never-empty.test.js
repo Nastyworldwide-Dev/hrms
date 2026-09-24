@@ -17,6 +17,6 @@ test("Needs you stays for approvers, saying nothing is waiting", () => {
 
 test("Announcements always shows, saying there is no news", () => {
 	const src = read("../Announcements.vue")
-	assert.match(src, /__\("No news\."\)/)
+	assert.match(src, /__\("No new announcements"\)/)
 	assert.doesNotMatch(src, /v-else-if="cards\.length" class="w-full"/)
 })

@@ -3964,3 +3964,30 @@ html {
 .g-header .g-iconbtn--flush {
 	margin-left: 0;
 }
+
+/* alpha.7 Home (plan §3): the Today card — the status and the one button on
+   ONE solid content card (Wallet / Fitness summary style). */
+.g-today {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 16px;
+	border-radius: var(--g-radius-panel);
+	background: var(--g-glass-fill-fallback);
+}
+.g-today #open-checkin-modal {
+	margin-top: 4px;
+}
+/* The quiet-day announcements line: label leading, See all trailing. */
+.g-ann-quiet {
+	justify-content: space-between;
+	text-align: left;
+}
+.g-form-row.g-ann-quiet > .g-ann-quiet__all {
+	flex: 0 0 auto;
+	color: var(--g-ink2);
+}
+.g-ann-quiet > .g-form-row__label {
+	max-width: none;
+	flex: 1 1 auto;
+}
