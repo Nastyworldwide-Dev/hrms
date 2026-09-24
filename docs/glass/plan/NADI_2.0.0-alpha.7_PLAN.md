@@ -272,3 +272,25 @@ accept `ENGINE=webkit` and present an iPhone user agent, so iOS-only code runs.
 |---|---|---|---|
 | 0.10 | The iOS "Install Nadi" banner covers the bottom of every page for anyone using Nadi in Safari (not installed). White text on lime: **contrast 1.18** (WCAG needs 4.5) | `components/InstallPrompt.vue` (a frappe-ui Popover with Tailwind accent colours); measured on the WebKit screenshot | Replace with one small dismissible row at the top of Home only ("Add Nadi to your Home Screen" + Share symbol), our own tokens, shown once per 30 days; never over forms |
 | 0.11 | **Body text and buttons render in Inter, not Apple's system font** on iPhone | frappe-ui's Tailwind plugin sets `html { font-family: InterVar, … }` ahead of our `-apple-system` stack (`node_modules/frappe-ui/src/tailwind/plugin.js:18`); measured in WebKit: html/body/tab labels = InterVar first | Override the html font family with our stack (system font first); stop shipping InterVar/Inter Tight/JetBrains Mono to Apple devices (plan 5.7) |
+
+## 12. What alpha.7 shipped from §5.7, and what moved (25 Sep)
+
+Shipped: Home Screen badge (unread count), screen stays on for the selfie, the
+large title folding into the bar, system font on iPhone (0.11).
+
+Moved, with the reason:
+- **Dynamic Type** (follow the iPhone's Text Size): every font size is in px
+  (34+ rules and the tokens). Following Text Size means moving them to rem, which
+  changes every screen's baseline. It is its own release, measured screen by
+  screen, not a tail item. → alpha.8.
+- **Search** (owner Q5: yes): needs a ruling before it is built. Who may find
+  whom by name? HR sees everyone (ruling, 23 Sep); should staff find people
+  outside their team? A search box is a way round every fence if that is not
+  decided first. → question for the owner, then alpha.8.
+- **Tapping a notification opens that exact request**: already true for request
+  notifications (the push carries the link); Declarative Web Push would need the
+  push relay to change, which is not this app's code.
+- **Apple's spring on push, sheets, tab lens**: a motion tuning pass; the current
+  motion tokens are unchanged. → alpha.8.
+- **Offline check-in**: not built, by the owner's rule ("never ever offline
+  checks in").
