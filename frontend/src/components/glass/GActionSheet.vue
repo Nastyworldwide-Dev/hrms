@@ -40,7 +40,13 @@
 				:aria-disabled="action.disabled || undefined"
 				@click="onSelect(action)"
 			>
-				<span v-if="action.icon" class="g-sheet__icon" aria-hidden="true">
+				<span
+					v-if="action.icon"
+					class="g-sheet__icon"
+					:class="{ 'g-sheet__icon--tile': action.tint }"
+					:style="action.tint ? { background: action.tint } : undefined"
+					aria-hidden="true"
+				>
 					<component :is="action.icon" class="h-5 w-5" />
 				</span>
 				<span class="g-sheet__text">

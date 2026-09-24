@@ -45,6 +45,7 @@
 </template>
 
 <script setup>
+import { TILE } from "@/utils/iconTile"
 import { inject, ref } from "vue"
 import { CalendarCheck, CalendarClock, Clock, Palmtree, Receipt } from "lucide-vue-next"
 import { useRouter } from "vue-router"
@@ -75,30 +76,35 @@ const ROUTES = {
 const requestTypes = [
 	{
 		key: "leave",
+		tint: TILE.leave,
 		label: __("Time off"),
 		hint: __("Leave, sick days or a holiday"),
 		icon: Palmtree,
 	},
 	{
 		key: "overtime",
+		tint: TILE.overtime,
 		label: __("Claim overtime"),
 		hint: __("Get paid for extra hours you worked"),
 		icon: Clock,
 	},
 	{
 		key: "expense",
+		tint: TILE.expense,
 		label: __("Claim an expense"),
 		hint: __("Get back money you spent for work"),
 		icon: Receipt,
 	},
 	{
 		key: "shift",
+		tint: TILE.shift,
 		label: __("Change a shift"),
 		hint: __("Work a different shift on some days"),
 		icon: CalendarClock,
 	},
 	{
 		key: "fix",
+		tint: TILE.fix,
 		label: __("Fix a day"),
 		hint: __("A missing check-in, or a day on duty"),
 		icon: CalendarCheck,

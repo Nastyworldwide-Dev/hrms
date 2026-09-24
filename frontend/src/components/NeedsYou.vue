@@ -53,6 +53,7 @@
 				:key="row.key"
 				:label="row.label"
 				:sublabel="row.sublabel"
+				:tint="row.tint"
 				@click="row.go()"
 			>
 				<template #icon>
@@ -82,14 +83,15 @@
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import {
+	CalendarCheck,
 	CalendarClock,
-	CalendarDays,
 	CircleCheckBig,
-	CircleDollarSign,
+	Clock,
 	FileText,
+	Palmtree,
 	Receipt,
-	UserCheck,
 } from "lucide-vue-next"
+import { TILE, tileFor } from "@/utils/iconTile"
 
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
@@ -116,14 +118,16 @@ const approvals = computed(() => Number(needsYouResource.data?.checkins) || 0)
 
 //: One icon per kind. The server sends a noun and a route, not a glyph — an
 //: icon is a presentation decision and belongs on this side.
+//: The SAME symbol per kind as the Requests sheet (alpha.7 §7): overtime was
+//: a receipt here and a clock there.
 const ICONS = {
-	"Leave Application": CalendarDays,
-	"Expense Claim": CircleDollarSign,
+	"Leave Application": Palmtree,
+	"Expense Claim": Receipt,
 	"Shift Request": CalendarClock,
-	"OT Request": Receipt,
-	"Attendance Request": UserCheck,
-	"Replacement Leave Claim": CalendarDays,
-	"Compensatory Leave Request": CalendarDays,
+	"OT Request": Clock,
+	"Attendance Request": CalendarCheck,
+	"Replacement Leave Claim": Palmtree,
+	"Compensatory Leave Request": Palmtree,
 }
 
 //: Every kind of waiting thing, in one list. Adding a kind is adding an entry
@@ -135,6 +139,7 @@ const rows = computed(() => {
 		out.push({
 			key: "remote-checkin",
 			icon: CircleCheckBig,
+			tint: TILE.checkin,
 			// "remote" is load-bearing and an earlier trim of this copy removed
 			// it: the count is `remote_checkin.get_pending_count` and the row
 			// goes to RemoteApprovals only, so a bare "check-ins to approve"
@@ -156,6 +161,7 @@ const rows = computed(() => {
 		out.push({
 			key: row.key,
 			icon: ICONS[row.doctype] || FileText,
+			tint: tileFor(row.doctype),
 			// The NOUN comes from the server so the wording lives in one place,
 			// and the count is stated rather than left to be counted by eye.
 			// "20+" when the scan capped: an approver reading that makes the

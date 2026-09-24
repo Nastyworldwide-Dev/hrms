@@ -11,6 +11,7 @@
 						v-for="item in moreItems"
 						:key="item.route"
 						:label="item.title"
+						:tint="item.tint"
 						@click="router.push(item.route)"
 					>
 						<template #icon>
@@ -20,7 +21,11 @@
 					<!-- One list of the year ahead, in a sheet (PAGE-20): its only
 					     door was inside the Leaves dashboard, which More no longer
 					     lists. -->
-					<GListRow :label="__('Public holidays')" @click="holidaysOpen = true">
+					<GListRow
+						:label="__('Public holidays')"
+						:tint="TILE.holiday"
+						@click="holidaysOpen = true"
+					>
 						<template #icon>
 							<CalendarDays class="h-icon-md w-icon-md" />
 						</template>
@@ -65,6 +70,8 @@
 </template>
 
 <script setup>
+import { TILE } from "@/utils/iconTile"
+import { HUB_PATH } from "@/utils/helpdeskHub"
 import { CalendarDays, ExternalLink, Users } from "lucide-vue-next"
 import { useRouter } from "vue-router"
 import { computed, inject, markRaw, ref } from "vue"
@@ -86,12 +93,22 @@ const __ = inject("$translate")
 
 // Team is manager-only: the entry appears once has_team confirms direct reports
 // (or the caller is HR, who browse teams via the selector)
+//: One tile colour per destination (alpha.7 §7).
+const MORE_TINT = {
+	[HUB_PATH]: TILE.help,
+	"/sop": TILE.sop,
+	"/announcements": TILE.announcement,
+}
 const moreItems = computed(() => {
 	// Helpdesk (HR Issues + IT Helpdesk) is in MORE_ITEMS for everyone; the IT
 	// pill inside it is what the Helpdesk-app availability gate hides now
-	const items = MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) }))
+	const items = MORE_ITEMS.map((item) => ({
+		...item,
+		title: __(item.title),
+		tint: MORE_TINT[item.route] || TILE.neutral,
+	}))
 	if (hasTeam.data) {
-		items.push({ icon: markRaw(Users), title: __("Team"), route: "/team" })
+		items.push({ icon: markRaw(Users), title: __("Team"), route: "/team", tint: TILE.team })
 	}
 	return items
 })

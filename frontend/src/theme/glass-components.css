@@ -4042,3 +4042,10 @@ html {
 	height: 16px;
 	color: var(--g-ink3);
 }
+
+/* alpha.7 §7: a kind's coloured tile with a white symbol (iOS Settings). */
+.g-row__well--tile,
+.g-sheet__icon--tile {
+	color: #fff;
+	border-radius: 8px;
+}

@@ -27,7 +27,13 @@
 		:class="{ 'g-row--tappable': tappable, 'g-row--destructive': destructive }"
 		@click="tappable && $emit('click', $event)"
 	>
-		<span v-if="$slots.icon" class="g-row__well" aria-hidden="true">
+		<span
+			v-if="$slots.icon"
+			class="g-row__well"
+			:class="{ 'g-row__well--tile': tint }"
+			:style="tint ? { background: tint } : undefined"
+			aria-hidden="true"
+		>
 			<slot name="icon" />
 		</span>
 
@@ -63,6 +69,9 @@
 import GTag from "./GTag.js"
 
 defineProps({
+	//: A kind colour (utils/iconTile.js): the well becomes a filled tile with a
+	//: white symbol, as in iOS Settings (alpha.7 §7).
+	tint: { type: String, default: "" },
 	label: { type: String, required: true },
 	sublabel: { type: String, default: "" },
 	amount: { type: String, default: "" },
