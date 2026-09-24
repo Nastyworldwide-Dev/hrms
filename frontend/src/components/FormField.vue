@@ -40,6 +40,7 @@
 			:doctype="props.options"
 			:modelValue="modelValue"
 			:filters="props.linkFilters"
+			:placeholder="$attrs.placeholder"
 			:disabled="isReadOnly"
 			:aria-label="label"
 			@update:modelValue="(v) => emit('update:modelValue', v)"

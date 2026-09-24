@@ -122,6 +122,11 @@
 		</div>
 
 		<GModal trigger="show-filter-modal" :title="__('Filters')">
+			<template #confirm>
+				<button type="button" class="g-sheet__done g-focusable" @click="applyFilters">
+					{{ __("Done") }}
+				</button>
+			</template>
 			<!-- Filter Action Sheet -->
 			<template #actionSheet>
 				<ListFiltersActionSheet
@@ -150,6 +155,7 @@ import ShellHeader from "@/components/ShellHeader.vue"
 import { createResource, debounce } from "frappe-ui"
 import { computed, inject, markRaw, onMounted, reactive, ref, watch } from "vue"
 import { initialListTab } from "@/utils/listTab"
+import { filterCondition } from "@/utils/listFilters"
 import { useRoute, useRouter } from "vue-router"
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import EmployeeCheckinItem from "@/components/EmployeeCheckinItem.vue"
@@ -422,7 +428,7 @@ const closeRequestModal = async () => {
 function initializeFilters() {
 	props.filterConfig.forEach((filter) => {
 		filterMap[filter.fieldname] = {
-			condition: "=",
+			condition: filterCondition(filter),
 			value: null,
 		}
 	})

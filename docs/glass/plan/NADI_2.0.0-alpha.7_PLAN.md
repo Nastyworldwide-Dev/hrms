@@ -43,7 +43,7 @@ fix the live defects in the new screenshots; a deep dive per page; a better-calc
 | 0.6 | Filters sheet: labels above empty boxed selects; a black footer band with two mismatched buttons | ListFiltersActionSheet predates the grouped form | Filters = grouped rows with menu pickers ("All" default); Reset leading / Done trailing in the sheet bar; apply live |
 | 0.7 | Appearance menu: opaque, a blank slot above "Light", covers the row labels | custom menu | iOS pull-down menu (glass, anchored to the value, no blank slot) — see D2 |
 | 0.8 | Check-ins list: time as a bold title, In/Out as chips, filter as a boxed square | list row predates alpha.6 | Rows "In / Out" + time trailing, grouped by day (Today / Yesterday / Mon 22 Sep); filter = a glass bar button |
-| 0.9 | Staff see **"₹ 50"** on expenses; the approver sees "RM 12.50" | a claim can carry the employee's salary currency; the list formats with it | Show money in the company currency everywhere; flag claims whose currency differs from the company's in readiness |
+| 0.9 | Staff see **"₹ 50"** on expenses; the approver sees "RM 12.50" | a claim can carry the employee's salary currency; the list formats with it | **Withdrawn 25 Sep (checked, not a defect):** the staff test user is in "_Test Company", whose currency IS INR; the approver's company is MYR. Each claim shows its own currency correctly. No change. |
 
 ## 3. Home overhaul (owner's request; research: `alpha7-home.md`)
 

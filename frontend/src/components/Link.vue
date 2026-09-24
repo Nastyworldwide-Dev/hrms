@@ -23,7 +23,7 @@
 			:aria-expanded="open ? 'true' : 'false'"
 			@click="openSheet"
 		>
-			<span class="g-linkpick__value">{{ selectedLabel }}</span>
+			<span class="g-linkpick__value">{{ selectedLabel || placeholder }}</span>
 			<ChevronDown class="g-linkpick__chevron" aria-hidden="true" />
 		</button>
 
@@ -93,6 +93,8 @@ const props = defineProps({
 		required: false,
 		default: "",
 	},
+	//: Shown while nothing is chosen, e.g. "All" in a filter (alpha.7 0.6).
+	placeholder: { type: String, default: "" },
 	filters: {
 		type: Object,
 		// Vue requires a factory here — a literal default is the SAME object

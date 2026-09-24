@@ -622,7 +622,7 @@ html[data-transparency="reduce"] .g-sidenav {
 .g-auth__link {
 	align-self: flex-end;
 	min-height: 44px;
-	padding: 0 4px;
+	padding: 0 12px 0 4px; /* optical: 16 pt from the edge, as iOS */
 	border: 0;
 	background: transparent;
 	font-family: var(--g-type-caption-family);
@@ -3849,4 +3849,25 @@ html {
 .g-install-hint__close svg {
 	width: 20px;
 	height: 20px;
+}
+
+/* alpha.7 0.6: the sheet's own confirm, trailing in its bar (HIG Sheets:
+   "Done" in the top trailing corner, semibold). A 44 pt target. */
+.g-sheet__done {
+	min-width: 44px;
+	min-height: 44px;
+	padding: 0 12px 0 4px; /* optical: 16 pt from the edge, as iOS */
+	border: 0;
+	background: transparent;
+	font-family: var(--g-font-ui);
+	font-size: 17px;
+	line-height: 22px;
+	font-weight: 600;
+	color: var(--g-ink);
+	white-space: nowrap;
+}
+/* A word ("Done") needs a wider trailing column than the 44 pt X; both
+   sides widen so the title stays centred. */
+.g-sheet__bar:has(.g-sheet__done) {
+	grid-template-columns: 64px 1fr 64px;
 }
