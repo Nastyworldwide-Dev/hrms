@@ -3804,3 +3804,11 @@ body {
 	min-width: var(--g-touch-target-min);
 	min-height: var(--g-touch-target-min);
 }
+
+/* alpha.7 0.11: frappe-ui's Tailwind plugin sets `html { font-family: InterVar, … }`
+   (under @supports font-variation-settings), putting Inter ahead of our
+   system-first stack, so buttons and body text rendered in Inter on iPhone.
+   The app's one stack wins: the system font first (HIG Typography). */
+html {
+	font-family: var(--g-font-ui) !important;
+}

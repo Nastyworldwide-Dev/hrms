@@ -30,3 +30,20 @@ test("Tailwind's layers still load (only the font sheet was dropped)", () => {
 	assert.match(main, /@tailwind base;/)
 	assert.match(main, /@tailwind utilities;/)
 })
+
+// alpha.7 0.11 (Safari engine, 25 Sep): frappe-ui's Tailwind plugin sets
+// `html { font-family: InterVar, … }` under @supports(font-variation-settings),
+// ahead of our system-first stack, and the app downloaded Inter + Inter Tight
+// on iPhones that never need them. Apple devices use the system font (SF Pro);
+// the web fonts stay as the fallback for everyone else.
+test("the html font is our system-first stack, not frappe-ui's InterVar", () => {
+	const css = read("../glass-components.css")
+	assert.match(css, /html\s*{[^}]*font-family:\s*var\(--g-font-ui\)\s*!important/s)
+})
+
+test("every font stack starts with the system font, so Apple devices never fetch Inter", () => {
+	const css = read("../glass.css")
+	for (const m of css.matchAll(/--g-font-(ui|display):\s*([^;]+);/g)) {
+		assert.match(m[2].trim(), /^-apple-system/, m[1])
+	}
+})

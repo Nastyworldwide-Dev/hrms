@@ -8,6 +8,11 @@
    imports that sheet. Italic is not registered: the interface never sets it
    (BDA style: bold, not italics, for emphasis). */
 
+/* alpha.7 0.11: no guard is needed to spare iPhones these files. A browser
+   downloads a web font only when a character is actually drawn with it, and
+   every stack here starts with -apple-system (SF Pro on Apple devices), so on
+   an iPhone Inter is never reached. The InterVar html rule from frappe-ui was
+   what made iPhones fetch it; that rule is overridden in glass-components.css. */
 @font-face {
 	font-family: "Inter";
 	font-style: normal;
