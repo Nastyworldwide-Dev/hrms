@@ -4095,8 +4095,12 @@ html {
    in a small grey capsule, trailing; the native picker is kept. */
 .g-form-group .g-datefield input {
 	width: auto;
-	min-height: 36px;
+	/* 44 pt target (HIG, WCAG 2.5.8): the pill is drawn 36 tall inside it
+	   by the transparent 4 pt borders, so the look stays compact. */
+	min-height: var(--g-touch-target-min);
 	padding: 8px 12px;
+	border: 4px solid transparent;
+	background-clip: padding-box;
 	border-radius: 8px;
 	background: var(--g-icon-bg);
 	color: var(--g-ink);
