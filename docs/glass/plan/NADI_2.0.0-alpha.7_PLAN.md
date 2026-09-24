@@ -151,7 +151,7 @@ with every P1/P2/P3 difference are in the review files.
 - Stop downloading Inter / Inter Tight / JetBrains Mono on Apple devices.
 - **App icon badge** = approvals waiting / unread (Home Screen apps, iOS 16.4+).
 - **Tapping a notification opens that exact request** (Declarative Web Push). Approve/Reject buttons *on* the notification are impossible on iPhone.
-- **Check-in without signal**: kept on the phone and sent when back online (iOS has no background sync).
+- ~~**Check-in without signal**~~ **Not built (25 Sep):** the owner's standing rule is "never ever offline checks in"; the app says "You need signal to check in" at the button instead.
 - **Screen stays on** during the selfie (Wake Lock, iOS 18.4+).
 - **Share** (iOS share sheet) on a request or an announcement.
 - Face ID sign-in: **later** (owner, 25 Sep).

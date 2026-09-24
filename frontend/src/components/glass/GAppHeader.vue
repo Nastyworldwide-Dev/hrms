@@ -30,7 +30,11 @@
 	     a pushed screen Back + a centred inline title + its own actions. -->
 	<header
 		class="g-header"
-		:class="{ 'g-header--large': !showBack, 'g-header--inline': showBack }"
+		:class="{
+			'g-header--large': !showBack,
+			'g-header--inline': showBack,
+			'g-header--collapsed': collapsed,
+		}"
 	>
 		<!-- Back is GPage's decision, not this component's and not the screen's
 		     (§12, v1.11): a pushed screen gets one, a tab root does not. -->
@@ -49,6 +53,8 @@
 		<!-- Decorative: the h1 beside it names the page (visually hidden on Home),
 		     so a labelled mark would say "Nadi" twice to a screen reader. -->
 		<GLogo v-if="!showBack" label="" />
+		<!-- The small title that replaces the large one after it scrolls away. -->
+		<span v-if="!showBack && title" class="g-header__mini" aria-hidden="true">{{ title }}</span>
 		<h1 class="g-header__title" :class="{ 'sr-only': !title }">{{ title || __("Nadi") }}</h1>
 		<!-- A hidden title takes no space, so this holds the bell and avatar at
 		     the right edge on Home (the mark alone, 23 Sep). -->
@@ -99,6 +105,8 @@ import GLogo from "./GLogo.vue"
 const __ = inject("$translate")
 // provided by GPage; false on tab roots
 const showBack = inject("gShowBack", false)
+//: BaseLayout's scroll says when the large title has gone (alpha.7 §5.1).
+const collapsed = inject("gTitleCollapsed", false)
 
 defineProps({
 	title: { type: String, default: "" },

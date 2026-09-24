@@ -4249,3 +4249,48 @@ ion-modal.g-mustread {
 	background: transparent;
 	overflow: hidden;
 }
+
+/* alpha.7 §5.1: the small title that fades into a tab root's bar once the
+   large title has scrolled away. The bar gains the page ground behind it. */
+.g-header__mini {
+	position: absolute;
+	left: 50%;
+	top: 34px; /* the centre of the first row (12 pad + 44 / 2) */
+	transform: translate(-50%, -50%);
+	max-width: 50%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 17px;
+	line-height: 22px;
+	font-weight: 600;
+	color: var(--g-ink);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity var(--g-motion-state-change-duration) var(--g-motion-state-change-easing);
+}
+.g-header--large {
+	position: relative;
+}
+.g-header--collapsed .g-header__mini {
+	opacity: 1;
+}
+/* The large title is in the bar, not the scroller, so it folds away itself
+   (iOS: it scrolls under the bar). Height collapses with it, no jump. */
+.g-header--large .g-header__title {
+	max-height: 41px;
+	overflow: hidden;
+	transition:
+		max-height var(--g-motion-state-change-duration) var(--g-motion-state-change-easing),
+		opacity var(--g-motion-state-change-duration) var(--g-motion-state-change-easing);
+}
+.g-header--collapsed .g-header__title {
+	max-height: 0;
+	opacity: 0;
+}
+.g-header--collapsed {
+	row-gap: 0;
+	padding-bottom: 4px;
+	border-bottom-color: var(--g-hair);
+	background: var(--g-bg);
+}
