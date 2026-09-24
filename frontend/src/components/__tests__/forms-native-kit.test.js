@@ -45,7 +45,8 @@ test('FormField placeholders never say "Select X"', () => {
 
 test("FormField routes each fieldtype to its Glass control", () => {
 	const src = read("../FormField.vue")
-	for (const tag of ["GSelect", "GDatePicker", "GDateTimePicker", "GCheckbox"]) {
+	// Check is a switch in its row (alpha.6 B3, HIG Toggles), not a checkbox.
+	for (const tag of ["GSelect", "GDatePicker", "GDateTimePicker", "GSwitch"]) {
 		assert.match(src, new RegExp(`<${tag}[\\s>]`), `FormField must render <${tag}>`)
 	}
 	assert.match(src, /<p[^>]*class="g-field-error"/, "error is a plain Glass line")

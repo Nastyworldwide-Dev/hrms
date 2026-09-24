@@ -10,11 +10,7 @@
 			     hairline at lg:, a phone-only Back and a second desktop-only
 			     "Back" link inside the form. Back is one control now, at every
 			     width, and it still asks before discarding typed work. -->
-			<ShellHeader
-				bare
-				:title="__(formTitle(props.doctype, !id))"
-				:back="confirmBack"
-			>
+			<ShellHeader bare :title="__(formTitle(props.doctype, !id))" :back="confirmBack">
 				<template v-if="id" #actions>
 					<!-- No id badge (ruling L4: ids never reach users; alpha.5 walk found
 					     "HR-LAP-2026-00043" on every open request). -->
@@ -57,7 +53,11 @@
 
 			<!-- Form. Focusable so a keyboard user can scroll it (WCAG 2.1.1;
 			     axe scrollable-region-focusable, alpha.5 served gate). -->
-			<div class="grow overflow-y-auto" tabindex="0" :aria-label="__(formTitle(props.doctype, !id))">
+			<div
+				class="grow overflow-y-auto"
+				tabindex="0"
+				:aria-label="__(formTitle(props.doctype, !id))"
+			>
 				<!-- The one content column (§20.3): 720px, left-aligned against the
 				     side nav at lg:. It was sm:max-w-2xl (672px) centred. -->
 				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
@@ -90,36 +90,48 @@
 						<template v-for="(fieldList, tabName, index) in tabFields" :key="tabName">
 							<div
 								v-show="tabName === activeTab"
-								class="flex flex-col space-y-4 p-4"
+								class="g-form-body"
 								@focusin="touchForm"
 								@click.capture="touchForm"
 							>
-								<template v-for="field in fieldList" :key="field.fieldname">
-									<slot
-										v-if="field.fieldtype == 'Table'"
-										:name="field.fieldname"
-										:isFormReadOnly="isFormReadOnly"
-									></slot>
-
-									<FormField
-										v-else
-										:fieldtype="field.fieldtype"
-										:fieldname="field.fieldname"
-										v-model="formModel[field.fieldname]"
-										:default="field.default"
-										:label="__(field.label, null, props.doctype)"
-										:options="field.options"
-										:linkFilters="field.linkFilters"
-										:documentList="field.documentList"
-										:readOnly="isFieldReadOnly(field)"
-										:reqd="Boolean(field.reqd)"
-										:hidden="Boolean(field.hidden)"
-										:errorMessage="field.error_message"
-										:minDate="field.minDate"
-										:maxDate="field.maxDate"
-										:addSectionPadding="fieldList[0].name !== field.name"
-									/>
-								</template>
+								<!-- Each section is ONE inset group (alpha.6 B2, Apple HIG Lists and
+								     tables): a small grey heading, then the rows on one rounded surface. -->
+								<section
+									v-for="group in groupFields(fieldList)"
+									:key="group.key"
+									class="g-form-section"
+								>
+									<h2 v-if="group.label" class="g-form-section__title">
+										{{ sentenceCase(__(group.label, null, props.doctype)) }}
+									</h2>
+									<template v-for="(segment, s) in group.segments" :key="s">
+										<div v-if="segment.kind === 'rows'" class="g-form-group">
+											<FormField
+												v-for="field in segment.fields"
+												:key="field.fieldname"
+												:fieldtype="field.fieldtype"
+												:fieldname="field.fieldname"
+												v-model="formModel[field.fieldname]"
+												:default="field.default"
+												:label="__(field.label, null, props.doctype)"
+												:options="field.options"
+												:linkFilters="field.linkFilters"
+												:documentList="field.documentList"
+												:readOnly="isFieldReadOnly(field)"
+												:reqd="Boolean(field.reqd)"
+												:hidden="Boolean(field.hidden)"
+												:errorMessage="field.error_message"
+												:minDate="field.minDate"
+												:maxDate="field.maxDate"
+											/>
+										</div>
+										<slot
+											v-else
+											:name="segment.field.fieldname"
+											:isFormReadOnly="isFormReadOnly"
+										></slot>
+									</template>
+								</section>
 
 								<!-- Attachment upload -->
 								<div
@@ -140,30 +152,45 @@
 						</template>
 					</template>
 
-					<div
-						class="flex flex-col space-y-4 p-4"
-						v-else
-						@focusin="touchForm"
-						@click.capture="touchForm"
-					>
-						<FormField
-							v-for="field in shownFields"
-							:key="field.name"
-							:fieldtype="field.fieldtype"
-							:fieldname="field.fieldname"
-							v-model="formModel[field.fieldname]"
-							:default="field.default"
-							:label="__(field.label, null, props.doctype)"
-							:options="field.options"
-							:linkFilters="field.linkFilters"
-							:documentList="field.documentList"
-							:readOnly="isFieldReadOnly(field)"
-							:reqd="Boolean(field.reqd)"
-							:hidden="Boolean(field.hidden)"
-							:errorMessage="field.error_message"
-							:minDate="field.minDate"
-							:maxDate="field.maxDate"
-						/>
+					<div class="g-form-body" v-else @focusin="touchForm" @click.capture="touchForm">
+						<!-- Each section is ONE inset group (alpha.6 B2, Apple HIG Lists and
+						     tables): a small grey heading, then the rows on one rounded surface. -->
+						<section
+							v-for="group in groupFields(shownFields)"
+							:key="group.key"
+							class="g-form-section"
+						>
+							<h2 v-if="group.label" class="g-form-section__title">
+								{{ sentenceCase(__(group.label, null, props.doctype)) }}
+							</h2>
+							<template v-for="(segment, s) in group.segments" :key="s">
+								<div v-if="segment.kind === 'rows'" class="g-form-group">
+									<FormField
+										v-for="field in segment.fields"
+										:key="field.fieldname"
+										:fieldtype="field.fieldtype"
+										:fieldname="field.fieldname"
+										v-model="formModel[field.fieldname]"
+										:default="field.default"
+										:label="__(field.label, null, props.doctype)"
+										:options="field.options"
+										:linkFilters="field.linkFilters"
+										:documentList="field.documentList"
+										:readOnly="isFieldReadOnly(field)"
+										:reqd="Boolean(field.reqd)"
+										:hidden="Boolean(field.hidden)"
+										:errorMessage="field.error_message"
+										:minDate="field.minDate"
+										:maxDate="field.maxDate"
+									/>
+								</div>
+								<slot
+									v-else
+									:name="segment.field.fieldname"
+									:isFormReadOnly="isFormReadOnly"
+								></slot>
+							</template>
+						</section>
 
 						<!-- Attachment upload -->
 						<div
@@ -385,6 +412,8 @@ import {
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import FormField from "@/components/FormField.vue"
 import { dropEmptySections } from "@/utils/visibleSections"
+import { groupFields } from "@/utils/formGroups"
+import { sentenceCase } from "@/utils/sentenceCase"
 import FileUploaderView from "@/components/FileUploaderView.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
@@ -475,7 +504,6 @@ const router = useRouter()
 const { downloadPDF } = useDownloadPDF()
 
 const __ = inject("$translate")
-const $dayjs = inject("$dayjs")
 const currentUser = inject("$user")
 const currentEmployee = inject("$employee")
 
@@ -486,7 +514,6 @@ const cancelViewer = computed(() => ({
 	roles: currentUser?.data?.roles || [],
 	employee: currentEmployee?.data?.name,
 }))
-
 
 let activeTab = ref(props.tabs?.[0].name)
 let fileAttachments = ref([])
@@ -581,7 +608,9 @@ watch(
 )
 
 //: The fields as drawn: a section heading only when something under it shows.
-const shownFields = computed(() => dropEmptySections(props.fields, formModel.value, isFieldReadOnly))
+const shownFields = computed(() =>
+	dropEmptySections(props.fields, formModel.value, isFieldReadOnly)
+)
 const tabFields = computed(() => splitFieldsByTab(shownFields.value, props.tabs))
 
 const attachedFiles = createResource({
@@ -1015,27 +1044,3 @@ onMounted(async () => {
 	}
 })
 </script>
-
-<style scoped>
-/* Modernist form controls: surface fill, hairline divider border, square, 14px. */
-.form-view-root :deep(input:not([type="checkbox"]):not([type="radio"])),
-.form-view-root :deep(textarea),
-.form-view-root :deep(select) {
-	background-color: var(--g-glass-fill-fallback);
-	border: 1px solid var(--g-hair);
-	border-radius: 0;
-	/* 16px, not 14px: iOS Safari zooms the viewport on focus of any field under
-	   16px and does not cleanly zoom back. These form inputs use a different
-	   selector path from .g-input, so the app-wide 16px fix missed them and
-	   every leave/expense/OT form still zoomed on tap. */
-	font-size: 16px;
-	color: var(--g-ink);
-}
-.form-view-root :deep(input:not([type="checkbox"]):not([type="radio"]):focus),
-.form-view-root :deep(textarea:focus),
-.form-view-root :deep(select:focus) {
-	border-color: var(--g-accent-ink);
-	box-shadow: none;
-	outline: none;
-}
-</style>

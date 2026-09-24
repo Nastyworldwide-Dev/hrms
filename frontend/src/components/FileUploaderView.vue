@@ -1,15 +1,12 @@
 <template>
 	<div class="flex flex-col gap-3 py-4">
+		<!-- One grouped row, like every other field (alpha.6 B2): "Add a file",
+		     a plain verb, instead of a dashed web drop zone under a lime heading. -->
 		<label class="file-select">
-			<h2 class="g-eyebrow pb-4">{{ __("Attachments") }}</h2>
-			<div class="select-button cursor-pointer">
-				<div
-					class="flex flex-col w-full bg-surface border border-divider rounded-input items-center p-4 gap-2"
-				>
-					<Upload class="h-6 w-6 text-ink-700" />
-					<span class="block text-sm font-normal leading-5 text-ink-700">
-						{{ __("Upload images or documents") }}
-					</span>
+			<div class="select-button cursor-pointer g-form-group">
+				<div class="g-form-row">
+					<span class="g-form-row__label">{{ __("Add a file") }}</span>
+					<Upload class="g-form-row__switch h-5 w-5 text-ink-600" aria-hidden="true" />
 				</div>
 				<input
 					class="hidden"

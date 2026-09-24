@@ -1,13 +1,16 @@
 <template>
-	<div v-if="showField" class="flex flex-col gap-1.5">
-		<!-- Label -->
+	<!-- One row of an inset grouped form (alpha.6 B2; Apple HIG Lists and
+	     tables): the label leads, the control trails. Long text stacks: its
+	     label on top, the text under it, on the same row surface. -->
+	<div
+		v-if="showField"
+		class="g-form-row"
+		:class="{ 'g-form-row--stacked': isStacked, 'g-form-row--error': props.errorMessage }"
+	>
 		<span
 			v-if="!['Check', 'Section Break', 'Column Break'].includes(props.fieldtype)"
-			:class="[
-				// mandatory marker takes the danger ink, not a Tailwind default
-				props.reqd ? `after:content-['_*'] after:text-danger-ink` : ``,
-				`g-field__label`,
-			]"
+			class="g-form-row__label"
+			:class="{ 'g-form-row__label--required': props.reqd }"
 		>
 			{{ label }}
 		</span>
@@ -69,16 +72,20 @@
 			"
 		/>
 
-		<!-- Check: native checkbox; the whole labelled row is the 44px target -->
-		<GCheckbox
-			v-else-if="props.fieldtype === 'Check'"
-			:label="label"
-			:model-value="modelValue"
-			v-bind="$attrs"
-			:disabled="isReadOnly"
-			@update:model-value="(v) => emit('update:modelValue', v)"
-			@change="(v) => emit('change', v)"
-		/>
+		<!-- Check: a switch trailing its row (Apple HIG Toggles: in a list row,
+		     the row text is the label). The row itself is the 44px target. -->
+		<template v-else-if="props.fieldtype === 'Check'">
+			<span class="g-form-row__label">{{ label }}</span>
+			<GSwitch
+				class="g-form-row__switch"
+				:aria-label="label"
+				:model-value="modelValue"
+				v-bind="$attrs"
+				:disabled="isReadOnly"
+				@update:model-value="(v) => emit('update:modelValue', v)"
+				@change="(v) => emit('change', v)"
+			/>
+		</template>
 
 		<!-- Data field -->
 		<GInput
@@ -203,7 +210,7 @@ import GInput from "@/components/glass/GInput.vue"
 import GDatePicker from "@/components/glass/GDatePicker.vue"
 import GDateTimePicker from "@/components/glass/GDateTimePicker.vue"
 import GSelect from "@/components/glass/GSelect.vue"
-import GCheckbox from "@/components/glass/GCheckbox.vue"
+import GSwitch from "@/components/glass/GSwitch.vue"
 import { TextEditor } from "frappe-ui"
 import { sentenceCase } from "@/utils/sentenceCase"
 import { computed, onMounted, inject } from "vue"
@@ -257,6 +264,11 @@ const showField = computed(() => {
 
 	return props.fieldtype !== "Table" && !props.hidden
 })
+
+//: Long text (and rich text) needs the row's full width: label on top.
+const isStacked = computed(() =>
+	["Small Text", "Text", "Long Text", "Text Editor"].includes(props.fieldtype)
+)
 
 const isNumberType = computed(() => {
 	return ["Int", "Float", "Currency"].includes(props.fieldtype)

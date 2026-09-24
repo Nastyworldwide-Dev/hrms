@@ -3433,3 +3433,174 @@ ion-router-outlet {
 	line-height: var(--g-type-caption-line-height);
 	color: var(--g-danger-ink);
 }
+
+/* ==========================================================================
+   Grouped form (alpha.6 B1–B3). Apple HIG Lists and tables; iOS Settings and
+   Calendar "New Event": each section is ONE inset rounded group of rows under
+   a small grey heading. A row puts its label first and its control after it.
+   Hairlines are inset to the text; the last row has none. The group is the
+   surface, so a control inside it draws no box of its own. Before: six field
+   looks on one form, square boxes stacked under labels (alpha6-pages.md §F).
+   Tested by components/__tests__/grouped-form.test.js.
+   ========================================================================== */
+.g-form-body {
+	display: flex;
+	flex-direction: column;
+	gap: 24px; /* groups are separated by space, not lines (HIG Layout) */
+	padding: 16px;
+}
+.g-form-section {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.g-form-section__title {
+	margin: 0;
+	padding: 0 16px;
+	/* iOS section header: Footnote, secondary, sentence case (rulebook R4). */
+	font-family: var(--g-font-ui);
+	font-size: 13px;
+	font-weight: 400;
+	line-height: 18px;
+	color: var(--g-ink2);
+}
+.g-form-group {
+	display: flex;
+	flex-direction: column;
+	border-radius: var(--g-radius-card);
+	background: var(--g-glass-fill-fallback);
+	overflow: hidden;
+}
+.g-form-row {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-height: var(--g-touch-target-min);
+	padding: 0 16px;
+}
+.g-form-row + .g-form-row::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 16px; /* inset to the text, as iOS draws it */
+	right: 0;
+	height: 1px;
+	background: var(--g-hair);
+}
+.g-form-row__label {
+	flex: 0 1 auto;
+	max-width: 45%;
+	/* iOS Body: 17/22 regular */
+	font-family: var(--g-font-ui);
+	font-size: 17px;
+	line-height: 22px;
+	font-weight: 400;
+	color: var(--g-ink);
+}
+.g-form-row__label--required::after {
+	content: " *";
+	color: var(--g-danger-ink);
+}
+/* The control takes the rest of the row, its value trailing. */
+.g-form-row > :not(.g-form-row__label):not(.g-form-row__switch) {
+	flex: 1 1 0;
+	min-width: 0;
+}
+.g-form-row > .g-form-row__label {
+	flex: 1 0 auto;
+}
+.g-form-row > .g-form-row__label + :not(.g-form-row__switch) {
+	flex: 1 1 55%;
+}
+.g-form-group .g-field__label {
+	display: none; /* the row label names the field */
+}
+.g-form-group .g-datefield {
+	display: flex;
+	justify-content: flex-end;
+}
+.g-form-group .g-input,
+.g-form-group .g-datefield input {
+	min-height: var(--g-touch-target-min);
+	padding: 8px 0;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	text-align: right;
+	font-size: 17px;
+	line-height: 22px;
+	color: var(--g-ink2);
+}
+.g-form-group .g-select__native {
+	padding-right: 24px;
+	text-align: right;
+	text-align-last: right;
+}
+.g-form-group .g-select__chevron {
+	right: 0;
+}
+.g-form-group .g-linkpick__trigger {
+	justify-content: flex-end;
+}
+.g-form-group input[type="date"],
+.g-form-group input[type="time"],
+.g-form-group input[type="datetime-local"] {
+	display: flex;
+	justify-content: flex-end;
+}
+.g-form-group input[type="date"]::-webkit-datetime-edit,
+.g-form-group input[type="time"]::-webkit-datetime-edit,
+.g-form-group input[type="datetime-local"]::-webkit-datetime-edit {
+	flex: 1;
+	text-align: right;
+}
+.g-form-group input[type="date"]::-webkit-date-and-time-value,
+.g-form-group input[type="time"]::-webkit-date-and-time-value,
+.g-form-group input[type="datetime-local"]::-webkit-date-and-time-value {
+	text-align: right;
+}
+.g-form-group .g-input:focus-visible,
+.g-form-group .g-datefield input:focus-visible {
+	box-shadow: none;
+	color: var(--g-ink);
+}
+.g-form-row:focus-within {
+	background: var(--g-icon-bg);
+}
+/* Long text: label on top, the text under it, full width, left aligned. */
+.g-form-row--stacked {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 4px;
+	padding: 12px 16px;
+}
+.g-form-row--stacked .g-form-row__label {
+	max-width: none;
+}
+.g-form-row--stacked .g-input {
+	text-align: left;
+	padding: 0;
+	min-height: 64px;
+	color: var(--g-ink);
+}
+.g-form-row__switch {
+	flex: none;
+	margin-left: auto;
+}
+/* The field error sits on its own line inside the row, under the value. */
+.g-form-row--error {
+	flex-wrap: wrap;
+	padding-bottom: 8px;
+}
+.g-form-row--error .g-field-error {
+	flex-basis: 100%;
+	text-align: right;
+}
+/* A read-only form shows values as quiet text, not disabled grey boxes. */
+.g-form-group .g-input:disabled,
+.g-form-group .g-select__native:disabled {
+	-webkit-text-fill-color: var(--g-ink2);
+	opacity: 1;
+}
