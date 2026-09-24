@@ -11,6 +11,8 @@
   "column_break_meta",
   "pinned",
   "acknowledge_required",
+  "urgent",
+  "notify_on_publish",
   "audience_section",
   "audience",
   "audience_value",
@@ -19,8 +21,12 @@
   "column_break_schedule",
   "publish_until",
   "content_section",
+  "summary",
+  "cover_image",
   "body",
-  "published"
+  "published",
+  "minor_fix",
+  "version"
  ],
  "fields": [
   {
@@ -60,6 +66,20 @@
    "description": "Adds an 'I've read and understood this' button, and keeps the card on the employee's Home until they press it. For policies and safety notices, not for a canteen closure."
   },
   {
+   "fieldname": "urgent",
+   "fieldtype": "Check",
+   "label": "Urgent",
+   "default": "0",
+   "description": "Shows above the check-in card and cannot be put off with Remind me later."
+  },
+  {
+   "fieldname": "notify_on_publish",
+   "fieldtype": "Check",
+   "label": "Notify on publish",
+   "default": "1",
+   "description": "Sends one phone notification (title + summary) when it is published."
+  },
+  {
    "fieldname": "audience_section",
    "fieldtype": "Section Break",
    "label": "Who sees it"
@@ -79,7 +99,7 @@
    "label": "Which one",
    "depends_on": "eval:doc.audience && doc.audience != 'Everyone'",
    "mandatory_depends_on": "eval:doc.audience && doc.audience != 'Everyone'",
-   "description": "The company, department or branch name this is for. A plain name rather than a Link: a Dynamic Link resolves its target doctype during Frappe's _validate_links(), which runs before every controller hook, so a target derived from `audience` can never be set in time \u2014 verified on the bench, 22 Sep 2026. The fence compares names (api/announcements.audience_matches)."
+   "description": "The company, department or branch name this is for. A plain name rather than a Link: a Dynamic Link resolves its target doctype during Frappe's _validate_links(), which runs before every controller hook, so a target derived from `audience` can never be set in time — verified on the bench, 22 Sep 2026. The fence compares names (api/announcements.audience_matches)."
   },
   {
    "fieldname": "schedule_section",
@@ -110,6 +130,19 @@
    "label": "Content"
   },
   {
+   "fieldname": "summary",
+   "fieldtype": "Small Text",
+   "label": "Summary",
+   "description": "One or two plain sentences (max 140 characters). Shown on the Home card and as the phone notification. No formatting.",
+   "length": 140
+  },
+  {
+   "fieldname": "cover_image",
+   "fieldtype": "Attach Image",
+   "label": "Cover image",
+   "description": "Optional. A small picture on the Home card."
+  },
+  {
    "fieldname": "body",
    "fieldtype": "Text Editor",
    "label": "Body",
@@ -122,6 +155,22 @@
    "default": "0",
    "in_list_view": 1,
    "description": "Nothing reaches an employee until this is ticked."
+  },
+  {
+   "fieldname": "minor_fix",
+   "fieldtype": "Check",
+   "label": "Minor fix (don't ask people to confirm again)",
+   "default": "0",
+   "depends_on": "eval:doc.acknowledge_required && doc.published",
+   "description": "Tick for a typo fix. Otherwise, changing a must-read notice asks everyone to confirm the new text."
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "label": "Version",
+   "default": "1",
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -173,5 +222,6 @@
  "sort_order": "DESC",
  "states": [],
  "title_field": "title",
- "track_changes": 1
+ "track_changes": 1,
+ "make_attachments_public": 1
 }

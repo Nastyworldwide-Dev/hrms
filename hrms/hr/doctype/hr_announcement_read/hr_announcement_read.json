@@ -10,7 +10,8 @@
   "employee",
   "read_on",
   "acknowledged",
-  "acknowledged_on"
+  "acknowledged_on",
+  "acknowledged_version"
  ],
  "fields": [
   {
@@ -46,6 +47,13 @@
    "fieldname": "acknowledged_on",
    "fieldtype": "Datetime",
    "label": "Acknowledged on"
+  },
+  {
+   "fieldname": "acknowledged_version",
+   "fieldtype": "Int",
+   "label": "Acknowledged version",
+   "read_only": 1,
+   "description": "The version of the notice this person confirmed."
   }
  ],
  "index_web_pages_for_search": 0,

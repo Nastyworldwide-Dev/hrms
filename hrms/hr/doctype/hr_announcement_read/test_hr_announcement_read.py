@@ -47,9 +47,7 @@ class TestHRAnnouncementRead(FrappeTestCase):
 		alone would record the first reader and silently drop everybody else."""
 		self._read(self.employee)
 		self._read(self.other)
-		self.assertEqual(
-			frappe.db.count("HR Announcement Read", {"announcement": self.announcement.name}), 2
-		)
+		self.assertEqual(frappe.db.count("HR Announcement Read", {"announcement": self.announcement.name}), 2)
 
 	def test_it_is_not_a_child_table(self):
 		"""Deliberate: a child table is rewritten wholesale on every parent

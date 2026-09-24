@@ -6,7 +6,7 @@ import logging
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_days, getdate, nowdate
+from frappe.utils import add_days, cint, getdate, nowdate, strip_html
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,18 @@ AUDIENCE_DOCTYPE = {
 #: change it, but they never have to think about it.
 DEFAULT_RUN_DAYS = 14
 
+#: The summary is the push body too, and a phone shows about two lines (alpha.7 §10.1).
+SUMMARY_MAX = 140
+
+
+def summary_from(body) -> str:
+	"""The first sentence-sized piece of the body, as plain text."""
+	text = " ".join(strip_html(body or "").split())
+	if len(text) <= SUMMARY_MAX:
+		return text
+	cut = text[: SUMMARY_MAX - 1].rsplit(" ", 1)[0]
+	return f"{cut}…"
+
 
 class HRAnnouncement(Document):
 	def validate(self):
@@ -34,6 +46,33 @@ class HRAnnouncement(Document):
 		self.resolve_audience()
 		self.validate_dates()
 		self.enforce_single_pin()
+		self.clean_summary()
+		self.bump_version()
+
+	def clean_summary(self):
+		"""Plain words, short enough for a notification (alpha.7 §10.1). A
+		notification shows no formatting, so none is kept."""
+		self.summary = " ".join(strip_html(self.summary or "").split())
+		if len(self.summary) > SUMMARY_MAX:
+			frappe.throw(
+				_("Keep the summary to {0} characters; it is {1}.").format(SUMMARY_MAX, len(self.summary))
+			)
+		if not self.summary:
+			# Notices published before the field existed (and a hurried HR
+			# save) get the opening words of the body; HR can rewrite it.
+			self.summary = summary_from(self.body)
+
+	def bump_version(self):
+		"""A must-read notice whose words change is a new notice to confirm
+		(alpha.7 4.3), unless HR marks the save a minor fix. The tick applies
+		to one save only."""
+		self.version = cint(self.version) or 1
+		before = self.get_doc_before_save()
+		changed = before and (before.title != self.title or (before.body or "") != (self.body or ""))
+		if changed and before.published and self.acknowledge_required and not cint(self.minor_fix):
+			self.version += 1
+			logger.info("[announcement] %s words changed -> version %s", self.name, self.version)
+		self.minor_fix = 0
 
 	def set_defaults(self):
 		"""HR types a title and a body; everything else has a right answer."""
@@ -59,9 +98,7 @@ class HRAnnouncement(Document):
 		# department that does not exist — which shows it to nobody, silently,
 		# and HR has no way to tell that from "nobody has read it yet".
 		if not frappe.db.exists(doctype, self.audience_value):
-			frappe.throw(
-				_("There is no {0} called {1}.").format(self.audience.lower(), self.audience_value)
-			)
+			frappe.throw(_("There is no {0} called {1}.").format(self.audience.lower(), self.audience_value))
 
 	def validate_dates(self):
 		if getdate(self.publish_until) < getdate(self.publish_from):

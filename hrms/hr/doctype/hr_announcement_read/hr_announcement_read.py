@@ -41,3 +41,17 @@ class HRAnnouncementRead(Document):
 				_("This announcement is already marked as read for {0}.").format(self.employee),
 				frappe.DuplicateEntryError,
 			)
+
+
+def on_doctype_update():
+	"""One row per person per notice, held by the database too (alpha.7 4.7):
+	two taps racing past enforce_one_row could both insert. A site that
+	already holds duplicates keeps working and says so; nothing is deleted."""
+	dupes = frappe.db.sql(
+		"""select announcement, employee, count(*) n from `tabHR Announcement Read`
+		group by announcement, employee having n > 1 limit 5"""
+	)
+	if dupes:
+		logger.warning("[announcement read] duplicates %s; unique index not added", dupes)
+		return
+	frappe.db.add_unique("HR Announcement Read", ["announcement", "employee"], "unique_announcement_employee")
