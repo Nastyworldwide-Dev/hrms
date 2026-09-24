@@ -3871,3 +3871,29 @@ html {
 .g-sheet__bar:has(.g-sheet__done) {
 	grid-template-columns: 64px 1fr 64px;
 }
+
+/* alpha.7 0.8: a check-in row. "In"/"Out" leads, the time trails in grey. */
+.g-checkin-row {
+	width: 100%;
+	border: 0;
+	background: transparent;
+	text-align: left;
+	cursor: pointer;
+}
+.g-checkin-row:active {
+	background: var(--g-icon-bg);
+}
+.g-form-row.g-checkin-row > .g-checkin-row__time {
+	flex: 1 1 auto;
+	text-align: right;
+	font-size: 17px;
+	line-height: 22px;
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink2);
+}
+.g-form-row.g-checkin-row > .g-checkin-row__chevron {
+	flex: 0 0 16px;
+	width: 16px;
+	height: 16px;
+	color: var(--g-ink3);
+}

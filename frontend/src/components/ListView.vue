@@ -67,8 +67,27 @@
 				     row. §11.2: skeleton rows mirroring the real row shape while
 				     loading — the LoadingIndicator spinner this replaces is one of
 				     the seven §11.2 names. -->
+				<!-- Check-ins: one group per day under a day heading (alpha.7 0.8,
+				     iOS lists), not the day repeated on every row. -->
+				<template v-if="props.doctype === 'Employee Checkin' && documents.data?.length">
+					<section
+						v-for="group in checkinDays"
+						:key="group.day"
+						class="g-form-section g-checkin-day mt-5"
+					>
+						<h2 class="g-form-section__title">{{ __(dayHeading(group.day, today)) }}</h2>
+						<div class="g-form-group">
+							<EmployeeCheckinItem
+								v-for="link in group.rows"
+								:key="link.name"
+								:doc="link"
+								@click="openRequestModal(link)"
+							/>
+						</div>
+					</section>
+				</template>
 				<GListPanel
-					v-if="documents.loading || documents.data?.length"
+					v-else-if="documents.loading || documents.data?.length"
 					class="mt-5"
 					:loading="documents.loading"
 					:rows="4"
@@ -156,6 +175,8 @@ import { createResource, debounce } from "frappe-ui"
 import { computed, inject, markRaw, onMounted, reactive, ref, watch } from "vue"
 import { initialListTab } from "@/utils/listTab"
 import { filterCondition } from "@/utils/listFilters"
+import { dayHeading, groupByDay } from "@/utils/dayGroups"
+import { siteTime, siteTimeZone } from "@/utils/siteTime"
 import { useRoute, useRouter } from "vue-router"
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import EmployeeCheckinItem from "@/components/EmployeeCheckinItem.vue"
@@ -379,6 +400,12 @@ const documents = createResource({
 		return pagedData
 	},
 })
+
+//: Check-ins by their day on the site clock (alpha.7 0.8).
+const today = dayjs().tz(siteTimeZone()).format("YYYY-MM-DD")
+const checkinDays = computed(() =>
+	groupByDay(documents.data, (doc) => siteTime(doc.time).format("YYYY-MM-DD"))
+)
 
 const createPermission = createResource({
 	url: "frappe.client.has_permission",

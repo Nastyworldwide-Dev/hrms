@@ -1,12 +1,12 @@
-CLASS: a native <select> that always has a value still drew an empty first <option> (iOS shows it as a blank menu slot)
+CLASS: a list row that predates alpha.6 (bold time as the title, In/Out as coloured chips, the day repeated on every row)
 
-Instance: plan §2 0.7 — Profile > Appearance menu, a blank slot above "Light".
+Instance: plan §2 0.8 — Your check-ins list.
 
 Sites:
-- frontend/src/components/glass/GSelect.vue — same-root (empty option only with a placeholder or while unset)
-- frontend/src/views/Profile.vue Appearance — same-root (always has a mode; now no blank slot)
-- frontend/src/components/FormField.vue Select rows — not-affected: an unset form field still gets its empty option; a set one no longer offers "" (Frappe Select with a leading "\n" still lists "" as its own option)
-- frontend/src/components/ListFiltersActionSheet.vue — not-affected: passes placeholder "All", so the empty option stays and reads "All"
-- the menu's look (glass, position) — not-affected: it is iOS's own native picker; not ours to draw
+- frontend/src/components/EmployeeCheckinItem.vue — same-root (a grouped row: In/Out leading, time trailing grey, chevron)
+- frontend/src/components/ListView.vue Employee Checkin branch — same-root (groups by site day under Today/Yesterday/Tue 22 Sep headings)
+- frontend/src/utils/dayGroups.js — new (groupByDay keeps server order; dayHeading)
+- the other ListView doctypes — not-affected: they keep GListPanel rows; their redesign is Phase 3 (lists)
+- the filter as a glass bar button — ticket Phase 1 (every bar button changes there, not one screen alone)
 
-Locked: native-controls.test.js (+1).
+Locked: utils/__tests__/dayGroups.test.js (3). Verified in WebKit: headings by day, rows 44 pt, tap opens the check-in sheet, no page errors.
