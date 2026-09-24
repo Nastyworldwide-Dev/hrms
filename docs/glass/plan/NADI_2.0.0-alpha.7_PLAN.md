@@ -209,3 +209,49 @@ colour carries the kind, the word carries the meaning (never colour alone — HI
 | Q6 new | Announcement confirmation report in Desk — OK despite the 13 Sep report deferral? |
 | Q7 new | Announcement images public-by-link — OK, or are some notices sensitive? |
 | Q8 new | Home: required/urgent announcement above the Today card, routine news below it (research) — OK vs "announcement on top"? |
+
+## 10. Owner answers, 25 Sep (second round) — and the calls made on them
+
+**Q6 confirmation report: yes. Q7 public images: yes. Q8: yes, with the senior's ask folded in (below).**
+
+### 10.1 Announcement fields in Desk (owner: "separate what shows in the preview and in the notification")
+One field per job, so HR controls each place the notice appears:
+
+| Field | Shown where | Rule |
+|---|---|---|
+| Title | Home card, list, notification title, full view | short; required |
+| **Summary** (new) | the Home preview line **and** the push notification body | plain text, max 140 characters, required when published; no formatting (a notification cannot show any) |
+| Body | only the full view | rich text + images (existing editor) |
+| Cover image (new, optional) | small thumbnail on the Home card | one image |
+| Must read | full-screen + "I have read this" | existing |
+| Urgent (new) | sits above the Today card; no "Remind me later" | off by default |
+| Notify on publish (new) | sends the push once when published | on by default |
+
+Today the Home preview and the push are cut from the body HTML, so a picture or a heading can become the
+preview. The Summary field removes that guesswork. HR sees all three places in "Preview as staff".
+
+### 10.2 Carousel — decision: no
+NN/g's carousel studies: people mostly see only the first slide, and auto-rotating carousels annoy users and hurt
+accessibility (nngroup.com/articles/auto-forwarding, nngroup.com/articles/designing-effective-carousels).
+Apple uses horizontal scrolling rows (App Store) for browsing catalogues, not for things people must read.
+So: a **short vertical list** (up to 3, each title + summary + thumbnail) and "See all". Every notice is visible
+without swiping.
+
+### 10.3 Home order with the senior's goal ("make sure people read announcements")
+Taken seriously, not blindly:
+- **What actually makes people read is the must-read flow (§4.4), not the position.** A notice at the top of a
+  page can still be skipped (NN/g banner blindness). Must-read notices open full screen and need "I have read
+  this"; that is the guarantee.
+- **The senior's placement is adopted where it does not slow the daily task:** the Announcements section sits
+  **first, always in the same place** (consistent = same spot every day; persistent = the slot is there even
+  on a quiet day, so people learn to glance at it).
+- **The check-in card goes directly under it, still on the first screen with no scrolling.** Measured budget
+  at iPhone height (874 pt): title about 100, announcements about 130 to 230, Today card about 220. This fits.
+  Putting check-in at the very bottom of the page was rejected: it is the one daily action, done at a door,
+  often in a hurry. Every workforce app studied keeps it on the first screen. Apple's iOS 26 guidance also
+  rejects the other "bottom" option, a check-in bar docked above the tab bar: "Do not put screen-specific
+  actions (like a checkout button) in the tab bar accessory" (WWDC25 356).
+- **Quiet day:** the slot shrinks to one line, "No new announcements · See all". It is not an empty card.
+  An empty card would take the top of the screen every day to say nothing.
+- **Separation:** the Announcements group and the Today card are separate groups with the standard 35 pt gap
+  and their own headers. That keeps them visually apart without extra lines or borders.
