@@ -58,3 +58,16 @@ test("the form's own read-only decision is used (a sent request is read-only)", 
 	const allReadOnly = () => true
 	assert.deepEqual(names(dropEmptySections(fields, { i: "x" }, allReadOnly)), ["explanation", "s_Items", "i"])
 })
+
+// alpha.7 B5/B7: on a sent request the "Who" row already shows the person's
+// name (a Link row shows the record's title), so "Name" said it again; same
+// for "Goes to" and the approver's name. A *_name row that repeats the value
+// its Link row already shows is not drawn.
+test("a name row that repeats its link row is dropped", () => {
+	const out = dropEmptySections(
+		[f("employee", { fieldtype: "Link" }), f("employee_name"), f("leave_approver", { fieldtype: "Link" }), f("leave_approver_name"), f("x_name")],
+		{ employee: "HR-EMP-1", employee_name: "Ann", leave_approver: "a@x", leave_approver_name: "Bo", x_name: "keep" },
+		() => true
+	)
+	assert.deepEqual(names(out), ["employee", "leave_approver", "x_name"])
+})

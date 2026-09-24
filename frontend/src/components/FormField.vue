@@ -5,13 +5,29 @@
 	<div
 		v-if="showField"
 		class="g-form-row"
-		:class="{ 'g-form-row--stacked': isStacked, 'g-form-row--error': props.errorMessage }"
+		:class="{
+			'g-form-row--stacked': isStacked,
+			'g-form-row--error': props.errorMessage,
+			'g-form-row--readonly': isReadOnly,
+		}"
 	>
 		<span
-			v-if="!['Check', 'Section Break', 'Column Break'].includes(props.fieldtype)"
+			v-if="
+				!['Check', 'Section Break', 'Column Break'].includes(props.fieldtype) ||
+				(isReadOnly && props.fieldtype === 'Check')
+			"
 			class="g-form-row__label"
 		>
 			{{ label }}
+		</span>
+
+		<!-- A sent request reads as label / value (alpha.7 B1): a yes/no is a
+		     word, a date is written out, not a disabled switch or picker. -->
+		<span
+			v-if="isReadOnly && ['Check', 'Date'].includes(props.fieldtype)"
+			class="g-form-row__value"
+		>
+			{{ readValue }}
 		</span>
 
 		<!-- Select, or a Link with a fixed option list (documentList): a native
@@ -19,7 +35,7 @@
 			 Autocomplete (the grey "Select Leave Type" box). No placeholder
 			 words: the label above already names the field. -->
 		<GSelect
-			v-if="props.fieldtype === 'Select' || props.documentList"
+			v-else-if="props.fieldtype === 'Select' || props.documentList"
 			:options="selectionList"
 			:model-value="modelValue"
 			:placeholder="$attrs.placeholder || rowPlaceholder"
@@ -283,6 +299,12 @@ const isNumberType = computed(() => {
 
 const isReadOnly = computed(() => {
 	return Boolean(props.readOnly)
+})
+
+//: The plain words for a read-only yes/no or date (alpha.7 B1).
+const readValue = computed(() => {
+	if (props.fieldtype === "Check") return props.modelValue ? __("Yes") : __("No")
+	return props.modelValue ? dayjs(props.modelValue).format("D MMM YYYY") : ""
 })
 
 //: An empty entry row says what it wants, as iOS forms do (alpha.6 B2):

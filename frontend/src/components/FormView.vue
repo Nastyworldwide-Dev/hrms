@@ -207,6 +207,20 @@
 							@handleFileSelect="handleFileSelect"
 							@handleFileDelete="handleFileDelete"
 						/>
+
+						<!-- Cancel a sent request = a red row at the end, as iOS
+						     does for a destructive action on a record (alpha.7 B6);
+						     it still asks first (the confirm dialog). -->
+						<div v-if="cancelAsRow" class="g-form-group">
+							<button
+								type="button"
+								class="g-form-row g-form-row--action g-form-row--destructive"
+								:disabled="finalize.loading || documentResource?.setValue?.loading"
+								@click="submitOrCancelForm()"
+							>
+								{{ __("Cancel request") }}
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -245,7 +259,7 @@
 
 			<!-- save/submit/cancel -->
 			<div
-				v-else-if="isFormDirty || (!workflow?.hasWorkflow && formButton)"
+				v-else-if="isFormDirty || (!workflow?.hasWorkflow && formButton && !cancelAsRow)"
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
 				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
@@ -541,6 +555,8 @@ let isFormUpdated = ref(false)
 let showDeleteDialog = ref(false)
 let showSubmitDialog = ref(false)
 let showCancelDialog = ref(false)
+//: A clean sent request whose only action is Cancel shows it as a red row in
+//: the form, not a footer capsule (alpha.7 B6).
 let isFileUploading = ref(false)
 let workflow = ref(null)
 
@@ -610,8 +626,17 @@ watch(
 )
 
 //: The fields as drawn: a section heading only when something under it shows.
+//: On a saved request the header chip states the status, so a read-only
+//: status row would say it a second time (alpha.7 B7: status once).
+const STATUS_ROWS = ["status", "approval_status"]
 const shownFields = computed(() =>
-	dropEmptySections(props.fields, formModel.value, isFieldReadOnly)
+	dropEmptySections(
+		props.id
+			? props.fields.filter((f) => !(STATUS_ROWS.includes(f.fieldname) && isFieldReadOnly(f)))
+			: props.fields,
+		formModel.value,
+		isFieldReadOnly
+	)
 )
 const tabFields = computed(() => splitFieldsByTab(shownFields.value, props.tabs))
 //: Whether a row draws, for the one-row-section rule (alpha.7 B13).
@@ -825,6 +850,9 @@ const formButton = computed(() => {
 	}
 	return null
 })
+const cancelAsRow = computed(
+	() => formButton.value === "Cancel" && !isFormDirty.value && !workflow.value?.hasWorkflow
+)
 
 // Use the same document capability as the sheet and Desk. Field grants alone
 // do not describe the server's routed-manager authority.

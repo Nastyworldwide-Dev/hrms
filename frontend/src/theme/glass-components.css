@@ -4073,3 +4073,19 @@ html {
 	background: transparent;
 	color: var(--g-ink2);
 }
+
+/* alpha.7 B1: a read-only row is label / value — no control affordances. */
+.g-form-row--readonly .g-select__chevron,
+.g-form-row--readonly .g-linkpick__chevron {
+	display: none;
+}
+.g-form-row--readonly .g-select__native {
+	padding-right: 0;
+}
+.g-form-row.g-form-row--readonly > .g-form-row__value {
+	flex: 1 1 auto;
+	text-align: right;
+	font-size: 17px;
+	line-height: 22px;
+	color: var(--g-ink2);
+}

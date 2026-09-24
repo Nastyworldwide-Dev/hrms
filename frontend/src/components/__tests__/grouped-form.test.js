@@ -27,7 +27,8 @@ test("the old square-box override is gone (it forced radius 0 on every form inpu
 })
 
 test("a Check field is a switch trailing its row, not a checkbox", () => {
-	const check = formField.slice(formField.indexOf("props.fieldtype === 'Check'") - 200, formField.indexOf("props.fieldtype === 'Check'") + 400)
+	const at = formField.indexOf(`<template v-else-if="props.fieldtype === 'Check'">`)
+	const check = formField.slice(at, at + 500)
 	assert.match(check, /<GSwitch/)
 	assert.doesNotMatch(check, /<GCheckbox/)
 })

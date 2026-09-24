@@ -9,6 +9,13 @@
 
 const LAYOUT = new Set(["Section Break", "Column Break", "Tab Break"])
 
+//: "<link>_name" beside its Link: the Link row already shows the title, so on
+//: a read-only screen the name row says it twice (alpha.7 B5/B7).
+function repeatsLink(field, fieldnames, readOnly) {
+	const m = /^(.*)_name$/.exec(field.fieldname)
+	return Boolean(m && fieldnames.has(m[1]) && readOnly(field))
+}
+
 export function isShown(field, model, readOnly = (f) => Boolean(f.read_only)) {
 	if (LAYOUT.has(field.fieldtype)) return false
 	if (field.fieldtype === "Table") return true
@@ -24,7 +31,9 @@ export function dropEmptySections(fields, model, readOnly = (field) => Boolean(f
 	const out = []
 	let pending = null // a Section Break waiting to prove it has content
 	let dropped = 0
+	const linkNames = new Set(fields.filter((x) => x.fieldtype === "Link").map((x) => x.fieldname))
 	for (const field of fields) {
+		if (repeatsLink(field, linkNames, readOnly)) continue
 		if (field.fieldtype === "Section Break") {
 			if (pending) dropped++
 			pending = field
