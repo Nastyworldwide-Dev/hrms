@@ -83,7 +83,7 @@
 	--g-radius-input: 12px;
 	--g-radius-panel: 20px;
 	--g-radius-pill: 8px;
-	--g-radius-tabbar: 24px;
+	--g-radius-tabbar: 32px;
 	--g-radius-tile: 16px;
 	--g-radius-well: 8px;
 	/* blur */
@@ -105,9 +105,10 @@
 	--g-sheet-max-height: calc(100dvh - 5rem);
 	--g-tabbar-border: 1px;
 	--g-tabbar-gap: 8px;
-	--g-tabbar-height: 64px;
-	--g-tabbar-pad-bottom: 8px;
-	--g-tabbar-pad-top: 12px;
+	--g-tabbar-height: 52px;
+	--g-tabbar-inset: 20px;
+	--g-tabbar-pad-bottom: 4px;
+	--g-tabbar-pad-top: 4px;
 	--g-touch-target-min: 44px;
 	--g-viewport-floor: 320px;
 	--g-viewport-height: 844px;

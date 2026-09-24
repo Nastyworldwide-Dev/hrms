@@ -68,7 +68,7 @@ ion-tab-bar.g-tabbar {
 }
 ion-tab-button.g-tabbar__btn {
 	--color: var(--g-ink3);
-	--color-selected: var(--g-ink);
+	--color-selected: var(--g-accent-ink);
 	--background: transparent;
 	--background-focused: transparent;
 	--ripple-color: transparent;
