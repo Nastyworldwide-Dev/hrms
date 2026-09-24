@@ -3885,3 +3885,72 @@ html {
 	height: 16px;
 	color: var(--g-ink3);
 }
+
+/* ---------- iOS navigation bar (alpha.7 §5.1; A1, A8-A10, B24) ----------
+   Tab root: row 1 = the Nadi mark leading, bell + avatar trailing; row 2 =
+   the LARGE title, 34 pt bold, leading (HIG "Large titles"). Pushed screen:
+   Back leading, 17 pt semibold title CENTRED, the screen's actions trailing. */
+.g-header--large {
+	flex-wrap: wrap;
+	row-gap: 4px;
+	padding-bottom: 8px;
+}
+.g-header--large .g-header__title {
+	order: 10;
+	flex: 1 0 100%;
+	font-size: 34px;
+	line-height: 41px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+}
+.g-header--large .g-header__action,
+.g-header--large .g-header__actions {
+	margin-left: auto;
+}
+.g-header--large .g-header__action + .g-header__avatar-link {
+	margin-left: 0;
+}
+.g-header--inline {
+	display: grid;
+	grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);
+	gap: 8px;
+}
+.g-header--inline .g-header__back {
+	justify-self: start;
+}
+.g-header--inline .g-header__title {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-align: center;
+	font-size: 17px;
+	line-height: 22px;
+	font-weight: 600;
+	letter-spacing: -0.4px;
+}
+.g-header--inline .g-header__actions,
+.g-header--inline .g-header__trail {
+	justify-self: end;
+}
+.g-header--inline .g-header__spacer {
+	display: none;
+}
+/* Bar buttons: round 44 pt, a quiet fill, a monochrome symbol (iOS 26). */
+.g-header .g-iconbtn,
+.g-header__action {
+	width: 44px;
+	height: 44px;
+	border: 0;
+	border-radius: 50%;
+	background: var(--g-icon-bg);
+	color: var(--g-ink);
+}
+.g-header .g-iconbtn.g-iconbtn--on {
+	background: var(--g-ink);
+	color: var(--g-bg);
+}
+/* A filled circle sits ON the gutter, not pulled out past it. */
+.g-header .g-iconbtn--flush {
+	margin-left: 0;
+}

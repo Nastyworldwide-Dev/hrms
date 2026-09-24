@@ -15,23 +15,19 @@
 				class="g-iconbtn--boxed"
 				:class="areFiltersApplied ? 'g-iconbtn--on' : ''"
 			>
-				<Funnel class="h-4 w-4" />
+				<Funnel class="h-5 w-5" aria-hidden="true" />
 			</GIconButton>
-			<!-- A create action is a GButton wherever it appears (§18, v1.11).
-			     This was a white frappe-ui pill in the header while the same
-			     "create a new X" role rendered as a chartreuse GButton on the
-			     dashboards — one role, two components, two colours. -->
 			<router-link
 				v-if="canCreate"
 				:to="{ name: formViewRoute }"
 				v-slot="{ navigate }"
 				class="shrink-0"
 			>
-				<GButton
-					:label="__('New', null, props.doctype)"
-					class="g-btn--compact"
-					@click="navigate"
-				/>
+				<!-- "New" is a round + bar button, as in iOS (alpha.7 A8/A9);
+				     lime is kept for the one primary action on a screen. -->
+				<GIconButton :label="__('New', null, props.doctype)" @click="navigate">
+					<Plus class="h-5 w-5" aria-hidden="true" />
+				</GIconButton>
 			</router-link>
 		</template>
 	</ShellHeader>
@@ -168,7 +164,7 @@
 </template>
 
 <script setup>
-import { Funnel } from "lucide-vue-next"
+import { Funnel, Plus } from "lucide-vue-next"
 import { IonContent, modalController } from "@ionic/vue"
 import ShellHeader from "@/components/ShellHeader.vue"
 import { createResource, debounce } from "frappe-ui"
@@ -181,7 +177,6 @@ import { useRoute, useRouter } from "vue-router"
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import EmployeeCheckinItem from "@/components/EmployeeCheckinItem.vue"
 import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
-import GButton from "@/components/glass/GButton.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"

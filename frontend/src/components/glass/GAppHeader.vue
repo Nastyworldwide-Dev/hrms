@@ -26,7 +26,12 @@
   Emits: notifications, profile, back
 -->
 <template>
-	<header class="g-header">
+	<!-- iOS navigation bar (alpha.7 §5.1): a tab root shows a LARGE title,
+	     a pushed screen Back + a centred inline title + its own actions. -->
+	<header
+		class="g-header"
+		:class="{ 'g-header--large': !showBack, 'g-header--inline': showBack }"
+	>
 		<!-- Back is GPage's decision, not this component's and not the screen's
 		     (§12, v1.11): a pushed screen gets one, a tab root does not. -->
 		<GIconButton
@@ -55,7 +60,10 @@
 		<div v-if="$slots.actions" class="g-header__actions">
 			<slot name="actions" />
 		</div>
-		<template v-else>
+		<!-- Bell and avatar belong to the tab roots (B24); a pushed screen
+		     keeps a spacer so its title stays centred. -->
+		<span v-else-if="showBack" class="g-header__trail" aria-hidden="true" />
+		<template v-else-if="!showBack">
 		<button
 			type="button"
 			class="g-header__action g-focusable"
@@ -76,7 +84,7 @@
 			@click="$emit('profile', $event)"
 		>
 			<!-- decorative: the button above already carries "Profile, <name>" -->
-			<GAvatar :image="avatarUrl" :label="avatarLabel" :size="34" decorative />
+			<GAvatar :image="avatarUrl" :label="avatarLabel" :size="34" round decorative />
 		</button>
 		</template>
 	</header>
