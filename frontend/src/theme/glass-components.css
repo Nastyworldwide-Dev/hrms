@@ -3631,3 +3631,65 @@ ion-router-outlet {
 .g-form-row--destructive {
 	color: var(--g-danger-ink);
 }
+
+/* Action sheet group (alpha.6 B7; HIG Menus / Action sheets): the choices are
+   one rounded group with separators inset to the text. */
+.g-sheet__group {
+	display: flex;
+	flex-direction: column;
+	margin: 0 16px 16px;
+	border-radius: var(--g-radius-card);
+	background: var(--g-glass-fill-fallback);
+	overflow: hidden;
+}
+.g-sheet__group .g-sheet__action {
+	position: relative;
+	border-radius: 0;
+	min-height: 56px;
+	padding: 8px 16px;
+}
+.g-sheet__group .g-sheet__action + .g-sheet__action::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 60px; /* 16 padding + 32 icon + 12 gap: inset to the text */
+	right: 0;
+	height: 1px;
+	background: var(--g-hair);
+}
+.g-sheet__icon {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: var(--g-radius-well);
+	background: var(--g-icon-bg);
+	color: var(--g-ink2);
+}
+.g-sheet__text {
+	text-align: left;
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-width: 0;
+}
+.g-sheet__rowtitle {
+	font-family: var(--g-font-ui);
+	font-size: 17px;
+	line-height: 22px;
+	color: var(--g-ink);
+}
+.g-sheet__hint {
+	font-family: var(--g-font-ui);
+	font-size: 13px;
+	line-height: 18px;
+	color: var(--g-ink2);
+}
+.g-sheet__chevron {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	color: var(--g-ink3);
+}

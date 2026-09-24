@@ -46,6 +46,7 @@
 
 <script setup>
 import { inject, ref } from "vue"
+import { CalendarCheck, CalendarClock, Clock, Palmtree, Receipt } from "lucide-vue-next"
 import { useRouter } from "vue-router"
 
 import BaseLayout from "@/components/BaseLayout.vue"
@@ -69,12 +70,39 @@ const ROUTES = {
 	shift: { name: "ShiftRequestFormView" },
 	fix: { name: "AttendanceRequestFormView" },
 }
+//: Icon per kind = the one Notifications uses; the hint says what each is FOR
+//: in the employee's words (owner, 24 Sep: "bad guidance design").
 const requestTypes = [
-	{ key: "leave", label: __("Time off") },
-	{ key: "overtime", label: __("Claim overtime") },
-	{ key: "expense", label: __("Claim an expense") },
-	{ key: "shift", label: __("Change a shift") },
-	{ key: "fix", label: __("Fix a day") },
+	{
+		key: "leave",
+		label: __("Time off"),
+		hint: __("Leave, sick days or a holiday"),
+		icon: Palmtree,
+	},
+	{
+		key: "overtime",
+		label: __("Claim overtime"),
+		hint: __("Get paid for extra hours you worked"),
+		icon: Clock,
+	},
+	{
+		key: "expense",
+		label: __("Claim an expense"),
+		hint: __("Get back money you spent for work"),
+		icon: Receipt,
+	},
+	{
+		key: "shift",
+		label: __("Change a shift"),
+		hint: __("Work a different shift on some days"),
+		icon: CalendarClock,
+	},
+	{
+		key: "fix",
+		label: __("Fix a day"),
+		hint: __("A missing check-in, or a day on duty"),
+		icon: CalendarCheck,
+	},
 ]
 
 const typeSheetOpen = ref(false)

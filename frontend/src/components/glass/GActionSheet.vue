@@ -18,7 +18,7 @@
     isOpen   boolean — controlled open state
     trigger  string — id of the opening element
     title    string — sheet heading
-    actions  array — [{ key, label, destructive, disabled }] for the simple case
+    actions  array — [{ key, label, hint?, icon?, destructive, disabled }]
   Emits:
     select(key)  — an action row was chosen
     did-dismiss  — passthrough from GModal
@@ -28,21 +28,33 @@
 	<GModal :is-open="isOpen" :trigger="trigger" :title="title" @did-dismiss="$emit('did-dismiss')">
 		<slot />
 
-		<button
-			v-for="action in actions"
-			:key="action.key ?? action.label"
-			type="button"
-			class="g-sheet__action g-focusable"
-			:class="{ 'g-sheet__action--destructive': action.destructive }"
-			:aria-disabled="action.disabled || undefined"
-			@click="onSelect(action)"
-		>
-			{{ action.label }}
-		</button>
+		<!-- One group, inset separators (HIG Menus / Action sheets). A row may
+		     carry an icon and a one-line hint (alpha.6 B7). -->
+		<div v-if="actions.length" class="g-sheet__group">
+			<button
+				v-for="action in actions"
+				:key="action.key ?? action.label"
+				type="button"
+				class="g-sheet__action g-focusable"
+				:class="{ 'g-sheet__action--destructive': action.destructive }"
+				:aria-disabled="action.disabled || undefined"
+				@click="onSelect(action)"
+			>
+				<span v-if="action.icon" class="g-sheet__icon" aria-hidden="true">
+					<component :is="action.icon" class="h-5 w-5" />
+				</span>
+				<span class="g-sheet__text">
+					<span class="g-sheet__rowtitle">{{ action.label }}</span>
+					<span v-if="action.hint" class="g-sheet__hint">{{ action.hint }}</span>
+				</span>
+				<ChevronRight v-if="action.icon" class="g-sheet__chevron" aria-hidden="true" />
+			</button>
+		</div>
 	</GModal>
 </template>
 
 <script setup>
+import { ChevronRight } from "lucide-vue-next"
 import GModal from "./GModal.vue"
 
 defineProps({
