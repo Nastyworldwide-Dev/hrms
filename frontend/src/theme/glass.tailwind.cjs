@@ -67,28 +67,28 @@ module.exports = {
 	},
 	fontSize: {
 		badge: ["0.75rem", {
-			fontWeight: "700",
-			letterSpacing: "0.01em",
+			fontWeight: "600",
+			letterSpacing: "0",
 			lineHeight: "1.2",
 		}],
-		"button-label": ["1rem", {
-			fontWeight: "800",
+		"button-label": ["1.0625rem", {
+			fontWeight: "600",
 			letterSpacing: "-0.01em",
 			lineHeight: "1.2",
 		}],
 		caption: ["0.75rem", {
 			fontWeight: "400",
-			letterSpacing: "0.02em",
+			letterSpacing: "0",
 			lineHeight: "1.45",
 		}],
-		"card-title": ["0.875rem", {
+		"card-title": ["0.9375rem", {
 			fontWeight: "600",
 			letterSpacing: "0",
 			lineHeight: "1.4",
 		}],
-		clock: ["2.5rem", {
-			fontWeight: "800",
-			letterSpacing: "-0.02em",
+		clock: ["2.125rem", {
+			fontWeight: "700",
+			letterSpacing: "-0.01em",
 			lineHeight: "1",
 		}],
 		"data-system": ["0.75rem", {
@@ -97,58 +97,58 @@ module.exports = {
 			lineHeight: "1.5",
 		}],
 		"display-number": ["2.125rem", {
-			fontWeight: "800",
-			letterSpacing: "-0.02em",
+			fontWeight: "700",
+			letterSpacing: "-0.01em",
 			lineHeight: "1",
 		}],
-		eyebrow: ["0.75rem", {
-			fontWeight: "600",
-			letterSpacing: "0.01em",
+		eyebrow: ["0.8125rem", {
+			fontWeight: "400",
+			letterSpacing: "0",
 			lineHeight: "1.3",
 		}],
-		"field-label": ["0.75rem", {
-			fontWeight: "600",
-			letterSpacing: "0.01em",
+		"field-label": ["0.8125rem", {
+			fontWeight: "400",
+			letterSpacing: "0",
 			lineHeight: "1.3",
 		}],
-		"kra-label": ["0.875rem", {
+		"kra-label": ["0.9375rem", {
 			fontWeight: "600",
 			letterSpacing: "0",
 			lineHeight: "1.4",
 		}],
 		"micro-label": ["0.75rem", {
-			fontWeight: "600",
-			letterSpacing: "0.01em",
+			fontWeight: "400",
+			letterSpacing: "0",
 			lineHeight: "1.3",
 		}],
-		"panel-title": ["1rem", {
-			fontWeight: "800",
-			letterSpacing: "-0.02em",
+		"panel-title": ["1.0625rem", {
+			fontWeight: "600",
+			letterSpacing: "-0.01em",
 			lineHeight: "1.2",
 		}],
 		"ring-centre": ["1.75rem", {
-			fontWeight: "800",
-			letterSpacing: "-0.02em",
+			fontWeight: "700",
+			letterSpacing: "-0.01em",
 			lineHeight: "1",
 		}],
-		"row-label": ["0.875rem", {
-			fontWeight: "500",
+		"row-label": ["0.9375rem", {
+			fontWeight: "400",
 			letterSpacing: "0",
 			lineHeight: "1.4",
 		}],
-		"screen-title": ["1.1875rem", {
-			fontWeight: "800",
-			letterSpacing: "-0.025em",
+		"screen-title": ["1.25rem", {
+			fontWeight: "600",
+			letterSpacing: "-0.01em",
 			lineHeight: "1.15",
 		}],
-		"stat-number": ["1.4375rem", {
-			fontWeight: "800",
-			letterSpacing: "-0.02em",
+		"stat-number": ["1.375rem", {
+			fontWeight: "700",
+			letterSpacing: "-0.01em",
 			lineHeight: "1",
 		}],
-		"tab-label": ["10px", {
+		"tab-label": ["11px", {
 			fontWeight: "600",
-			letterSpacing: "0.02em",
+			letterSpacing: "0",
 			lineHeight: "1.2",
 		}],
 	},

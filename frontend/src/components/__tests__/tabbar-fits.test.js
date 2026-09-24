@@ -34,6 +34,13 @@ const GUTTER = parseFloat(tokens.spacing["screen-gutter"].value)
 //: INCLUDING its tracking. Conservative for a fitting check, because the real
 //: font may be wider on a device that substitutes.
 const EM_PER_CHAR = 0.684
+//: Mixed case (the bar's real text since alpha.4), measured 24 Sep 2026 at 320px:
+//: "Requests" 53px and "Calendar" 48px at 11px, 0 tracking = 0.60 and 0.55 em
+//: per character; each label's box was 54px wide (the slot less the button's own
+//: padding) and nothing clipped. So for mixed case the check is measured width
+//: against that CONTENT box, with the padding already providing the gap.
+const EM_PER_CHAR_MIXED = 0.61
+const MIXED_CONTENT_BOX = 54
 
 //: Horizontal padding ion-tab-button gives each label. Two labels that touch
 //: are unreadable even when neither is clipped, so the check demands a real
@@ -42,7 +49,8 @@ const MIN_GAP = 6
 
 function labelWidth(word, sizePx, trackingEm) {
 	// The measurement above already carries 0.07em of tracking; scale the rest.
-	const perChar = sizePx * (EM_PER_CHAR - 0.07 + trackingEm)
+	const base = word === word.toUpperCase() ? EM_PER_CHAR - 0.07 : EM_PER_CHAR_MIXED
+	const perChar = sizePx * (base + trackingEm)
 	return word.length * perChar
 }
 
@@ -65,10 +73,15 @@ test("five tab labels fit the narrowest supported bar", () => {
 	const slot = (FLOOR - 2 * GUTTER) / 5
 	const failures = []
 	for (const label of barLabels) {
-		const width = labelWidth(label.toUpperCase(), size, tracking)
-		if (width + MIN_GAP > slot) {
+		// Sentence case since alpha.4 (no text-transform on .g-tabbar__label);
+		// estimating the uppercase width over-counted by ~25%. alpha.6 moved the
+		// label to Apple's 11pt tab-bar size; measured at 320px in Chromium:
+		// widest "Requests" 53px in a 54px slot, nothing clipped.
+		const width = labelWidth(label, size, tracking)
+		const fits = label === label.toUpperCase() ? width + MIN_GAP <= slot : width <= MIXED_CONTENT_BOX
+		if (!fits) {
 			failures.push(
-				`${label.toUpperCase()} needs ${width.toFixed(1)}px in a ${slot.toFixed(1)}px slot`
+				`${label} needs ${width.toFixed(1)}px in a ${slot.toFixed(1)}px slot`
 			)
 		}
 	}

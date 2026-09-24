@@ -90,6 +90,12 @@ const tooSmall = sizes
 //: is a ramp with rungs 1.05 apart.
 const MIN_RATIO = 1.125;
 const MAX_RATIO = 1.334;
+//: alpha.6 (owner, 24 Sep 2026: "strict apple engineering"): the type sizes ARE
+//: Apple's iOS Dynamic Type ramp at the default Large size (HIG Typography;
+//: docs/glass/plan/alpha6-research.md §3). Apple's own ramp has steps closer
+//: than the modular band (Caption 12 -> Footnote 13, Title 3 20 -> Title 2 22),
+//: so a size ON Apple's ramp passes; the modular ratio still guards anything else.
+const APPLE_RAMP = new Set([11, 12, 13, 15, 16, 17, 20, 22, 28, 34]);
 //: Roles that are a FITTING problem rather than a reading problem, and are
 //: therefore outside the ramp by decision. Each must say so in its own
 //: description, so the exception is on the record next to the value.
@@ -112,6 +118,7 @@ const distinct = [...new Set(sizes.filter((s) => !RAMP_EXEMPT.has(s.name)).map((
 const badSteps = [];
 for (let i = 1; i < distinct.length; i++) {
 	const ratio = distinct[i] / distinct[i - 1];
+	if (APPLE_RAMP.has(distinct[i]) && APPLE_RAMP.has(distinct[i - 1])) continue;
 	if (ratio < MIN_RATIO || ratio > MAX_RATIO) {
 		const who = (px) => sizes.filter((s) => s.px === px).map((s) => s.name).join(", ");
 		badSteps.push(

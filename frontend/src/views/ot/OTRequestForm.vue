@@ -22,7 +22,7 @@
 						v-if="compensation && !props.id"
 						class="mx-4 mt-4 border border-divider rounded-panel p-4 flex flex-col gap-2"
 					>
-						<span class="g-eyebrow text-accent-ink">{{ __("You claim") }}</span>
+						<span class="g-eyebrow">{{ __("You claim") }}</span>
 						<span class="text-lg font-extrabold text-inkbase">
 							{{ __(compensation) }}
 						</span>

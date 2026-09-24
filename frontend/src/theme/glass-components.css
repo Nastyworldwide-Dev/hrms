@@ -429,8 +429,12 @@ html[data-transparency="reduce"] .g-sidenav {
 	letter-spacing: var(--g-type-eyebrow-tracking);
 	line-height: var(--g-type-eyebrow-line-height);
 }
+/* Section headers are the iOS grouped-list header: Footnote, SECONDARY
+   colour (alpha.6 B5, owner-delegated Q2). They were lime, the same colour as
+   the primary button, on 21 screens; "When every element is tinted, nothing
+   stands out" (WWDC25 219, HIG Color). Lime now means "act". */
 .g-eyebrow {
-	color: var(--g-accent-ink);
+	color: var(--g-ink2);
 }
 
 /* ---------- GIconButton (§14.1) ---------- */
