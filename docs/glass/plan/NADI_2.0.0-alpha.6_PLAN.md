@@ -41,7 +41,7 @@ Status: ✅ done (commit) · ▶ next · ◻ to do. "Evidence" = how we know it'
 | # | Step | Evidence it's broken | Source | Status |
 |---|---|---|---|---|
 | A0 | Approval sheet shows the date | screen journey: Fix a day sheet had no date | W6, owner "correctly" | ✅ 45f1d5efb |
-| A1 | Overtime through the screens | not yet tapped through | 0.5 gap | ▶ |
+| A1 | Overtime through the screens | 10/10: all 5 types, both decisions each way | 0.5 gap | ✅ |
 | A2 | Home "No shift today" when Profile shows a shift | Home reads only assignments (`api/now.py:65`), Profile the default shift (`Profile.vue:321`) | your screenshot | ◻ |
 | A3 | Time off page drags sideways on iPhone | Safari ignores a date field's width without `appearance:none; min-width:0`, and Chrome can't show it | WebKit bug, 3 sources | ◻ |
 | A4 | Empty section headings (6 on Expense, "Other details" on Time off) | audit §F | R7, W1 | ◻ |

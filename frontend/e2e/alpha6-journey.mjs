@@ -123,6 +123,18 @@ const ahead = (n) => iso(new Date(Date.now() + n * 864e5))
 // ---- the journeys -------------------------------------------------------------
 const JOURNEYS = [
 	{
+		kind: "Overtime",
+		doctype: "OT Request",
+		path: "/ot-requests/new",
+		async fill(page) {
+			// Tap an open day from "Days you can claim", as a person does.
+			const day = page.locator("button[aria-pressed]").first()
+			await day.click()
+			await page.waitForTimeout(800)
+			await fillText(page, "Explanation", "screen journey")
+		},
+	},
+	{
 		kind: "Time off",
 		doctype: "Leave Application",
 		path: "/leave-applications/new",
