@@ -64,12 +64,12 @@ test("every <GModal> passes a title", () => {
 
 const modal = read(join(SRC, "components/glass/GModal.vue"))
 
-test("the head is a pinned bar: grabber, centred title, Close X", () => {
+test("the head is a pinned bar: grabber, Close X (leading), centred title, confirm slot", () => {
 	assert.match(
 		modal,
 		/<div class="g-sheet__head">\s*<span class="g-sheet__grabber" aria-hidden="true"/
 	)
-	assert.match(modal, /g-sheet__spacer[\s\S]*g-sheet__title[\s\S]*g-sheet__close/)
+	assert.match(modal, /g-sheet__close[\s\S]*g-sheet__title[\s\S]*g-sheet__trail/)
 	const css = read(join(SRC, "theme/glass-components.css"))
 	assert.match(css, /\.g-sheet__head \{[^}]*position: sticky[^}]*top: 0/)
 	assert.match(css, /\.g-sheet__bar \{[^}]*grid-template-columns: 44px 1fr 44px/)

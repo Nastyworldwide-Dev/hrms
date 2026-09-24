@@ -56,12 +56,16 @@
 		<div class="g-sheet" role="dialog" aria-modal="true" :aria-label="title || undefined">
 			<div class="g-sheet__head">
 				<span class="g-sheet__grabber" aria-hidden="true" />
+				<!-- HIG Sheets (iOS): Close on the LEADING edge, the sheet's own
+				     confirm on the TRAILING edge (alpha.6 B8). -->
 				<div class="g-sheet__bar">
-					<span class="g-sheet__spacer" aria-hidden="true" />
-					<p class="g-sheet__title">{{ title }}</p>
 					<GIconButton class="g-sheet__close" :label="__('Close')" @click="closeOwnSheet">
 						<X class="h-5 w-5" aria-hidden="true" />
 					</GIconButton>
+					<p class="g-sheet__title">{{ title }}</p>
+					<span class="g-sheet__trail">
+						<slot name="confirm" />
+					</span>
 				</div>
 			</div>
 			<slot name="actionSheet" />

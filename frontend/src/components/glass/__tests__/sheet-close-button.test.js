@@ -17,12 +17,14 @@ test("every sheet has a Close button with a name, that closes that sheet", () =>
 })
 
 test("a sheet with a title shows it beside the Close button", () => {
-	assert.match(modal, /<div class="g-sheet__head">[\s\S]*g-sheet__title[\s\S]*g-sheet__close/)
+	assert.match(modal, /<div class="g-sheet__head">[\s\S]*g-sheet__close[\s\S]*g-sheet__title/)
 })
 
-test("the head keeps Close on the trailing edge of the bar", () => {
-	// 23 Sep: the bar is [spacer | centred title | Close] (HIG); see
-	// sheet-one-kind.test.js for the rest of the pinned bar.
+// alpha.6 B8. Apple HIG Sheets (iOS): "Cancel/Close on the leading edge, Done
+// on the trailing edge"; iOS 26 draws Close as the × symbol. It was on the
+// trailing edge; the trailing slot is for a sheet's own confirm action.
+test("Close is on the LEADING edge of the bar", () => {
 	const css = read("../../../theme/glass-components.css")
-	assert.match(css, /\.g-sheet__close \{[^}]*grid-column: 3/)
+	assert.match(css, /\.g-sheet__close \{[^}]*grid-column: 1/)
+	assert.match(modal, /<slot name="confirm"/)
 })

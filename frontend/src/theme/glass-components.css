@@ -2284,7 +2284,12 @@ html[data-transparency="reduce"] .g-modal::part(content) {
 	width: 100%;
 }
 .g-sheet__close {
+	grid-column: 1;
+}
+.g-sheet__trail {
 	grid-column: 3;
+	display: flex;
+	justify-content: flex-end;
 }
 .g-sheet__title {
 	grid-column: 2;
