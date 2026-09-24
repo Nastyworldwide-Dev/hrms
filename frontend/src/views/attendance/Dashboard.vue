@@ -12,19 +12,18 @@
 				<AttendanceCalendar ref="calendar" />
 				<ResourceError :resource="shifts" what="your shifts" />
 
-				<!-- Two quiet links: used now and then, one tap away. -->
-				<div class="flex flex-row flex-wrap gap-x-6 gap-y-2 text-card-title">
-					<router-link
-						:to="{ name: 'EmployeeCheckinListView' }"
-						class="g-focusable g-seclink underline underline-offset-link text-ink-800"
-						>{{ __("All check-ins") }}</router-link
-					>
-					<router-link
-						:to="{ name: 'ShiftAssignmentListView' }"
-						class="g-focusable g-seclink underline underline-offset-link text-ink-800"
-						>{{ __("Your shifts") }}</router-link
-					>
-				</div>
+				<!-- Two destinations, used now and then: list rows with a chevron
+				     (HIG Lists and tables), not underlined web links (alpha.6 C5). -->
+				<GListPanel>
+					<GListRow
+						:label="__('All check-ins')"
+						@click="router.push({ name: 'EmployeeCheckinListView' })"
+					/>
+					<GListRow
+						:label="__('Your shifts')"
+						@click="router.push({ name: 'ShiftAssignmentListView' })"
+					/>
+				</GListPanel>
 			</div>
 		</template>
 	</BaseLayout>
@@ -38,7 +37,12 @@ import { onIonViewWillEnter } from "@ionic/vue"
 import AttendanceCalendar from "@/components/AttendanceCalendar.vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
+import { useRouter } from "vue-router"
 import ResourceError from "@/components/ResourceError.vue"
+
+const router = useRouter()
 
 // The calendar stays mounted while the tab is in the Ionic stack, so a day
 // the hourly job processed while the employee was on another tab never

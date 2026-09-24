@@ -5,9 +5,9 @@
 			<router-link
 				v-if="leaveBalance.data"
 				:to="{ name: 'LeaveApplicationListView' }"
-				class="g-focusable text-kra-label text-accent-ink underline underline-offset-link"
+				class="g-focusable text-kra-label text-accent-ink"
 			>
-				{{ __("View leave history") }}
+				{{ __("See all") }}
 			</router-link>
 		</div>
 

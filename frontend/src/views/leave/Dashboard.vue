@@ -34,9 +34,9 @@
 							<span class="g-eyebrow">{{ __("Recent leave") }}</span>
 							<router-link
 								:to="{ name: 'LeaveApplicationListView' }"
-								class="g-focusable g-seclink text-kra-label text-accent-ink underline underline-offset-link"
+								class="g-focusable g-seclink text-kra-label text-accent-ink"
 							>
-								{{ __("View list") }}
+								{{ __("See all") }}
 							</router-link>
 						</div>
 						<div class="border-t-2 border-divider">

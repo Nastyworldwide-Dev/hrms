@@ -51,7 +51,7 @@
 								</span>
 							</div>
 							<button
-								class="g-seclink g-focusable text-kra-label text-accent-ink underline underline-offset-link flex-none"
+								class="g-seclink g-focusable text-kra-label text-accent-ink flex-none"
 								@click="openAssign(member)"
 							>
 								{{ __("Assign") }}

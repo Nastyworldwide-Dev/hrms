@@ -44,7 +44,7 @@
 				class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
 				@click="navigate"
 			>
-				{{ __("View list") }}
+				{{ __("See all") }}
 			</button>
 		</router-link>
 	</div>

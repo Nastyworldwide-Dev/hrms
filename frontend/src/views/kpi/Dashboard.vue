@@ -96,7 +96,7 @@
 				<template v-else-if="openedName">
 					<button
 						type="button"
-						class="g-seclink g-focusable self-start underline underline-offset-link text-ink-800"
+						class="g-seclink g-focusable self-start text-ink-800"
 						@click="closeEmployee({ restoreFocus: true })"
 					>
 						← {{ __("Back to {0}", [teamTabLabel]) }}

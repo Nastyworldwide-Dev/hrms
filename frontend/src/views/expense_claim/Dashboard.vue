@@ -20,9 +20,9 @@
 							</span>
 							<router-link
 								:to="{ name: 'ExpenseClaimListView' }"
-								class="g-seclink text-kra-label text-accent-700 underline underline-offset-link cursor-pointer"
+								class="g-seclink text-kra-label text-accent-700 cursor-pointer"
 							>
-								{{ __("View list") }}
+								{{ __("See all") }}
 							</router-link>
 						</div>
 						<hr class="h-px border-0 bg-hair" />
