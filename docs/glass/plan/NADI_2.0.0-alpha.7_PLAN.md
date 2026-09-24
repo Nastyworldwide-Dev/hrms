@@ -255,3 +255,20 @@ Taken seriously, not blindly:
   An empty card would take the top of the screen every day to say nothing.
 - **Separation:** the Announcements group and the Today card are separate groups with the standard 35 pt gap
   and their own headers. That keeps them visually apart without extra lines or borders.
+
+## 11. Safari engine results (WebKit 26.5, 25 Sep)
+
+WebKit now runs locally without admin rights (`~/.local/webkit-deps/README.txt`); the audit and sheet crawler
+accept `ENGINE=webkit` and present an iPhone user agent, so iOS-only code runs.
+
+**Whole-app audit, 205 views, WebKit vs Chromium: identical on every measure** (sideways scroll 0, glass on content
+0, text under 11 pt 0, tap targets under 44 pt 0, field looks, button heights, empty sections, jargon). The 5
+"page errors" are the local site's live-update socket (port 9000 not running on the test bench), not the app.
+**Sheets: 10/10 open and close in WebKit.** Time off: page 393 wide, no sideways scroll.
+
+**Found only in Safari (added to phase 0):**
+
+| # | Defect | Evidence | Fix |
+|---|---|---|---|
+| 0.10 | The iOS "Install Nadi" banner covers the bottom of every page for anyone using Nadi in Safari (not installed). White text on lime: **contrast 1.18** (WCAG needs 4.5) | `components/InstallPrompt.vue` (a frappe-ui Popover with Tailwind accent colours); measured on the WebKit screenshot | Replace with one small dismissible row at the top of Home only ("Add Nadi to your Home Screen" + Share symbol), our own tokens, shown once per 30 days; never over forms |
+| 0.11 | **Body text and buttons render in Inter, not Apple's system font** on iPhone | frappe-ui's Tailwind plugin sets `html { font-family: InterVar, … }` ahead of our `-apple-system` stack (`node_modules/frappe-ui/src/tailwind/plugin.js:18`); measured in WebKit: html/body/tab labels = InterVar first | Override the html font family with our stack (system font first); stop shipping InterVar/Inter Tight/JetBrains Mono to Apple devices (plan 5.7) |
