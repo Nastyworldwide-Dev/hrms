@@ -3614,9 +3614,16 @@ ion-router-outlet {
 	flex-wrap: wrap;
 	padding-bottom: 8px;
 }
-.g-form-row--error .g-field-error {
-	flex-basis: 100%;
-	text-align: right;
+/* (0,3,0) + later in the file: beats `.g-form-row > :not(…):not(…)`, which
+   gave the error `flex: 1 1 0` and squeezed it into a one-word column inside
+   the value (owner's Overtime shot, 25 Sep). The error is a full line under
+   the row, aligned with the label as iOS draws footnote errors. */
+.g-form-row.g-form-row--error > .g-field-error {
+	flex: 0 0 100%;
+	min-width: 0;
+	text-align: left;
+	font-size: 13px;
+	line-height: 18px;
 }
 /* A read-only form shows values as quiet text, not disabled grey boxes. */
 .g-form-group .g-input:disabled,

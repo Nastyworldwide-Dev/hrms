@@ -21,17 +21,6 @@
 					     (at most 5, "Show more"), the rest folded into two counted rows
 					     (NN/g: the few that matter, the rest on request). -->
 					<div v-if="!props.id" class="g-form-body g-ot-days">
-						<section v-if="compensation" class="g-form-section">
-							<p class="g-form-footer g-ot-paidas">
-								{{ isRL ? __("Paid as time off") : __("Paid as overtime") }}
-								<template v-if="otSummary.data && !isRL">
-									·
-									{{ __("{0} to claim", [capAsTime(otSummary.data.punch_ot_hours)]) }}
-								</template>
-								<template v-if="isRL && expectation"> · {{ expectation }}</template>
-							</p>
-						</section>
-
 						<section v-if="dayGroups.open.length" class="g-form-section">
 							<h2 class="g-form-section__title">{{ __("Pick a day") }}</h2>
 							<div class="g-form-group" role="radiogroup" :aria-label="__('Pick a day')">
@@ -52,6 +41,16 @@
 										aria-hidden="true"
 									/>
 								</button>
+								<!-- The check failed: retry is a row in the group (alpha.7 0.5),
+								     not a floating lime link. -->
+								<button
+									v-if="otSummary.error"
+									type="button"
+									class="g-form-row g-form-row--action g-ot-more"
+									@click="loadSummary"
+								>
+									{{ __("Try again") }}
+								</button>
 								<button
 									v-if="dayGroups.moreOpen"
 									type="button"
@@ -61,6 +60,10 @@
 									{{ __("Show {0} more", [dayGroups.moreOpen]) }}
 								</button>
 							</div>
+							<!-- One footer says what the picked day is worth and how it is
+							     paid, or what went wrong (alpha.7 0.5; HIG: guidance is the
+							     group footer, never a line floating between groups). -->
+							<p class="g-form-footer" role="status">{{ dayFooter }}</p>
 						</section>
 
 						<section
@@ -120,18 +123,6 @@
 					>
 						{{ emptyReason }}
 					</p>
-
-					<p v-if="saveError" class="mx-4 mt-3 text-sm text-ink-600" role="status">
-						{{ saveError }}
-					</p>
-					<button
-						v-if="otSummary.error"
-						type="button"
-						class="mx-4 mt-2 text-accent-ink"
-						@click="loadSummary"
-					>
-						{{ __("Try again") }}
-					</button>
 				</template>
 			</FormView>
 			<ResourceError :resource="formFields" back what="the overtime request form" />
@@ -157,6 +148,7 @@ import {
 	claimDayRows,
 	emptyClaimReason,
 	inlineClaimError,
+	summaryFailure,
 } from "./claimEmptyReason.js"
 import { Check } from "lucide-vue-next"
 
@@ -343,6 +335,33 @@ const summaryKey = computed(() => {
 		? JSON.stringify([employeeId, otRequest.value.ot_date, props.id || ""])
 		: ""
 })
+
+//: The day was chosen from "Pick a day": asking for the date again below would
+//: show one fact twice (alpha.7 0.4). The field stays for a day not in the list.
+const pickedFromList = computed(
+	() =>
+		!props.id && displayDays.value.some((d) => !d.disabled && d.date === otRequest.value.ot_date)
+)
+watch(
+	[pickedFromList, () => formFields.data],
+	() => {
+		const field = formFields.data?.find((f) => f.fieldname === "ot_date")
+		if (field) field.hidden = pickedFromList.value ? 1 : 0
+	},
+	{ immediate: true }
+)
+
+//: The Pick-a-day footer: how it is paid and what the day is worth, or the
+//: state of the check. Never red: an error for the hours goes under the row.
+const dayFooter = computed(() => {
+	const paid = isRL.value ? __("Paid as time off") : __("Paid as overtime")
+	if (!summaryKey.value) return paid
+	if (otSummary.value.error) return summaryFailure(otSummary.value.error, __)
+	if (otSummary.value.loading || !otSummary.value.data) return __("Checking this day…")
+	if (isRL.value) return expectation.value ? `${paid} · ${expectation.value}` : paid
+	return __("{0} · {1} to claim", [paid, capAsTime(otSummary.value.data.punch_ot_hours)])
+})
+
 let previousKey = ""
 let retainedClaim = null
 function loadSummary() {
@@ -380,6 +399,13 @@ function loadSummary() {
 					throw new Error("Invalid overtime summary")
 				return data
 			},
+			onError(error) {
+				// The reason the live check failed (24 Sep) was never recorded.
+				console.error("[OTRequestForm] overtime check failed", {
+					exc_type: error?.exc_type,
+					message: (error?.messages || [])[0] || error?.message,
+				})
+			},
 			onSuccess(data) {
 				if (summaryRequest.value !== entry || summaryKey.value !== key) return
 				const cap = data.punch_ot_hours
@@ -405,7 +431,7 @@ watch([summaryKey, () => otRequest.value.modified], loadSummary, {
 const saveError = computed(() => {
 	if (!canEditClaim.value) return ""
 	if (!summaryKey.value) return __("Choose a work date to check available overtime.")
-	if (otSummary.value.error) return __("Could not check overtime. Try again before saving.")
+	if (otSummary.value.error) return summaryFailure(otSummary.value.error, __)
 	if (otSummary.value.loading || !otSummary.value.data)
 		return __("Checking overtime for this date…")
 	const cap = otRequest.value.punch_ot_hours
@@ -434,6 +460,13 @@ const saveError = computed(() => {
 const inlineError = computed(() =>
 	inlineClaimError(saveError.value, {
 		hasDate: Boolean(summaryKey.value),
+		// A pending OR failed day check is said once, in the Pick-a-day footer
+		// (dayFooter), not a second time in red under Hours (alpha.7 0.3/0.5).
+		loading:
+			Boolean(summaryKey.value) &&
+			(Boolean(otSummary.value.error) ||
+				otSummary.value.loading ||
+				!otSummary.value.data),
 		touched: dateTouched.value,
 		saveAttempted: saveAttempted.value,
 	})

@@ -645,3 +645,17 @@ test("own saved Open and Approved drafts stay pristine after an unchanged delaye
 		}
 	}
 })
+
+// alpha.7 0.4/0.5 (owner's live Overtime shots, 25 Sep): the picked day showed
+// twice ("Wed, 23 Sep ✓" and "Day you worked 23 Sep 2026"), and "Paid as
+// overtime", the status line and a lime "Try again" floated between groups at
+// three different indents. iOS: a fact once; guidance is a group footer.
+test("the picked day is not asked again, and loose text lives in group footers", () => {
+	const template = read(ot).split("<script setup>")[0]
+	const src = read(ot)
+	assert.match(src, /pickedFromList/, "the date field hides when the day came from the list")
+	assert.match(src, /f\.fieldname === "ot_date"[\s\S]{0,120}field\.hidden = pickedFromList/, "ot_date is hidden, not removed")
+	assert.doesNotMatch(template, /class="mx-4 mt-3 text-sm text-ink-600"/, "no free-floating status line")
+	assert.doesNotMatch(template, /class="mx-4 mt-2 text-accent-ink"/, "no free-floating Try again")
+	assert.doesNotMatch(template, /class="g-form-footer g-ot-paidas"/, "Paid as is not a lone line above the list")
+})

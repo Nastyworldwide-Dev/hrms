@@ -121,7 +121,8 @@ test("the form renders the reason, and says HR handles unclaimable days", () => 
 
 test("the inline field error goes through the deferred helper, the grey hint does not", () => {
 	assert.match(src, /field\.error_message = inlineError\.value/)
-	assert.match(src, /<p v-if="saveError"/, "the grey hint under the panel stays")
+	// alpha.7 0.5: the grey hint is the Pick-a-day group footer (dayFooter).
+	assert.match(src, /<p class="g-form-footer" role="status">\{\{ dayFooter \}\}<\/p>/, "the grey hint is the group footer")
 })
 
 // alpha.6 C3 (owner screenshots, 24 Sep 2026): "Claim overtime page shows a
@@ -152,4 +153,27 @@ test("claimed and unclaimable days are counted and folded, not listed", () => {
 	assert.deepEqual(g.open.map((r) => r.date), ["2026-09-20"])
 	assert.equal(g.claimed.length, 2)
 	assert.equal(g.cannot.length, 1)
+})
+
+// alpha.7 0.3 (owner's live shot): "Checking overtime for this date…" showed in
+// RED inside the Hours row. Loading is not an error. The inline (red) channel
+// carries errors only; the loading state is shown as progress, not as a problem.
+import { inlineClaimError as inlineErr } from "../claimEmptyReason.js"
+test("a pending check is never shown as a red error", () => {
+	assert.equal(inlineErr("Checking overtime for this date…", { hasDate: true, loading: true }), "")
+	assert.equal(inlineErr("Enter the hours to claim.", { hasDate: true, loading: false }), "Enter the hours to claim.")
+})
+
+// alpha.7 0.2: the live "Could not check overtime" could not be reproduced; the
+// form threw the server's reason away. It now shows it, so the next report
+// names the cause instead of a generic line.
+import { summaryFailure } from "../claimEmptyReason.js"
+test("a failed check says the server's own reason when there is one", () => {
+	const __ = (s, a) => (a ? s.replace("{0}", a[0]) : s)
+	assert.equal(
+		summaryFailure({ messages: ["Attendance for 23 Sep is not submitted yet"] }, __),
+		"Could not check overtime: Attendance for 23 Sep is not submitted yet"
+	)
+	assert.equal(summaryFailure({}, __), "Could not check overtime. Try again.")
+	assert.equal(summaryFailure({ messages: ["<b>HTML</b> kept out"] }, __), "Could not check overtime: HTML kept out")
 })

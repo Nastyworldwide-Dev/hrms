@@ -202,7 +202,7 @@ colour carries the kind, the word carries the meaning (never colour alone — HI
 | Q | Answer / status |
 |---|---|
 | Q1 accent | **Yes** — keep lime as the one tint; only on the primary action, switches ON, the tab lens |
-| Q2 coloured icon tiles | Recommended — example set in §7; needs a yes |
+| Q2 coloured icon tiles | **Yes** (25 Sep) — set in §7 |
 | Q3 Face ID sign-in | **Later** |
 | Q4 real Safari | Owner will run `! sudo npx playwright install-deps webkit` after this plan |
 | Q5 search | **Yes** — requests, people's names, SOPs, days |

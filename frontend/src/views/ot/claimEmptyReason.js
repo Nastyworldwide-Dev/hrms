@@ -72,9 +72,23 @@ export function claimDayRows(summary, opts = {}) {
  * that needs a date shows as soon as there is one.
  */
 export function inlineClaimError(saveError, state = {}) {
-	const { hasDate = false, touched = false, saveAttempted = false } = state
+	const { hasDate = false, touched = false, saveAttempted = false, loading = false } = state
+	// A check in flight is progress, not a mistake (alpha.7 0.3: it showed red).
+	if (loading) return ""
 	if (!hasDate && !touched && !saveAttempted) return ""
 	return saveError || ""
+}
+
+/**
+ * The line shown when the per-day overtime check fails: the server's own reason
+ * when it sent one (tags stripped), else a plain retry line. The live failure of
+ * 24 Sep could not be reproduced because the form discarded this (alpha.7 0.2).
+ */
+export function summaryFailure(error, translate) {
+	const __ = translate || ((text) => text)
+	const raw = (error?.messages || []).find(Boolean)
+	const reason = raw ? String(raw).replace(/<[^>]*>/g, "").trim() : ""
+	return reason ? __("Could not check overtime: {0}", [reason]) : __("Could not check overtime. Try again.")
 }
 
 export function emptyClaimReason(summary, { isRL = false, rlHoursPerDay = 8, translate } = {}) {

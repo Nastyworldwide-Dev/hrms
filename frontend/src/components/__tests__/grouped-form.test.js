@@ -45,3 +45,12 @@ test("controls inside a group lose their own box (the group is the surface)", ()
 test("hairlines are inset to the text, and the last row has none (HIG grouped list)", () => {
 	assert.match(css, /\.g-form-row \+ \.g-form-row::before/)
 })
+
+// alpha.7 0.1 (owner's live Overtime shot, 25 Sep): "Could not check overtime…"
+// wrapped one word per line inside the Hours value, the row grew 43 -> 87 pt.
+// `.g-form-row > :not(.g-form-row__label):not(.g-form-row__switch)` is
+// specificity (0,3,0) and gave the error `flex: 1 1 0`; the old error rule was
+// (0,2,0) and lost. The error must be a full-width line UNDER the row.
+test("a field error takes the full row width under the value (beats the child rule)", () => {
+	assert.match(css, /\.g-form-row\.g-form-row--error\s*>\s*\.g-field-error\s*{[^}]*flex:\s*0 0 100%/s)
+})

@@ -73,7 +73,7 @@ const sites = {
 	"../src/views/ot/OTRequestForm.vue": [
 		// alpha.6 C3: the day list and summary read as time (ruling C8), rounded
 		// down to the minute because they are caps.
-		/capAsTime\(otSummary\.data\.punch_ot_hours\)/,
+		/capAsTime\(otSummary\.value\.data\.punch_ot_hours\)/,
 		/formatHours: capAsTime/,
 		/Math\.floor\(\(Number\(h\) \|\| 0\) \* 60/,
 		/formatHoursCap\(cap\)/,
