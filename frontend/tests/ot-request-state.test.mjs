@@ -33,9 +33,20 @@ const formatHoursSource = (() => {
 		)
 		.join("\n")
 })()
+// hoursAsTime (utils/daySheet.js) is the form's hours-as-time rule (alpha.6 C3);
+// lifted the same way, so the sandbox runs the real function.
+const hoursAsTimeSource = (() => {
+	const source = read("../src/utils/daySheet.js")
+	const node = parse(source, { ecmaVersion: "latest", sourceType: "module" }).body.find(
+		(n) => n.declaration?.id?.name === "hoursAsTime"
+	)
+	return node ? source.slice(node.declaration.start, node.declaration.end) : ""
+})()
 // claimEmptyReason.js is plain ESM; the form's <script setup> calls its helpers
 // from computeds the tests evaluate, so it runs in the sandbox next to formatHours.
 const claimHelpersSource =
+	hoursAsTimeSource +
+	"\n" +
 	read("../src/utils/countWords.js").replace(/^export /gm, "") +
 	"\n" +
 	read("../src/views/ot/claimEmptyReason.js")
@@ -390,7 +401,7 @@ test("claimed days are listed beside claimable ones, disabled and labelled by st
 		rows.map((d) => [d.date, Boolean(d.claimed), d.label]),
 		[
 			["2026-09-05", true, "Claimed · Approved"],
-			["2026-09-04", false, "5.66 h"],
+			["2026-09-04", false, "5h 40m"],
 			["2026-09-03", true, "Claimed · Waiting"],
 			["2026-09-02", true, "Claimed · Rejected"],
 		]
@@ -402,12 +413,14 @@ test("claimed days are listed beside claimable ones, disabled and labelled by st
 	s.stop()
 })
 
-test("claimed-day buttons carry native and accessible disabled semantics", () => {
+test("claimed and unclaimable days cannot be picked", () => {
 	const template = read(ot).split("<script setup>")[0]
-	// A claimed day and an incomplete (unclaimable) day are both non-selectable rows.
-	assert.match(template, /:disabled="d\.disabled"/)
-	assert.match(template, /:aria-disabled="d\.disabled \? 'true' : undefined"/)
-	assert.match(template, /@click="pickDay\(d\)"/)
+	// alpha.6 C3: only OPEN days are buttons (dayGroups.open); claimed and
+	// unclaimable days are folded, plain rows with no click at all.
+	assert.match(template, /v-for="d in dayGroups\.open"[\s\S]*?@click="pickDay\(d\)"/)
+	assert.match(template, /role="radio"/)
+	const claimedRows = template.slice(template.indexOf("dayGroups.claimed : []"))
+	assert.doesNotMatch(claimedRows.slice(0, 300), /@click/)
 })
 
 test("reloading a saved draft preserves its lower claim and refreshes the cap", async () => {
@@ -554,7 +567,7 @@ test("the OT introduction is inside FormView's slot below its existing header", 
 			introduction = n
 	})
 	assert.ok(introduction)
-	assert.match(introduction.loc.source, /Days you can claim/)
+	assert.match(introduction.loc.source, /Pick a day/)
 	assert.doesNotMatch(
 		script(ot),
 		/This pays out as overtime|Your overtime pays out/

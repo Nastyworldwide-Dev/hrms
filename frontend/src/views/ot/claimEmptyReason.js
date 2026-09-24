@@ -40,7 +40,7 @@ export function claimDayRows(summary, opts = {}) {
 	const brokenRows = summary?.incomplete || []
 	console.info("[claimDayRows]", { days: days.length, incomplete: brokenRows.length })
 	const open = !isRL
-		? days.map((d) => ({ ...d, disabled: false, label: __("{0} h", [hours(d.hours)]) }))
+		? days.map((d) => ({ ...d, disabled: false, label: hours(d.hours) }))
 		: days
 				.map((d) => ({ ...d, leaveDays: rlDaysFor(d.hours, rlHoursPerDay) }))
 				.filter((d) => d.leaveDays > 0)
@@ -118,4 +118,24 @@ export function emptyClaimReason(summary, { isRL = false, rlHoursPerDay = 8, tra
 	return __("You worked overtime on {0} in this period, but none of it is claimable right now.", [
 		countOf(summary.days_with_overtime, __("day")),
 	])
+}
+
+//: Open days shown before "Show more" (alpha.6 C3; NN/g: the few that matter).
+const OPEN_DAYS_SHOWN = 5
+
+/**
+ * claimDayRows' flat list -> what the screen shows: open days (at most
+ * OPEN_DAYS_SHOWN unless showAll), and the claimed / unclaimable days as two
+ * folded groups. The owner's screenshot scrolled a whole month of greyed
+ * "Claimed · Approved" cards before reaching the form.
+ */
+export function claimDayGroups(rows, { showAll = false } = {}) {
+	const all = rows || []
+	const open = all.filter((r) => !r.disabled)
+	return {
+		open: showAll ? open : open.slice(0, OPEN_DAYS_SHOWN),
+		moreOpen: showAll ? 0 : Math.max(0, open.length - OPEN_DAYS_SHOWN),
+		claimed: all.filter((r) => r.claimed),
+		cannot: all.filter((r) => r.incomplete),
+	}
 }

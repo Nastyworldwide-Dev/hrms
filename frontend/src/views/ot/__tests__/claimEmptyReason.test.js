@@ -55,7 +55,8 @@ test("claimable and claimed rows are untouched by the new list", () => {
 	const rows = claimDayRows(summary, opts)
 	const open = rows.find((r) => r.date === "2026-09-29")
 	assert.equal(open.disabled, false)
-	assert.equal(open.label, "2 h")
+	// The label is formatHours(d.hours) as given; the form passes hours-as-time.
+	assert.equal(open.label, "2")
 	const claimed = rows.find((r) => r.date === "2026-09-20")
 	assert.equal(claimed.disabled, true)
 	assert.equal(claimed.label, "Claimed · Pending")
@@ -110,14 +111,45 @@ test("the date error is held back until the date is touched or a save is tried",
 
 const src = readFileSync(fileURLToPath(new URL("../OTRequestForm.vue", import.meta.url)), "utf8")
 
-test("the form renders the reason and the HR tag on incomplete rows", () => {
-	assert.match(src, /d\.incomplete/, "rows carry the incomplete flag")
+test("the form renders the reason, and says HR handles unclaimable days", () => {
 	assert.match(src, /d\.reason/, "the reason is rendered under the date")
-	assert.match(src, /HR can see this/, "the tag is in the markup or the label")
-	assert.match(src, /:disabled="d\.disabled"/, "greyed rows are not selectable")
+	// alpha.6 C3: unclaimable days are folded rows, not buttons, under a footer
+	// in plain words (was an "HR can see this" tag on each card).
+	assert.match(src, /HR will sort these out/, "the footer says HR handles them")
+	assert.match(src, /dayGroups\.cannot/, "unclaimable days are their own folded group")
 })
 
 test("the inline field error goes through the deferred helper, the grey hint does not", () => {
 	assert.match(src, /field\.error_message = inlineError\.value/)
 	assert.match(src, /<p v-if="saveError"/, "the grey hint under the panel stays")
+})
+
+// alpha.6 C3 (owner screenshots, 24 Sep 2026): "Claim overtime page shows a
+// long list ... to the bottom, killing the idea of compact, no scrolling".
+// Every past day was a full card, claimed and unclaimable included. NN/g
+// (infinite scrolling; accordions): show the few that matter, fold the rest,
+// offer "Show more". Open days first (up to 5), then two folded groups.
+import { claimDayGroups } from "../claimEmptyReason.js"
+
+const row = (date, extra = {}) => ({ date, disabled: false, label: "1 h", ...extra })
+
+test("open days first, at most 5 until the person asks for more", () => {
+	const rows = ["09-20", "09-19", "09-18", "09-17", "09-16", "09-15", "09-14"].map((d) => row(`2026-${d}`))
+	const g = claimDayGroups(rows)
+	assert.equal(g.open.length, 5)
+	assert.equal(g.moreOpen, 2)
+	assert.equal(claimDayGroups(rows, { showAll: true }).open.length, 7)
+})
+
+test("claimed and unclaimable days are counted and folded, not listed", () => {
+	const rows = [
+		row("2026-09-20"),
+		row("2026-09-19", { claimed: true, disabled: true }),
+		row("2026-09-18", { claimed: true, disabled: true }),
+		row("2026-09-17", { incomplete: true, disabled: true, reason: "Only a check-in" }),
+	]
+	const g = claimDayGroups(rows)
+	assert.deepEqual(g.open.map((r) => r.date), ["2026-09-20"])
+	assert.equal(g.claimed.length, 2)
+	assert.equal(g.cannot.length, 1)
 })

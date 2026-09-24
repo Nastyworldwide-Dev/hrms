@@ -71,8 +71,11 @@ test("display rows render hours as time, not decimals (ruling C8)", () => {
 
 const sites = {
 	"../src/views/ot/OTRequestForm.vue": [
-		/formatHoursCap\(otSummary\.data\.punch_ot_hours\)/,
-		/formatHours: formatHoursCap/,
+		// alpha.6 C3: the day list and summary read as time (ruling C8), rounded
+		// down to the minute because they are caps.
+		/capAsTime\(otSummary\.data\.punch_ot_hours\)/,
+		/formatHours: capAsTime/,
+		/Math\.floor\(\(Number\(h\) \|\| 0\) \* 60/,
 		/formatHoursCap\(cap\)/,
 	],
 }

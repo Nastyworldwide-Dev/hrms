@@ -14,78 +14,110 @@
 				@validateForm="validateForm"
 			>
 				<template #beforeFields>
-					<!-- What this claims, shown UP FRONT (from HR-set eligibility) so the form is
-			     never a blank mystery: the employee sees "Overtime Pay" or "Replacement
-			     Leave" and what it means before touching anything. Once a day is picked it
-			     also shows that day's punch-verified hours. -->
-					<div
-						v-if="compensation && !props.id"
-						class="mx-4 mt-4 border border-divider rounded-panel p-4 flex flex-col gap-2"
-					>
-						<span class="g-eyebrow">{{ __("You claim") }}</span>
-						<span class="text-lg font-extrabold text-inkbase">
-							{{ __(compensation) }}
-						</span>
-						<span class="text-sm text-ink-600">{{ claimTypeHint }}</span>
-						<template v-if="otSummary.data">
-							<!-- Overtime Pay claims HOURS, so it shows hours. Replacement Leave earns
-					     whole-day blocks — showing raw hours there just confuses, so the day
-					     result (from `expectation`) speaks for it. -->
-							<span v-if="!isRL" class="text-sm text-ink-600">
-								{{
-									__("Available to claim: {0} h", [formatHoursCap(otSummary.data.punch_ot_hours)])
-								}}
-							</span>
-							<span v-if="isRL" class="text-sm text-ink-600">{{ expectation }}</span>
-						</template>
-					</div>
-					<!-- The dates the employee actually has unclaimed OT on — tap instead of
-			     guessing a date in the picker. Days that already have a request stay in
-			     the list, greyed and not selectable, so they never look like lost overtime.
-			     Days worked but unclaimable (a lone check-in, a tap on no shift, a punch
-			     waiting for approval…) stay too, greyed, with the reason under the date
-			     and an "HR can see this" tag — the day is not hidden and nobody is asked
-			     to fix a record. Only on a new request. -->
-					<div v-if="displayDays.length && !props.id" class="mx-4 mt-4 flex flex-col gap-2">
-						<span class="g-eyebrow">{{ __("Days you can claim") }}</span>
-						<button
-							v-for="d in displayDays"
-							:key="d.date"
-							class="w-full text-left rounded-panel border px-4 py-3 flex items-center justify-between gap-3"
-							:class="
-								d.disabled
-									? 'border-divider bg-icon-bg cursor-not-allowed'
-									: otRequest.ot_date === d.date
-									? 'border-accent-ink cursor-pointer'
-									: 'border-divider hover:bg-icon-bg cursor-pointer'
-							"
-							:disabled="d.disabled"
-							:aria-disabled="d.disabled ? 'true' : undefined"
-							:aria-pressed="d.disabled ? undefined : String(otRequest.ot_date === d.date)"
-							@click="pickDay(d)"
-						>
-							<span class="flex flex-col gap-0.5 min-w-0">
-								<span
-									class="font-semibold"
-									:class="d.disabled ? 'text-ink-700' : 'text-inkbase'"
-									>{{ formatDay(d.date) }}</span
+					<!-- alpha.6 C3 (owner screenshots, 24 Sep): the page was a card saying
+					     "You claim · Overtime Pay", then EVERY past day as a big card —
+					     claimed and unclaimable included — scrolling past the form. Now:
+					     how it is paid as one line, then the open days as one grouped list
+					     (at most 5, "Show more"), the rest folded into two counted rows
+					     (NN/g: the few that matter, the rest on request). -->
+					<div v-if="!props.id" class="g-form-body g-ot-days">
+						<section v-if="compensation" class="g-form-section">
+							<p class="g-form-footer g-ot-paidas">
+								{{ isRL ? __("Paid as time off") : __("Paid as overtime") }}
+								<template v-if="otSummary.data && !isRL">
+									·
+									{{ __("{0} to claim", [capAsTime(otSummary.data.punch_ot_hours)]) }}
+								</template>
+								<template v-if="isRL && expectation"> · {{ expectation }}</template>
+							</p>
+						</section>
+
+						<section v-if="dayGroups.open.length" class="g-form-section">
+							<h2 class="g-form-section__title">{{ __("Pick a day") }}</h2>
+							<div class="g-form-group" role="radiogroup" :aria-label="__('Pick a day')">
+								<button
+									v-for="d in dayGroups.open"
+									:key="d.date"
+									type="button"
+									role="radio"
+									class="g-form-row g-form-row--action g-ot-day"
+									:aria-checked="String(otRequest.ot_date === d.date)"
+									@click="pickDay(d)"
 								>
-								<span v-if="d.incomplete" class="text-xs text-ink-600">{{ d.reason }}</span>
-							</span>
-							<span
-								v-if="d.incomplete"
-								class="shrink-0 text-xs text-ink-700 border border-divider rounded-full px-2 py-0.5"
-								>{{ d.label }}</span
-							>
-							<span v-else class="text-sm" :class="d.disabled ? 'text-ink-700' : 'text-ink-600'">{{
-								d.label
-							}}</span>
-						</button>
+									<span class="g-form-row__label">{{ formatDay(d.date) }}</span>
+									<span class="g-ot-day__value">{{ d.label }}</span>
+									<Check
+										v-if="otRequest.ot_date === d.date"
+										class="g-ot-day__check"
+										aria-hidden="true"
+									/>
+								</button>
+								<button
+									v-if="dayGroups.moreOpen"
+									type="button"
+									class="g-form-row g-form-row--action g-ot-more"
+									@click="showAllDays = true"
+								>
+									{{ __("Show {0} more", [dayGroups.moreOpen]) }}
+								</button>
+							</div>
+						</section>
+
+						<section
+							v-if="dayGroups.claimed.length || dayGroups.cannot.length"
+							class="g-form-section"
+						>
+							<div class="g-form-group">
+								<button
+									v-if="dayGroups.claimed.length"
+									type="button"
+									class="g-form-row g-form-row--action g-ot-fold"
+									:aria-expanded="String(openFold === 'claimed')"
+									@click="openFold = openFold === 'claimed' ? '' : 'claimed'"
+								>
+									<span class="g-form-row__label">{{ __("Already claimed") }}</span>
+									<span class="g-ot-day__value">{{ dayGroups.claimed.length }}</span>
+								</button>
+								<div
+									v-for="d in openFold === 'claimed' ? dayGroups.claimed : []"
+									:key="`c${d.date}`"
+									class="g-form-row g-ot-sub"
+								>
+									<span class="g-form-row__label">{{ formatDay(d.date) }}</span>
+									<span class="g-ot-day__value">{{ d.label.replace(/^Claimed · /, "") }}</span>
+								</div>
+								<button
+									v-if="dayGroups.cannot.length"
+									type="button"
+									class="g-form-row g-form-row--action g-ot-fold"
+									:aria-expanded="String(openFold === 'cannot')"
+									@click="openFold = openFold === 'cannot' ? '' : 'cannot'"
+								>
+									<span class="g-form-row__label">{{ __("Can't claim yet") }}</span>
+									<span class="g-ot-day__value">{{ dayGroups.cannot.length }}</span>
+								</button>
+								<div
+									v-for="d in openFold === 'cannot' ? dayGroups.cannot : []"
+									:key="`x${d.date}`"
+									class="g-form-row g-form-row--stacked g-ot-sub"
+								>
+									<span class="g-form-row__label">{{ formatDay(d.date) }}</span>
+									<span class="g-ot-reason">{{ d.reason }}</span>
+								</div>
+							</div>
+							<p v-if="dayGroups.cannot.length" class="g-form-footer">
+								{{ __("HR will sort these out. You don't need to do anything.") }}
+							</p>
+						</section>
 					</div>
 
 					<!-- An empty list used to leave a blank date picker and no answer.
 			     Say which of the four situations this is. -->
-					<p v-if="emptyReason && !props.id" class="g-empty-line mx-4 mt-4 text-sm text-ink-600" role="status">
+					<p
+						v-if="emptyReason && !props.id"
+						class="g-empty-line mx-4 mt-4 text-sm text-ink-600"
+						role="status"
+					>
 						{{ emptyReason }}
 					</p>
 
@@ -117,9 +149,16 @@ import FormView from "@/components/FormView.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { settings } from "@/data/settings"
 import { formatHoursCap } from "@/utils/formatters"
+import { hoursAsTime } from "@/utils/daySheet"
 import { countOf } from "@/utils/countWords"
 import { requestStatusChip } from "@/utils/requestStatus"
-import { claimDayRows, emptyClaimReason, inlineClaimError } from "./claimEmptyReason.js"
+import {
+	claimDayGroups,
+	claimDayRows,
+	emptyClaimReason,
+	inlineClaimError,
+} from "./claimEmptyReason.js"
+import { Check } from "lucide-vue-next"
 
 const employee = inject("$employee")
 const __ = inject("$translate")
@@ -173,15 +212,6 @@ const rlDays = (hours) => {
 }
 
 // One plain line telling the employee what their claim type means.
-const claimTypeHint = computed(() => {
-	const c = compensation.value
-	if (c === "Overtime Pay") return __("You’ll be paid for approved overtime hours.")
-	if (c === "Replacement Leave")
-		return __("Your overtime becomes time off — {0} hours earns half a day.", [
-			(rlHoursPerDay.value || 8) / 2,
-		])
-	return ""
-})
 
 // The claimable days, shaped for display (claimDayRows): Overtime Pay shows hours;
 // Replacement Leave shows the whole-day blocks and DROPS days under 4h (they earn
@@ -189,15 +219,24 @@ const claimTypeHint = computed(() => {
 // request are merged in, greyed, labelled by their decision (Approved is final —
 // payroll is external, so there is no "paid"). Days worked but unclaimable are
 // merged in greyed with their reason, so a broken day never looks like lost overtime.
+//: Hours as time ("5h 40m", ruling C8), rounded DOWN to the minute: these are
+//: caps, and a rounded-up figure offers time the cap check refuses.
+const capAsTime = (h) => hoursAsTime(Math.floor((Number(h) || 0) * 60 + 1e-9) / 60)
+
 const displayDays = computed(() =>
 	claimDayRows(claimableDays.value.data, {
 		isRL: isRL.value,
 		rlHoursPerDay: rlHoursPerDay.value,
 		translate: __,
 		statusLabel: requestStatusChip,
-		formatHours: formatHoursCap,
+		formatHours: capAsTime,
 	})
 )
+
+//: Folded groups and "Show more" (alpha.6 C3).
+const showAllDays = ref(false)
+const openFold = ref("")
+const dayGroups = computed(() => claimDayGroups(displayDays.value, { showAll: showAllDays.value }))
 
 function pickDay(d) {
 	if (d.disabled) return

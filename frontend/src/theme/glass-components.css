@@ -3709,3 +3709,51 @@ ion-router-outlet {
 	height: 16px;
 	color: var(--g-ink3);
 }
+
+/* Overtime days (alpha.6 C3): a grouped list, a checkmark on the chosen day
+   (HIG Lists: option lists show a checkmark), folded rows for the rest. */
+.g-ot-days {
+	padding-bottom: 0;
+}
+.g-ot-paidas {
+	color: var(--g-ink);
+	font-size: 15px;
+	line-height: 20px;
+}
+.g-ot-day,
+.g-ot-fold {
+	justify-content: flex-start;
+	text-align: left;
+}
+/* Row children must not stretch here: the value is pushed to the trailing edge. */
+.g-ot-day > *,
+.g-ot-fold > *,
+.g-ot-sub > * {
+	flex: 0 0 auto;
+}
+.g-ot-day__value {
+	margin-left: auto;
+	text-align: right;
+	font-size: 17px;
+	line-height: 22px;
+	color: var(--g-ink2);
+}
+.g-ot-day__check {
+	flex: none;
+	margin-left: 8px;
+	width: 20px;
+	height: 20px;
+	color: var(--g-accent-ink);
+}
+.g-ot-more {
+	color: var(--g-accent-ink);
+}
+.g-ot-sub .g-form-row__label,
+.g-ot-sub .g-ot-day__value {
+	color: var(--g-ink2);
+}
+.g-ot-reason {
+	font-size: 15px;
+	line-height: 20px;
+	color: var(--g-ink2);
+}
