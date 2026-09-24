@@ -1745,24 +1745,37 @@ html[data-theme="dark"] .g-cal__day--present {
 	background: transparent;
 	box-shadow: inset 0 0 0 1.5px var(--g-ink3);
 }
+/* The legend, in its sheet (alpha.7 A19): one row per key. */
 .g-cal__legend {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 12px;
-	margin-top: 12px;
+	margin: 0 16px;
 }
-.g-cal__key {
-	display: flex;
+.g-form-row.g-cal__key {
+	gap: 12px;
+	font-size: 17px;
+	line-height: 22px;
+	color: var(--g-ink);
+}
+.g-cal__info {
+	display: inline-flex;
 	align-items: center;
-	gap: 4px;
-	font-family: var(--g-type-caption-family);
-	font-size: var(--g-type-caption-size);
-	line-height: var(--g-type-caption-line-height);
+	gap: 8px;
+	min-height: var(--g-touch-target-min);
+	margin-top: 4px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	font-size: 15px;
+	line-height: 20px;
 	color: var(--g-ink2);
+	cursor: pointer;
+}
+.g-cal__info-icon {
+	width: 16px;
+	height: 16px;
 }
 .g-cal__swatch {
-	width: 8px;
-	height: 8px;
+	width: 12px;
+	height: 12px;
 	border-radius: 2.5px;
 	flex: none;
 }

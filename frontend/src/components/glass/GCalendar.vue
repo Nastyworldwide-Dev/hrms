@@ -86,16 +86,32 @@
 			</button>
 		</div>
 
-		<div class="g-cal__legend">
-			<span v-for="key in legend" :key="key.state" class="g-cal__key">
+		<!-- The keys are on request, as Apple's Calendar does it (alpha.7 A19):
+		     two lines of ten swatches under every month was noise. -->
+		<button type="button" class="g-cal__info g-focusable" @click="legendOpen = true">
+			<Info class="g-cal__info-icon" aria-hidden="true" />
+			{{ __("What the colours mean") }}
+		</button>
+	</div>
+
+	<GModal :is-open="legendOpen" :title="__('What the colours mean')" @did-dismiss="legendOpen = false">
+		<div class="g-form-group g-cal__legend">
+			<span v-for="key in legend" :key="key.state" class="g-form-row g-cal__key">
 				<span class="g-cal__swatch" :class="`g-cal__swatch--${key.state}`" aria-hidden="true" />
 				{{ key.label }}
 			</span>
 		</div>
-	</div>
+	</GModal>
 </template>
 
 <script setup>
+import { inject, ref } from "vue"
+import { Info } from "lucide-vue-next"
+import GModal from "./GModal.vue"
+
+const __ = inject("$translate", (t) => t)
+const legendOpen = ref(false)
+
 const props = defineProps({
 	title: { type: String, required: true },
 	days: { type: Array, required: true },
