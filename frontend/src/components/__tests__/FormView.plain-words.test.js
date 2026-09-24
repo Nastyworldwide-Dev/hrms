@@ -92,3 +92,10 @@ test("the word is a word, not a doctype in disguise", () => {
 	}
 	assert.deepEqual(offenders, [], "pass the employee's word, not the table's")
 })
+
+// Owner ruling Q1, 24 Sep 2026.
+test("a new request's button says Send to {name}, not Save", () => {
+	const src = readFileSync(fileURLToPath(new URL("../FormView.vue", import.meta.url)), "utf8")
+	assert.match(src, /:label="formButton === 'Save' \? __\(saveLabel\) : __\(formButton\)"/)
+	assert.match(src, /sendLabel\(\{ doctype: props\.doctype, isNew: !props\.id/)
+})

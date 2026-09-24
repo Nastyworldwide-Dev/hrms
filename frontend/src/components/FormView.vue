@@ -266,8 +266,8 @@
 				     got --accent-ink, dark olive on light. GButton resolves
 				     --g-brand directly, so it cannot. -->
 					<GButton
-						:label="__(formButton)"
-						:pending-label="__('Saving…')"
+						:label="formButton === 'Save' ? __(saveLabel) : __(formButton)"
+						:pending-label="saveLabel.startsWith('Send') ? __('Sending…') : __('Saving…')"
 						:pending="
 							docList.insert.loading || documentResource?.setValue?.loading || finalize.loading
 						"
@@ -414,6 +414,7 @@ import FormField from "@/components/FormField.vue"
 import { dropEmptySections } from "@/utils/visibleSections"
 import { groupFields } from "@/utils/formGroups"
 import { sentenceCase } from "@/utils/sentenceCase"
+import { sendLabel } from "@/utils/sendLabel"
 import FileUploaderView from "@/components/FileUploaderView.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
@@ -786,6 +787,12 @@ const approvedCancel = useApprovedCancel(() =>
 	props.id && canOfferCancel(formModel.value, props.doctype, cancelViewer.value) === "approved"
 		? { doctype: props.doctype, name: props.id, modified: formModel.value?.modified }
 		: null
+)
+
+//: What the Save button SAYS (owner ruling Q1): "Send to {name}" on a new
+//: request. formButton stays the action key ("Save" still means save).
+const saveLabel = computed(() =>
+	sendLabel({ doctype: props.doctype, isNew: !props.id, fields: props.fields, model: formModel.value })
 )
 
 const formButton = computed(() => {
