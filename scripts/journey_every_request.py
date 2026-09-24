@@ -201,18 +201,20 @@ def run():
 
 def _fixture():
 	"""What a configured site already has. Inside the rollback, so nothing persists."""
-	hla = frappe.new_doc("Holiday List Assignment")
-	hla.update(
-		{
-			"holiday_list": "Nadi W0 2026",
-			"assigned_to": COMPANY,
-			"applicable_for": "Company",
-			"from_date": "2026-01-01",
-		}
-	)
-	hla.flags.ignore_permissions = True
-	hla.insert()
-	hla.submit()
+	# Only what the site is missing: HR may already have set it up.
+	if not frappe.db.exists("Holiday List Assignment", {"assigned_to": COMPANY, "docstatus": 1}):
+		hla = frappe.new_doc("Holiday List Assignment")
+		hla.update(
+			{
+				"holiday_list": "Nadi W0 2026",
+				"assigned_to": COMPANY,
+				"applicable_for": "Company",
+				"from_date": "2026-01-01",
+			}
+		)
+		hla.flags.ignore_permissions = True
+		hla.insert()
+		hla.submit()
 	acct = frappe.db.get_value(
 		"Account", {"company": COMPANY, "account_type": "Payable", "is_group": 0}, "name"
 	)
@@ -225,6 +227,10 @@ def _fixture():
 		t.save()
 	for n in (10, 11):
 		day = _day(n)
+		if frappe.db.exists(
+			"Employee Checkin", {"employee": EMP, "time": ["between", [f"{day} 00:00:00", f"{day} 23:59:59"]]}
+		):
+			continue
 		for tm, lt in (("08:55:00", "IN"), ("20:05:00", "OUT")):
 			c = frappe.new_doc("Employee Checkin")
 			c.update({"employee": EMP, "time": f"{day} {tm}", "log_type": lt})
@@ -244,10 +250,13 @@ def _fixture():
 	# Time off in lieu is for working on a rest day: make two past days holidays.
 	hl = frappe.get_doc("Holiday List", "Nadi W0 2026")
 	for n in (60, 61):
-		hl.append("holidays", {"holiday_date": _day(n), "description": "journey rest day"})
+		if not any(str(h.holiday_date) == str(_day(n)) for h in hl.holidays):
+			hl.append("holidays", {"holiday_date": _day(n), "description": "journey rest day"})
 	hl.flags.ignore_permissions = True
 	hl.save()
 	for n in (10, 11):
+		if frappe.db.exists("Attendance", {"employee": EMP, "attendance_date": _day(n), "docstatus": 1}):
+			continue
 		a = frappe.new_doc("Attendance")
 		a.update(
 			{
