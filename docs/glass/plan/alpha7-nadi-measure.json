@@ -1,0 +1,150 @@
+{
+ "profile": {
+  "group": {
+   "left": 16,
+   "width": 370,
+   "radius": "16px",
+   "bg": "rgb(21, 23, 29)",
+   "border": "0px rgb(35, 35, 35)",
+   "shadow": "none",
+   "blur": "none"
+  },
+  "rowHeights": [
+   56,
+   56,
+   44,
+   44
+  ],
+  "label": {
+   "size": "15px",
+   "weight": "400",
+   "color": "rgb(255, 255, 255)",
+   "family": "-apple-system, BlinkMacSystemFont, Inter"
+  },
+  "title": {
+   "text": "You",
+   "size": "20px",
+   "weight": "600",
+   "top": 23
+  },
+  "tab": null,
+  "page": "rgb(7, 7, 10)"
+ },
+ "more": {
+  "group": null,
+  "rowHeights": [
+   56,
+   56,
+   56,
+   56
+  ],
+  "label": {
+   "size": "15px",
+   "weight": "400",
+   "color": "rgb(255, 255, 255)",
+   "family": "-apple-system, BlinkMacSystemFont, Inter"
+  },
+  "title": {
+   "text": "More",
+   "size": "20px",
+   "weight": "600",
+   "top": 23
+  },
+  "tab": {
+   "top": 800,
+   "h": 66,
+   "left": 16,
+   "w": 370,
+   "radius": "24px",
+   "blur": "blur(20px) saturate(1.8)"
+  },
+  "page": "rgb(7, 7, 10)"
+ },
+ "leave-applications/new": {
+  "group": {
+   "left": 16,
+   "width": 370,
+   "radius": "16px",
+   "bg": "rgb(21, 23, 29)",
+   "border": "0px rgb(35, 35, 35)",
+   "shadow": "none",
+   "blur": "none"
+  },
+  "rowHeights": [
+   44,
+   44,
+   44,
+   44
+  ],
+  "label": {
+   "size": "17px",
+   "weight": "400",
+   "color": "rgb(255, 255, 255)",
+   "family": "-apple-system, BlinkMacSystemFont, Inter"
+  },
+  "title": {
+   "text": "Time off",
+   "size": "20px",
+   "weight": "600",
+   "top": 23
+  },
+  "tab": null,
+  "page": "rgb(7, 7, 10)"
+ },
+ "home": {
+  "group": null,
+  "rowHeights": [
+   62,
+   52
+  ],
+  "label": {
+   "size": "15px",
+   "weight": "400",
+   "color": "rgb(255, 255, 255)",
+   "family": "-apple-system, BlinkMacSystemFont, Inter"
+  },
+  "title": {
+   "text": "Nadi",
+   "size": "20px",
+   "weight": "600",
+   "top": 34
+  },
+  "tab": {
+   "top": 800,
+   "h": 66,
+   "left": 16,
+   "w": 370,
+   "radius": "24px",
+   "blur": "blur(20px) saturate(1.8)"
+  },
+  "page": "rgb(7, 7, 10)"
+ },
+ "requests": {
+  "group": null,
+  "rowHeights": [
+   56,
+   56
+  ],
+  "label": {
+   "size": "15px",
+   "weight": "400",
+   "color": "rgb(255, 255, 255)",
+   "family": "-apple-system, BlinkMacSystemFont, Inter"
+  },
+  "title": {
+   "text": "Requests",
+   "size": "20px",
+   "weight": "600",
+   "top": 23
+  },
+  "tab": {
+   "top": 800,
+   "h": 66,
+   "left": 16,
+   "w": 370,
+   "radius": "24px",
+   "blur": "blur(20px) saturate(1.8)"
+  },
+  "page": "rgb(7, 7, 10)"
+ }
+}
