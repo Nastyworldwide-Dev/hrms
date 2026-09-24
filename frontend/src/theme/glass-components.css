@@ -4255,7 +4255,8 @@ ion-modal.g-mustread {
 .g-header__mini {
 	position: absolute;
 	left: 50%;
-	top: 34px; /* the centre of the first row (12 pad + 44 / 2) */
+	/* the centre of the first row: the bar's 12 pt pad + half a 44 pt control */
+	top: calc(12px + var(--g-touch-target-min) / 2);
 	transform: translate(-50%, -50%);
 	max-width: 50%;
 	overflow: hidden;

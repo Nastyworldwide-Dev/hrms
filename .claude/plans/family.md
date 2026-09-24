@@ -1,12 +1,8 @@
-CLASS: a duration written as a unit abbreviation ("1d", "0.5d") instead of words
+CLASS: a literal off-grid length in the stylesheet (scale gate)
 
-Instance: plan §5.3 A16/B4 — list rows read "15 Sep · 1d".
+Instance: .g-header__mini top: 34px (dd845cd8e).
 
 Sites:
-- frontend/src/components/LeaveRequestItem.vue — same-root
-- frontend/src/components/AttendanceRequestItem.vue — same-root
-- frontend/src/components/ShiftRequestItem.vue — same-root
-- frontend/src/components/ShiftAssignmentItem.vue — same-root
-- frontend/src/utils/countWords.js countOf — not-affected: already words; daysWords added beside it
+- frontend/src/theme/glass-components.css .g-header__mini — same-root (calc from the pad and the touch-target token)
 
-Locked: utils/__tests__/daysWords.test.js (3).
+Locked: design/gates/scale.mjs (already the gate; it caught this).
