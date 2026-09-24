@@ -3812,3 +3812,41 @@ body {
 html {
 	font-family: var(--g-font-ui) !important;
 }
+
+/* alpha.7 0.10: the iPhone "Add to Home Screen" row on Home. */
+.g-install-hint .g-form-row {
+	padding-top: 11px;
+	padding-bottom: 11px;
+}
+/* (0,3,0): beats the form row's "every control takes the rest" rule. */
+.g-install-hint .g-form-row > .g-install-hint__icon {
+	flex: 0 0 20px;
+}
+.g-install-hint .g-form-row > .g-install-hint__text {
+	flex: 1 1 auto;
+}
+.g-install-hint .g-form-row > .g-install-hint__close {
+	flex: 0 0 44px;
+}
+.g-install-hint__icon {
+	width: 20px;
+	height: 20px;
+	color: var(--g-ink2);
+}
+.g-install-hint__text {
+	font-size: 15px;
+	line-height: 20px;
+	color: var(--g-ink);
+}
+.g-install-hint__close {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	margin-right: -12px;
+	color: var(--g-ink2);
+}
+.g-install-hint__close svg {
+	width: 20px;
+	height: 20px;
+}

@@ -7,44 +7,13 @@
 		<GButton :label="__('Install')" @click="() => install()" />
 	</GModal>
 
-	<!-- iOS installation info message -->
-	<Popover :show="iosInstallMessage" placement="bottom">
-		<template #body>
-			<div
-				class="mt-[calc(100dvh-15rem)] flex flex-col gap-3 mx-2 py-5 bg-accent-100 border border-accent-200 drop-shadow-xl"
-			>
-				<div class="flex flex-row text-center items-center justify-between mb-1 px-3">
-					<span class="text-base text-inkbase font-bold">
-						{{ __("Install Nadi") }}
-					</span>
-					<span class="inline-flex items-baseline">
-						<X class="ml-auto h-4 w-4 text-ink-700" @click="dismiss" />
-					</span>
-				</div>
-				<div class="text-xs text-ink-800 px-3">
-					<span class="flex flex-col gap-2">
-						<span>
-							{{ __("Get the app on your iPhone for easy access & a better experience") }}
-						</span>
-						<span class="inline-flex items-start whitespace-nowrap">
-							<span>Tap&nbsp;</span>
-							<Share class="h-4 w-4 text-accent-600" />
-							<span>&nbsp;and then "Add to Home Screen"</span>
-						</span>
-					</span>
-				</div>
-			</div>
-		</template>
-	</Popover>
+	<!-- iPhone Safari: no prompt exists; Home shows InstallHint instead (alpha.7 0.10). -->
 </template>
 
 <script setup>
-import { Share, X } from "lucide-vue-next"
 import GButton from "@/components/glass/GButton.vue"
 import GModal from "@/components/glass/GModal.vue"
 import { ref } from "vue"
-
-import { Popover } from "frappe-ui"
 
 import { INSTALL_DISMISS_KEY, isWithinCooldown } from "@/utils/installPromptMemory"
 import { sessionUser } from "@/data/session"
@@ -58,7 +27,6 @@ const isAuthed = () => !!sessionUser()
 // Initialize deferredPrompt for use later to show browser install prompt.
 const deferredPrompt = ref(null)
 const showDialog = ref(false)
-const iosInstallMessage = ref(false)
 
 // The install prompt is a bottom sheet that overlays the home content and the
 // tab bar. `beforeinstallprompt` fires on every load while the app is
@@ -76,26 +44,11 @@ function recentlyHandled() {
 
 function dismiss() {
 	showDialog.value = false
-	iosInstallMessage.value = false
 	try {
 		localStorage.setItem(INSTALL_DISMISS_KEY, String(Date.now()))
 	} catch (e) {
 		// storage unavailable — the prompt may reappear next load, no worse than before
 	}
-}
-
-const isIos = () => {
-	// Detects if device is on iOS
-	const userAgent = window.navigator.userAgent.toLowerCase()
-	return /iphone|ipad|ipod/.test(userAgent)
-}
-
-// Detects if device is in standalone mode
-const isInStandaloneMode = () => "standalone" in window.navigator && window.navigator.standalone
-
-// Checks if should display install popup notification:
-if (isIos() && !isInStandaloneMode() && !recentlyHandled() && isAuthed()) {
-	iosInstallMessage.value = true
 }
 
 window.addEventListener("beforeinstallprompt", (e) => {
@@ -107,11 +60,7 @@ window.addEventListener("beforeinstallprompt", (e) => {
 	// installable, and re-popping the sheet over the tab bar each time is the
 	// nag this guard removes. Never surface it to a logged-out visitor.
 	if (recentlyHandled() || !isAuthed()) return
-	if (isIos() && !isInStandaloneMode()) {
-		iosInstallMessage.value = true
-	} else {
-		showDialog.value = true
-	}
+	showDialog.value = true
 })
 
 window.addEventListener("appinstalled", () => {

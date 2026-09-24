@@ -98,11 +98,8 @@ test("only the sheet may resize with the address bar", () => {
 			// matched at all. Found by a mutant that added exactly that and
 			// survived — the rule had a hole its own author could not see.
 			if (!/\d(?:dvh|svh|lvh)\b/.test(line)) continue
-			// The sheet's own token, and the one view that positions ITSELF a
-			// viewport down (InstallPrompt's margin-top) — a margin moves a
-			// box, it does not resize a compositing layer.
+			// The sheet's own token is the one allowed.
 			if (/--g-sheet-max-height/.test(line)) continue
-			if (/mt-\[calc\(100dvh/.test(line)) continue
 			offenders.push(`${path.slice(SRC.length)}: ${line.trim()}`)
 		}
 	}

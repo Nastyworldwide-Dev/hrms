@@ -22,3 +22,15 @@ export function isWithinCooldown(stored, now, cooldownMs = INSTALL_COOLDOWN_MS) 
 	const elapsed = now - at
 	return elapsed >= 0 && elapsed < cooldownMs
 }
+
+/**
+ * iPhone/iPad Safari has no install prompt, so Nadi says how once: a row on
+ * Home (alpha.7 0.10), hidden when installed or closed in the last 30 days.
+ * @param {{userAgent: string, standalone: boolean, stored: string|null, now: number}} env
+ * @returns {boolean}
+ */
+export function showIosInstallHint({ userAgent, standalone, stored, now }) {
+	if (!/iphone|ipad|ipod/i.test(userAgent || "")) return false
+	if (standalone) return false
+	return !isWithinCooldown(stored, now)
+}

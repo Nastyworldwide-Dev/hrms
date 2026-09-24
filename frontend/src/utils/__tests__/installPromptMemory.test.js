@@ -33,3 +33,23 @@ test("absent or junk storage never suppresses — the prompt is allowed to show"
 	// A future timestamp (clock skew) is treated as not-suppressed, not forever-on.
 	assert.equal(isWithinCooldown(NOW + 5000, NOW), false)
 })
+
+// alpha.7 0.10: on iPhone Safari the hint was a lime popover over the bottom
+// of EVERY page (contrast 1.18). It is now one row on Home, and this rule is
+// the only thing that decides whether that row shows.
+import { showIosInstallHint } from "../installPromptMemory.js"
+
+const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15"
+const hint = (o = {}) =>
+	showIosInstallHint({ userAgent: IPHONE, standalone: false, stored: null, now: NOW, ...o })
+
+test("iPhone Safari, not installed, never dismissed: the hint shows", () => {
+	assert.equal(hint(), true)
+})
+
+test("installed, dismissed within 30 days, or not an iPhone: no hint", () => {
+	assert.equal(hint({ standalone: true }), false, "already on the Home Screen")
+	assert.equal(hint({ stored: String(NOW - 1000) }), false, "closed a second ago")
+	assert.equal(hint({ userAgent: "Mozilla/5.0 (Linux; Android 14) Chrome/128" }), false)
+	assert.equal(hint({ stored: String(NOW - INSTALL_COOLDOWN_MS) }), true, "30 days later it may show once more")
+})

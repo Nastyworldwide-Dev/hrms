@@ -33,6 +33,8 @@
 				     so the button underneath is a decision rather than a guess
 				     (§2). Renders nothing when there is no shift and no open
 				     session, which is most of a day off. -->
+				<!-- iPhone Safari only, once per 30 days (alpha.7 0.10). -->
+				<InstallHint />
 				<NowBar />
 				<CheckInPanel />
 				<!-- Owner-approved Home (23 Sep 2026): News sits right under
@@ -66,6 +68,7 @@ import { pendingCountResource } from "@/data/remoteCheckin"
 
 import CheckInPanel from "@/components/CheckInPanel.vue"
 import NowBar from "@/components/NowBar.vue"
+import InstallHint from "@/components/InstallHint.vue"
 import NeedsYou from "@/components/NeedsYou.vue"
 import Announcements from "@/components/Announcements.vue"
 import HomeWeek from "@/components/HomeWeek.vue"
