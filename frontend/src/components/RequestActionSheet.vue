@@ -9,6 +9,9 @@
 				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
 					{{ __(kindLabel) }}
 				</span>
+				<!-- WHEN, under WHAT: read off the document itself, so the sheet an
+				     approver opens from Approvals says which day it is deciding. -->
+				<span v-if="whenLine" class="text-sm text-ink-600">{{ whenLine }}</span>
 			</div>
 			<ExternalLink
 				v-if="props.showOpenForm"
@@ -243,6 +246,7 @@ import { canOfferCancel } from "@/utils/cancelRule"
 import { formatCurrency, formatHours } from "@/utils/formatters"
 import { requestStatus } from "@/utils/requestStatus"
 import { REQUEST_KIND } from "@/utils/requestKind"
+import { requestDates } from "@/utils/requestDates"
 import { firstMessage } from "@/utils/loudRequest"
 import { shownLeaveBalance, shortLeaveNotice } from "@/utils/liveLeaveBalance"
 
@@ -477,6 +481,9 @@ const fieldsWithValues = computed(() => {
 		return field.value
 	})
 })
+
+//: Which day(s) this request is for; empty for types with no single date.
+const whenLine = computed(() => requestDates(document?.doc))
 
 //: The person's word for this request, not its doctype (plan P1-5).
 const kindLabel = computed(() => REQUEST_KIND[document?.doctype] || document?.doctype || "")

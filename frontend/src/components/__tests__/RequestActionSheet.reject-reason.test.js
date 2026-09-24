@@ -37,3 +37,11 @@ test("the reason goes to the server with the decision", () => {
 	const at = src.indexOf("return decision.submit(")
 	assert.match(src.slice(at, at + 300), /reason: status === "Rejected" \? reason : undefined/)
 })
+
+// alpha.6 screen journey: the approver's sheet for Fix a day and Shift change
+// named no date. The date line is read off the loaded document, under the title.
+test("the sheet says which day(s) the request is for", () => {
+	const header = template.slice(0, template.indexOf("<!-- Request Summary"))
+	assert.match(header, /v-if="whenLine"/)
+	assert.match(src, /const whenLine = computed\(\(\) => requestDates\(document\?\.doc\)\)/)
+})
