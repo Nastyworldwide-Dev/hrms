@@ -182,7 +182,22 @@ const expensesTableFields = createResource({
 	url: "hrms.api.get_doctype_fields",
 	params: { doctype: "Expense Claim Detail" },
 	transform(data) {
-		const excludeFields = ["description_sb", "amounts_sb", "base_amount", "base_sanctioned_amount"]
+		// alpha.6: the employee enters what they paid. "Sanctioned amount" is
+		// the approver's number (it follows the amount, watch below), and cost
+		// center / department / location are accounting tags the claim stamps
+		// from the company (Form.vue); none is a question for the employee.
+		const excludeFields = [
+			"description_sb",
+			"amounts_sb",
+			"base_amount",
+			"base_sanctioned_amount",
+			"sanctioned_amount",
+			"cost_center",
+			"department",
+			"location",
+			"project",
+			"accounting_dimensions_section",
+		]
 		return data
 			.filter((field) => !excludeFields.includes(field.fieldname))
 			.map((field) => {

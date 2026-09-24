@@ -28,6 +28,15 @@ export const PLAIN_LABELS = {
 	"expense date": "Date",
 	"in time": "In",
 	"out time": "Out",
+	// The approver's sheet (data/config/requestSummaryFields.js).
+	"leave balance": "Days left",
+	"total attendance days": "Days",
+	"total shift days": "Days",
+	"punch-verified ot (hours)": "Hours from check-ins",
+	compensation: "Paid as",
+	"work from date": "Worked from",
+	"work end date": "Worked to",
+	employee: "Who",
 }
 
 export function plainLabel(label) {

@@ -84,6 +84,7 @@
 	<GModal
 		v-if="settings.data?.allow_employee_checkin_from_mobile_app"
 		trigger="open-checkin-modal"
+		:title="__(nextAction.label)"
 		@did-present="onModalPresent"
 		@will-dismiss="onModalDismiss"
 	>
@@ -1348,7 +1349,9 @@ async function startCamera() {
 	} catch (err) {
 		if (generation !== cameraGeneration) return
 		console.error("[Selfie] Camera error:", err)
-		cameraError.value = __("Camera access denied. Please allow camera permission.")
+		cameraError.value = __(
+			"Nadi can't use the camera. Turn on Camera for this site in your phone's settings, then try again."
+		)
 		cameraStatus.value = "error"
 	}
 }

@@ -6,7 +6,7 @@
 		>
 			<div class="flex flex-col gap-1">
 				<div class="g-eyebrow">{{ __("Request") }}</div>
-				<span class="text-inkbase font-extrabold text-stat-number leading-tight">
+				<span class="text-inkbase font-bold text-stat-number leading-tight">
 					{{ __(kindLabel) }}
 				</span>
 				<!-- WHEN, under WHAT: read off the document itself, so the sheet an
@@ -34,7 +34,7 @@
 					]"
 				>
 					<div class="text-ink-600 text-xs shrink-0">
-						{{ __(field.label, null, props.modelValue?.doctype) }}
+						{{ sentenceCase(__(plainLabel(field.label), null, props.modelValue?.doctype)) }}
 					</div>
 					<component
 						v-if="field.fieldtype === 'Table'"
@@ -247,6 +247,8 @@ import { formatCurrency, formatHours } from "@/utils/formatters"
 import { requestStatus } from "@/utils/requestStatus"
 import { REQUEST_KIND } from "@/utils/requestKind"
 import { requestDates } from "@/utils/requestDates"
+import { plainLabel } from "@/utils/plainLabel"
+import { sentenceCase } from "@/utils/sentenceCase"
 import { firstMessage } from "@/utils/loudRequest"
 import { shownLeaveBalance, shortLeaveNotice } from "@/utils/liveLeaveBalance"
 
