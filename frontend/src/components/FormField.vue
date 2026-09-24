@@ -213,6 +213,7 @@ import GSelect from "@/components/glass/GSelect.vue"
 import GSwitch from "@/components/glass/GSwitch.vue"
 import { TextEditor } from "frappe-ui"
 import { sentenceCase } from "@/utils/sentenceCase"
+import { plainLabel } from "@/utils/plainLabel"
 import { computed, onMounted, inject } from "vue"
 
 import Link from "@/components/Link.vue"
@@ -248,7 +249,9 @@ const dayjs = inject("$dayjs")
 
 // the doctype label as the server sends it, translated, then sentence case
 // ("Leave Type" -> "Leave type"; acronyms like HR/OT/ID stay capital)
-const label = computed(() => sentenceCase(props.label ? __(props.label) : ""))
+// Plain words first (alpha.6 C1: "Leave Type" -> "Kind of leave"), then the
+// site's translation, then sentence case.
+const label = computed(() => sentenceCase(props.label ? __(plainLabel(props.label)) : ""))
 
 const isLayoutField = computed(() => {
 	return ["Section Break", "Column Break"].includes(props.fieldtype)

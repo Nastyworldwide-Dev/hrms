@@ -43,7 +43,7 @@
 								<span>
 									{{
 										__("{0}: {1}", [
-											__("Sanctioned"),
+											__("Approved"),
 											formatCurrency(item.sanctioned_amount || 0, expenseClaim.currency),
 										])
 									}}

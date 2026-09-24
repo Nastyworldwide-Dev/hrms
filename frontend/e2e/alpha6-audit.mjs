@@ -140,6 +140,8 @@ function audit() {
 	)
 
 	// W — words.
+	// The words gate (alpha.6 C1). Every one of these was on a live screen;
+	// utils/plainLabel.js replaced them. E1 requires 0 on every screen.
 	const BANNED = /\b(posting date|explanation|ot date|claimed hours|approver|submit(ted)?|draft|document|mandatory|invalid|leave type|shift type|employee|designation|accounting|exchange gain|advance|sanctioned|reimbursed|naming series|amended|docstatus|cancelled|hr can see this|overtime pay|you claim|compensat)/i
 	const pageText = texts.map((e) => ownText(e))
 	const jargon = [...new Set(pageText.filter((t) => BANNED.test(t)).map((t) => t.slice(0, 40)))]
