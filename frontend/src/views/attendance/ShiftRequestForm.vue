@@ -17,6 +17,7 @@
 </template>
 
 <script setup>
+import { approverOptions } from "@/utils/approverOptions"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"
@@ -57,15 +58,12 @@ const formFields = createResource({
 // first must not assume the other is ready. Stash the approvers and apply them
 // when both are present — the old code dereferenced formFields.data before it
 // existed, throwing, so the approver dropdown stayed empty and submit failed.
-const approverOptions = ref(null)
+const approverList = ref(null)
 function applyApproverOptions() {
-	const data = approverOptions.value
+	const data = approverList.value
 	const approver = formFields.data?.find((field) => field.fieldname === "approver")
 	if (!data || !approver) return
-	approver.documentList = data.map((a) => ({
-		label: a.full_name ? `${a.name} : ${a.full_name}` : a.name,
-		value: a.name,
-	}))
+	approver.documentList = approverOptions(data)
 	if (!shiftRequest.value.approver) shiftRequest.value.approver = data[0]?.name
 }
 createResource({
@@ -73,7 +71,7 @@ createResource({
 	params: { employee: employee.data.name },
 	auto: !props.id,
 	onSuccess(data) {
-		approverOptions.value = data
+		approverList.value = data
 		applyApproverOptions()
 	},
 })

@@ -1,11 +1,13 @@
-CLASS: layout fields kept by kind survive when every data field under them is filtered out (empty section headings)
+CLASS: a person shown by login email instead of name (the picker label was "email : Full Name")
 
-Instance: New expense showed 9 section headings, 6 empty (Currency, Taxes & charges, Advance payments, Totals, Exchange gain/loss, Accounting dimensions); Time off showed an empty "Other details" (alpha.6 audit §F, 24 Sep 2026).
+Instance: approver pickers on Time off, Expense and Shift change showed "muhammadnurhafiz@nastyworldwide.com : H…" (owner screenshots, 24 Sep 2026).
 
-Where section headings are drawn:
-- frontend/src/components/FormView.vue tabbed branch (tabFields) — same-root (fixed: tabFields built from shownFields)
-- frontend/src/components/FormView.vue flat branch (props.fields) — same-root (fixed: v-for over shownFields)
-- frontend/src/components/FormField.vue Section Break branch — not-affected: draws what it is given; the decision is upstream
-- each screen's getFilteredFields (leave, expense, attendance, shift, OT) — not-affected: allowlists are right to keep layout by kind; FormView now decides visibility once for all
+Call sites that built the label:
+- frontend/src/views/leave/Form.vue:343 — same-root (approverOptions)
+- frontend/src/views/expense_claim/Form.vue:226 — same-root (approverOptions)
+- frontend/src/views/attendance/ShiftRequestForm.vue:66 — same-root (approverOptions)
+Other person displays:
+- Approvals rows, notifications, Who to ask — not-affected: already print employee_name / full_name (alpha.5 S8)
+- read-only "Leave approver name" field — not-affected: holds the full name
 
-Locked: utils/__tests__/visibleSections.test.js (8). Measured after build: expense 9 -> 3 headings, time off "Other details" gone.
+Locked: utils/__tests__/approverOptions.test.js (4). Measured after build: 0 email strings on the three forms; pickers read "W0 approver".

@@ -43,6 +43,7 @@
 </template>
 
 <script setup>
+import { approverOptions } from "@/utils/approverOptions"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"
@@ -222,10 +223,7 @@ function getFilteredFields(fields) {
 function setExpenseApprover(data) {
 	const expense_approver = formFields.data?.find((field) => field.fieldname === "expense_approver")
 	expense_approver.reqd = data?.is_mandatory
-	expense_approver.documentList = data?.department_approvers.map((approver) => ({
-		label: approver.full_name ? `${approver.name} : ${approver.full_name}` : approver.name,
-		value: approver.name,
-	}))
+	expense_approver.documentList = approverOptions(data?.department_approvers)
 
 	expenseClaim.value.expense_approver = data?.expense_approver
 	expenseClaim.value.expense_approver_name = data?.expense_approver_name

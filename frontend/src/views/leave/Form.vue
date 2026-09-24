@@ -18,6 +18,7 @@
 </template>
 
 <script setup>
+import { approverOptions } from "@/utils/approverOptions"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { createResource, toast } from "frappe-ui"
@@ -339,10 +340,7 @@ function setHalfDayDateRange() {
 function setLeaveApprovers(data) {
 	const leave_approver = formFields.data?.find((field) => field.fieldname === "leave_approver")
 	leave_approver.reqd = data?.is_mandatory
-	leave_approver.documentList = data?.department_approvers.map((approver) => ({
-		label: approver.full_name ? `${approver.name} : ${approver.full_name}` : approver.name,
-		value: approver.name,
-	}))
+	leave_approver.documentList = approverOptions(data?.department_approvers)
 	if (!leaveApplication.value.leave_approver) {
 		leaveApplication.value.leave_approver = data?.leave_approver
 		leaveApplication.value.leave_approver_name = data?.leave_approver_name
