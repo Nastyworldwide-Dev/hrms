@@ -1,5 +1,28 @@
 <template>
 	<ResourceError v-if="props.resource?.error" :resource="props.resource" :what="props.what" />
+	<!-- Compact (Requests' "Your last 5"): ONE inset group, one row per
+	     request, the caller's footer ("See all") as the last row (alpha.7 A6/A15). -->
+	<template v-else-if="props.items?.length && props.compact">
+		<div class="g-form-group">
+			<button
+				v-for="link in props.items"
+				:key="link.name"
+				type="button"
+				class="g-form-row g-form-row--action g-req-row"
+				@click="openRequestModal(link)"
+			>
+				<span class="g-form-row__label">
+					{{ __(REQUEST_KIND[link.doctype] || link.doctype) }}
+					<span class="g-req-row__when"> · {{ filedOn(link) }}</span>
+				</span>
+				<GStatusChip
+					:status="requestStatus(link.doctype, link).label"
+					:label="__(requestStatus(link.doctype, link).label)"
+				/>
+			</button>
+			<slot name="footer" />
+		</div>
+	</template>
 	<div class="flex flex-col overflow-auto" v-else-if="props.items?.length">
 		<div
 			class="flex flex-row py-3 items-center justify-between border-b border-divider cursor-pointer"
@@ -13,18 +36,7 @@
 		>
 			<!-- One line per request (one-screen Requests, 23 Sep): what it is,
 			     when it was filed, and its status. The full row is in See all. -->
-			<template v-if="props.compact">
-				<span class="text-sm text-ink truncate">
-					{{ __(REQUEST_KIND[link.doctype] || link.doctype) }}
-					<span class="text-ink-600"> · {{ filedOn(link) }}</span>
-				</span>
-				<GStatusChip
-					:status="requestStatus(link.doctype, link).label"
-					:label="__(requestStatus(link.doctype, link).label)"
-				/>
-			</template>
 			<component
-				v-else
 				:is="props.component || link.component"
 				:doc="link"
 				:workflowStateField="link.workflow_state_field"

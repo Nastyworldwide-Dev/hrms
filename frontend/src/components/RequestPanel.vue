@@ -2,19 +2,18 @@
 	<!-- YOUR LAST 5 (owner-approved one-screen Requests, 23 Sep 2026): own
 	     requests, newest first, one line each, then See all. No tabs and no
 	     filter chips here — they moved, unchanged, into the See all sheet. -->
-	<div class="w-full">
-		<div class="g-eyebrow mb-2">{{ __("Your last 5") }}</div>
+	<div class="w-full g-form-section">
+		<h2 class="g-form-section__title">{{ __("Your last 5") }}</h2>
 		<p v-if="refreshing" class="text-xs text-ink-500 mb-2" role="status">
 			{{ __("Refreshing…") }}
 		</p>
-		<RequestList :items="lastFive" :resource="lastFiveResource" :what="__('your requests')" compact />
-		<button
-			type="button"
-			class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
-			@click="openAll"
-		>
-			{{ __("See all") }} ›
-		</button>
+		<RequestList :items="lastFive" :resource="lastFiveResource" :what="__('your requests')" compact>
+			<template #footer>
+				<button type="button" class="g-form-row g-form-row--action g-seeall" @click="openAll">
+					{{ __("See all") }}
+				</button>
+			</template>
+		</RequestList>
 	</div>
 
 	<GModal :is-open="allOpen" :title="__('All your requests')" @did-dismiss="allOpen = false">

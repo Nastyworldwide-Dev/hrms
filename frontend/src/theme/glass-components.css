@@ -4089,3 +4089,26 @@ html {
 	line-height: 22px;
 	color: var(--g-ink2);
 }
+
+/* alpha.7 A6/A15: a request row in an inset group, and "See all" as the
+   group's last row (tinted text, as an iOS action row). */
+.g-req-row {
+	justify-content: space-between;
+	text-align: left;
+}
+.g-req-row > .g-form-row__label {
+	max-width: none;
+	flex: 1 1 auto;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.g-req-row__when {
+	color: var(--g-ink2);
+}
+.g-form-row.g-req-row > .g-badge {
+	flex: 0 0 auto;
+}
+.g-seeall {
+	color: var(--g-ink2);
+}
