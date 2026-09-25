@@ -15,7 +15,7 @@
 			{{ __("Coming up could not be loaded. Pull down to try again.") }}
 		</p>
 		<template v-else>
-			<GListRow :label="label" :tappable="Boolean(target)" @click="open">
+			<GListRow :label="label" :sublabel="sublabel" :tappable="Boolean(target)" @click="open">
 				<template #icon>
 					<component :is="icon" class="g-row-icon" />
 				</template>
@@ -56,16 +56,16 @@ function what(item) {
 	return item.label
 }
 
-const label = computed(() => {
-	if (next.value) return `${what(next.value)} · ${day(next.value.date)}`
-	if (holiday.value) {
-		return __("Nothing booked. Next public holiday: {0} · {1}", [
-			holiday.value.label,
-			day(holiday.value.date),
-		])
-	}
-	return __("Nothing booked.")
-})
+//: Title + subtitle, as an iOS row (alpha.8): one sentence wrapped to two
+//: heading-sized lines on a phone.
+const label = computed(() =>
+	next.value ? `${what(next.value)} · ${day(next.value.date)}` : __("Nothing booked")
+)
+const sublabel = computed(() =>
+	!next.value && holiday.value
+		? __("Next public holiday: {0} · {1}", [holiday.value.label, day(holiday.value.date)])
+		: ""
+)
 
 function open() {
 	if (!target.value) return

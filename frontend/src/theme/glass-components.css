@@ -1039,6 +1039,11 @@ html[data-theme="dark"] .g-badge--open {
 	color: var(--g-ink);
 }
 .g-row__sub {
+	/* Two lines at most, then an ellipsis, as iOS Mail (alpha.8). */
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
 	font-family: var(--g-type-caption-family);
 	font-size: var(--g-type-caption-size);
 	font-weight: var(--g-type-caption-weight);

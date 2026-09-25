@@ -30,7 +30,7 @@ test("Home reads Today, News, This week, Coming up, Waiting on you", () => {
 
 for (const [name, src, resource, empty] of [
 	["This week", week, "homeWeek", "Nothing to claim this week."],
-	["Coming up", comingUp, "homeComingUp", "Nothing booked."],
+	["Coming up", comingUp, "homeComingUp", "Nothing booked"],
 ]) {
 	test(`${name} always renders: eyebrow, skeleton, error line, empty line`, () => {
 		const t = templateOf(src)
@@ -53,7 +53,11 @@ test("This week taps through to the overtime form", () => {
 })
 
 test("Coming up names the next public holiday when nothing is booked", () => {
-	assert.match(comingUp, /Nothing booked\. Next public holiday: \{0\} · \{1\}/)
+	// alpha.8: title + subtitle, as iOS rows are, instead of one sentence
+	// that wrapped to two heading-sized lines (owner's iPhone, 25 Sep).
+	assert.match(comingUp, /__\("Nothing booked"\)/)
+	assert.match(comingUp, /__\("Next public holiday: \{0\} · \{1\}"/)
+	assert.match(comingUp, /:sublabel="sublabel"/)
 })
 
 test("both resources are personal and call the new home endpoints", () => {
