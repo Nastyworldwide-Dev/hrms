@@ -1,7 +1,4 @@
-CLASS: a saved request shows a record ID or noise where a person expects words (link value drawn raw)
-frontend/src/components/FormView.vue employee row — same-root (fixed: stored employee_name via display)
-frontend/src/components/FormView.vue company row — same-root (fixed: hidden on the viewer's own request)
-frontend/src/components/Link.vue selectedLabel — same-root (display wins over the raw ID)
-frontend/src/components/FormField.vue — same-root (passes display through)
-leave_approver / expense_approver ("Goes to") — not-affected — measured: shows "W0 approver" (the select's label), the login is only the hidden value
-frontend/src/views/Profile.vue — not-affected — its own rows, no FormView
+CLASS: a form row's label capped at 45% wraps beside a short value or a switch
+frontend/src/theme/glass-components.css .g-form-row__label — same-root (fixed: 70% cap)
+.g-form-row--stacked, .g-ann-quiet, .g-req-row, .g-balances-row labels — not-affected — they set max-width none already
+remaining wrap: /issues/new "What are you reporting?" at 320 pt — not-affected — a question beside a picker on the narrowest phone; wraps within the row as iOS does

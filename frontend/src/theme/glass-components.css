@@ -3630,7 +3630,11 @@ ion-router-outlet {
 }
 .g-form-row__label {
 	flex: 0 1 auto;
-	max-width: 45%;
+	/* alpha.9 D14 (measured: "Hours from check-ins" broke onto two lines beside
+	   a one-digit value): as iOS lays out a value row, the label keeps its
+	   one line and the value gets what is left. Only a label longer than 70%
+	   of the row wraps, so a long value still has room. */
+	max-width: 70%;
 	/* iOS Body: 17/22 regular */
 	font-family: var(--g-font-ui);
 	font-size: 17px;

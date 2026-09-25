@@ -26,3 +26,12 @@ test("Company is not drawn on the viewer's own request", () => {
 	assert.match(view, /OWN_REQUEST_NOISE = \["company"\]/)
 	assert.match(view, /formModel\.value\?\.employee === currentEmployee\?\.data\?\.name/)
 })
+
+test("a row label keeps its one line beside a short value (D14)", () => {
+	// Measured on 36 screens at 402 and 320 pt: the 45% cap broke 12 labels
+	// ("Hours from check-ins", "Shift reminders", "Day you worked") onto two
+	// lines beside a one-digit value or a switch; at 70% one remains, a long
+	// question beside a picker on the narrowest phone.
+	const css = read("../../theme/glass-components.css")
+	assert.match(css, /\.g-form-row__label \{\s*flex: 0 1 auto;[^}]*max-width: 70%;/)
+})
