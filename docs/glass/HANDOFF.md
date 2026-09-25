@@ -1,11 +1,14 @@
 # HANDOFF
-prompt:   owner report 25 Sep (fix-a-day Open, manager can't see, AL balance, Desk Fix attendance)
+prompt:   defect families behind the 25 Sep report (hunt + fix)
 status:   done
-commit:   446b77b9f on nz-glass (after tag v2.0.0-alpha.7; deploy the branch head)
+commit:   0523b4016 on nz-glass (deploy the branch head)
 files:    hrms/api/attendance_fix_day.py
-          hrms/tests/test_attendance_fix_day_save_day.py
-          frontend/src/utils/requestStatus.js
-          frontend/src/components/RequestBalances.vue
-verify:   Desk > Employee Checkin > Fix attendance on Norazlin 19 or 20 Aug: pair pre-ticked, Save & rebuild writes Present
-flags:    the two On Duty rows (27 Jun, 29 Jul) are already submitted; confirm on live that their attendance exists (not checked: no live access)
+          hrms/api/attendance_fix_days.py
+          hrms/api/calendar.py
+          hrms/api/__init__.py
+          frontend/src/components/CheckinDecisionSheet.vue
+          frontend/src/components/glass/GBalanceCard.vue
+          docs/glass/audit/2026-09-25-defect-families.md
+verify:   Desk Fix attendance on an August day with an old-system Absent row -> Save & rebuild -> Present
+flags:    stored "Open" on old submitted requests left as is (every screen now reads it right); no live access to confirm the two On Duty days
 next:     owner deploys nz-glass head
