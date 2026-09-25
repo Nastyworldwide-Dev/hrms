@@ -1,11 +1,11 @@
 # HANDOFF
-prompt:   alpha.9 — 25 defects (names not IDs, nothing loose, one radius, sheets, lock-in) + HR OT hours 1.50
+prompt:   half day AM/PM (not late) + Fix a day keeps typed hours — same release as alpha.9
 status:   done
-commit:   see git log nz-glass (b0337e3db + baselines + this)
-files:    frontend/src/components/{FormView,Link,RequestList,HolidayList,LeaveBalance,WhoToAsk}.vue
-          frontend/src/views/{Notifications,Profile}.vue, team/TeamDashboard.vue
-          frontend/src/theme/glass-components.css, design/gates/ios.mjs
-          hrms/hr/doctype/ot_request/ot_request_list.js
-verify:   set -a && . ./.env && set +a && node design/gates/ios.mjs   (all four audits 0)
-flags:    D15-D17 were the audit counting avatar/logo marks; D23 needed no change
-next:     deploy; then the owner's open rulings (Search, reports)
+commit:   ed55d1e7c on nz-glass
+files:    hrms/utils/half_day_session.py, hrms/api/half_day.py, hrms/utils/request_hours.py
+          hrms/hr/doctype/{shift_type,leave_application,attendance_request}/*.py
+          hrms/patches/v16_0/leave_half_day_session.py
+          frontend/src/views/leave/Form.vue, utils/halfDaySession.js, FormView.vue
+verify:   Time off > Half day > Which half shows "AM · start 13:30"; approve an AM half day on a day marked late -> late cleared
+flags:    old half days keep a blank session (no guess); pay/deduction rules unchanged
+next:     deploy nz-glass
