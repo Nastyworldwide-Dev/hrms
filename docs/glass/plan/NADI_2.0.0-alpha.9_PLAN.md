@@ -41,35 +41,35 @@ typography, all pages, sheets, dialogs. Plan it the Apple way."
 | # | Screen | What |
 |---|---|---|
 | D1 ✅ 0f5e6667b | Home (approver) | "Needs you" header + "Nothing waiting on you." as loose grey text |
-| D2 | Team | "Today · Fri 25 Sep" loose bold text; the calendar is a group, the list below is not |
-| D3 | Notifications | "67 unread" loose text above the list |
-| D4 | Who to ask | "Your manager / No manager is set for you" and "HR / HR hasn't listed contacts yet" are all loose small text |
+| D2 ✅ 085680ad0 | Team | "Today · Fri 25 Sep" loose bold text; the calendar is a group, the list below is not |
+| D3 ✅ 284caf4bb | Notifications | "67 unread" loose text above the list |
+| D4 ✅ 284caf4bb | Who to ask | "Your manager / No manager is set for you" and "HR / HR hasn't listed contacts yet" are all loose small text |
 | D5 ✅ 0f5e6667b | Approvals | "Nothing is waiting on you." loose text |
 | D6 | Help, HR Issues | "Open" as a loose label above an empty state |
-| D7 | Overtime (new) | "No overtime recorded in this period…" loose text above the form |
-| D8 | Expense (new, detail) | "Expenses RM 0 +" loose header row; "Paid back RM 0" group of one |
-| D9 | You | "Version 2.0.0-alpha.7 · 2026-09-25 07:11" loose (iOS: a footer or About row) |
+| D7 ✅ 085680ad0 | Overtime (new) | "No overtime recorded in this period…" loose text above the form |
+| D8 ✅ 085680ad0 | Expense (new, detail) | "Expenses RM 0 +" loose header row; "Paid back RM 0" group of one |
+| D9 ✅ 284caf4bb | You | "Version 2.0.0-alpha.7 · 2026-09-25 07:11" loose (iOS: a footer or About row) |
 
 ### Wrong information (R9)
 | # | Screen | What |
 |---|---|---|
-| D10 | Every sent-request detail (Fix a day, Shift change, Time off, Overtime, Expense) | "Who: HR-EMP-00009" — an employee ID, not the name (owner rule: ids never reach users) |
-| D11 | Same | "Company: Nadi W0 A" on the employee's OWN request — noise |
+| D10 ✅ 2f2ddb58d | Every sent-request detail (Fix a day, Shift change, Time off, Overtime, Expense) | "Who: HR-EMP-00009" — an employee ID, not the name (owner rule: ids never reach users) |
+| D11 ✅ 2f2ddb58d | Same | "Company: Nadi W0 A" on the employee's OWN request — noise |
 | D12 ✅ cdf71f556 | Expense detail | bar reads "Expense" + "Approved, not paid yet" overlapping the title ("Expensproved…") |
 | D13 ✅ cdf71f556 | Overtime / Time off detail | numeric values show a stray box glyph ("2▪", "1▪", "19▪") — a spinner/stepper artefact of a disabled number input |
-| D14 | Overtime detail | "Hours from check-ins" wraps to two lines at 17 pt |
+| D14 ✅ e8086bfdc | Overtime detail | "Hours from check-ins" wraps to two lines at 17 pt |
 
 ### Type (R8)
 | # | Where | What |
 |---|---|---|
-| D15 | Home, Requests, Calendar, Score, More | 18 pt and 14 pt text (off ramp) — the Today card's state line and bar text |
-| D16 | You, Settings | 24 pt (off ramp) |
-| D17 | Expense | 14 pt totals |
+| D15 ✅ 02d619463 (audit counted avatar/logo marks) | Home, Requests, Calendar, Score, More | 18 pt and 14 pt text (off ramp) — the Today card's state line and bar text |
+| D16 ✅ 02d619463 (avatar initial) | You, Settings | 24 pt (off ramp) |
+| D17 ✅ 085680ad0 (totals now a footer) | Expense | 14 pt totals |
 
 ### Shape (R3, R5, R7)
 | # | Where | What |
 |---|---|---|
-| D18 | Home, Calendar | two radii on one screen (26 and 20): the Today card and the calendar still use 20 |
+| D18 ✅ 02d619463 | Home, Calendar | two radii on one screen (26 and 20): the Today card and the calendar still use 20 |
 | D19 | Time off dashboard, Expense dashboard | big "No leave allocated yet" card with an empty state INSIDE a card, then a second empty state below: two empty states on one screen |
 | D20 | Expense dashboard | lime "Total claimed" card: lime used as a surface, not an action (R10) |
 | D21 ◐ 0f5e6667b (Leave left always answers) | Requests (approver) | "Your last 5" header then an empty state with no group; balances line missing when there is no allocation — the screen is mostly blank |
