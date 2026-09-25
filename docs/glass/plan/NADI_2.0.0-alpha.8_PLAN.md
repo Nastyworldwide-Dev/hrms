@@ -95,3 +95,21 @@ request and cannot show two rates in one cell honestly; a report can.
 3. Which iOS version is on the phone in the screenshots? (Why the switches are checkboxes.)
 4. OT report: claimed hours fewer than worked — which rate do they take? (Payroll today: first band first.)
 5. OT report: include Replacement Leave claims (rate "—") or pay claims only?
+
+
+## 7. Done so far (25 Sep) and what is left
+
+Done: HR's Day Type + OT Rate columns on the existing OT Request report
+(7c02c1d2b, a patch fills existing pay claims); separator start/end from the
+owner's Settings shot (e8eeb25f7); tab lens centred, inset, sliding, and the
+press felt (ba21a2165); pull-down and scroll lag causes removed (ba21a2165);
+switches on iOS 26 (f999305f0); Home holiday line + 2-line previews
+(e7254f520); the You account card (a9f89bec2); "Rate ×" header.
+
+Left, needs the owner:
+- **Hours shown with 9 decimals in Desk** (2.940000000): the 9 is deliberate
+  STORAGE (8 Sep, beae4237c, checked by a patch). Showing 2 decimals means a
+  display override in Desk for Attendance / OT Request / the band table, while
+  keeping the 9 stored. Say yes and it is done; it changes nothing stored.
+- Confirm on the iPhone that the lag is gone (the two causes found are fixed;
+  Chrome's trace was already clean, so the phone is the only proof).

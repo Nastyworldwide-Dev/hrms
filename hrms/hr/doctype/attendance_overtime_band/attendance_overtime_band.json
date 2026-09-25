@@ -23,7 +23,7 @@
    "fieldname": "rate",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Rate (× Hourly)",
+   "label": "Rate ×",
    "precision": "2",
    "read_only": 1
   },
