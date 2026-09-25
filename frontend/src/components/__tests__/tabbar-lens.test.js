@@ -51,8 +51,9 @@ test("the lens is an inset pill that slides, and the press is felt", () => {
 	assert.match(lens.transition || "", /left var\(--g-motion-tab-lens-duration\)/)
 	assert.match(read("../BottomTabs.vue"), /class="g-tabbar__lens"/)
 	assert.match(read("../BottomTabs.vue"), /:style="lensStyle"/)
-	const pressed = decls("ion-tab-button.g-tabbar__btn:active .g-tabbar__well")
-	assert.match(pressed.transform || "", /scale\(0\.9/)
+	// r2: the whole tab scales (alpha8-native-feel.test.js)
+	const pressed = decls("ion-tab-button.g-tabbar__btn:active")
+	assert.match(pressed.transform || "", /scale\(0\.96\)/)
 	// the whole tab cell no longer paints the lens
 	assert.ok(!decls("ion-tab-button.g-tabbar__btn.tab-selected").background)
 })

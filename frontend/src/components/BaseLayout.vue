@@ -10,7 +10,7 @@
 			</template>
 		</ShellHeader>
 
-		<ion-content class="ion-no-padding g-page__content">
+		<ion-content ref="content" class="ion-no-padding g-page__content">
 			<div class="flex flex-col min-h-full w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
 				<!-- iOS large title (alpha.8): part of the page, so it scrolls away
 				     with it at no cost; tab roots only (a pushed screen's title is
@@ -51,11 +51,20 @@ const largeTitle = ref(null)
 const collapsed = ref(false)
 provide("gTitleCollapsed", collapsed)
 let observer = null
-onMounted(() => {
+const content = ref(null)
+onMounted(async () => {
 	if (!largeTitle.value || typeof IntersectionObserver === "undefined") return
-	observer = new IntersectionObserver(([entry]) => {
-		collapsed.value = !entry.isIntersecting
-	})
+	// Rooted on the page's own scroller: a tab page Ionic hid is not "scrolled
+	// past", and read against the viewport it was (owner, 25 Sep: the title
+	// showed twice after switching tabs). Collapsed only when the large title
+	// went UP past the scroller's top edge.
+	observer = new IntersectionObserver(
+		([entry]) => {
+			if (!entry.rootBounds) return
+			collapsed.value = !entry.isIntersecting && entry.boundingClientRect.bottom <= entry.rootBounds.top
+		},
+		{ root: await content.value?.$el?.getScrollElement?.() }
+	)
 	observer.observe(largeTitle.value)
 })
 onBeforeUnmount(() => observer?.disconnect())

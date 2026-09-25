@@ -185,8 +185,8 @@ ion-tab-button.g-tabbar__btn {
    0.5 s, damping 0.825) as a cubic-bezier with a small overshoot. */
 .g-tabbar__lens {
 	position: absolute;
-	top: calc(var(--g-tabbar-pad-top) + 4px);
-	bottom: calc(var(--g-tabbar-pad-bottom) + 4px);
+	top: var(--g-tabbar-pad-top);
+	bottom: var(--g-tabbar-pad-bottom);
 	pointer-events: none;
 	z-index: 0;
 	transition:
@@ -204,17 +204,19 @@ ion-tab-button.g-tabbar__btn {
 	z-index: 1;
 }
 /* The press is felt: the pressed tab's icon dips, as iOS 26 tabs do. */
-ion-tab-button.g-tabbar__btn .g-tabbar__well {
+/* A press scales the whole tab as one piece, icon and label together
+   (alpha.8 r2: scaling only the icon moved it against its label). */
+ion-tab-button.g-tabbar__btn {
 	transition: transform var(--g-motion-button-press-duration) var(--g-motion-button-press-easing);
 }
-ion-tab-button.g-tabbar__btn:active .g-tabbar__well {
-	transform: scale(0.9);
+ion-tab-button.g-tabbar__btn:active {
+	transform: scale(0.96);
 }
 @media (prefers-reduced-motion: reduce) {
 	.g-tabbar__lens {
 		transition: none;
 	}
-	ion-tab-button.g-tabbar__btn:active .g-tabbar__well {
+	ion-tab-button.g-tabbar__btn:active {
 		transform: none;
 	}
 }
@@ -1008,7 +1010,7 @@ html[data-theme="dark"] .g-badge--open {
 	height: 1px;
 	background: var(--g-hair);
 }
-.g-row:has(.g-row__well) + .g-row::before {
+.g-row + .g-row:has(.g-row__well)::before {
 	/* iOS 26 Settings, measured: the line starts at the text (tile 29 + gap)
 	   and stops 16 pt short of the group's edge. */
 	left: 58px;
@@ -3899,6 +3901,15 @@ body {
 	overscroll-behavior-x: none;
 	background-color: var(--g-bg);
 }
+/* alpha.8 r2 (owner: "goes up and down more than it should"): the document
+   itself never scrolls or rubber-bands; the app shell (bar, tab bar) stays
+   put and only each page's own content (ion-content) scrolls, as a native
+   app does. Pinch zoom stays (§14). */
+html {
+	overflow: hidden;
+	overscroll-behavior: none;
+	height: 100%;
+}
 
 /* The header "⋯" menu (frappe-ui Dropdown, ghost button) renders 28px. It is
    a 44px target now (HIG / WCAG 2.5.8); the menu's own redesign is ticketed
@@ -4421,4 +4432,19 @@ ion-modal.g-mustread {
 	right: 16px;
 	height: 1px;
 	background: var(--g-hair);
+}
+
+/* alpha.8 r2: frappe-ui's forms plugin paints a checked checkbox blue with
+   [type=checkbox]:checked (0,2,0) and a blue focus ring; the switch outranks
+   both so Safari draws only its own switch, lime-tinted. */
+.g-switch__input[type="checkbox"],
+.g-switch__input[type="checkbox"]:checked,
+.g-switch__input[type="checkbox"]:focus {
+	background-color: transparent;
+	background-image: none;
+	border-color: transparent;
+	box-shadow: none;
+}
+.g-switch__input[type="checkbox"]:focus-visible {
+	box-shadow: var(--g-shadow-focus-ring);
 }

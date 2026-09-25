@@ -39,7 +39,8 @@ test("the separator runs from the text to 16 pt short of the edge", () => {
 	// tile 30.7-59.3, text at 76, separator 74.3 -> 369.7, i.e. it stops
 	// 16 pt before the group's right edge. Ours ran to the edge, which read
 	// as "shifted to the right".
-	assert.equal(decls(".g-row:has(.g-row__well) + .g-row::before").left, "58px")
+	// r2: keyed on the row the line belongs to (alpha8-native-feel.test.js)
+	assert.equal(decls(".g-row + .g-row:has(.g-row__well)::before").left, "58px")
 	assert.equal(decls(".g-row + .g-row::before").right, "16px")
 	assert.equal(decls(".g-form-row + .g-form-row::before").right, "16px")
 	assert.equal(decls(".g-row__well").width, "29px")

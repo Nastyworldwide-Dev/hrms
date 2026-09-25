@@ -36,3 +36,15 @@ test("nothing animates a layout property", () => {
 	})
 	assert.deepEqual(offenders, [])
 })
+
+
+// Owner, 25 Sep 2026: "there is a redundant title in the page and the top
+// bar". Ionic keeps every tab page alive when you switch tabs; hiding a page
+// made its large title "leave the screen", the observer said collapsed, and
+// the page came back with BOTH the small bar title and the large one. The
+// small title appears only when the large one scrolled UNDER THE BAR, i.e.
+// it is above the scroll area's top edge, never because the page was hidden.
+test("the small title shows only when the large one went up under the bar", () => {
+	assert.match(layout, /entry\.boundingClientRect\.bottom\s*<=\s*entry\.rootBounds\.top/)
+	assert.match(layout, /root:\s*await/)
+})
