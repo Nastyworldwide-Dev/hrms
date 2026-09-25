@@ -118,14 +118,19 @@
 					</div>
 
 					<!-- An empty list used to leave a blank date picker and no answer.
-			     Say which of the four situations this is. -->
-					<p
-						v-if="emptyReason && !props.id"
-						class="g-empty-line mx-4 mt-4 text-sm text-ink-600"
-						role="status"
-					>
-						{{ emptyReason }}
-					</p>
+			     Say which of the four situations this is: one row in a group
+			     under "Pick a day", as iOS shows an empty section (alpha.9 D7:
+			     not a loose grey line above the form). -->
+					<div v-if="emptyReason && !props.id" class="g-form-body g-ot-days">
+						<section class="g-form-section">
+							<h2 class="g-form-section__title">{{ __("Pick a day") }}</h2>
+							<div class="g-form-group">
+								<p class="g-form-row g-form-row--stacked g-ot-empty" role="status">
+									{{ emptyReason }}
+								</p>
+							</div>
+						</section>
+					</div>
 				</template>
 			</FormView>
 			<ResourceError :resource="formFields" back what="the overtime request form" />

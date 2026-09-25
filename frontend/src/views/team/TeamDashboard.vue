@@ -59,12 +59,14 @@
 					</template>
 				</GCalendar>
 
-				<div class="flex flex-row items-center justify-between gap-2">
-					<!-- data-visual-mask: defaults to today, so "TODAY · FRI 21 AUG"
-					     becomes "TODAY · SUN 23 AUG" overnight. -->
-					<span class="g-datenav__label" data-visual-mask>
+				<!-- The day is the section header over the team, with the roster as
+				     its trailing link (alpha.9 D2: it was loose bold text). -->
+				<div class="g-exp-head">
+					<!-- data-visual-mask: defaults to today, so "Today · Fri 21 Aug"
+					     becomes "Today · Sun 23 Aug" overnight. -->
+					<h2 class="g-form-section__title" data-visual-mask>
 						{{ dayLabel }}
-					</span>
+					</h2>
 					<router-link
 						v-if="teamStatus.data?.members?.length"
 						:to="{ name: 'TeamRosterView' }"
@@ -79,65 +81,61 @@
 				     member SET is exactly the reports_to team the server returned —
 				     frontend/tests/team-grouping.test.mjs pins that grouping can
 				     never add, drop, or leak a member. -->
-				<div
-					class="flex flex-col border-t-2 border-divider"
-					v-if="teamStatus.data?.members?.length"
-				>
-					<template v-for="group in departmentGroups" :key="group.department">
-						<div class="g-eyebrow px-3 pt-4 pb-1.5">
+				<!-- One iOS section per department: its header, then its people as
+				     rows in ONE group (alpha.9 D2: they were bordered blocks on the
+				     page, not a group). A tap opens the day's detail under the row. -->
+				<template v-if="teamStatus.data?.members?.length">
+					<section
+						v-for="group in departmentGroups"
+						:key="group.department"
+						class="g-form-section"
+					>
+						<h2 class="g-form-section__title">
 							{{ departmentLabel(group.department) }} ({{ group.members.length }})
-						</div>
-						<div
-							v-for="member in group.members"
-							:key="member.employee"
-							class="g-focusable flex flex-col bg-surface border-b border-divider p-3 cursor-pointer"
-							role="button"
-							tabindex="0"
-							:aria-expanded="String(expandedRow === member.employee)"
-							@click="toggleRow(member.employee)"
-							@keydown.enter.prevent="toggleRow(member.employee)"
-							@keydown.space.prevent="toggleRow(member.employee)"
-						>
-							<div class="flex flex-row items-center justify-between gap-2">
-								<div class="flex flex-col min-w-0">
-									<span class="font-semibold text-panel-title text-inkbase truncate">
-										{{ member.employee_name }}
+						</h2>
+						<div class="g-form-group">
+							<div
+								v-for="member in group.members"
+								:key="member.employee"
+								class="g-focusable g-team-row"
+								role="button"
+								tabindex="0"
+								:aria-expanded="String(expandedRow === member.employee)"
+								@click="toggleRow(member.employee)"
+								@keydown.enter.prevent="toggleRow(member.employee)"
+								@keydown.space.prevent="toggleRow(member.employee)"
+							>
+								<div class="g-team-row__main">
+									<span class="g-team-row__text">
+										<span class="g-team-row__name">{{ member.employee_name }}</span>
+										<span class="g-team-row__sub">
+											{{ [member.designation, summaryLine(member)].filter(Boolean).join(" · ") }}
+										</span>
 									</span>
-									<span class="text-kra-label text-ink-600 truncate">
-										{{ member.designation }}
+									<GStatusChip class="flex-none" :status="member.status" :label="__(member.status)" />
+								</div>
+
+								<!-- expanded detail -->
+								<div v-if="expandedRow === member.employee" class="g-team-row__detail">
+									<span v-if="member.shift">
+										{{ __("Shift") }}: {{ member.shift }} · {{ formatTime(member.shift_start) }}–{{
+											formatTime(member.shift_end)
+										}}
+									</span>
+									<span>
+										{{ __("First in") }}: {{ formatPunch(member.first_in) }} · {{ __("Last out") }}:
+										{{ formatPunch(member.last_out) }}
+									</span>
+									<span v-if="member.leave_type">
+										{{ __(member.leave_type, null, "Leave Type") }}
+										<template v-if="member.half_day">({{ __("Half day") }})</template>
+										· {{ __("until") }} {{ dayjs(member.leave_until).format("D MMM") }}
 									</span>
 								</div>
-								<GStatusChip
-									class="flex-none"
-									:status="member.status"
-									:label="__(member.status)"
-								/>
-							</div>
-							<span class="text-kra-label text-ink-600 mt-1.5">{{ summaryLine(member) }}</span>
-
-							<!-- expanded detail -->
-							<div
-								v-if="expandedRow === member.employee"
-								class="flex flex-col gap-1 mt-2.5 pt-2.5 border-t border-divider text-kra-label text-ink-600"
-							>
-								<span v-if="member.shift">
-									{{ __("Shift") }}: {{ member.shift }} · {{ formatTime(member.shift_start) }}–{{
-										formatTime(member.shift_end)
-									}}
-								</span>
-								<span>
-									{{ __("First in") }}: {{ formatPunch(member.first_in) }} · {{ __("Last out") }}:
-									{{ formatPunch(member.last_out) }}
-								</span>
-								<span v-if="member.leave_type">
-									{{ __(member.leave_type, null, "Leave Type") }}
-									<template v-if="member.half_day">({{ __("Half day") }})</template>
-									· {{ __("until") }} {{ dayjs(member.leave_until).format("D MMM") }}
-								</span>
 							</div>
 						</div>
-					</template>
-				</div>
+					</section>
+				</template>
 
 				<!-- TWO different empties, and saying the wrong one is a false
 				     statement about somebody's job. An employee who is nobody's
@@ -168,9 +166,9 @@
 					<GSkeleton height="14px" width="42%" />
 				</div>
 
-				<span class="text-caption text-ink-600" v-if="teamStatus.data?.members?.length">
+				<p class="g-form-footer" v-if="teamStatus.data?.members?.length">
 					{{ __("You see your direct reports. Tap a day on the calendar to browse other dates.") }}
-				</span>
+				</p>
 			</div>
 		</template>
 	</BaseLayout>

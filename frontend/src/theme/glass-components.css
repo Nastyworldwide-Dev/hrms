@@ -2767,6 +2767,68 @@ textarea {
    §6.3 treatment directly: an opaque surface, because a figure someone
    disputes with their manager must not be read through a moving tint. Same
    rule, same fill, different component shape. */
+/* The Expenses section header carries its Add button (alpha.9 D8). */
+.g-exp-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding-right: 4px;
+}
+/* Team rows (alpha.9 D2): a person row in a grouped list — name 17, the
+   line under it 13 secondary, the status trailing; separators as every row. */
+.g-team-row {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	padding: 11px 16px;
+	cursor: pointer;
+}
+.g-team-row + .g-team-row::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 16px;
+	right: 16px;
+	height: 1px;
+	background: var(--g-hair);
+}
+.g-team-row__main {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	min-height: 32px;
+}
+.g-team-row__text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+.g-team-row__name {
+	font-size: 17px;
+	line-height: 22px;
+	color: var(--g-ink);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.g-team-row__sub,
+.g-team-row__detail {
+	font-size: 13px;
+	line-height: 18px;
+	color: var(--g-ink2);
+}
+.g-team-row__sub {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.g-team-row__detail {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-top: 8px;
+}
 .g-lineitems {
 	background: var(--g-glass-fill-fallback);
 	border: 1px solid var(--g-glass-rim);
@@ -3850,6 +3912,12 @@ ion-router-outlet {
    (HIG Lists: option lists show a checkmark), folded rows for the rest. */
 .g-ot-days {
 	padding-bottom: 0;
+}
+.g-ot-empty {
+	margin: 0;
+	font-size: 15px;
+	line-height: 20px;
+	color: var(--g-ink2);
 }
 .g-ot-paidas {
 	color: var(--g-ink);

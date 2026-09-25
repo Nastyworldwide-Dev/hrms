@@ -30,3 +30,26 @@ test("D9 You: the version is the last group's footer", () => {
 	assert.doesNotMatch(src, /<p class="text-caption text-ink-600 text-center">/)
 	assert.match(src, /<p class="g-form-footer g-form-footer--center">\s*\{\{ __\("Version \{0\} · \{1\}"/)
 })
+
+test("D7 Overtime: why there is nothing to claim is a row in the day group", () => {
+	const src = read("../../views/ot/OTRequestForm.vue")
+	assert.doesNotMatch(src, /class="g-empty-line mx-4/)
+	assert.match(src, /<p class="g-form-row g-form-row--stacked g-ot-empty" role="status">\s*\{\{ emptyReason \}\}/)
+})
+
+test("D8 Expense: items are rows in one group, the total is the footer", () => {
+	const src = read("../ExpensesTable.vue")
+	assert.doesNotMatch(src, /class="text-base font-bold text-inkbase"/, "no loose bold total in a header row")
+	assert.doesNotMatch(src, /g-lineitems__row/)
+	assert.match(src, /<GListRow\s+v-for="\(item, idx\) in expenseClaim\.expenses"[\s\S]*?:amount="formatCurrency\(item\.amount/)
+	assert.match(src, /<p v-if="expenseClaim\.expenses\?\.length" class="g-form-footer">\s*\{\{ __\("Total \{0\}"/)
+})
+
+test("D2 Team: the day is a section header, each department a grouped section", () => {
+	const src = read("../../views/team/TeamDashboard.vue")
+	assert.match(src, /<h2 class="g-form-section__title" data-visual-mask>\s*\{\{ dayLabel \}\}/)
+	assert.doesNotMatch(src, /g-datenav__label/)
+	assert.doesNotMatch(src, /border-t-2 border-divider/, "no hand-ruled table")
+	assert.match(src, /<section\s+v-for="group in departmentGroups"[\s\S]*?<div class="g-form-group">\s*<div\s+v-for="member in group\.members"/)
+	assert.match(src, /<p class="g-form-footer" v-if="teamStatus\.data\?\.members\?\.length">/)
+})

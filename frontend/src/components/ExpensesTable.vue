@@ -1,11 +1,10 @@
 <template>
-	<!-- Header -->
-	<div class="flex flex-row justify-between items-center mt-2 pb-2 border-b-2 border-divider">
-		<h2 class="g-eyebrow">{{ __("Expenses") }}</h2>
-		<div class="flex flex-row gap-3 items-center">
-			<span class="text-base font-bold text-inkbase">
-				{{ formatCurrency(expenseClaim.total_claimed_amount, expenseClaim.currency) }}
-			</span>
+	<!-- One iOS section (alpha.9 D8): a header with its Add action, the items
+	     as rows in ONE group, the total as the footer. It was a loose header
+	     row with a bold total, over a hand-drawn table. -->
+	<section class="g-form-section">
+		<div class="g-exp-head">
+			<h2 class="g-form-section__title">{{ __("Expenses") }}</h2>
 			<GIconButton
 				v-if="!isReadOnly"
 				id="add-expense-modal"
@@ -15,61 +14,27 @@
 				<Plus class="w-4" />
 			</GIconButton>
 		</div>
-	</div>
-
-	<!-- Table -->
-	<!-- §6.3: an expense figure is a number someone disputes with their
-	     manager, so it sits on an opaque surface — never glass, never a
-	     translucent track. -->
-	<div v-if="expenseClaim.expenses" class="g-lineitems flex flex-col overflow-auto">
-		<div
-			class="g-lineitems__row flex flex-row py-3 px-3 items-center justify-between cursor-pointer"
-			v-for="(item, idx) in expenseClaim.expenses"
-			:key="idx"
-			role="button"
-			tabindex="0"
-			@click="openModal(item, idx)"
-			@keydown.enter.prevent="openModal(item, idx)"
-			@keydown.space.prevent="openModal(item, idx)"
-		>
-			<div class="flex flex-col w-full justify-center gap-2.5">
-				<div class="flex flex-row items-center justify-between">
-					<div class="flex flex-row items-start gap-3 grow">
-						<div class="flex flex-col items-start gap-1.5">
-							<div class="text-button-label font-semibold text-inkbase">
-								{{ __(item.expense_type) }}
-							</div>
-							<div class="text-xs font-normal text-ink-600">
-								<span>
-									{{
-										__("{0}: {1}", [
-											__("Approved"),
-											formatCurrency(item.sanctioned_amount || 0, expenseClaim.currency),
-										])
-									}}
-								</span>
-								<span class="whitespace-pre"> &middot; </span>
-								<span class="whitespace-nowrap" v-if="item.expense_date">
-									{{ dayjs(item.expense_date).format("D MMM") }}
-								</span>
-							</div>
-						</div>
-					</div>
-					<div class="flex flex-row justify-end items-center gap-2">
-						<span class="text-inkbase font-semibold text-base">
-							{{ formatCurrency(item.amount, expenseClaim.currency) }}
-						</span>
-						<ChevronRight class="h-5 w-5 text-ink-500" />
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-	<GEmptyState
-		v-else
-		:title="__('No expenses added')"
-		:body="__('Add each item you paid for with the + above')"
-	/>
+		<!-- §6.3: an expense figure is a number someone disputes with their
+		     manager, so it sits on the group's opaque fill, never translucent. -->
+		<GListPanel v-if="expenseClaim.expenses?.length">
+			<GListRow
+				v-for="(item, idx) in expenseClaim.expenses"
+				:key="idx"
+				:label="__(item.expense_type)"
+				:sublabel="itemLine(item)"
+				:amount="formatCurrency(item.amount, expenseClaim.currency)"
+				@click="openModal(item, idx)"
+			/>
+		</GListPanel>
+		<GEmptyState
+			v-else
+			:title="__('No expenses added')"
+			:body="__('Add each item you paid for with the + above')"
+		/>
+		<p v-if="expenseClaim.expenses?.length" class="g-form-footer">
+			{{ __("Total {0}", [formatCurrency(expenseClaim.total_claimed_amount, expenseClaim.currency)]) }}
+		</p>
+	</section>
 
 	<GModal :is-open="isModalOpen" :title="modalTitle" @did-dismiss="resetSelectedItem()">
 		<!-- Add Expense Action Sheet -->
@@ -124,7 +89,7 @@
 </template>
 
 <script setup>
-import { ChevronRight, Plus } from "lucide-vue-next"
+import { Plus } from "lucide-vue-next"
 import { createResource } from "frappe-ui"
 import GButton from "@/components/glass/GButton.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
@@ -132,6 +97,8 @@ import { computed, ref, watch, inject } from "vue"
 
 import FormField from "@/components/FormField.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
 
 import { claimTypesByID, claimTypesResource } from "@/data/claims"
@@ -182,6 +149,13 @@ const updateExpenseItem = () => {
 		emit("update-expense-item", expenseItem.value, editingIdx.value)
 	}
 	resetSelectedItem()
+}
+
+//: "Approved RM 12.50 · 21 Sep" — what came back and when, under the type.
+function itemLine(item) {
+	const approved = __("{0}: {1}", [__("Approved"), formatCurrency(item.sanctioned_amount || 0, props.expenseClaim.currency)])
+	const day = item.expense_date ? dayjs(item.expense_date).format("D MMM") : ""
+	return [approved, day].filter(Boolean).join(" · ")
 }
 
 function resetSelectedItem() {

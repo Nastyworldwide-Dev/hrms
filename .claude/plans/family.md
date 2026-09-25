@@ -1,7 +1,6 @@
-CLASS: a line of content sitting loose between groups (iOS keeps content in groups; only headers and footers sit outside)
-frontend/src/views/Notifications.vue unread count — same-root (fixed: first section header)
-frontend/src/components/WhoToAsk.vue empty lines — same-root (fixed: rows in the group, section headers)
-frontend/src/views/Profile.vue version — same-root (fixed: the log-out group's footer; /settings renders You)
-frontend/src/views/team/TeamDashboard.vue day label — ticket alpha9-D2 — its member list is not a group either; one change next
-frontend/src/views/ot/OTRequestForm.vue empty reason — ticket alpha9-D7 — next slice
-frontend/src/views/expense_claim totals — ticket alpha9-D8 — next slice
+CLASS: content drawn outside a group (loose line, hand-ruled table) where iOS puts rows in a group under a section header
+frontend/src/views/team/TeamDashboard.vue — same-root (fixed: day = section header, each department a grouped section, hint = footer)
+frontend/src/components/ExpensesTable.vue — same-root (fixed: header + Add, rows in one group, total = footer)
+frontend/src/views/ot/OTRequestForm.vue empty reason — same-root (fixed: a row in the "Pick a day" group)
+frontend/src/views/team/TeamRoster.vue — not-affected — audit: no loose text
+all 36 screens — not-affected — ios-consistency-audit loose-text rule: 0
