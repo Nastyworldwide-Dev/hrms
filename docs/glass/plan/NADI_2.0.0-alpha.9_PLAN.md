@@ -40,11 +40,11 @@ typography, all pages, sheets, dialogs. Plan it the Apple way."
 ### Structure (R1) — loose content outside groups
 | # | Screen | What |
 |---|---|---|
-| D1 | Home (approver) | "Needs you" header + "Nothing waiting on you." as loose grey text |
+| D1 ✅ 0f5e6667b | Home (approver) | "Needs you" header + "Nothing waiting on you." as loose grey text |
 | D2 | Team | "Today · Fri 25 Sep" loose bold text; the calendar is a group, the list below is not |
 | D3 | Notifications | "67 unread" loose text above the list |
 | D4 | Who to ask | "Your manager / No manager is set for you" and "HR / HR hasn't listed contacts yet" are all loose small text |
-| D5 | Approvals | "Nothing is waiting on you." loose text |
+| D5 ✅ 0f5e6667b | Approvals | "Nothing is waiting on you." loose text |
 | D6 | Help, HR Issues | "Open" as a loose label above an empty state |
 | D7 | Overtime (new) | "No overtime recorded in this period…" loose text above the form |
 | D8 | Expense (new, detail) | "Expenses RM 0 +" loose header row; "Paid back RM 0" group of one |
@@ -72,7 +72,7 @@ typography, all pages, sheets, dialogs. Plan it the Apple way."
 | D18 | Home, Calendar | two radii on one screen (26 and 20): the Today card and the calendar still use 20 |
 | D19 | Time off dashboard, Expense dashboard | big "No leave allocated yet" card with an empty state INSIDE a card, then a second empty state below: two empty states on one screen |
 | D20 | Expense dashboard | lime "Total claimed" card: lime used as a surface, not an action (R10) |
-| D21 | Requests (approver) | "Your last 5" header then an empty state with no group; balances line missing when there is no allocation — the screen is mostly blank |
+| D21 ◐ 0f5e6667b (Leave left always answers) | Requests (approver) | "Your last 5" header then an empty state with no group; balances line missing when there is no allocation — the screen is mostly blank |
 | D22 | Calendar | "What the colours mean" row inside the calendar card at a different inset from the rows below |
 | D23 | Every list screen | Filter and + in the bar; the + duplicates "New request" on Requests (two ways, R10) |
 | D24 | Notifications | 12 identical rows "W0 employee asked for …" with a grey tile each — no kind colour (R5), unread dot AND chevron on every row |
@@ -91,6 +91,20 @@ typography, all pages, sheets, dialogs. Plan it the Apple way."
 5. **D19–D24** screen structure: one empty state per screen, lime only on the action, notifications with kind tiles, one way to create.
 6. **D25** sheets and dialogs through the same script.
 7. Prove: the script at 0 findings on all 36 screens + sheets, WebKit audit, journeys, gates; screenshots side by side with the iOS reference.
+
+## Motion and scroll (alpha.8 r3, 25 Sep — owner: "turn off zoom … overflow
+## scrolling … jumpy stuff on pages and sheets … every bit measured")
+
+| What | Measured before | After | Commit |
+|---|---|---|---|
+| Zoom | pinch zoomed freely | off: viewport + gesture guard (iOS ignores `user-scalable=no` alone) | d13122051 |
+| List pages scroll past their end | 8 pages, 28 pt | 0 (one scroller: ion-content) | d13122051 |
+| Pages move while loading | 7 of 36, 9–132 pt | 0 of 36, first visit AND return visit | 0f5e6667b |
+| Sheets move after opening | 0 of 10 | 0 of 10 | — |
+| Sheet scroll runs into the page | 10 of 10 | 0 (overscroll contain) | b152fe9c8 |
+
+Proof, re-runnable: `e2e/scroll-and-shift-audit.mjs` (pages, cold + warm) and
+`e2e/sheet-shift-audit.mjs` (sheets). Visual baselines re-shot: d261bb7c4.
 
 ## Already fixed this round (c8ea821ad, d14e31252)
 Doubled title after switching tabs; blue square behind switches; tab icon
