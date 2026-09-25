@@ -3249,6 +3249,9 @@ ion-router-outlet {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	/* A line of text tall even while its skeleton shows (alpha.8 r3: the
+	   18 pt skeleton gave way to 20 pt text and Home moved 9 pt). */
+	min-height: calc(var(--g-type-panel-title-size) * var(--g-type-panel-title-line-height));
 }
 .g-now__dot {
 	width: 8px;
@@ -3285,6 +3288,9 @@ ion-router-outlet {
 	color: var(--g-ink);
 }
 .g-now__detail {
+	display: flex;
+	align-items: center;
+	min-height: calc(var(--g-type-caption-size) * var(--g-type-caption-line-height));
 	font-family: var(--g-type-caption-family);
 	font-size: var(--g-type-caption-size);
 	line-height: var(--g-type-caption-line-height);
@@ -3904,11 +3910,22 @@ body {
 /* alpha.8 r2 (owner: "goes up and down more than it should"): the document
    itself never scrolls or rubber-bands; the app shell (bar, tab bar) stays
    put and only each page's own content (ion-content) scrolls, as a native
-   app does. Pinch zoom stays (§14). */
+   app does. Zoom is off (owner ruling 25 Sep 2026; utils/blockZoom.js). */
 html {
 	overflow: hidden;
 	overscroll-behavior: none;
 	height: 100%;
+}
+
+/* alpha.8 r3 (measured, WebKit, frame by frame): a sheet waiting to be opened
+   took space for its first frame. Until Ionic has hydrated an overlay it
+   carries no mode class and no .overlay-hidden, so it is a plain block, and a
+   flex column's gap is paid for it: 12 px per sheet. Home's Today card grew
+   12 px and the Calendar's rows sat 24 px low, then everything jumped back.
+   Every hydrated overlay carries its mode class (.ios / .md); until then it
+   takes no place in the page. */
+:is(ion-modal, ion-popover, ion-alert, ion-action-sheet, ion-toast, ion-loading):not(.ios):not(.md) {
+	display: none;
 }
 
 /* The header "⋯" menu (frappe-ui Dropdown, ghost button) renders 28px. It is
@@ -4097,7 +4114,8 @@ html {
 	border-radius: var(--g-radius-panel);
 	background: var(--g-glass-fill-fallback);
 }
-.g-today #open-checkin-modal {
+.g-today #open-checkin-modal,
+.g-today .g-today__action-skeleton {
 	margin-top: 4px;
 }
 /* The quiet-day announcements line: label leading, See all trailing. */

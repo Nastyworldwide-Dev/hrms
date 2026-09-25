@@ -35,7 +35,12 @@ await ctx.addInitScript(() => {
 await ctx.request.post(`${BASE}/api/method/login`, { form: { usr: process.env.WHO_USER || "nadi.w0.approver@example.invalid", pwd: PW } })
 const p = await ctx.newPage()
 const list = [...new Map((await screens(ctx.request)).filter((s) => !s.anon && s.path).map((s) => [s.path, s])).values()]
+// Two passes (PASS=cold|warm|both, default both): COLD is a first-ever open
+// (empty cache), WARM is the same page again with the cache filled, which is
+// every open after the first on a real phone. Both must hold still.
+const PASSES = process.env.PASS === "cold" ? ["cold"] : process.env.PASS === "warm" ? ["cold-unmeasured", "warm"] : ["cold", "warm"]
 const rows = []
+for (const pass of PASSES)
 for (const s of list) {
 	try {
 		await p.goto(`${BASE}/hrms${s.path}`, { waitUntil: "domcontentloaded" })
@@ -46,7 +51,10 @@ for (const s of list) {
 			const inner = sc.firstElementChild
 			// the real bottom of the content, not the scroller's padding
 			let bottom = 0
-			for (const e of sc.querySelectorAll("*")) { const r = e.getBoundingClientRect(); if (r.height > 0 && getComputedStyle(e).position !== "fixed") bottom = Math.max(bottom, r.bottom + sc.scrollTop) }
+			// Light DOM of ion-content: its scroller is in the shadow root and
+			// holds only a <slot>, so asking IT for descendants found none and
+			// every long list read as "fits" (the /notifications false alarm).
+			for (const e of (content || sc).querySelectorAll("*")) { const r = e.getBoundingClientRect(); if (r.height > 0 && getComputedStyle(e).position !== "fixed") bottom = Math.max(bottom, r.bottom + sc.scrollTop) }
 			const top = sc.getBoundingClientRect().top
 			const max = sc.scrollHeight - sc.clientHeight
 			const contentH = bottom - top
@@ -54,9 +62,9 @@ for (const s of list) {
 			const moved = [...new Map(shifts.map((x) => [x.el + x.text, x])).values()].slice(0, 5)
 			return { scrollMax: Math.round(max), contentH: Math.round(contentH), viewH: sc.clientHeight, padB: getComputedStyle(sc).paddingBottom, fitsButScrolls: contentH <= sc.clientHeight && max > 2, shiftCount: shifts.length, moved }
 		})
-		rows.push({ path: s.path, ...r })
+		if (pass !== "cold-unmeasured") rows.push({ pass, path: s.path, ...r })
 	} catch (e) {
-		rows.push({ path: s.path, error: String(e).slice(0, 100) })
+		rows.push({ pass, path: s.path, error: String(e).slice(0, 100) })
 	}
 }
 writeFileSync(`${OUT}/report.json`, JSON.stringify(rows, null, 1))
@@ -65,7 +73,7 @@ for (const r of rows) {
 	const flags = []
 	if (r.fitsButScrolls) flags.push(`fits but scrolls ${r.scrollMax}px`)
 	if (r.shiftCount) flags.push(`${r.shiftCount} shifts: ${r.moved.map((m) => `${m.text || m.el} ${m.dy}`).join("; ")}`)
-	if (flags.length) console.log(r.path, "|", flags.join(" || "), `(content ${r.contentH}/${r.viewH}, pad ${r.padB})`)
+	if (flags.length) console.log(r.pass, r.path, "|", flags.join(" || "), `(content ${r.contentH}/${r.viewH}, pad ${r.padB})`)
 }
-console.log("screens", rows.length, "fitsButScrolls", rows.filter((r) => r.fitsButScrolls).length, "withShifts", rows.filter((r) => r.shiftCount).length)
+for (const pass of new Set(rows.map((r) => r.pass))) { const rs = rows.filter((r) => r.pass === pass); console.log(pass, "screens", rs.length, "fitsButScrolls", rs.filter((r) => r.fitsButScrolls).length, "withShifts", rs.filter((r) => r.shiftCount).length) }
 await b.close()

@@ -49,11 +49,15 @@ test("a zero is not a row", () => {
 	assert.match(rows, /attendance\?\.days > 0/)
 })
 
-test("the whole strip disappears when there is nothing to say", () => {
-	// `v-else-if` since the error branch went in above it — still conditional,
-	// still on the same condition.
-	assert.match(component, /v-else-if="hasAnything"/)
-	assert.match(component, /leave\.value\.length > 0 \|\| rows\.value\.length > 0/)
+test("Leave left always answers; the attention rows only when non-zero", () => {
+	// SUPERSEDED 25 Sep 2026 (alpha.8 r3, measured): the strip vanishing when
+	// empty made Requests jump 71 pt as the skeleton gave way to nothing, and
+	// left "where do I check my leave?" with no answer. Leave left is always
+	// drawn — "None allocated yet" when HR has not allocated any; the
+	// attention rows (and their header) still only when there is one.
+	assert.doesNotMatch(component, /hasAnything/)
+	assert.match(component, /__\("None allocated yet"\)/)
+	assert.match(component, /<template v-if="rows\.length">/)
 })
 
 test("a failed read is not the same as having nothing", () => {
@@ -62,7 +66,7 @@ test("a failed read is not the same as having nothing", () => {
 	// precisely so nobody has to guess at those numbers.
 	assert.match(component, /v-if="requestsSummary\.error"/, "the error is its own branch")
 	assert.ok(
-		component.indexOf("requestsSummary.error") < component.indexOf('v-else-if="hasAnything"'),
+		component.indexOf("requestsSummary.error") < component.indexOf('v-else-if="firstLoad"'),
 		"and it is checked first"
 	)
 	assert.match(component, /could not be loaded/, "it says so")

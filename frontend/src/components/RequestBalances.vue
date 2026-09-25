@@ -34,11 +34,19 @@
 		<!-- The skeleton is hidden from screen readers; this line says what it
 		     means (review of 111402a6d). -->
 		<span class="sr-only" role="status">{{ __("Loading your balances") }}</span>
-		<div class="flex flex-col gap-4" aria-hidden="true">
-			<GListPanel loading :rows="1" />
-		</div>
+		<!-- The SAME header and 44 pt row the answer draws (alpha.8 r3: a 51 pt
+		     skeleton panel with no header, then either a header + row or
+		     nothing, moved the list below 71 pt on every visit). -->
+		<section class="g-form-section" aria-hidden="true">
+			<h2 class="g-form-section__title">{{ __("Leave left") }}</h2>
+			<div class="g-form-group">
+				<div class="g-form-row">
+					<GSkeleton width="58%" height="11px" />
+				</div>
+			</div>
+		</section>
 	</div>
-	<div v-else-if="hasAnything" class="flex flex-col gap-4">
+	<div v-else class="flex flex-col gap-4">
 		<!-- Owner ruling (23 Sep, one-screen Requests): the balances are ONE
 		     line, "Annual 6 · Medical 13 · All balances ›" — the two cards took
 		     a third of the phone. The numbers are what is LEFT; the "of 14" and
@@ -46,9 +54,16 @@
 		<!-- A header and one row (25 Sep 2026: "where do I check my AL
 		     balance?" — it was an unlabelled grey line). The row opens every
 		     balance. -->
-		<section v-if="shownLeave.length" class="g-form-section">
+		<!-- Always here (alpha.9 D21): "where do I check my leave?" has one
+		     answer, in one place, even before HR allocates any. -->
+		<section class="g-form-section">
 			<h2 class="g-form-section__title">{{ __("Leave left") }}</h2>
-			<div class="g-form-group">
+			<div v-if="!shownLeave.length" class="g-form-group">
+				<div class="g-form-row g-form-row--readonly">
+					<span class="g-form-row__label">{{ __("None allocated yet") }}</span>
+				</div>
+			</div>
+			<div v-else class="g-form-group">
 				<button
 					type="button"
 					class="g-form-row g-form-row--action g-balances-row"
@@ -104,6 +119,7 @@ import { useRouter } from "vue-router"
 import { CircleDollarSign, Receipt, UserCheck } from "lucide-vue-next"
 
 import GBanner from "@/components/glass/GBanner.vue"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
@@ -230,8 +246,6 @@ const rows = computed(() => {
 
 	return out
 })
-
-const hasAnything = computed(() => leave.value.length > 0 || rows.value.length > 0)
 
 onMounted(() => {
 	requestsSummary.fetch()

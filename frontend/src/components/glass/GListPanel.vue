@@ -19,7 +19,12 @@
 	<div class="g-glass g-list">
 		<template v-if="loading">
 			<div v-for="n in rows" :key="n" class="g-row" aria-hidden="true">
-				<GSkeleton width="27px" height="27px" radius="var(--g-radius-well)" />
+				<!-- In the well a real row's tile sits in, so the skeleton row is
+				     the icon row's 54 pt, not 51 (alpha.8 r3: Home's rows under
+				     "Needs you" slid 3 pt when the answer landed). -->
+				<span class="g-row__well">
+					<GSkeleton width="29px" height="29px" radius="8px" />
+				</span>
 				<span class="g-row__body">
 					<GSkeleton width="58%" height="11px" />
 				</span>

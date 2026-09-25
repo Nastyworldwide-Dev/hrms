@@ -25,13 +25,18 @@
 							<!-- On the page, not in sheets (PAGE-23; shift pattern by owner
 							     ruling 3, 23 Sep), now as label/value rows of the same group
 							     instead of loose lines between groups (alpha.8). -->
-							<div v-if="managerName" class="g-form-row g-form-row--readonly">
+							<!-- Always both rows (alpha.8 r3: they appeared once the record
+							     loaded and pushed the page down 44 pt). "None" when unset, as
+							     iOS Settings says it; a placeholder while loading. -->
+							<div class="g-form-row g-form-row--readonly">
 								<span class="g-form-row__label">{{ __("Manager") }}</span>
-								<span class="g-form-row__value">{{ managerName }}</span>
+								<GSkeleton v-if="managerLoading" width="96px" height="11px" />
+								<span v-else class="g-form-row__value">{{ managerName || __("None") }}</span>
 							</div>
-							<div v-if="shiftName" class="g-form-row g-form-row--readonly">
+							<div class="g-form-row g-form-row--readonly">
 								<span class="g-form-row__label">{{ __("Shift") }}</span>
-								<span class="g-form-row__value">{{ shiftName }}</span>
+								<GSkeleton v-if="!employeeDoc.doc" width="96px" height="11px" />
+								<span v-else class="g-form-row__value">{{ shiftName || __("None") }}</span>
 							</div>
 						</div>
 
@@ -147,6 +152,7 @@ import { gToast } from "@/components/glass/toast"
 import GSwitch from "@/components/glass/GSwitch.vue"
 import ShellHeader from "@/components/ShellHeader.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
@@ -354,6 +360,10 @@ watch(
 )
 
 const managerName = computed(() => (employeeDoc.doc?.reports_to ? reportsToName.data : null))
+//: Until the record says who, and then until the name is read.
+const managerLoading = computed(
+	() => !employeeDoc.doc || Boolean(employeeDoc.doc.reports_to && !reportsToName.data && !reportsToName.error)
+)
 
 const getFieldValue = (fieldname) => {
 	const doc = employeeDoc.doc

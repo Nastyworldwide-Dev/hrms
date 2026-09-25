@@ -42,12 +42,19 @@
 		<p v-if="!rows.length && needsYouResource.error" class="text-caption text-ink-600" role="alert">
 			{{ __("We couldn't load what needs you. Pull down to try again.") }}
 		</p>
-		<p v-else-if="!rows.length && !needsYouResource.loading" class="g-empty-line text-caption text-ink-600">
-			{{ __("Nothing waiting on you.") }}
-		</p>
+		<!-- A row in a group, the same 51 pt as the skeleton row it replaces
+		     (alpha.8 r3: a 17 pt grey line under a 51 pt skeleton moved every
+		     block below it 34 pt on each visit; alpha.9 D1: nothing loose). -->
+		<GListPanel v-else-if="!rows.length && !firstRead">
+			<GListRow :label='__("Nothing waiting on you.")' :tint="TILE.neutral" :tappable="false">
+				<template #icon>
+					<CircleCheckBig class="g-row-icon" />
+				</template>
+			</GListRow>
+		</GListPanel>
 		<!-- ONE panel for loading and content (§15.1 surface budget): skeleton
 		     rows while the first read is in flight, real rows after. -->
-		<GListPanel v-else :loading="!rows.length && needsYouResource.loading" :rows="1">
+		<GListPanel v-else :loading="!rows.length && firstRead" :rows="1">
 			<GListRow
 				v-for="row in shown"
 				:key="row.key"
@@ -179,6 +186,11 @@ const rows = computed(() => {
 	return out
 })
 
+//: Skeleton only on a FIRST read. A refresh behind a cached answer keeps the
+//: answer on screen: swapping "Nothing waiting on you." (17 px) for a skeleton
+//: row (51 px) and back moved every block under it twice on each visit
+//: (alpha.8 r3, measured in WebKit).
+const firstRead = computed(() => Boolean(needsYouResource.loading && !needsYouResource.data))
 const shown = computed(() => (showAll.value ? rows.value : rows.value.slice(0, HOME_ROWS)))
 const hidden = computed(() => (showAll.value ? 0 : Math.max(0, rows.value.length - HOME_ROWS)))
 

@@ -1,8 +1,11 @@
 <template>
 	<GPage>
 		<ion-content :fullscreen="true">
+			<!-- Drawn once the claimable days have answered too (or failed):
+			     painting the form first and the days line after moved the whole
+			     form 52 pt down a moment after it appeared (alpha.8 r3). -->
 			<FormView
-				v-if="formFields.data"
+				v-if="formFields.data && (props.id || daysAnswered)"
 				doctype="OT Request"
 				:noun="__('overtime request')"
 				v-model="otRequest"
@@ -175,6 +178,12 @@ watch(
 	},
 	{ immediate: true, flush: "sync" }
 )
+
+//: The claimable-days read has answered or failed; never waits on nothing.
+const daysAnswered = computed(() => {
+	const r = claimableDays.value
+	return Boolean(!employee.data?.name || r.data || r.error)
+})
 
 const formatDay = (date) => dayjs(date).format("ddd, D MMM")
 

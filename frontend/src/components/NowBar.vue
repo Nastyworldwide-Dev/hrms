@@ -37,6 +37,11 @@
 			<p class="g-now__state">{{ stateLine }}</p>
 		</div>
 		<p v-if="detail" class="g-now__detail">{{ detail }}</p>
+		<!-- The shift line's place while pending (alpha.8 r3: it arrived after
+		     the state and pushed the Check in button down 24 pt). -->
+		<p v-else-if="pending" class="g-now__detail" aria-hidden="true">
+			<GSkeleton width="45%" height="11px" />
+		</p>
 		<!-- The state changes without the employee doing anything — a shift
 		     starts, a session passes an hour. Polite: not worth interrupting a
 		     sentence that is already being read. -->

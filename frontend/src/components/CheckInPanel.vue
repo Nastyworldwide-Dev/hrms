@@ -67,6 +67,14 @@
 			</p>
 		</template>
 
+		<!-- The button's place while the settings are read (alpha.8 r3: the
+		     Check in button arrived after the card and pushed Home down). -->
+		<GSkeleton
+			v-else-if="!settings.data && settings.loading"
+			class="g-today__action-skeleton"
+			height="48px"
+			radius="var(--g-radius-pill)"
+		/>
 		<div v-else class="text-card-title text-ink-600 mt-1">
 			{{ dayjs().format("ddd, D MMMM, YYYY") }}
 		</div>
@@ -193,6 +201,7 @@
 </template>
 
 <script setup>
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import { holdScreen, releaseScreen } from "@/utils/wakeLock"
 import { Check, ChevronRight, Clock, TriangleAlert } from "lucide-vue-next"
 import GSelfiePanel from "@/components/glass/GSelfiePanel.vue"

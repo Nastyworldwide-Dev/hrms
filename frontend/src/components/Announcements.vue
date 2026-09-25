@@ -102,7 +102,12 @@
 	     Home, 23 Sep 2026: every block always renders). -->
 	<div v-else class="w-full">
 		<div class="g-eyebrow mb-4">{{ __("Announcements") }}</div>
-		<GListPanel loading :rows="2" />
+		<!-- The quiet board's shape, one 44 pt row: the commonest answer, so a
+		     slow first read no longer shrinks 58 pt when it lands (alpha.8 r3).
+		     New notices still grow it; content arriving is allowed to. -->
+		<div class="g-form-group" aria-hidden="true">
+			<div class="g-form-row"><GSkeleton width="58%" height="11px" /></div>
+		</div>
 	</div>
 </template>
 
@@ -112,6 +117,7 @@ import { useRouter } from "vue-router"
 import { CalendarDays, Megaphone, ShieldAlert, TriangleAlert } from "lucide-vue-next"
 
 import GListPanel from "@/components/glass/GListPanel.vue"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 

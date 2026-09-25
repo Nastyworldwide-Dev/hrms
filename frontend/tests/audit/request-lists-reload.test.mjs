@@ -81,7 +81,9 @@ test("the registry is reached from mount, pull-to-refresh, reconnect and resume"
 })
 
 test("a cached paint says it is refreshing until the first fetch answers", () => {
-	assert.match(panel, /v-if="refreshing"[^>]*role="status"/)
+	// Said to screen readers, not drawn: the visible line pushed the list down
+	// 33 pt on every visit and pulled it back (alpha.8 r3, measured).
+	assert.match(panel, /class="sr-only" role="status">\{\{ refreshing \? __\("Refreshing…"\)/)
 	assert.match(panel, /!list\.fetched && !list\.error/)
 })
 

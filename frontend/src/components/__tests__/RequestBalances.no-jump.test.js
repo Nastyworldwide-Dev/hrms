@@ -15,9 +15,13 @@ const source = readFileSync(
 const template = source.slice(0, source.indexOf("<script"))
 
 test("the first load holds its place with a skeleton grid", () => {
-	// Sized like the finished strip. Owner ruling 23 Sep 2026 (one-screen
-	// Requests): the leave grid became one line, so the skeleton is one row.
-	assert.match(template, /v-else-if="firstLoad"[\s\S]*?<GListPanel loading :rows="1" \/>/)
+	// Sized like the finished strip: the SAME "Leave left" header and one
+	// 44 pt form row (alpha.8 r3 — a header-less 51 pt panel moved the list
+	// 71 pt when the answer landed).
+	assert.match(
+		template,
+		/v-else-if="firstLoad"[\s\S]*?__\("Leave left"\)[\s\S]*?<div class="g-form-row">\s*<GSkeleton/
+	)
 	assert.match(
 		source,
 		/const firstLoad = computed\(\(\) => requestsSummary\.loading && !requestsSummary\.data\)/

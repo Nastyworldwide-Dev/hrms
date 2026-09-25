@@ -4,9 +4,10 @@
 	     filter chips here — they moved, unchanged, into the See all sheet. -->
 	<div class="w-full g-form-section">
 		<h2 class="g-form-section__title">{{ __("Your last 5") }}</h2>
-		<p v-if="refreshing" class="text-xs text-ink-500 mb-2" role="status">
-			{{ __("Refreshing…") }}
-		</p>
+		<!-- Said, not drawn (alpha.8 r3): a visible line here pushed the list
+		     down 33 px on every visit and pulled it back when the fetch landed.
+		     iOS refreshes cached rows in place. -->
+		<p class="sr-only" role="status">{{ refreshing ? __("Refreshing…") : "" }}</p>
 		<RequestList :items="lastFive" :resource="lastFiveResource" :what="__('your requests')" compact>
 			<template #footer>
 				<button type="button" class="g-form-row g-form-row--action g-seeall" @click="openAll">
@@ -19,9 +20,7 @@
 	<GModal :is-open="allOpen" :title="__('All your requests')" @did-dismiss="allOpen = false">
 		<div class="w-full">
 			<GSegmented :buttons="TAB_BUTTONS" v-model="activeTab" :label="__('Requests')" />
-			<p v-if="refreshing" class="text-xs text-ink-500 mt-2" role="status">
-				{{ __("Refreshing…") }}
-			</p>
+			<p class="sr-only" role="status">{{ refreshing ? __("Refreshing…") : "" }}</p>
 			<!-- FILTER CHIPS (mockup 4 gap #3). The question somebody brings to this
 		     screen is almost always one of three: what is still out, what came
 		     back yes, what came back no. A list with no filter is a list you

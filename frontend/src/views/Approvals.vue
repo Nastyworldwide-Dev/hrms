@@ -14,13 +14,22 @@
 			>
 				<ResourceError :resource="waiting" what="your approvals" />
 
-				<GListPanel v-if="waiting.loading && !rows.length" loading />
+				<GListPanel v-if="waiting.loading && !waiting.data" loading :rows="1" />
 
 				<template v-else-if="!waiting.error">
 					<p v-if="rows.length" class="text-card-title text-ink-600">
 						{{ summary }}
 					</p>
-					<p v-else class="g-empty-line text-card-title text-ink-600">{{ __("Nothing is waiting on you.") }}</p>
+					<!-- The same 51 pt row as the skeleton above (alpha.8 r3: three
+					     skeleton rows collapsing to one grey line moved the page
+					     132 pt; alpha.9 D5: nothing loose). -->
+					<GListPanel v-else>
+						<GListRow :label='__("Nothing is waiting on you.")' :tint="TILE.neutral" :tappable="false">
+							<template #icon>
+								<CircleCheckBig class="g-row-icon" />
+							</template>
+						</GListRow>
+					</GListPanel>
 
 					<!-- YOURS: sent to you to decide -->
 					<section v-if="groups.yours.count" class="flex flex-col gap-3">
@@ -179,6 +188,9 @@ import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GPullRefresh from "@/components/glass/GPullRefresh.vue"
+import { CircleCheckBig } from "lucide-vue-next"
+import { TILE } from "@/utils/iconTile"
+import { personalCacheKey } from "@/utils/personalCache"
 import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
 import { decidedForApproverResource } from "@/data/remoteCheckin"
 import { isApprover } from "@/data/team"
@@ -193,6 +205,9 @@ const $dayjs = inject("$dayjs")
 // (hrms/api/approvals_list.py). This page only groups them.
 const waiting = createResource({
 	url: "hrms.api.approvals_list.get_waiting_for_me",
+	// Personal, like every approver-scoped read: without a cache every visit
+	// drew three skeleton rows, then collapsed to one line (alpha.8 r3).
+	cache: personalCacheKey("nsty:approvals-waiting"),
 	auto: true,
 })
 const rows = computed(() => waiting.data?.rows || [])
