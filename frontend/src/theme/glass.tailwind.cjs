@@ -190,12 +190,14 @@ module.exports = {
 		"row-tap": "var(--g-motion-row-tap-duration)",
 		"skeleton-shimmer": "var(--g-motion-skeleton-shimmer-duration)",
 		"state-change": "var(--g-motion-state-change-duration)",
+		"tab-lens": "var(--g-motion-tab-lens-duration)",
 	},
 	transitionTimingFunction: {
 		"button-press": "var(--g-motion-button-press-easing)",
 		"row-tap": "var(--g-motion-row-tap-easing)",
 		"skeleton-shimmer": "var(--g-motion-skeleton-shimmer-easing)",
 		"state-change": "var(--g-motion-state-change-easing)",
+		"tab-lens": "var(--g-motion-tab-lens-easing)",
 	},
 	zIndex: {
 		overlay: "var(--g-layer-overlay)",

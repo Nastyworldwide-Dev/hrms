@@ -34,8 +34,13 @@ test("rows: 17 pt title, 44 plain, 54 with an icon tile of 29", () => {
 	assert.equal(decls(".g-row__well").width, "29px")
 })
 
-test("the separator starts at the text, not the edge", () => {
-	// 16 inset + 29 tile + 12 gap = 57 when there is a tile; 16 otherwise.
-	assert.equal(decls(".g-row:has(.g-row__well) + .g-row::before").left, "57px")
-	assert.equal(decls(".g-row + .g-row::before").right, "0")
+test("the separator runs from the text to 16 pt short of the edge", () => {
+	// Owner's iOS 26 Settings, measured at 3x (25 Sep 2026): group 16-385.7,
+	// tile 30.7-59.3, text at 76, separator 74.3 -> 369.7, i.e. it stops
+	// 16 pt before the group's right edge. Ours ran to the edge, which read
+	// as "shifted to the right".
+	assert.equal(decls(".g-row:has(.g-row__well) + .g-row::before").left, "58px")
+	assert.equal(decls(".g-row + .g-row::before").right, "16px")
+	assert.equal(decls(".g-form-row + .g-form-row::before").right, "16px")
+	assert.equal(decls(".g-row__well").width, "29px")
 })

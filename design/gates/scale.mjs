@@ -152,7 +152,7 @@ const CSS_EXEMPT = new Map([
 	[54, "iOS 26 list row with an icon, measured (alpha.7 §5.3)"],
 	[35, "gap between iOS inset groups, measured (alpha.7 §5.3)"],
 	[29, "iOS Settings icon tile, measured 29 pt (alpha.7 §5.3)"],
-	[57, "separator start past an icon tile: 16 inset + 29 tile + 12 gap (alpha.7 §5.3)"],
+	[58, "separator start past an icon tile, measured on iOS 26 Settings (74.3 pt - 16 group inset; alpha.8)"],
 ]);
 
 const cssPath = join(ROOT, "frontend/src/theme/glass-components.css");

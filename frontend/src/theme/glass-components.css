@@ -179,9 +179,44 @@ ion-tab-button.g-tabbar__btn {
 /* The iOS 26 selected-tab lens (alpha.7 §5.1, A5): a soft pill behind the
    selected tab, inside the bar's own glass. Tint (lime, owner Q1) is on the
    icon and label via --color-selected (BottomTabs.vue). */
-ion-tab-button.g-tabbar__btn.tab-selected {
-	background: var(--g-icon-bg);
+/* alpha.8: the lens is one inset pill that slides (BottomTabs.vue), not
+   the whole tab cell. 4 pt bar padding + 4 pt inset = 8 pt from the bar
+   edge on every side, centred on its tab. Apple's default spring (response
+   0.5 s, damping 0.825) as a cubic-bezier with a small overshoot. */
+.g-tabbar__lens {
+	position: absolute;
+	top: calc(var(--g-tabbar-pad-top) + 4px);
+	bottom: calc(var(--g-tabbar-pad-bottom) + 4px);
+	pointer-events: none;
+	z-index: 0;
+	transition:
+		left var(--g-motion-tab-lens-duration) var(--g-motion-tab-lens-easing),
+		opacity var(--g-motion-state-change-duration) var(--g-motion-state-change-easing);
+}
+.g-tabbar__lens::before {
+	content: "";
+	position: absolute;
+	inset: 0 4px;
 	border-radius: var(--g-radius-tabbar);
+	background: var(--g-icon-bg);
+}
+ion-tab-button.g-tabbar__btn {
+	z-index: 1;
+}
+/* The press is felt: the pressed tab's icon dips, as iOS 26 tabs do. */
+ion-tab-button.g-tabbar__btn .g-tabbar__well {
+	transition: transform var(--g-motion-button-press-duration) var(--g-motion-button-press-easing);
+}
+ion-tab-button.g-tabbar__btn:active .g-tabbar__well {
+	transform: scale(0.9);
+}
+@media (prefers-reduced-motion: reduce) {
+	.g-tabbar__lens {
+		transition: none;
+	}
+	ion-tab-button.g-tabbar__btn:active .g-tabbar__well {
+		transform: none;
+	}
 }
 
 .g-tabbar__well {
@@ -969,12 +1004,14 @@ html[data-theme="dark"] .g-badge--open {
 	position: absolute;
 	top: 0;
 	left: 16px;
-	right: 0;
+	right: 16px;
 	height: 1px;
 	background: var(--g-hair);
 }
 .g-row:has(.g-row__well) + .g-row::before {
-	left: 57px;
+	/* iOS 26 Settings, measured: the line starts at the text (tile 29 + gap)
+	   and stops 16 pt short of the group's edge. */
+	left: 58px;
 }
 .g-row__well {
 	display: flex;
@@ -2808,8 +2845,11 @@ ion-refresher {
    its "Refreshing…" / "Pull to refresh" line showed through the page top on a
    real phone (hotfix 23 Sep, screenshots of Home and Requests). Ionic marks
    the live states with refresher-active (pulling, ready, refreshing). */
+/* alpha.8: not painted at all at rest. visibility:hidden still left a layer
+   over the page with a looping animation in it (owner, iOS 26: laggy while
+   scrolling; the words showed under Today). */
 ion-refresher:not(.refresher-active) .g-refresh {
-	visibility: hidden;
+	display: none;
 }
 
 /* ion-refresher-content's inner icon nodes are shadow DOM with no published
@@ -2837,6 +2877,9 @@ ion-refresher:not(.refresher-active) .g-refresh {
 	width: 40%;
 	height: 100%;
 	background: var(--g-brand);
+}
+/* Only while the reload is running; a pull that has not let go shows a still bar. */
+ion-refresher.refresher-refreshing .g-refresh__fill {
 	animation: g-indeterminate var(--g-motion-skeleton-shimmer-duration)
 		var(--g-motion-skeleton-shimmer-easing) var(--g-motion-skeleton-shimmer-iteration);
 }
@@ -3555,7 +3598,7 @@ ion-router-outlet {
 	position: absolute;
 	top: 0;
 	left: 16px; /* inset to the text, as iOS draws it */
-	right: 0;
+	right: 16px;
 	height: 1px;
 	background: var(--g-hair);
 }
@@ -3954,14 +3997,6 @@ html {
 	row-gap: 4px;
 	padding-bottom: 8px;
 }
-.g-header--large .g-header__title {
-	order: 10;
-	flex: 1 0 100%;
-	font-size: 34px;
-	line-height: 41px;
-	font-weight: 700;
-	letter-spacing: 0.4px;
-}
 .g-header--large .g-header__action,
 .g-header--large .g-header__actions {
 	margin-left: auto;
@@ -4282,17 +4317,6 @@ ion-modal.g-mustread {
 }
 /* The large title is in the bar, not the scroller, so it folds away itself
    (iOS: it scrolls under the bar). Height collapses with it, no jump. */
-.g-header--large .g-header__title {
-	max-height: 41px;
-	overflow: hidden;
-	transition:
-		max-height var(--g-motion-state-change-duration) var(--g-motion-state-change-easing),
-		opacity var(--g-motion-state-change-duration) var(--g-motion-state-change-easing);
-}
-.g-header--collapsed .g-header__title {
-	max-height: 0;
-	opacity: 0;
-}
 .g-header--collapsed {
 	row-gap: 0;
 	padding-bottom: 4px;
@@ -4332,4 +4356,18 @@ ion-modal.g-mustread {
 	font-size: 15px;
 	line-height: 20px;
 	color: var(--g-ink2);
+}
+
+/* alpha.8: the tab root's large title is page content (BaseLayout), so it
+   scrolls away with the page at no cost. 34/41 bold, 16 pt gutter, directly
+   under the bar row (owner's Settings: title baseline ~6 pt under the bar). */
+.g-large-title {
+	margin: 0;
+	padding: 2px var(--g-screen-gutter) 8px;
+	font-family: var(--g-font-ui);
+	font-size: 34px;
+	line-height: 41px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+	color: var(--g-ink);
 }

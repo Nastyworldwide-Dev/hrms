@@ -244,6 +244,8 @@
 	--g-motion-skeleton-shimmer-iteration: infinite;
 	--g-motion-state-change-duration: 200ms;
 	--g-motion-state-change-easing: cubic-bezier(.2,0,0,1);
+	--g-motion-tab-lens-duration: 500ms;
+	--g-motion-tab-lens-easing: cubic-bezier(.32,1.28,.5,1);
 }
 
 html[data-theme="dark"] {
