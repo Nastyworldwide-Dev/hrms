@@ -1,10 +1,10 @@
 # HANDOFF
-prompt:   alpha.8 r3 — zoom off, scroll, jumps
+prompt:   alpha.8 r3 — zoom off, scroll, jumps; HR OT hours 2 decimals
 status:   done
-commit:   b152fe9c8 on nz-glass
-files:    frontend/index.html, src/utils/blockZoom.js, src/components/ListView.vue
-          src/theme/glass-components.css, NeedsYou.vue, Approvals.vue, RequestBalances.vue
+commit:   379d94e14 on nz-glass
+files:    hrms/hr/doctype/ot_request/ot_request_list.js (+ .test.js)
+          frontend/src/theme/glass-components.css, NeedsYou.vue, Approvals.vue
           e2e/scroll-and-shift-audit.mjs, e2e/sheet-shift-audit.mjs
-verify:   cd frontend && node e2e/scroll-and-shift-audit.mjs && node e2e/sheet-shift-audit.mjs
-flags:    empty queues are now a row in a group (D1, D5); Leave left always shows ("None allocated yet")
-next:     alpha.9 D10/D11 (name not ID, no Company on own requests), then D2–D9 into groups
+verify:   Desk > OT Request > Report: Claimed Hours reads 1.50; Day Type + OT Rate beside Compensation
+flags:    Attendance working_hours report has the same 9-decimal display (not asked; ticketed)
+next:     alpha.9 D10/D11 — name not ID, no Company on own requests
