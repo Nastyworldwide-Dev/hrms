@@ -272,14 +272,11 @@ def _apply(emp, day, shift, taps, plan, rows, reason, entry) -> dict:
 		)
 
 	rebuild = fd._rebuild(emp.name, day, f"fix days: {reason}", requests_ok=True)
-	if rebuild.get("action") in fd.NOT_APPLIED:
+	if why := fd.not_applied(rebuild):
 		# The Release 1 rule: a fix the engine did not apply is never logged as
-		# done. Raising rolls the whole request back and HR sees why.
-		frappe.throw(
-			_("{0} was not rebuilt, so nothing was changed: {1}").format(
-				day, rebuild.get("detail") or rebuild.get("action")
-			)
-		)
+		# done — including one it ran and marked no row for (25 Sep 2026).
+		# Raising rolls the whole request back and HR sees why.
+		frappe.throw(_("{0} was not rebuilt, so nothing was changed: {1}").format(day, why))
 	after_rows = fd._day_attendance(emp.name, day)
 	entry["log"] = fd._write_log(
 		{

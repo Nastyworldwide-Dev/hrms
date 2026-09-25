@@ -89,7 +89,8 @@ async function decide(kind, submit) {
 		gToast({
 			title: shown.title,
 			text: shown.text,
-			variant: "info",
+			// "Approved, but attendance was not updated" is a warning, not news.
+			variant: shown.tone,
 		})
 		console.info("[CheckinDecisionSheet] decided", kind)
 		askingWhy.value = false

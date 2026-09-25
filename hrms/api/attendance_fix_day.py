@@ -76,6 +76,21 @@ LOG_SOURCE = "hr_fix_day"
 #: "held" is not one: a protection (leave, request, payout) answers held and the
 #: taps HR wrote still stand, logged — HR's edit always wins; the engine recalculates.
 NOT_APPLIED = ("deadlocked", "running")
+
+
+def not_applied(verdict: dict, expects_a_row: bool = True) -> str | None:
+	"""Why the engine did NOT carry out a fix, or None. Pure.
+
+	Two shapes (25 Sep 2026): it never ran (deadlocked / still running), or it
+	ran, marked no row, and said why (a shift with auto attendance off). The
+	second answered "done" on Save & rebuild and on Fix days alike."""
+	if verdict.get("action") in NOT_APPLIED:
+		return verdict.get("detail") or verdict.get("action")
+	if expects_a_row and verdict.get("errors") and not verdict.get("marked"):
+		return "; ".join(verdict["errors"])
+	return None
+
+
 ACTIONS = (
 	"rebuild_day",
 	"claim_tap",
@@ -1528,15 +1543,15 @@ def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None, 
 			_("{0} by {1}. Reason: {2}").format(note, frappe.session.user, reason or _("not given")),
 		)
 	rebuild = {str(day): _rebuild(emp.name, day, f"fix day: {action}", requests_ok=True) for day in days}
-	lost = {day: verdict for day, verdict in rebuild.items() if verdict.get("action") in NOT_APPLIED}
-	# A pair was ticked, the engine marked NO row and said why (its shift's
-	# auto attendance is off, say): answering "done" there is the fix that
-	# looked like it worked and did nothing (owner, 25 Sep 2026: "weak, not
+	# A pair was ticked and the engine marked NO row: answering "done" there is
+	# the fix that looked like it worked (owner, 25 Sep 2026: "weak, not
 	# authoritative"). The engine's own reason goes to HR and nothing changes.
-	if plan and plan.get("pairs") and not plan.get("leave_open"):
-		for day, verdict in rebuild.items():
-			if verdict.get("errors") and not verdict.get("marked") and day not in lost:
-				lost[day] = {"action": verdict.get("action"), "detail": "; ".join(verdict["errors"])}
+	expects_row = bool(plan and plan.get("pairs") and not plan.get("leave_open"))
+	lost = {
+		day: {"detail": why}
+		for day, verdict in rebuild.items()
+		if (why := not_applied(verdict, expects_a_row=expects_row))
+	}
 	if lost:
 		# The engine did not apply HR's fix: the shift is still running, or the
 		# database deadlocked. Logging it as done and answering

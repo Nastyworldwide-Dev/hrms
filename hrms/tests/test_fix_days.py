@@ -655,3 +655,20 @@ class TestTheEndpointContract(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestAFixThatMarksNothingIsNotDone(FixDaysCase):
+	"""Family B (25 Sep 2026): the bulk path shared Save & rebuild's hole. A day
+	whose shift has auto attendance off came back "remarked" with no row and
+	was logged as fixed. It is refused with the engine's reason instead."""
+
+	def test_a_day_the_engine_marked_nothing_for_is_refused(self):
+		self.norazmi()
+		with patch.object(
+			fd,
+			"_rebuild",
+			lambda *a, **k: {"action": "remarked", "marked": [], "errors": ["Day: auto attendance is off"]},
+		):
+			message = self.refusal(self.fix, dry_run=False)
+		self.assertIn("auto attendance is off", message)
+		self.assertEqual(self.store.logs, {})
