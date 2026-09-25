@@ -34,7 +34,12 @@
 		<span class="g-sr">{{ announcement }}</span>
 
 		<div aria-hidden="true">
-			<div class="g-balance__number">{{ remaining }}</div>
+			<div class="g-balance__head">
+				<span class="g-balance__number">{{ remaining }}</span>
+				<!-- What the number counts, on screen too (25 Sep 2026: a bare
+				     "19" did not read as a leave balance). -->
+				<span class="g-balance__unit">{{ unitLine }}</span>
+			</div>
 			<div class="g-balance__bar">
 				<div class="g-balance__fill" :style="{ width: `${fillPercentage}%` }" />
 				<div
@@ -53,7 +58,7 @@
 </template>
 
 <script setup>
-import { computed } from "vue"
+import { computed, inject } from "vue"
 
 const props = defineProps({
 	label: { type: String, required: true },
@@ -75,6 +80,16 @@ const fillPercentage = computed(() => {
 	if (!denominator) return 0
 	return Math.min(100, Math.max(0, (props.remaining / denominator) * 100))
 })
+
+const __ = inject("$translate", (text, args) =>
+	args ? text.replace(/\{(\d)\}/g, (_, i) => args[i]) : text
+)
+//: "days left of 20" beside the number; just "days left" when nothing is allocated.
+const unitLine = computed(() =>
+	props.allocated
+		? __("{0} left of {1}", [props.unit, props.allocated])
+		: __("{0} left", [props.unit])
+)
 
 const announcement = computed(
 	() =>

@@ -4320,3 +4320,16 @@ ion-modal.g-mustread {
 	height: 16px;
 	color: var(--g-ink3);
 }
+
+/* The balance card says what its number counts (25 Sep 2026). */
+.g-balance__head {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+.g-balance__unit {
+	font-size: 15px;
+	line-height: 20px;
+	color: var(--g-ink2);
+}
