@@ -92,7 +92,9 @@
 			@click="$emit('profile', $event)"
 		>
 			<!-- decorative: the button above already carries "Profile, <name>" -->
-			<GAvatar :image="avatarUrl" :label="avatarLabel" :size="34" round decorative />
+			<!-- 44 pt, the size of every bar button beside it (owner, 25 Sep 2026:
+			     "bell icon is way bigger than profile"). -->
+			<GAvatar :image="avatarUrl" :label="avatarLabel" :size="44" round decorative />
 		</button>
 		</template>
 	</header>

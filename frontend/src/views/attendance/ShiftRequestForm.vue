@@ -48,9 +48,10 @@ const formFields = createResource({
 	auto: true,
 	transform(data) {
 		if (props.id) return data
-		return data.filter(
-			(field) => !["employee", "employee_name", "status", "company"].includes(field.fieldname)
-		)
+		// "Goes to" read-only from the first frame (no appear-then-vanish).
+		return data
+			.filter((field) => !["employee", "employee_name", "status", "company"].includes(field.fieldname))
+			.map((field) => (field.fieldname === "approver" ? { ...field, read_only: 1 } : field))
 	},
 })
 

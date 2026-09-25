@@ -12,6 +12,7 @@ import { translationsPlugin } from "./plugins/translationsPlugin.js"
 import ResourceError from "@/components/ResourceError.vue"
 import { applyProductName } from "@/utils/productName"
 import { blockZoom } from "@/utils/blockZoom"
+import { noOverscroll } from "@/utils/noOverscroll"
 
 import { IonicVue } from "@ionic/vue"
 
@@ -46,6 +47,7 @@ import { installDiagnostics } from "@/utils/diagnostics"
 
 // Zoom off (owner ruling, 25 Sep 2026); see utils/blockZoom.js.
 blockZoom()
+noOverscroll()
 const app = createApp(App)
 
 // FIRST, before any plugin: a failure while the app is still starting is

@@ -1,3 +1,3 @@
-GOAL: nobody picks their approver; the check-in toast names the approver
-DONE WHEN: real-DB: staff send the manager above their approver -> saved as their own approver; WebKit: each form's Goes to is one disabled option
-CHECK: PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_own_approver_is_set_not_chosen.py
+GOAL: pages stop at their edges; no refresh words on a light pull; bell = avatar; tab icon centred in its pill
+DONE WHEN: WebKit: forceOverscroll false on every ion-content; bell 44x44 = avatar 44x44; tab gap 7/7 (was 0/14); ios gate 0/0/0/0
+CHECK: node --test frontend/src/components/__tests__/alpha10-frame.test.js; node design/gates/ios.mjs

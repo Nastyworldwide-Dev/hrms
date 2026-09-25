@@ -97,7 +97,11 @@ const formFields = createResource({
 	url: "hrms.api.get_doctype_fields",
 	params: { doctype: "Expense Claim" },
 	transform(data) {
-		return getFilteredFields(data)
+		// "Goes to" is read-only from the first frame, so it never shows and
+		// then vanishes for someone with no approver above them.
+		return getFilteredFields(data).map((field) =>
+			field.fieldname === "expense_approver" ? { ...field, read_only: 1 } : field
+		)
 	},
 	onSuccess(_data) {
 		expenseApproverDetails.reload()

@@ -90,6 +90,10 @@ const formFields = createResource({
 
 		return fields.map((field) => {
 			if (field.fieldname === "half_day_date") field.hidden = true
+			// Read-only from the first frame: an empty read-only row is not drawn,
+			// so "Goes to" never appears and then vanishes for someone with no
+			// approver above them (measured: the rows below jumped 68 pt).
+			if (field.fieldname === "leave_approver") field.read_only = 1
 			// Asked only for a half day, and each choice says what it means in
 			// the person's shift (owner, 25 Sep 2026).
 			if (field.fieldname === "half_day_session") {

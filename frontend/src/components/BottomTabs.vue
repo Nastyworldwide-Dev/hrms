@@ -103,4 +103,11 @@ ion-tab-button.g-tabbar__btn {
 	--padding-top: 0;
 	--padding-bottom: 0;
 }
+/* Icon and label centred inside the tab, so the selected pill holds them with
+   even space above and below (owner, 25 Sep 2026: the icon touched the pill's
+   top edge; measured icon top = pill top). */
+ion-tab-button.g-tabbar__btn::part(native) {
+	justify-content: center;
+	gap: 2px;
+}
 </style>

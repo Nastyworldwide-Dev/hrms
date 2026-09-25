@@ -172,8 +172,12 @@ html[data-transparency="reduce"] ion-tab-bar.g-tabbar {
    its 11/9 padding (8.6). */
 ion-tab-button.g-tabbar__btn {
 	/* The tab fills the bar's height token (BottomTabs sets the host to
-	   height:auto, so the tab is what gives the bar its 62 pt). */
+	   height:auto, so the tab is what gives the bar its 62 pt). A HEIGHT, not
+	   only a min-height: Ionic's inner link is height:100%, which a min-height
+	   does not resolve, so it collapsed to its content (38 pt) at the top of
+	   the tab and the icon touched the selected pill (measured, 25 Sep 2026). */
 	min-height: var(--g-tabbar-height);
+	height: var(--g-tabbar-height);
 	border-radius: var(--g-radius-tabbar);
 }
 /* The iOS 26 selected-tab lens (alpha.7 §5.1, A5): a soft pill behind the
@@ -2968,6 +2972,15 @@ ion-refresher {
    over the page with a looping animation in it (owner, iOS 26: laggy while
    scrolling; the words showed under Today). */
 ion-refresher:not(.refresher-active) .g-refresh {
+	display: none;
+}
+/* alpha.10 (owner screenshots, 25 Sep 2026: "Pull to refresh" beside the
+   large title while simply scrolling). Ionic marks the refresher ACTIVE on the
+   first pixel of any pull, including the small overscroll at the top of a
+   scroll. The words appear only once the pull has crossed Ionic's threshold
+   (refresher-ready) or a refresh is running; a light pull shows nothing. */
+ion-refresher.refresher-pulling .g-refresh,
+ion-refresher.refresher-cancelling .g-refresh {
 	display: none;
 }
 

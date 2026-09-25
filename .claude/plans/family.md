@@ -1,7 +1,6 @@
-CLASS: a staff member chooses who approves their own request (picker of the whole chain; server accepted any rung)
-hrms/hr/utils.py validate_staff_approver — same-root (fixed: own request -> first rung, whatever was sent) [Leave, Expense]
-hrms/hr/doctype/shift_request/shift_request.py validate_approver — same-root (fixed: same rule)
-frontend/src/views/leave/Form.vue, expense_claim/Form.vue, attendance/ShiftRequestForm.vue — same-root (one read-only approver)
-hrms/api/remote_checkin.py _punch_result + CheckInPanel toast — same-root (the toast named the login; now the name)
-hrms/overrides/remote_checkin_request_hooks.py resolve_approver — not-affected — already server-resolved, never chosen
-OT Request / Attendance Request — not-affected — no approver picker (filtered out)
+CLASS: the app frame does not behave like a native screen (page rubber-bands, refresh words on a light pull, unequal bar controls, tab content off-centre)
+frontend/src/utils/noOverscroll.js + main.js — same-root (Ionic forces overscroll per ion-content on iOS; off for every page)
+frontend/src/theme/glass-components.css refresher — same-root (words only past the pull threshold)
+frontend/src/components/glass/GAppHeader.vue avatar — same-root (44 like the bell)
+frontend/src/theme/glass-components.css ion-tab-button height — same-root (inner link resolved to 38 of 52; content now centred 7/7)
+frontend/src/views/leave|expense_claim|attendance forms — same-root (Goes to read-only from the first frame; the ios gate caught a 68 pt jump)
