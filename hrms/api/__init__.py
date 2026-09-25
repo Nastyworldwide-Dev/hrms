@@ -952,11 +952,18 @@ def get_filters(
 	if history:
 		# decided requests where the current user was the approver — the
 		# approval trail the Team tabs lose the moment a request is decided
-		filters.docstatus = ("!=", 2)
 		filters.employee = ("!=", employee)
-		# Expense Claim keeps its decision in approval_status; status tracks payment
-		status_field = "approval_status" if doctype == "Expense Claim" else "status"
-		filters[status_field] = ("in", ["Approved", "Rejected"])
+		if doctype == "Expense Claim":
+			# Its decision is approval_status; status tracks payment, and a Desk
+			# approval can be saved before finance submits it.
+			filters.docstatus = ("!=", 2)
+			filters.approval_status = ("in", ["Approved", "Rejected"])
+		else:
+			# Decided = SUBMITTED for every other request (decide() submits in
+			# the same step). Filtering on the status word dropped requests
+			# submitted before that field existed, which still say "Open"
+			# (25 Sep 2026, the "still Open" family).
+			filters.docstatus = 1
 		if approver_id and doctype in APPROVER_FIELD_MAP:
 			filters[APPROVER_FIELD_MAP[doctype]] = approver_id
 		logger.info("[api] history filters %s approver=%s", doctype, approver_id)

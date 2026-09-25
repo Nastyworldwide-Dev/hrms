@@ -17,7 +17,7 @@ Rows written before a rule existed are judged by that rule.
 | Move button on a pre-cutover punch | fixed | bca921ace |
 | Approvals list, request counts, approval sheet | not affected (docstatus-based, or read the shared rule) | — |
 | Engine's automatic passes (attendance_recovery, day_remark, late-OUT repair) | not affected: deliberate; broken mirrored days are released by recovery step 0 (owner, 14 Sep) | — |
-| Approver history filter (status in Approved/Rejected) | noted: a pre-field submitted request is missing from the approver's history list; no wrong label shown | open |
+| Approver history filter (status in Approved/Rejected) | fixed: decided = submitted | see git log |
 
 ## B. "Done" when nothing happened
 | Site | Verdict | Commit |

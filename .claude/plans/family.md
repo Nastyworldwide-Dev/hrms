@@ -1,12 +1,9 @@
-CLASS: a submitted request whose decision field still holds its waiting word read as waiting (server side)
+CLASS: a submitted request whose decision field still holds its waiting word, judged by the word
 
-Instance: Calendar day sheet — "Claim waiting" on overtime approved before the decision field existed (status Open, docstatus 1).
+Instance: the approver's "already answered" history filtered status in (Approved, Rejected), so a request submitted before the decision field existed ("Open", docstatus 1) was missing from it.
 
 Sites:
-- hrms/api/calendar.py _day_claim — same-root (a submitted Open claim is sent as Approved)
-- hrms/api/__init__.py get_claimable_ot_summary claimed_days — not-affected: sends docstatus; the PWA labels it through requestStatusChip (62246a4af)
-- hrms/api/__init__.py get_filters history — not-affected: filters status in (Approved, Rejected), so a submitted Open row is simply not in the approver's history (no wrong label shown); noted
-- hrms/api/approvals_list.py — not-affected: docstatus 0 only
-- hrms/api/request_counts.py — not-affected: docstatus 1 non-Rejected = approved
+- hrms/api/__init__.py get_filters history — same-root (decided = docstatus 1; Expense Claim keeps approval_status because an approved expense can stay a draft until finance submits)
+- other sites of the family — see docs/glass/audit/2026-09-25-defect-families.md (62246a4af, 9e71d0f9c)
 
-Locked: hrms/api/test_calendar_day_claim.py (+2).
+Locked: hrms/tests/test_requests_history_api.py (updated; red on the old code: 2 fail).
