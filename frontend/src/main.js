@@ -11,6 +11,7 @@ import { Button, Input, resourcesPlugin, FormControl, frappeRequest } from "frap
 import { translationsPlugin } from "./plugins/translationsPlugin.js"
 import ResourceError from "@/components/ResourceError.vue"
 import { applyProductName } from "@/utils/productName"
+import { blockZoom } from "@/utils/blockZoom"
 
 import { IonicVue } from "@ionic/vue"
 
@@ -43,6 +44,8 @@ import "./theme/glass-components.css"
 import "./data/theme"
 import { installDiagnostics } from "@/utils/diagnostics"
 
+// Zoom off (owner ruling, 25 Sep 2026); see utils/blockZoom.js.
+blockZoom()
 const app = createApp(App)
 
 // FIRST, before any plugin: a failure while the app is still starting is

@@ -97,15 +97,22 @@ test("the fix did not resize the rest of the app", () => {
 	assert.ok(rowLabel >= 14, `row-label is ${rowLabel}px; body copy floor is 14px`)
 })
 
-test("pinch zoom is still available", () => {
-	// §14: the page must survive being zoomed BY THE USER. Killing the
-	// viewport's zoom is the other way to stop focus-zoom, and it takes
-	// magnification away from everyone who needs it.
+test("zoom is off (owner ruling, 25 Sep 2026)", () => {
+	// SUPERSEDED: the owner turned zoom off ("turn off zoom"), for a native
+	// feel. iOS Safari ignores user-scalable=no since iOS 10, so three layers:
+	// the viewport meta (Android, older iOS), Safari's own gesture events
+	// cancelled (pinch), and touch-action: manipulation (double-tap). Text
+	// size still follows the phone's own setting, so reading help stays.
 	const html = readFileSync(fileURLToPath(new URL("../../index.html", import.meta.url)), "utf8")
 	const viewport = html.match(/<meta[^>]*name="viewport"[^>]*>/)
 	assert.ok(viewport, "there is a viewport meta")
-	assert.doesNotMatch(viewport[0], /user-scalable\s*=\s*no/, "never disable pinch zoom (§14)")
-	assert.doesNotMatch(viewport[0], /maximum-scale\s*=\s*1/, "nor cap it at 1")
+	assert.match(viewport[0], /maximum-scale=1/)
+	assert.match(viewport[0], /user-scalable=no/)
+	const main = readFileSync(fileURLToPath(new URL("../main.js", import.meta.url)), "utf8")
+	assert.match(main, /blockZoom\(\)/)
+	const guard = readFileSync(fileURLToPath(new URL("../utils/blockZoom.js", import.meta.url)), "utf8")
+	for (const ev of ["gesturestart", "gesturechange"]) assert.match(guard, new RegExp(ev))
+	assert.match(guard, /touches\.length > 1/)
 })
 
 test("the type floor holds (spec DECISION 5)", () => {

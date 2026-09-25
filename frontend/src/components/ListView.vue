@@ -32,7 +32,12 @@
 		</template>
 	</ShellHeader>
 
-	<ion-content class="g-page__content">
+	<ion-content
+		ref="content"
+		class="g-page__content"
+		:scroll-events="true"
+		@ionScroll="handleScroll"
+	>
 		<GPullRefresh @refresh="handleRefresh" />
 
 		<!-- tabindex="0" so a keyboard can reach the scroll. axe's
@@ -42,12 +47,11 @@
 		     keyboard user could not scroll the region at all. -->
 		<!-- The one content column (§20.3): 720px, left-aligned against the side
 		     nav at lg:. It was sm:max-w-2xl (672px) centred — a second width. -->
+		<!-- One scroller: ion-content's (alpha.8 r3). A second overflow box
+		     here scrolled every list 28 px past its content. -->
 		<div
-			class="flex flex-col items-center mb-7 p-4 h-full w-full max-w-content-column-lg mx-auto lg:mx-0 overflow-y-auto"
-			ref="scrollContainer"
-			tabindex="0"
+			class="flex flex-col items-center p-4 w-full max-w-content-column-lg mx-auto lg:mx-0"
 			:aria-label="pageTitle"
-			@scroll="() => handleScroll()"
 		>
 			<div class="w-full">
 				<GSegmented
@@ -348,8 +352,8 @@ const workflowStateField = ref(null)
 const isRequestModalOpen = ref(false)
 const selectedRequest = ref(null)
 
-// infinite scroll
-const scrollContainer = ref(null)
+// infinite scroll, read from ion-content's own scroller
+const content = ref(null)
 const hasNextPage = ref(true)
 const listOptions = ref({
 	doctype: props.doctype,
@@ -538,10 +542,12 @@ function fetchDocumentList(start = 0) {
 	})
 }
 
-const handleScroll = debounce(() => {
+const handleScroll = debounce(async () => {
 	if (!hasNextPage.value) return
 
-	const { scrollTop, scrollHeight, clientHeight } = scrollContainer.value
+	const scroller = await content.value?.$el?.getScrollElement?.()
+	if (!scroller) return
+	const { scrollTop, scrollHeight, clientHeight } = scroller
 	const scrollPercentage = (scrollTop / (scrollHeight - clientHeight)) * 100
 
 	if (scrollPercentage >= 90) {
