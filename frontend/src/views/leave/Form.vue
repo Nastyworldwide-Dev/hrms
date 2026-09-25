@@ -390,7 +390,10 @@ function setHalfDayDateRange() {
 function setLeaveApprovers(data) {
 	const leave_approver = formFields.data?.find((field) => field.fieldname === "leave_approver")
 	leave_approver.reqd = data?.is_mandatory
-	leave_approver.documentList = approverOptions(data?.department_approvers)
+	// Nobody chooses their approver (owner, 25 Sep 2026): the row shows their
+	// own, read-only; the server sets it whatever is sent.
+	leave_approver.documentList = approverOptions(data?.department_approvers).slice(0, 1)
+	leave_approver.read_only = 1
 	if (!leaveApplication.value.leave_approver) {
 		leaveApplication.value.leave_approver = data?.leave_approver
 		leaveApplication.value.leave_approver_name = data?.leave_approver_name

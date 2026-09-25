@@ -1,6 +1,7 @@
-CLASS: approved work after the shift filed off-shift, and off-shift never reaches overtime
-hrms/overrides/remote_checkin_request_hooks.py propagate_approval_decision — same-root (fixed: stamp_approved_callback on approval)
-hrms/utils/callback_session.py — same-root (the rule: after the day's window, within 18 h, before the next shift's window)
-hrms/patches/v16_0/count_approved_callbacks.py — same-root (owner yes: approved sessions since 16 Sep; paid days held)
-hrms/overrides/employee_checkin_override.py _inherit_open_in — not-affected — the later OUT inherits the stamped IN's shift (bench: OUT carried Nadi W0 Day)
-hrms/utils/ot_calculation.py _is_eligible_checkin — not-affected — unchanged: still refuses off-shift / pending / rejected
+CLASS: a staff member chooses who approves their own request (picker of the whole chain; server accepted any rung)
+hrms/hr/utils.py validate_staff_approver — same-root (fixed: own request -> first rung, whatever was sent) [Leave, Expense]
+hrms/hr/doctype/shift_request/shift_request.py validate_approver — same-root (fixed: same rule)
+frontend/src/views/leave/Form.vue, expense_claim/Form.vue, attendance/ShiftRequestForm.vue — same-root (one read-only approver)
+hrms/api/remote_checkin.py _punch_result + CheckInPanel toast — same-root (the toast named the login; now the name)
+hrms/overrides/remote_checkin_request_hooks.py resolve_approver — not-affected — already server-resolved, never chosen
+OT Request / Attendance Request — not-affected — no approver picker (filtered out)

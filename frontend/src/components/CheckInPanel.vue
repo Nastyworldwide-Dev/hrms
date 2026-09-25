@@ -1212,7 +1212,9 @@ const runSubmitLog = async (logType) => {
 							// dialog would otherwise caveat a verdict reached on a
 							// reading it no longer holds.
 							accuracyM: Number(doc.accuracy_m) || 0,
-							approverName: req.approver || "",
+							// The NAME the server resolved, never the login: the
+							// toast read an email address (owner, 25 Sep 2026).
+							approverName: doc.approver_name || "",
 							// From the punch response, not the request row: the
 							// row records the distance, not whether the distance
 							// could be trusted in the first place.

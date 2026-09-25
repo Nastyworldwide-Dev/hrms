@@ -145,12 +145,23 @@ class TestAnEmptyChainNamesTheRealProblem(unittest.TestCase):
 class TestAWrongPickStillSaysWrongPick(unittest.TestCase):
 	"""Somebody IS above them; the employee can fix this from the dropdown."""
 
-	def test_leave_keeps_its_message(self):
-		with self.assertRaises(frappe.ValidationError) as caught:
-			file_leave("stranger@example.com", ["boss@example.com"])
-		message = _message(caught)
-		self.assertIn("designated approvers", message)
-		self.assertNotIn("No approver", message)
+	def test_leave_routes_to_their_own_approver_instead_of_refusing(self):
+		# SUPERSEDED 25 Sep 2026 (owner: "nobody is supposed to choose their
+		# approver"): on the employee's own leave there is no pick to refuse;
+		# the approver is set to their own, whatever was sent.
+		doc = _Doc("stranger@example.com")
+		with _Fence(["boss@example.com"]):
+			with patch.object(
+				frappe.db,
+				"get_value",
+				side_effect=lambda dt, name, fields=None, **k: (
+					frappe._dict(user_id=STAFF, leave_approver=None, reports_to=None)
+					if isinstance(fields, list)
+					else STAFF
+				),
+			):
+				hr_utils.validate_staff_approver(doc, "leave_approver", "leave_approver", "leave_approvers")
+		self.assertEqual(doc.leave_approver, "boss@example.com")
 
 	def test_shift_keeps_its_message(self):
 		with self.assertRaises(frappe.ValidationError) as caught:

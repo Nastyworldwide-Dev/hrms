@@ -2477,6 +2477,24 @@ html[data-transparency="reduce"] #frappeui-toast-root .pointer-events-auto > div
 	line-height: 20px;
 	color: var(--g-ink2);
 }
+/* alpha.10 (owner screenshot, 25 Sep 2026): the banner sat over the header
+   and a long line ran to three rows. As an iOS banner: below the status bar,
+   title one line, text at most two, each cut with an ellipsis. */
+#frappeui-toast-root {
+	padding-top: env(safe-area-inset-top, 0px);
+}
+#frappeui-toast-root p:first-child {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+#frappeui-toast-root p + p {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	overflow: hidden;
+}
 
 /* ---------- GSearchBar (§10.3 treatment list) ---------- */
 

@@ -63,7 +63,9 @@ function applyApproverOptions() {
 	const data = approverList.value
 	const approver = formFields.data?.find((field) => field.fieldname === "approver")
 	if (!data || !approver) return
-	approver.documentList = approverOptions(data)
+	// Nobody chooses their approver (owner, 25 Sep 2026): their own, read-only.
+	approver.documentList = approverOptions(data).slice(0, 1)
+	approver.read_only = 1
 	if (!shiftRequest.value.approver) shiftRequest.value.approver = data[0]?.name
 }
 createResource({

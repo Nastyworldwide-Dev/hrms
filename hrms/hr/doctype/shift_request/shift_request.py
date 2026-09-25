@@ -123,6 +123,13 @@ class ShiftRequest(Document, PWANotificationsMixin):
 		approvers = get_designated_approvers(
 			self.employee, "shift_request_approver", "shift_request_approver"
 		)
+		# Nobody chooses their approver (owner, 25 Sep 2026): on their own
+		# request, the employee's approver is SET to their own, first rung.
+		from hrms.hr.utils import _is_own_request
+
+		if approvers and _is_own_request(self, frappe.session.user):
+			self.approver = approvers[0]
+			return
 		if self.approver not in approvers:
 			# Same two cases, same words as every other request type: an empty
 			# list is HR configuration the employee cannot fix, not a wrong pick.

@@ -1413,10 +1413,9 @@ def validate_staff_approver(doc, approver_field, employee_approver_field, depart
 	"""
 	logger.info("[staff_lockdown] approver fence: %s.%s", doc.doctype, approver_field)
 	approver = doc.get(approver_field)
-	if not approver:
-		return
-
 	user = frappe.session.user
+	if not approver and not _is_own_request(doc, user):
+		return
 	if user == "Administrator" or HR_ROLES & set(frappe.get_roles(user)):
 		return
 
@@ -1456,8 +1455,25 @@ def validate_staff_approver(doc, approver_field, employee_approver_field, depart
 		logger.warning("[staff_lockdown] %s attempted self-approval routing on %s", user, doc.doctype)
 		frappe.throw(_("You cannot set yourself as your own approver."))
 
+	# Nobody chooses their approver (owner, 25 Sep 2026: "never to the
+	# director, only their own approver"). On their own request the approver
+	# is SET to the first rung of the chain HR configured, whatever was sent;
+	# the rest of the chain is escalation for approvers, not a staff choice.
+	chain = get_designated_approvers(doc.employee, employee_approver_field, department_parentfield)
+	if chain:
+		if approver != chain[0]:
+			logger.info(
+				"[staff_lockdown] %s %s routed to own approver %s (sent %s)",
+				doc.doctype,
+				doc.name,
+				chain[0],
+				approver or "none",
+			)
+		setattr(doc, approver_field, chain[0])
+		return
+
 	# same list the PWA selector is built from — see get_designated_approvers
-	allowed = set(get_designated_approvers(doc.employee, employee_approver_field, department_parentfield))
+	allowed = set(chain)
 
 	if approver not in allowed:
 		logger.warning(
@@ -1469,6 +1485,13 @@ def validate_staff_approver(doc, approver_field, employee_approver_field, depart
 			sorted(allowed),
 		)
 		frappe.throw(no_approver_message(allowed, approver))
+
+
+def _is_own_request(doc, user) -> bool:
+	"""The session user is the request's own employee (not HR, not Desk)."""
+	if user == "Administrator" or HR_ROLES & set(frappe.get_roles(user)):
+		return False
+	return frappe.db.get_value("Employee", doc.employee, "user_id") == user
 
 
 def no_approver_message(allowed, approver) -> str:

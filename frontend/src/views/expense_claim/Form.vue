@@ -222,7 +222,9 @@ function getFilteredFields(fields) {
 function setExpenseApprover(data) {
 	const expense_approver = formFields.data?.find((field) => field.fieldname === "expense_approver")
 	expense_approver.reqd = data?.is_mandatory
-	expense_approver.documentList = approverOptions(data?.department_approvers)
+	// Nobody chooses their approver (owner, 25 Sep 2026): their own, read-only.
+	expense_approver.documentList = approverOptions(data?.department_approvers).slice(0, 1)
+	expense_approver.read_only = 1
 
 	expenseClaim.value.expense_approver = data?.expense_approver
 	expenseClaim.value.expense_approver_name = data?.expense_approver_name

@@ -905,6 +905,14 @@ def punch(
 	return _punch_result(doc, accuracy_m=accuracy_m)
 
 
+def _approver_name(doc) -> str:
+	"""The full name of whoever decides this punch's request, or ""."""
+	if not cint(doc.get("requires_remote_approval")):
+		return ""
+	login = frappe.db.get_value("Remote Checkin Request", {"checkin": doc.name}, "approver")
+	return (frappe.db.get_value("User", login, "full_name") or "") if login else ""
+
+
 def _punch_result(doc, accuracy_m=None) -> dict:
 	"""The endpoint's answer for a stored punch — minimal contract, never the
 	full doc. One builder, so a replayed tap and a fresh one read the same."""
@@ -917,6 +925,9 @@ def _punch_result(doc, accuracy_m=None) -> dict:
 		requires_remote_approval=doc.requires_remote_approval,
 		remote_approval_status=doc.remote_approval_status,
 		remote_reason=getattr(doc, "_remote_reason", None) or _reason_on_record(doc),
+		# Who decides, by NAME: the toast read "Pending approval from
+		# muhammadnurhafiz@…" (owner screenshot, 25 Sep 2026).
+		approver_name=_approver_name(doc),
 		# The accuracy the DECISION was made on, echoed like check_geofence
 		# does. The phone must not re-read its own live fix to judge how coarse
 		# the reading was: a newer one lands during the round trip, and the

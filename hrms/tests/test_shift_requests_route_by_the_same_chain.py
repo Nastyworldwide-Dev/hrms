@@ -200,9 +200,30 @@ class TestTheShiftValidatorAcceptsTheSameList(unittest.TestCase):
 		"""The escalation when the immediate approver forgets."""
 		files_with("head@example.com")  # must not raise
 
-	def test_a_department_approver_is_refused(self):
-		with self.assertRaises(frappe.ValidationError):
-			files_with(DEPARTMENT_APPROVER)
+	def test_a_department_approver_is_never_the_approver(self):
+		# 25 Sep 2026 (owner: nobody chooses their approver): the employee's own
+		# request is routed to their own approver; filed by someone else
+		# (HR in Desk) a department approver is still refused.
+		from hrms.hr import utils as hr_utils
+
+		with patch.object(hr_utils, "_is_own_request", return_value=False):
+			with self.assertRaises(frappe.ValidationError):
+				files_with(DEPARTMENT_APPROVER)
+		with patch.object(hr_utils, "_is_own_request", return_value=True):
+			doc = frappe._dict(
+				doctype="Shift Request",
+				name=None,
+				employee="HR-EMP-STAFF",
+				approver=DEPARTMENT_APPROVER,
+				status="Draft",
+			)
+			doc.is_new = lambda: True
+			doc.has_value_changed = lambda _f: True
+			from hrms.hr.doctype.shift_request.shift_request import ShiftRequest
+
+			with _Org():
+				ShiftRequest.validate_approver(doc)
+			self.assertEqual(doc.approver, "lead@example.com")
 
 	def test_everything_offered_is_accepted(self):
 		"""The invariant: the selector and the fence read one list."""
