@@ -55,3 +55,21 @@ test("the app shell never bounces; only the page content scrolls", () => {
 	assert.equal(html["overscroll-behavior"], "none")
 	assert.equal(html.overflow, "hidden")
 })
+
+// "Expensproved, not paid yet" (Expense detail): the centred bar title and a
+// long status word overlapped. The three bar tracks are equal on the sides so
+// the title stays centred and truncates; the status truncates in its own track.
+test("the bar title and a long status never overlap", () => {
+	assert.match(decls(".g-header--inline")["grid-template-columns"], /minmax\(0, 1fr\) minmax\(0, max-content\) minmax\(0, 1fr\)/)
+	const actions = decls(".g-header--inline .g-header__actions")
+	assert.equal(actions["min-width"], "0")
+	assert.equal(actions.overflow, "hidden")
+})
+
+// "2▪", "19▪" on sent requests: Safari draws its number spinner on a disabled
+// number input. A read-only row shows only the number.
+test("no number spinner on a read-only row", () => {
+	const css = read("../../../theme/glass-components.css")
+	assert.match(css, /\.g-form-row--readonly input\[type="number"\]::-webkit-inner-spin-button/)
+	assert.match(decls('.g-form-row--readonly input[type="number"]')["-moz-appearance"] || "", /textfield/)
+})

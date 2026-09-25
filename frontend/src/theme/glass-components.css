@@ -4031,7 +4031,9 @@ html {
 }
 .g-header--inline {
 	display: grid;
-	grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);
+	/* Equal side tracks keep the title centred; every track can shrink, so a
+	   long status word truncates instead of running over the title. */
+	grid-template-columns: minmax(0, 1fr) minmax(0, max-content) minmax(0, 1fr);
 	gap: 8px;
 }
 .g-header--inline .g-header__back {
@@ -4051,6 +4053,17 @@ html {
 .g-header--inline .g-header__actions,
 .g-header--inline .g-header__trail {
 	justify-self: end;
+}
+.g-header--inline .g-header__actions {
+	min-width: 0;
+	max-width: 100%;
+	overflow: hidden;
+}
+.g-header--inline .g-header__actions .g-badge {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
 }
 .g-header--inline .g-header__spacer {
 	display: none;
@@ -4447,4 +4460,15 @@ ion-modal.g-mustread {
 }
 .g-switch__input[type="checkbox"]:focus-visible {
 	box-shadow: var(--g-shadow-focus-ring);
+}
+/* A read-only number shows only the number: Safari drew its spinner on a
+   disabled number input ("2▪" on sent requests; alpha.8 r2). */
+.g-form-row--readonly input[type="number"] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+.g-form-row--readonly input[type="number"]::-webkit-inner-spin-button,
+.g-form-row--readonly input[type="number"]::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
 }
