@@ -15,7 +15,7 @@ def _hours(value) -> str:
 
 
 def rate_label(bands) -> str:
-	""" "1.5×", or "1.5× (4h) + 2.0× (1.5h)" when a claim spans bands. Pure."""
+	"""e.g. 1.5x, or 1.5x (4h) + 2.0x (1.5h) when a claim spans bands. Pure."""
 	bands = [b for b in bands or [] if b.get("hours")]
 	if not bands:
 		return ""
