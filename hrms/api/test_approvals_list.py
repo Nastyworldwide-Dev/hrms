@@ -513,3 +513,25 @@ class TestHomeCountsYoursOnly(unittest.TestCase):
 	def test_home_counts_only_my_check_ins(self):
 		# RCR-SHIFT (my shift approvee) and RCR-STAMPED (stamped to me); not RCR-OTHER.
 		self.assertEqual(self._needs_you()["checkins"], 2)
+
+
+class TestHalfDaySessionOnTheApproverRow(unittest.TestCase):
+	"""The approver reads which half (owner, 25 Sep 2026): 'Half day · AM'."""
+
+	def test_a_half_day_names_its_session(self):
+		doc = frappe._dict(
+			doctype="Leave Application",
+			leave_type="Annual Leave",
+			from_date="2026-10-14",
+			to_date="2026-10-14",
+			total_leave_days=0.5,
+			half_day=1,
+			half_day_session="AM",
+		)
+		self.assertEqual(approvals_list._row(doc)["detail"], "Annual Leave · Half day · AM")
+
+	def test_an_older_half_day_without_a_session_reads_as_before(self):
+		doc = frappe._dict(
+			doctype="Leave Application", leave_type="Annual Leave", total_leave_days=0.5, half_day=1
+		)
+		self.assertEqual(approvals_list._row(doc)["detail"], "Annual Leave · 0.5 days")

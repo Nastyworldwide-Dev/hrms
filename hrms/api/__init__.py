@@ -1061,6 +1061,7 @@ def get_leave_applications(
 		"from_date",
 		"to_date",
 		"half_day",
+		"half_day_session",
 		"half_day_date",
 		"description",
 		"total_leave_days",

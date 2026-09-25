@@ -144,7 +144,12 @@ def _row(doc, me: dict | None = None, cache: dict | None = None) -> dict:
 	when, detail, reason = "", "", ""
 	if doc.doctype == "Leave Application":
 		when = _range(doc.get("from_date"), doc.get("to_date"))
-		detail = f"{doc.get('leave_type')} · {_days(doc.get('total_leave_days'))}"
+		# Which half, when the request says (owner, 25 Sep 2026): the approver
+		# decides knowing whether the person is out in the morning or afternoon.
+		session = doc.get("half_day_session") if doc.get("half_day") else ""
+		detail = f"{doc.get('leave_type')} · " + (
+			f"Half day · {session}" if session else _days(doc.get("total_leave_days"))
+		)
 		reason = doc.get("description") or ""
 	elif doc.doctype == "OT Request":
 		when = _day(doc.get("ot_date"))

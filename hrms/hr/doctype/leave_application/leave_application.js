@@ -44,6 +44,9 @@ frappe.ui.form.on("Leave Application", {
 			frm.doc.half_day_date = "";
 		}
 		frm.toggle_reqd("half_day_date", cint(frm.doc.half_day));
+		// Which half (25 Sep 2026): required on a NEW half day; a request saved
+		// before the field existed is not blocked on edit.
+		frm.toggle_reqd("half_day_session", cint(frm.doc.half_day) && frm.is_new());
 	},
 
 	make_dashboard: function (frm) {

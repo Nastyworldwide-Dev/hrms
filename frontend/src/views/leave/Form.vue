@@ -11,7 +11,19 @@
 				:id="props.id"
 				:showAttachmentView="true"
 				@validateForm="validateForm"
-			/>
+			>
+				<!-- What the chosen half means, in the person's own shift, under the
+				     group that asks it (owner, 25 Sep 2026: clear, no confusion). -->
+				<template #groupFooter="{ group }">
+					<p
+						v-if="leaveApplication.half_day && groupHasSession(group)"
+						class="g-form-footer g-halfday-note"
+						role="status"
+					>
+						{{ sessionGuidance(halfDayHints.data, leaveApplication.half_day_session, __) }}
+					</p>
+				</template>
+			</FormView>
 			<ResourceError :resource="formFields" back what="the leave application form" />
 		</ion-content>
 	</GPage>
@@ -27,6 +39,7 @@ import { ref, watch, inject, nextTick } from "vue"
 import { useRoute } from "vue-router"
 
 import { dateFromRoute } from "@/utils/dateFromRoute"
+import { sessionGuidance, sessionOptions } from "@/utils/halfDaySession"
 
 import FormView from "@/components/FormView.vue"
 import { firstMessage } from "@/utils/loudRequest"
@@ -77,6 +90,13 @@ const formFields = createResource({
 
 		return fields.map((field) => {
 			if (field.fieldname === "half_day_date") field.hidden = true
+			// Asked only for a half day, and each choice says what it means in
+			// the person's shift (owner, 25 Sep 2026).
+			if (field.fieldname === "half_day_session") {
+				field.label = __("Which half")
+				field.hidden = !leaveApplication.value.half_day
+				field.documentList = sessionOptions(null, __)
+			}
 
 			if (field.fieldname === "posting_date") field.default = today
 
@@ -211,6 +231,7 @@ const FIELDS = [
 	"from_date",
 	"to_date",
 	"half_day",
+	"half_day_session",
 	"half_day_date",
 	"total_leave_days",
 	"description",
@@ -316,7 +337,37 @@ function setLeaveBalance() {
 	leaveBalance.reload()
 }
 
+//: The group that holds the AM | PM row carries the guidance line.
+const groupHasSession = (group) =>
+	group.segments.some((seg) => seg.fields?.some((f) => f.fieldname === "half_day_session"))
+
+//: What AM and PM mean on the half-day date, in the caller's own shift.
+const halfDayHints = createResource({
+	url: "hrms.api.half_day.get_half_day_hints",
+	onSuccess(hints) {
+		const session = formFields.data?.find((field) => field.fieldname === "half_day_session")
+		if (session) session.documentList = sessionOptions(hints, __)
+	},
+	onError(error) {
+		// the plain options stay; the choice is still clear without the clock
+		console.warn("[LeaveForm] half-day hints unavailable:", firstMessage(error))
+	},
+})
+
+watch(
+	() => leaveApplication.value.half_day && leaveApplication.value.half_day_date,
+	(day) => {
+		if (day) halfDayHints.submit({ day: leaveApplication.value.half_day_date })
+	}
+)
+
 function setHalfDayDate(half_day) {
+	const session = formFields.data.find((field) => field.fieldname === "half_day_session")
+	if (session) {
+		session.hidden = !half_day
+		session.reqd = Boolean(half_day)
+		if (!half_day) leaveApplication.value.half_day_session = ""
+	}
 	const half_day_date = formFields.data.find((field) => field.fieldname === "half_day_date")
 	half_day_date.hidden = !half_day
 	half_day_date.reqd = half_day

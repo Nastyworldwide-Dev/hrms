@@ -41,6 +41,7 @@ from hrms.hr.utils import (
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
 from hrms.utils.email_flush import flush_email_queue_after_commit
+from hrms.utils.half_day_session import sessions_clash
 from hrms.utils.holiday_list import get_holiday_dates_between_range
 
 
@@ -97,6 +98,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.validate_salary_processed_days()
 		self.validate_attendance()
 		self.set_half_day_date()
+		self.validate_half_day_session()
 		if frappe.db.get_value("Leave Type", self.leave_type, "is_optional_leave"):
 			self.validate_optional_leave()
 		self.validate_applicable_after()
@@ -370,15 +372,21 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			doc = frappe.get_doc("Attendance", attendance_name)
 			half_day_status = None if status == "On Leave" else "Present"
 			modify_half_day_status = 1 if doc.status == "Absent" and status == "Half Day" else 0
-			doc.db_set(
-				{
-					"status": status,
-					"leave_type": self.leave_type,
-					"leave_application": self.name,
-					"half_day_status": half_day_status,
-					"modify_half_day_status": modify_half_day_status,
-				}
-			)
+			values = {
+				"status": status,
+				"leave_type": self.leave_type,
+				"leave_application": self.name,
+				"half_day_status": half_day_status,
+				"modify_half_day_status": modify_half_day_status,
+			}
+			if status == "Half Day" and self.half_day_session:
+				# The punches already marked this day against the whole shift; the
+				# half off moves the line (owner, 25 Sep 2026: "we don't want them
+				# late"). Same in/out times, new boundary, nothing else touched.
+				from hrms.utils.half_day_session import late_early_for_row
+
+				values.update(late_early_for_row(doc, self.half_day_session))
+			doc.db_set(values)
 		else:
 			# make new attendance and submit it
 			doc = frappe.new_doc("Attendance")
@@ -538,6 +546,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				LeaveApplication.total_leave_days,
 				LeaveApplication.half_day,
 				LeaveApplication.half_day_date,
+				LeaveApplication.half_day_session,
 			)
 			.where(
 				(LeaveApplication.employee == self.employee)
@@ -560,6 +569,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 					or getdate(self.to_date) == getdate(d.from_date)
 				)
 			):
+				# The same half twice is one half day asked for twice; AM + PM
+				# is the whole day, as before (owner, 25 Sep 2026).
+				if sessions_clash(self.half_day_session, d.half_day_session):
+					self.throw_overlap_error(d)
 				total_leaves_on_half_day = self.get_total_leaves_on_half_day()
 				if total_leaves_on_half_day >= 1:
 					self.throw_overlap_error(d)
@@ -723,6 +736,23 @@ class LeaveApplication(Document, PWANotificationsMixin):
 					_("{0} is not in Optional Holiday List").format(formatdate(day)), NotAnOptionalHoliday
 				)
 			day = add_days(day, 1)
+
+	def validate_half_day_session(self):
+		"""A new half day says which half (owner, 25 Sep 2026): it decides
+		when the person is expected in, so late/early are never guessed."""
+		from hrms.utils.half_day_session import session_problem
+
+		if not cint(self.half_day):
+			self.half_day_session = None
+			return
+		if session_problem(cint(self.half_day), self.half_day_session, self.is_new()) == "missing":
+			logger.info("[leave_application] %s half day without a session refused", self.employee)
+			frappe.throw(
+				_(
+					"Choose AM or PM for the half day: AM if you are off in the morning, PM if you leave at mid-shift."
+				),
+				title=_("Which half?"),
+			)
 
 	def set_half_day_date(self):
 		if self.from_date == self.to_date and self.half_day == 1:

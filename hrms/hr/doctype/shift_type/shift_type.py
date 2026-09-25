@@ -837,19 +837,24 @@ class ShiftType(Document):
 		total_working_hours = self._deduct_unpaid_breaks(
 			total_working_hours, intervals, company=_company_of_logs(logs)
 		)
-		if (
-			cint(self.enable_late_entry_marking)
-			and in_time
-			and in_time > logs[0].shift_start + timedelta(minutes=cint(self.late_entry_grace_period))
-		):
-			late_entry = True
+		# A half day off moves the boundary to the middle of the shift (owner,
+		# 25 Sep 2026): AM off is not a late arrival at lunch, PM off is not an
+		# early exit. No session (every request before this) = the whole shift.
+		# ONE comparison, shared with the leave-approval path (flags_for).
+		from hrms.utils.half_day_session import approved_session, flags_for
 
-		if (
-			cint(self.enable_early_exit_marking)
-			and out_time
-			and out_time < logs[0].shift_end - timedelta(minutes=cint(self.early_exit_grace_period))
-		):
-			early_exit = True
+		flags = flags_for(
+			in_time=in_time,
+			out_time=out_time,
+			shift_start=logs[0].shift_start,
+			shift_end=logs[0].shift_end,
+			session=approved_session(logs[0].employee, getdate(logs[0].shift_start or logs[0].time)),
+			late_grace=cint(self.late_entry_grace_period),
+			early_grace=cint(self.early_exit_grace_period),
+			late_on=cint(self.enable_late_entry_marking),
+			early_on=cint(self.enable_early_exit_marking),
+		)
+		late_entry, early_exit = bool(flags["late_entry"]), bool(flags["early_exit"])
 
 		if working_hours_threshold_for_absent and total_working_hours < working_hours_threshold_for_absent:
 			return "Absent", total_working_hours, late_entry, early_exit, in_time, out_time

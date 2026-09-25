@@ -317,7 +317,9 @@ const rowPlaceholder = computed(() =>
 )
 
 const selectionList = computed(() => {
-	if (props.fieldtype === "Link" && props.documentList) {
+	// A caller's own option list wins for a Select too: the half-day AM | PM
+	// choice carries its meaning in the label ("AM — Start by 13:30").
+	if ((props.fieldtype === "Link" || props.fieldtype === "Select") && props.documentList) {
 		return props.documentList
 	} else if (props.fieldtype == "Select" && props.options) {
 		const options = props.options.split("\n")

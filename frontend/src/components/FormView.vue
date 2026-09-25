@@ -183,6 +183,9 @@
 									:isFormReadOnly="isFormReadOnly"
 								></slot>
 							</template>
+							<!-- The group's footer, when the page gives one: guidance under
+							     the rows it explains (HIG; half-day AM/PM, 25 Sep 2026). -->
+							<slot name="groupFooter" :group="group"></slot>
 						</section>
 
 						<!-- Attachment upload -->
