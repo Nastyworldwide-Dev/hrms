@@ -1,14 +1,13 @@
 # HANDOFF
-prompt:   alpha.8 slice 1 (owner 25 Sep: separator, tab bar, heading, lag; HR OT rate)
-status:   partial (one owner answer pending: Desk hour decimals)
-commit:   a7a664c4a on nz-glass (deploy the branch head)
-files:    hrms/hr/doctype/ot_request/ot_request.py (+ .json)
-          hrms/patches/v16_0/fill_ot_request_day_type_and_rate.py
-          frontend/src/components/BottomTabs.vue
+prompt:   alpha.8 round 2 (owner after deploy) + alpha.9 defect list
+status:   partial (alpha.9 plan written; D1-D25 minus D12/D13 not built)
+commit:   cdf71f556 on nz-glass (deploy the branch head)
+files:    hrms/utils/report_columns.py
+          hrms/patches/v16_0/ot_request_report_columns.py
           frontend/src/components/BaseLayout.vue
-          frontend/src/views/Profile.vue
           frontend/src/theme/glass-components.css
-          docs/glass/plan/NADI_2.0.0-alpha.8_PLAN.md
-verify:   Desk > OT Request > Report view: Day Type + OT Rate columns; PWA on iPhone: scroll + pull-down, tab switch
-flags:    Desk hours show 9 decimals by design (storage); a display-only 2-decimal view needs the owner's yes
-next:     owner deploys; confirms lag on the phone; answers the decimals question
+          frontend/e2e/ios-consistency-audit.mjs
+          docs/glass/plan/NADI_2.0.0-alpha.9_PLAN.md
+verify:   Desk > OT Request > Report view shows Day Type + OT Rate after Compensation; PWA: switch tabs, no double title
+flags:    pinch zoom kept on purpose (accessibility); the bounce fix is for the shell only
+next:     owner reviews the alpha.9 list; then build D10-D14, D1-D9, D15-D24 in that order

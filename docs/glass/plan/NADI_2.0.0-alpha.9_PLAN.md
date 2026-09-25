@@ -55,8 +55,8 @@ typography, all pages, sheets, dialogs. Plan it the Apple way."
 |---|---|---|
 | D10 | Every sent-request detail (Fix a day, Shift change, Time off, Overtime, Expense) | "Who: HR-EMP-00009" — an employee ID, not the name (owner rule: ids never reach users) |
 | D11 | Same | "Company: Nadi W0 A" on the employee's OWN request — noise |
-| D12 | Expense detail | bar reads "Expense" + "Approved, not paid yet" overlapping the title ("Expensproved…") |
-| D13 | Overtime / Time off detail | numeric values show a stray box glyph ("2▪", "1▪", "19▪") — a spinner/stepper artefact of a disabled number input |
+| D12 ✅ cdf71f556 | Expense detail | bar reads "Expense" + "Approved, not paid yet" overlapping the title ("Expensproved…") |
+| D13 ✅ cdf71f556 | Overtime / Time off detail | numeric values show a stray box glyph ("2▪", "1▪", "19▪") — a spinner/stepper artefact of a disabled number input |
 | D14 | Overtime detail | "Hours from check-ins" wraps to two lines at 17 pt |
 
 ### Type (R8)
