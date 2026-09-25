@@ -144,3 +144,17 @@ test("a remote check-in row reads the same rule as every other request", () => {
 	// not submittable: it has no docstatus at all, so the decision field decides
 	assert.equal(requestStatus("Remote Checkin Request", { status: "Pending" }).label, WAITING)
 })
+
+// Reported 25 Sep 2026 ("2 fix a day still Open"): On Duty requests
+// submitted before the Approve/Reject field existed (or in the old system)
+// carry status "Open" with docstatus 1. For these types submitting IS the
+// approval (the controller only pays out on submit), and the Approved filter
+// already counted them — only the chip said "Open".
+test("a submitted request still labelled Open reads Approved", () => {
+	for (const doctype of ["Attendance Request", "OT Request", "Replacement Leave Claim", "Leave Application"]) {
+		const s = requestStatus(doctype, { status: "Open", docstatus: 1 })
+		assert.equal(s.label, "Approved", doctype)
+		assert.equal(s.pending, false)
+	}
+	assert.equal(requestStatus("Shift Request", { status: "Draft", docstatus: 1 }).label, "Approved")
+})

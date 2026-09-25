@@ -121,6 +121,11 @@ export function requestStatus(doctype, doc = {}) {
 		}
 	} else if (rule?.submitted) {
 		label = rule.submitted(doc)
+	} else if (rule && decision === rule.pending) {
+		// Submitted but still carrying the waiting word: rows from before the
+		// decision field (or the old system). For these types submitting IS the
+		// approval, which is why the Approved filter counts them (25 Sep 2026).
+		label = "Approved"
 	} else {
 		// `status` missing from an older payload: a submitted request is Approved
 		label = decision || (rule ? "Approved" : "")
