@@ -90,9 +90,25 @@ if __name__ == "__main__":
 class TestDayClaimApprover(unittest.TestCase):
 	def test_a_disabled_approver_is_skipped(self):
 		# Review of the claim commit: name someone who can actually decide it.
-		me, _ = _day([{"name": "OT-1", "status": "Open"}], approvers=["gone@example.com", "hafiz@example.com"])
+		me, _ = _day(
+			[{"name": "OT-1", "status": "Open"}], approvers=["gone@example.com", "hafiz@example.com"]
+		)
 		self.assertEqual(me["claim"]["approver_name"], "Hafiz Rahman")
 
 	def test_only_disabled_approvers_names_nobody(self):
 		me, _ = _day([{"name": "OT-1", "status": "Open"}], approvers=["gone@example.com"])
 		self.assertEqual(me["claim"]["approver_name"], "")
+
+
+class TestASubmittedClaimStillLabelledOpen(unittest.TestCase):
+	"""Family A (25 Sep 2026): an OT Request submitted before the decision
+	field existed keeps status "Open" with docstatus 1. The sheet read that as
+	"Claim waiting" on overtime that was already approved."""
+
+	def test_it_is_sent_as_approved(self):
+		day, _ = _day([{"name": "OT-1", "status": "Open", "docstatus": 1}])
+		self.assertEqual(day["claim"]["status"], "Approved")
+
+	def test_a_draft_still_waits(self):
+		day, _ = _day([{"name": "OT-1", "status": "Open", "docstatus": 0}])
+		self.assertEqual(day["claim"]["status"], "Open")

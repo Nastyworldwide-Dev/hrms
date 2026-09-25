@@ -539,12 +539,17 @@ def _day_claim(employee: str, day) -> dict | None:
 	claims = frappe.get_all(
 		"OT Request",
 		filters={"employee": employee, "ot_date": day, "docstatus": ("<", 2)},
-		fields=["name", "status"],
+		fields=["name", "status", "docstatus"],
 		order_by="creation desc",
 		ignore_permissions=True,
 	)
 	if not claims:
 		return None
+	for row in claims:
+		# Submitted before the decision field existed: submitting WAS the
+		# approval (backfill_request_decision_status), so it is not waiting.
+		if row.get("docstatus") == 1 and row.status == "Open":
+			row.status = "Approved"
 	claim = min(claims, key=lambda row: _CLAIM_RANK.get(row.status, 2))
 	# The first designated approver — the order OT notifications try
 	# (pwa_notifications._get_ot_approver). Blank when none: the sheet then
