@@ -13,7 +13,9 @@ const markup = who.template.content
 const script = who.scriptSetup.content
 
 test("the empty HR list says so plainly, never 'assign roles'", () => {
-	assert.match(markup, /__\("HR hasn't listed contacts yet\."\)/)
+	// The words live in the script since alpha.9 D4 (a row label; the
+	// apostrophe cannot sit in a single-quoted template attribute).
+	assert.match(script, /__\("HR hasn't listed contacts yet\."\)/)
 	for (const file of ["../WhoToAsk.vue", "../../views/HRContacts.vue"]) {
 		assert.doesNotMatch(read(file), /administrator|assign the HR/i, file)
 	}

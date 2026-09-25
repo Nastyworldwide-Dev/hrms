@@ -19,11 +19,6 @@
 			<div class="flex flex-col min-h-full w-full">
 				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
 					<div class="flex flex-col gap-3 p-4">
-						<!-- A caption, not a headline: the old unread count in stat-number
-						     type was the loudest thing on the screen (owner, 23 Sep). -->
-						<span v-if="unreadNotificationsCount.data" class="text-caption text-ink-600">
-							{{ __("{0} unread", [unreadNotificationsCount.data]) }}
-						</span>
 
 						<GListPanel v-if="firstLoad" :loading="firstLoad" :rows="5" />
 
@@ -31,7 +26,11 @@
 						     Earlier), so the screen stays inside the surface budget. -->
 						<!-- glass-surfaces: bounded — three day groups at most -->
 						<template v-for="group in groups" :key="group.key">
-							<span class="g-eyebrow mt-2">{{ group.label }}</span>
+							<!-- The unread count rides on the first header ("Today · 3 unread"),
+							     not a loose line above the list (alpha.9 D3; iOS section header). -->
+							<h2 class="g-form-section__title mt-2">
+								{{ groupTitle(group) }}
+							</h2>
 							<GListPanel>
 								<GListRow
 									v-for="item in group.items"
@@ -192,6 +191,12 @@ const kindIcon = (item) => KIND_ICON[item.reference_document_type] || Bell
 // line (utils/notificationLine.js) and "who · when"; the stored sentence is
 // never drawn.
 const GROUPS = { Today: "Today", Yesterday: "Yesterday", Earlier: "Earlier" }
+//: The first section header carries the unread count (alpha.9 D3).
+function groupTitle(group) {
+	const unread = Number(unreadNotificationsCount.data) || 0
+	return group === groups.value[0] && unread ? __("{0} · {1} unread", [group.label, unread]) : group.label
+}
+
 const groups = computed(() => {
 	const now = dayjs().tz(siteTimeZone())
 	const out = []

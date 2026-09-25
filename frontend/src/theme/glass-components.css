@@ -3761,6 +3761,11 @@ ion-router-outlet {
 	line-height: 18px;
 	color: var(--g-ink2);
 }
+/* A footer that closes the page (the version under Log out), centred as
+   iOS centres the last line of a Settings page. */
+.g-form-footer--center {
+	text-align: center;
+}
 /* A row that IS the action (Log out): the whole row is the button. */
 .g-form-row--action {
 	width: 100%;

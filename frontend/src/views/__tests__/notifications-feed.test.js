@@ -35,7 +35,9 @@ test("mark all read is a header action; the unread count is a caption, not a sta
 	assert.match(markup, /<template #actions>[\s\S]*?__\("Mark all read"\)[\s\S]*?<\/template>/)
 	assert.doesNotMatch(markup, /text-stat-number/)
 	assert.doesNotMatch(markup, /\{0\} Unread/)
-	assert.match(markup, /__\("\{0\} unread"/)
+	// alpha.9 D3: the count rides on the first section header ("Today · 3
+	// unread"), not a loose caption above the list.
+	assert.match(script, /__\("\{0\} · \{1\} unread"/)
 	assert.doesNotMatch(script, /\bButton\b.*frappe-ui|from "frappe-ui"[^\n]*\bButton\b/)
 })
 

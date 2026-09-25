@@ -1,3 +1,3 @@
-GOAL: a row label keeps one line beside a short value (alpha.9 D14)
-DONE WHEN: WebKit sweep of 36 screens at 402 and 320 pt: wrapped labels 12 -> 1, 0 clipped values
-CHECK: node --test frontend/src/components/__tests__/request-detail-names.test.js
+GOAL: no loose lines on Notifications, Who to ask, You (alpha.9 D3, D4, D9)
+DONE WHEN: ios-consistency-audit loose-text rule clean on /notifications /hr-contacts /profile /settings
+CHECK: node --test frontend/src/components/__tests__/nothing-loose.test.js

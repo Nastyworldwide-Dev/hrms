@@ -1,4 +1,7 @@
-CLASS: a form row's label capped at 45% wraps beside a short value or a switch
-frontend/src/theme/glass-components.css .g-form-row__label — same-root (fixed: 70% cap)
-.g-form-row--stacked, .g-ann-quiet, .g-req-row, .g-balances-row labels — not-affected — they set max-width none already
-remaining wrap: /issues/new "What are you reporting?" at 320 pt — not-affected — a question beside a picker on the narrowest phone; wraps within the row as iOS does
+CLASS: a line of content sitting loose between groups (iOS keeps content in groups; only headers and footers sit outside)
+frontend/src/views/Notifications.vue unread count — same-root (fixed: first section header)
+frontend/src/components/WhoToAsk.vue empty lines — same-root (fixed: rows in the group, section headers)
+frontend/src/views/Profile.vue version — same-root (fixed: the log-out group's footer; /settings renders You)
+frontend/src/views/team/TeamDashboard.vue day label — ticket alpha9-D2 — its member list is not a group either; one change next
+frontend/src/views/ot/OTRequestForm.vue empty reason — ticket alpha9-D7 — next slice
+frontend/src/views/expense_claim totals — ticket alpha9-D8 — next slice

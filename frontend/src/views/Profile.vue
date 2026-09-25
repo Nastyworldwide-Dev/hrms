@@ -110,20 +110,22 @@
 						</section>
 
 						<!-- The way out: a destructive row, red text (HIG Buttons), never
-						     the loudest thing on the page. -->
-						<div class="g-form-group">
-							<button
-								type="button"
-								class="g-form-row g-form-row--action g-form-row--destructive"
-								@click="logout"
-							>
-								{{ __("Log out") }}
-							</button>
-						</div>
-
-						<p class="text-caption text-ink-600 text-center">
-							{{ __("Version {0} · {1}", [versionString, buildString]) }}
-						</p>
+						     the loudest thing on the page. The version is its footer, as
+						     iOS puts "About" facts (alpha.9 D9: not a loose line). -->
+						<section class="g-form-section">
+							<div class="g-form-group">
+								<button
+									type="button"
+									class="g-form-row g-form-row--action g-form-row--destructive"
+									@click="logout"
+								>
+									{{ __("Log out") }}
+								</button>
+							</div>
+							<p class="g-form-footer g-form-footer--center">
+								{{ __("Version {0} · {1}", [versionString, buildString]) }}
+							</p>
+						</section>
 					</div>
 				</div>
 			</div>
