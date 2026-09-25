@@ -78,4 +78,7 @@ const counts = {}
 for (const r of rows) for (const i of r.issues || []) { const k = i.split(":")[0]; counts[k] = (counts[k] || 0) + 1 }
 console.log(`${rows.length} screens`)
 console.log(Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n}\t${k}`).join("\n"))
+const FAILED = rows.filter((r) => r.error || r.issues?.length).length
+console.log(`GATE_COUNT ${FAILED}`)
 await b.close()
+process.exit(FAILED ? 1 : 0)

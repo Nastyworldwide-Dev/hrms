@@ -54,7 +54,10 @@
 			what="your leave balance"
 		/>
 		<!-- Four states (D6): in flight is not "none allocated". -->
-		<GBalanceGrid v-else-if="leaveBalance.loading" loading />
+		<!-- One skeleton card, the shape of the commonest answer (alpha.9
+		     lock-in, measured: four skeleton cells gave way to one real card and
+		     Time off jumped 120 pt on a first visit). -->
+		<GBalanceGrid v-else-if="leaveBalance.loading" loading :cells="1" />
 		<GBalanceGrid v-else empty>
 			<template #empty>
 				<GEmptyState

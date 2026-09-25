@@ -25,6 +25,7 @@ const GATES = [
   "a11y",
   "visual",
   "coherence",
+  "ios",
 ];
 
 const results = [];
@@ -36,7 +37,7 @@ for (const gate of GATES) {
   // visual ~114 — and a 6-minute cap SIGTERMed the visual gate with its output
   // still buffered, so it reported FAIL with no reason printed. Static gates
   // keep the short cap; anything that drives a browser gets 30 minutes.
-  const RENDER_GATES = new Set(["a11y", "visual", "coherence"]);
+  const RENDER_GATES = new Set(["a11y", "visual", "coherence", "ios"]);
   const res = spawnSync(
     process.execPath,
     [join(DIR, `${gate}.mjs`), ...(STRICT ? ["--strict"] : [])],
@@ -68,6 +69,10 @@ for (const { gate, code, info } of results) {
             ? `${info.screens ?? "?"} screen-themes, ${info.known ?? 0} baselined, ${info.new ?? 0} new`
             : gate === "coherence"
               ? `${info.screens ?? "?"} screens, ${info.violations ?? "?"} violation(s)`
+            : gate === "ios"
+              ? info.status === "skip"
+                ? "skipped (no served site)"
+                : `pages ${info["ios-consistency-audit"] ?? "?"}, sheets ${info["sheet-consistency-audit"] ?? "?"}, page moves ${info["scroll-and-shift-audit"] ?? "?"}, sheet moves ${info["sheet-shift-audit"] ?? "?"}`
               : gate === "scale"
                 ? `${info.steps ?? "?"} type steps, ${info.offGrid ?? 0} off the 4pt grid`
               : gate === "motion"

@@ -1,3 +1,3 @@
-GOAL: alpha.9 D6, D19, D20, D22, D24 — screen structure to the iOS rules
-DONE WHEN: ios-consistency-audit 0 issues / 36 screens; scroll-and-shift 0/36; tests green; screenshots checked
-CHECK: node --test frontend/src/components/__tests__/nothing-loose.test.js
+GOAL: alpha.9 D25 sheets meet the rules, and the rules are enforced (plan step 6)
+DONE WHEN: design/gates/ios.mjs OK: pages 0, sheets 0, page moves 0, sheet moves 0
+CHECK: set -a && . ./.env && set +a && node design/gates/ios.mjs

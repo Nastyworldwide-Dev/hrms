@@ -2,31 +2,31 @@
   The year's public holidays, one list (audit-pages PAGE-20): opened as a
   sheet from More's "Public holidays" row. The days still to come: the list
   is for planning (PAGE-20), and a past holiday plans nothing.
-  The sheet owns the title. The list is flat (plain divided rows, no card
-  inside the sheet), and the first row, the next holiday, carries a "Next" chip.
+  The sheet owns the title. The days are rows in one inset group, as every
+  sheet's (alpha.9 D25), and the next holiday carries a "Next" chip.
 -->
 <template>
 	<div class="flex flex-col px-4 pb-8">
 		<GListPanel v-if="holidays.loading && !holidays.data" loading />
 		<ResourceError v-else-if="holidays.error" :resource="holidays" what="your holiday calendar" />
-		<ul v-else-if="upcoming.length" class="flex flex-col">
-			<li
+		<!-- One inset group like every other sheet (alpha.9 D25): the rows were
+		     hand-ruled on the sheet, and "none listed" was a loose grey line. -->
+		<GListPanel v-else-if="upcoming.length">
+			<GListRow
 				v-for="(holiday, index) in upcoming"
 				:key="holiday.holiday_date"
-				class="flex flex-row items-center justify-between gap-3 py-3 border-b border-divider last:border-b-0"
+				:label="__(holiday.description)"
+				:amount="$dayjs(holiday.holiday_date).format('ddd D MMM')"
+				:tappable="false"
 			>
-				<span class="flex flex-row items-center gap-2 min-w-0">
-					<span class="text-sm text-ink">{{ __(holiday.description) }}</span>
-					<GStatusChip v-if="index === 0" status="Next" :label="__('Next')" />
-				</span>
-				<span class="text-sm text-ink-600 tabular-nums shrink-0">
-					{{ $dayjs(holiday.holiday_date).format("ddd D MMM") }}
-				</span>
-			</li>
-		</ul>
-		<p v-else class="text-caption text-ink-600">
-			{{ __("No public holidays ahead are listed yet.") }}
-		</p>
+				<template v-if="index === 0" #badge>
+					<GStatusChip status="Next" :label="__('Next')" />
+				</template>
+			</GListRow>
+		</GListPanel>
+		<GListPanel v-else>
+			<GListRow :label="__('No public holidays ahead are listed yet.')" :tappable="false" />
+		</GListPanel>
 	</div>
 </template>
 
@@ -35,6 +35,7 @@ import { computed, inject } from "vue"
 import { createResource } from "frappe-ui"
 
 import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import ResourceError from "@/components/ResourceError.vue"
 

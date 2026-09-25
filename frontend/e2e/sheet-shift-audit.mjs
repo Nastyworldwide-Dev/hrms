@@ -97,4 +97,7 @@ for (const [persona, path, opener, name] of SHEETS) {
 	await page.close()
 }
 console.log("sheets", SHEETS.length, "moving", bad)
+const FAILED = bad
+console.log(`GATE_COUNT ${FAILED}`)
 await browser.close()
+process.exit(FAILED ? 1 : 0)

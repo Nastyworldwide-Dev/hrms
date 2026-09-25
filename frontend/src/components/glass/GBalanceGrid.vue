@@ -25,7 +25,7 @@
 		:class="
 			empty
 				? 'g-list'
-				: ['g-cellgrid', 'g-cellgrid--balance', { 'g-cellgrid--odd': !loading && isOdd }]
+				: ['g-cellgrid', 'g-cellgrid--balance', { 'g-cellgrid--odd': loading ? cells % 2 === 1 : isOdd }]
 		"
 		:style="!empty && !loading ? { '--bcols': lgCols } : null"
 	>

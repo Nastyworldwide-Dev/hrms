@@ -76,4 +76,7 @@ for (const r of rows) {
 	if (flags.length) console.log(r.pass, r.path, "|", flags.join(" || "), `(content ${r.contentH}/${r.viewH}, pad ${r.padB})`)
 }
 for (const pass of new Set(rows.map((r) => r.pass))) { const rs = rows.filter((r) => r.pass === pass); console.log(pass, "screens", rs.length, "fitsButScrolls", rs.filter((r) => r.fitsButScrolls).length, "withShifts", rs.filter((r) => r.shiftCount).length) }
+const FAILED = rows.filter((r) => r.error || r.fitsButScrolls || r.shiftCount).length
+console.log(`GATE_COUNT ${FAILED}`)
 await b.close()
+process.exit(FAILED ? 1 : 0)

@@ -93,3 +93,14 @@ test("D24 Notifications: each kind has its colour; one trailing mark per row", (
 	assert.match(src, /:tint="tileFor\(item\.reference_document_type\)"/)
 	assert.match(src, /:chevron="item\.navigable && item\.read"/)
 })
+
+test("D25 Public holidays: rows in one group; none-listed is a row", () => {
+	const src = read("../HolidayList.vue")
+	assert.match(src, /<GListPanel v-else-if="upcoming\.length">/)
+	assert.match(src, /<GListRow :label="__\('No public holidays ahead are listed yet\.'\)" :tappable="false" \/>/)
+})
+
+test("Time off's loading card is the shape of the answer (one card)", () => {
+	assert.match(read("../LeaveBalance.vue"), /<GBalanceGrid v-else-if="leaveBalance\.loading" loading :cells="1" \/>/)
+	assert.match(read("../glass/GBalanceGrid.vue"), /'g-cellgrid--odd': loading \? cells % 2 === 1 : isOdd/)
+})

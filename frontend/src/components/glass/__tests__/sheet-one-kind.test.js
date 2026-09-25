@@ -92,9 +92,12 @@ test("More's holiday sheet is titled", () => {
 	assert.match(more, /<GModal[^>]*:title="__\('Public holidays'\)"/)
 })
 
-test("the holiday list is flat and marks the next one", () => {
+test("the holiday list is one group and marks the next one", () => {
+	// SUPERSEDED 25 Sep 2026 (alpha.9 D25): the flat, hand-ruled list was the
+	// one sheet not drawn as an inset group, and its empty line sat loose.
 	const list = read(join(SRC, "components/HolidayList.vue"))
-	assert.doesNotMatch(list, /<GListPanel v-else-if="upcoming/)
+	assert.match(list, /<GListPanel v-else-if="upcoming\.length">/)
 	assert.doesNotMatch(list, /<h2/)
-	assert.match(list, /<GStatusChip[^>]*v-if="index === 0"/)
+	assert.match(list, /<template v-if="index === 0" #badge>\s*<GStatusChip status="Next"/)
+	assert.doesNotMatch(list, /border-b border-divider/)
 })
