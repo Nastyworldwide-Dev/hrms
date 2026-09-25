@@ -166,6 +166,8 @@ class FixDayCase(unittest.TestCase):
 			stack.enter_context(patch.object(fd, name, value))
 
 		seam("_today", lambda employee: TODAY)
+		# Cutover (25 Sep 2026): no ERP instance is taken over unless a test says so.
+		seam("_instance_open", lambda instance: False)
 		seam("_lock_employee", lambda employee: None)
 		seam("_shift_running", lambda employee, day: self.running)
 		seam("_financial", lambda employee, day, rows, for_update: self.financial)

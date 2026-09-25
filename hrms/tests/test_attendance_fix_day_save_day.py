@@ -462,3 +462,27 @@ class TestMovingAPunchFromTheOldSystem(SaveDayCase):
 		self.store.taps["CKIN-B"]["synced_from_instance"] = "nasty-live"
 		message = self.refusal(fd.move_tap, "CKIN-B", shift=MORNING, day=str(DAY), reason="x")
 		self.assertIn("nasty-live", message)
+
+
+class TestAnOldSystemRowForTheDay(SaveDayCase):
+	"""The August shape (25 Sep 2026): the day's punches AND its attendance row
+	came from the old ERP. The dialog refused the whole day ("it is corrected
+	there") although, after cutover, there is no "there". The engine's own
+	recovery releases a broken mirrored day the same way (attendance_recovery,
+	step 0). Before cutover it is still refused, naming the site."""
+
+	def test_after_cutover_the_old_row_is_replaced_by_the_rebuild(self):
+		self.norazmis_night()
+		for row in self.store.rows.values():
+			row["synced_from_instance"] = "nasty-live"
+		self.unlocked.add("nasty-live")
+		answer = self.save({"in": "CKIN-A", "out": "CKIN-D"}, delete=["CKIN-B", "CKIN-C"])
+		self.assertTrue(answer["ok"])
+		self.assertEqual({row["docstatus"] for row in self.store.rows.values()}, {2})
+
+	def test_before_cutover_the_day_is_still_refused(self):
+		self.norazmis_night()
+		for row in self.store.rows.values():
+			row["synced_from_instance"] = "nasty-live"
+		message = self.refusal(self.save, {"in": "CKIN-A", "out": "CKIN-D"}, delete=["CKIN-B", "CKIN-C"])
+		self.assertIn("nasty-live", message)

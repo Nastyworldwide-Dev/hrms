@@ -337,8 +337,13 @@ def day_block_reason(
 	duplicate_rows_ok=False,
 	leaving=False,
 	requests_ok=False,
+	open_instances=(),
 ) -> str | None:
 	"""Why this employee-day must not be touched here, in one sentence, or None. Pure.
+
+	`open_instances`: the ERP instances this site has taken over from (cutover).
+	A row mirrored from one of them is this site's to correct now (25 Sep 2026,
+	the August days); a row from a still-locked instance is refused.
 
 	Deliberately NOT a reason: `auto_attendance = 0`. A day HR marked by hand is
 	exactly a day HR may still correct the evidence of; whether the engine then
@@ -379,7 +384,7 @@ def day_block_reason(
 			return _("{0} is a half-day leave. Cancel the leave first.").format(name)
 		if row.get("attendance_request") and not requests_ok:
 			return _("{0} came from an Attendance Request. Cancel that request first.").format(name)
-		if row.get("synced_from_instance"):
+		if row.get("synced_from_instance") and row["synced_from_instance"] not in open_instances:
 			# The same line this screen already draws for a mirrored TAP. Without
 			# it the row was refused three layers down by the re-mark, which the
 			# screen could only report as "nothing changed" (review of b9794c65b).
@@ -1625,6 +1630,11 @@ def _day_block(
 		duplicate_rows_ok=duplicate_rows_ok,
 		leaving=leaving,
 		requests_ok=requests_ok,
+		open_instances={
+			row["synced_from_instance"]
+			for row in rows or []
+			if row.get("synced_from_instance") and _instance_open(row["synced_from_instance"])
+		},
 	)
 
 
