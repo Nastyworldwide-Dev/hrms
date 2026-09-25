@@ -23,7 +23,8 @@ function decls(selector) {
 test("a tab root has a large title; a pushed screen an inline, centred one", () => {
 	assert.match(header, /'g-header--large': !showBack/)
 	assert.match(header, /'g-header--inline': showBack/)
-	const large = decls(".g-header--large .g-header__title")
+	// alpha.8: the tab root's large title is drawn by the page (BaseLayout)
+	const large = decls(".g-large-title")
 	assert.equal(large["font-size"], "34px")
 	assert.equal(large["font-weight"], "700")
 	const inline = decls(".g-header--inline .g-header__title")

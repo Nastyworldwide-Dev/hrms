@@ -6,6 +6,10 @@
 	     reaches the floating bar, so rows never butt against the glass. -->
 	<div class="g-tabbar-fade lg:hidden" aria-hidden="true" />
 	<ion-tab-bar slot="bottom" class="g-tabbar lg:hidden">
+		<!-- The iOS 26 lens (alpha.8): ONE pill behind the tabs that slides to
+		     the chosen one, inset inside its cell. Decorative; the tab itself
+		     says it is selected. -->
+		<span class="g-tabbar__lens" :style="lensStyle" aria-hidden="true" />
 		<ion-tab-button
 			v-for="item in tabItems"
 			:key="item.route"
@@ -31,7 +35,7 @@ import { useRoute } from "vue-router"
 
 import { IonTabBar, IonTabButton } from "@ionic/vue"
 
-import { inject } from "vue"
+import { computed, inject } from "vue"
 
 import { TAB_ITEMS } from "@/data/navItems"
 
@@ -47,6 +51,28 @@ const tabItems = TAB_ITEMS.map((item) => ({
 // More claims its child routes (`routes`) so the indicator stays lit on them
 const isActive = (item) =>
 	item.routes ? item.routes.some((path) => route.path.startsWith(path)) : route.path === item.route
+
+//: The lens sits on the active tab's cell: tabs share the bar equally, so its
+//: position is the tab's index (moved with transform, so it can slide).
+const lensStyle = computed(() => {
+	const at = tabItems.findIndex(isActive)
+	const n = tabItems.length
+	// The row of tabs spans the bar minus its 4 pt padding each side; one
+	// cell is that / n. The lens is a cell minus 4 pt each side and steps a
+	// whole cell per tab (measured centred to 0.1 pt, WebKit).
+	// The lens box is exactly one tab cell wide (the tabs share the bar
+	// equally) and placed by `left` on the same arithmetic as the cells, so
+	// it lands on sub-pixels exactly as the tabs do. A translateX(400%) was
+	// rounded to whole pixels by WebKit and drifted 1.6 pt by the 5th tab.
+	const cell = `(100% - 8px) / ${n}`
+	return {
+		width: `calc(${cell})`,
+		left: `calc(4px + ${Math.max(at, 0)} * ${cell})`,
+		opacity: at < 0 ? 0 : 1,
+	}
+
+
+})
 </script>
 
 <style scoped>

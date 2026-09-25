@@ -35,9 +35,29 @@ test("the bar is inset 20 pt from the screen edges", () => {
 	assert.equal(v("layout", "tabbar-inset"), 20)
 })
 
-test("the selected tab sits in a lens and carries the tint", () => {
-	const lens = decls("ion-tab-button.g-tabbar__btn.tab-selected")
-	assert.ok(lens.background, "a lens fill behind the selected tab")
-	assert.match(lens["border-radius"], /var\(--g-radius-tabbar\)|999|50%/)
+test("the selected tab carries the tint", () => {
 	assert.match(read("../BottomTabs.vue"), /--color-selected: var\(--g-accent-ink\)/)
+})
+
+
+// alpha.8 (owner, 25 Sep 2026: "not alive and misaligned"). Measured on the
+// owner's iPhone: the lens filled its whole tab cell (306.7-377 pt), touching
+// the next tab and 4 pt from the bar edge on one side, 5 on the other. The
+// lens is now a pill INSET inside the cell (equal on every side) that SLIDES
+// to the chosen tab with Apple's default spring, and a pressed tab dips.
+test("the lens is an inset pill that slides, and the press is felt", () => {
+	const lens = decls(".g-tabbar__lens")
+	assert.equal(lens.position, "absolute")
+	assert.match(lens.transition || "", /left var\(--g-motion-tab-lens-duration\)/)
+	assert.match(read("../BottomTabs.vue"), /class="g-tabbar__lens"/)
+	assert.match(read("../BottomTabs.vue"), /:style="lensStyle"/)
+	const pressed = decls("ion-tab-button.g-tabbar__btn:active .g-tabbar__well")
+	assert.match(pressed.transform || "", /scale\(0\.9/)
+	// the whole tab cell no longer paints the lens
+	assert.ok(!decls("ion-tab-button.g-tabbar__btn.tab-selected").background)
+})
+
+test("reduced motion: the lens moves without sliding", () => {
+	const css = read("../../theme/glass-components.css")
+	assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.g-tabbar__lens\s*\{[^}]*transition: none/)
 })

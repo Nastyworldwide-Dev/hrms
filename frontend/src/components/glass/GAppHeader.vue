@@ -55,7 +55,9 @@
 		<GLogo v-if="!showBack" label="" />
 		<!-- The small title that replaces the large one after it scrolls away. -->
 		<span v-if="!showBack && title" class="g-header__mini" aria-hidden="true">{{ title }}</span>
-		<h1 class="g-header__title" :class="{ 'sr-only': !title }">{{ title || __("Nadi") }}</h1>
+		<!-- On a tab root the LARGE title is drawn by the page (BaseLayout) so it
+		     scrolls with it; this h1 still names the page, visually hidden. -->
+		<h1 class="g-header__title" :class="{ 'sr-only': !title || !showBack }">{{ title || __("Nadi") }}</h1>
 		<!-- A hidden title takes no space, so this holds the bell and avatar at
 		     the right edge on Home (the mark alone, 23 Sep). -->
 		<span v-if="!title" class="g-header__spacer" aria-hidden="true" />

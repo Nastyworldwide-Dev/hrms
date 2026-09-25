@@ -12,5 +12,6 @@ const css = readFileSync(
 )
 
 test("the pull-to-refresh line is hidden unless the refresher is active", () => {
-	assert.match(css, /ion-refresher:not\(\.refresher-active\) \.g-refresh \{\s*visibility: hidden;/)
+	// alpha.8: display none, not visibility hidden (see pull-refresh-at-rest.test.js)
+	assert.match(css, /ion-refresher:not\(\.refresher-active\) \.g-refresh \{\s*display: none;/)
 })
