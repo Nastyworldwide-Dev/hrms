@@ -1,15 +1,11 @@
 # HANDOFF
-prompt:   alpha.7 (go till finish)
+prompt:   owner report 25 Sep (fix-a-day Open, manager can't see, AL balance, Desk Fix attendance)
 status:   done
-commit:   68869d581 on nz-glass (tag v2.0.0-alpha.7)
-files:    frontend/src/theme/glass-components.css
-          frontend/src/views/Home.vue
-          frontend/src/components/MustReadNotice.vue
-          hrms/api/announcements.py
-          hrms/hr/doctype/hr_announcement/hr_announcement.json
-          hrms/hr/report/announcement_confirmations/
-          hrms/patches/v16_0/announcement_alpha7_fields.py
-          docs/glass/CHANGELOG.md
-verify:   deploy nz-glass; open Nadi on iPhone Safari; Desk > HR Announcement > Preview as staff
-flags:    moved to alpha.8: Dynamic Type, Search (needs who-finds-whom ruling), spring motion; offline check-in never (owner rule)
-next:     owner deploys; answer the Search ruling before alpha.8
+commit:   446b77b9f on nz-glass (after tag v2.0.0-alpha.7; deploy the branch head)
+files:    hrms/api/attendance_fix_day.py
+          hrms/tests/test_attendance_fix_day_save_day.py
+          frontend/src/utils/requestStatus.js
+          frontend/src/components/RequestBalances.vue
+verify:   Desk > Employee Checkin > Fix attendance on Norazlin 19 or 20 Aug: pair pre-ticked, Save & rebuild writes Present
+flags:    the two On Duty rows (27 Jun, 29 Jul) are already submitted; confirm on live that their attendance exists (not checked: no live access)
+next:     owner deploys nz-glass head
