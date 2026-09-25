@@ -2,7 +2,7 @@
 
 A claim's hours are split across the shift's rate bands in band order — the
 order payroll prices them (`ot_calculation._ot_bands_for_day`). Most claims
-land in one band ("1.5×"); an Off Day claim past its first 4 h spans two.
+land in one band ("1.5x"); an Off Day claim past its first 4 h spans two.
 """
 
 import logging
