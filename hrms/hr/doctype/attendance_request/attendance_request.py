@@ -240,14 +240,7 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 		if doc:
 			# update existing attendance, change the status
 			if self.in_time and self.out_time:
-				frappe.msgprint(
-					_(
-						"Proposed hours were not applied for {0} — attendance record {1} already exists"
-					).format(
-						frappe.bold(format_date(date)),
-						get_link_to_form("Attendance", doc.name),
-					)
-				)
+				self.apply_typed_hours(doc, date, status)
 			old_status = doc.status
 
 			if old_status != status:
@@ -308,6 +301,32 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 				doc.working_hours = round((doc.out_time - doc.in_time).total_seconds() / 3600, 2)
 			doc.insert(ignore_permissions=True)
 			doc.submit()
+
+	def apply_typed_hours(self, doc, date: str, status: str) -> None:
+		"""The approved times go onto the day's existing row (owner, 25 Sep
+		2026): they were printed as "not applied" and dropped. A paid day
+		refuses in words; the status still follows the request below."""
+		from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
+		from hrms.utils.request_hours import hours_for_existing_row
+
+		in_dt, out_dt = self.get_in_out_datetimes(date)
+		paid_by = _repair_financial_dependency(
+			self.employee, getdate(date), doc.name if doc.docstatus == 1 else None, requests_ok=True
+		)
+		values, refusal = hours_for_existing_row(in_dt, out_dt, status, paid_by)
+		if refusal:
+			frappe.msgprint(refusal, title=_("Times not applied"))
+			return
+		if not values:
+			return
+		doc.db_set({**values, "attendance_request": self.name})
+		doc.add_comment(
+			comment_type="Info",
+			text=_("Times set to {0}–{1} ({2} h) by Attendance Request {3}").format(
+				in_dt.strftime("%H:%M"), out_dt.strftime("%H:%M"), values["working_hours"], self.name
+			),
+		)
+		logger.info("[attendance_request] %s wrote typed hours to %s", self.name, doc.name)
 
 	def should_mark_attendance(self, attendance_date: str) -> bool:
 		# Check if attendance_date is a holiday
