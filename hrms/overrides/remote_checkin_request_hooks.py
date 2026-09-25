@@ -458,6 +458,16 @@ def propagate_approval_decision(doc, method=None):
 			_announce_repair(doc.flags.late_checkout_repair)
 		else:
 			reapply_late_checkouts_unblocked_by(doc)
+			# Approved work after the day's shift is that day's overtime (owner,
+			# 25 Sep 2026): the off-shift punch and its session take the day's
+			# shift, so the claim list can see it. Paid only when claimed and
+			# approved; never raises, a stamp that fails leaves the old behaviour.
+			try:
+				from hrms.utils.callback_session import stamp_approved_callback
+
+				stamp_approved_callback(doc.checkin)
+			except Exception:
+				logger.exception("[remote_checkin_request] call-back stamp failed for %s", doc.name)
 			_remark_decided_day(doc)
 	else:  # Rejected
 		# skip_auto_attendance as well, or the rejection is cosmetic: the OT

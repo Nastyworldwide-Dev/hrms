@@ -1,6 +1,6 @@
-CLASS: two different answers to "is this check-in still the session" (phone 16 h, Home 16 h, server 06:00; small-hours tap stored as asked)
-frontend/src/components/CheckInPanel.vue isSessionStale — same-root (fixed: utils/checkinSession.js, the server's rule)
-hrms/api/now.py _open_session — same-root (fixed: session_open_until)
-hrms/api/remote_checkin.py resolve_punch_type band + _session_is_live + get_unresolved_stale_in — same-root (one session_open_until; a tap 00:00-06:00 with no new shift window ends the open day)
-hrms/utils/checkin_sweeper.py 36 h — not-affected — flags abandonment long after any session ends; a different question
-hrms/utils/ot_calculation.py pairing — not-affected — pairs stored punches; now receives the OUT instead of a second IN
+CLASS: approved work after the shift filed off-shift, and off-shift never reaches overtime
+hrms/overrides/remote_checkin_request_hooks.py propagate_approval_decision — same-root (fixed: stamp_approved_callback on approval)
+hrms/utils/callback_session.py — same-root (the rule: after the day's window, within 18 h, before the next shift's window)
+hrms/patches/v16_0/count_approved_callbacks.py — same-root (owner yes: approved sessions since 16 Sep; paid days held)
+hrms/overrides/employee_checkin_override.py _inherit_open_in — not-affected — the later OUT inherits the stamped IN's shift (bench: OUT carried Nadi W0 Day)
+hrms/utils/ot_calculation.py _is_eligible_checkin — not-affected — unchanged: still refuses off-shift / pending / rejected

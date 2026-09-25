@@ -131,3 +131,4 @@ hrms.patches.v16_0.announcement_alpha7_fields #2026-09-25 announcements: a Summa
 hrms.patches.v16_0.fill_ot_request_day_type_and_rate #2026-09-25 HR: the day type and the OT rate (1.5 / 2.0 / 3.0) beside each overtime pay claim in the OT Request report
 hrms.patches.v16_0.ot_request_report_columns #2026-09-25 HR: Day Type and OT Rate show as columns in each user's existing OT Request report view
 hrms.patches.v16_0.leave_half_day_session #2026-09-25 half day AM/PM: a new half day says which half, and HR sees it as a column in the Leave Application report
+hrms.patches.v16_0.count_approved_callbacks #2026-09-25 approved work after the shift since 16 Sep becomes claimable overtime (owner yes)
