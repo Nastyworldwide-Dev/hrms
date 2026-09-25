@@ -3418,6 +3418,15 @@ ion-router-outlet {
    lime is the switch-on colour). */
 .g-switch__input {
 	margin: 0;
+	/* frappe-ui's forms plugin sets appearance:none + a blue tick on every
+	   checkbox, which turned Safari's switch back into a checkbox (owner's
+	   iPhone, iOS 26). Native appearance back; our lime tint on. */
+	-webkit-appearance: auto;
+	appearance: auto;
+	width: auto;
+	height: auto;
+	border: 0;
+	background: none;
 	accent-color: var(--g-brand);
 }
 /* Drawn fallback: the input stays for focus and screen readers, invisible,

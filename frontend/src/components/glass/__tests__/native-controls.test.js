@@ -91,3 +91,14 @@ test("GSelect draws the empty option only when it means something", () => {
 		/<option v-if="placeholder \|\| modelValue === '' \|\| modelValue == null" value="">\{\{ placeholder \}\}<\/option>/
 	)
 })
+
+// alpha.8 (owner's iPhone, iOS 26: "Notifications" and "Shift reminders"
+// drawn as blue checkboxes). frappe-ui's Tailwind forms plugin sets
+// `[type=checkbox] { appearance: none }` and paints a blue tick, which strips
+// Safari's own switch. The switch input gets its native appearance back.
+test("the native switch keeps Safari's own look", () => {
+	const r = rule(".g-switch__input")
+	assert.match(r, /appearance: auto/)
+	assert.match(r, /-webkit-appearance: auto/)
+	assert.match(r, /background: none/)
+})

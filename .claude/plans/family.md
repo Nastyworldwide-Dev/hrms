@@ -1,9 +1,11 @@
-CLASS: a submitted request whose decision field still holds its waiting word, judged by the word
+CLASS: a vendor base style (frappe-ui Tailwind forms plugin) overriding a native control
 
-Instance: the approver's "already answered" history filtered status in (Approved, Rejected), so a request submitted before the decision field existed ("Open", docstatus 1) was missing from it.
+Instance: owner's iPhone, iOS 26 — You page "Notifications" / "Shift reminders" drawn as blue checkboxes: [type=checkbox] { appearance: none; blue tick } stripped Safari's <input switch>.
 
 Sites:
-- hrms/api/__init__.py get_filters history — same-root (decided = docstatus 1; Expense Claim keeps approval_status because an approved expense can stay a draft until finance submits)
-- other sites of the family — see docs/glass/audit/2026-09-25-defect-families.md (62246a4af, 9e71d0f9c)
+- frontend/src/theme/glass-components.css .g-switch__input — same-root (appearance auto, no background)
+- GCheckbox (a real checkbox) — not-affected: it is meant to be a checkbox
+- native <select> (GSelect) — not-affected: the plugin's select rule is overridden by .g-select__native (appearance none, our chevron) on purpose
+- date/time inputs — not-affected: .g-datefield rules set their own appearance
 
-Locked: hrms/tests/test_requests_history_api.py (updated; red on the old code: 2 fail).
+Locked: native-controls.test.js (+1).
