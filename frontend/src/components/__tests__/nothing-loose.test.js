@@ -59,3 +59,37 @@ test("D18 one radius: the Today card and the calendar are groups (26)", () => {
 	assert.match(css, /\.g-cal \{[^}]*border-radius: var\(--g-radius-group\);/)
 	assert.match(css, /\.g-today \{[^}]*border-radius: var\(--g-radius-group\);/)
 })
+
+test("D6 Help: the Open header shows only over its group", () => {
+	const src = read("../HelpSplitList.vue")
+	assert.match(src, /<h2 v-if="loading \|\| split\.open\.length" class="g-form-section__title">\{\{ __\("Open"\) \}\}<\/h2>/)
+})
+
+test("D19 request lists are one inset group, under a section header", () => {
+	const list = read("../RequestList.vue")
+	assert.match(list, /<div class="g-form-group g-req-list" v-else-if="props\.items\?\.length">/)
+	assert.doesNotMatch(list, /border-b border-divider/)
+	for (const f of ["../../views/leave/Dashboard.vue", "../../views/expense_claim/Dashboard.vue"]) {
+		const src = read(f)
+		assert.doesNotMatch(src, /border-t-2 border-divider|<hr class="h-px/, f)
+		assert.match(src, /<h2 class="g-form-section__title">/, f)
+	}
+})
+
+test("D20 lime is the action only: the expense total is a plain group", () => {
+	const css = read("../../theme/glass-components.css")
+	const poster = css.slice(css.indexOf(".g-poster {"), css.indexOf("}", css.indexOf(".g-poster {")))
+	assert.doesNotMatch(poster, /--g-brand/)
+	assert.match(poster, /border-radius: var\(--g-radius-group\)/)
+})
+
+test("D22 the calendar's contents start at the row text's inset (16)", () => {
+	const css = read("../../theme/glass-components.css")
+	assert.match(css, /\.g-cal \{[^}]*padding: 16px;/)
+})
+
+test("D24 Notifications: each kind has its colour; one trailing mark per row", () => {
+	const src = read("../../views/Notifications.vue")
+	assert.match(src, /:tint="tileFor\(item\.reference_document_type\)"/)
+	assert.match(src, /:chevron="item\.navigable && item\.read"/)
+})

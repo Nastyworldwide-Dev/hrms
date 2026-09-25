@@ -1,8 +1,7 @@
 <template>
 	<div class="flex flex-col gap-stack-md w-full" v-if="summary.data">
-		<!-- The screen's one accent surface. See `.g-poster` in the theme layer
-		     for why its ink is --g-on-brand rather than `text-ground`, which
-		     measured 1.03 in light theme. -->
+		<!-- A plain group with the big figure (alpha.9 D20): lime is kept for
+		     the screen's one action, "Claim an expense". -->
 		<div class="g-poster">
 			<div class="g-eyebrow-type g-poster__label">
 				{{ __("Total claimed") }}

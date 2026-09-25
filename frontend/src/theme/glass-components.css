@@ -1626,7 +1626,10 @@ svg.lucide {
 /* ---------- GCalendar (§10.2 #18) ---------- */
 
 .g-cal {
-	padding: 16px 12px;
+	/* 16 each side (alpha.9 D22): the title and "What the colours mean" start
+	   where every row's text starts (x 32), not 4 pt left of it. A day cell
+	   stays 44 wide at 402 pt. */
+	padding: 16px;
 	/* One radius for every group on a screen (alpha.9 D18): the calendar is
 	   a group, so it takes the group's 26, not the action's 20. */
 	border-radius: var(--g-radius-group);
@@ -2740,18 +2743,17 @@ textarea {
 
    Neither was visible to the contrast gate, which checks the §14.2 token
    matrix: a Tailwind class pairing is not a token pairing. */
+/* alpha.9 D20 (owner rule: lime marks the ONE action): the total is a plain
+   group with a big figure, as the Time off balance card is. It was a lime
+   slab, the loudest thing on a screen whose action is "Claim an expense". */
 .g-poster {
-	background: var(--g-brand);
-	color: var(--g-on-brand);
-	border-radius: var(--g-radius-panel);
-	padding: var(--g-pad-panel);
-	box-shadow: var(--g-lift);
+	background: var(--g-glass-fill-fallback);
+	color: var(--g-ink);
+	border-radius: var(--g-radius-group);
+	padding: 16px;
 }
-/* g-eyebrow-type, not g-eyebrow: the type without the --g-accent-ink colour,
-   which is the split §11 introduced for exactly this case. */
 .g-poster__label {
-	color: var(--g-on-brand);
-	opacity: 0.74;
+	color: var(--g-ink2);
 }
 .g-poster__figure {
 	font-family: var(--g-type-clock-family);
@@ -2830,6 +2832,30 @@ textarea {
 	flex-direction: column;
 	gap: 4px;
 	margin-top: 8px;
+}
+/* A request list as one inset group (alpha.9 D19): each row padded like a
+   form row, the separator inset to the text and short of the right edge. */
+.g-req-list__row {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--g-pad-row);
+	cursor: pointer;
+}
+.g-req-list__row + .g-req-list__row::before,
+.g-req-list__row + a > .g-seeall::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 16px;
+	right: 16px;
+	height: 1px;
+	background: var(--g-hair);
+}
+.g-req-list__row > * {
+	flex: 1 1 auto;
+	min-width: 0;
 }
 .g-lineitems {
 	background: var(--g-glass-fill-fallback);

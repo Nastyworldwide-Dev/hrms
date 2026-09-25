@@ -38,7 +38,8 @@
 									:class="{ 'n-unread': !item.read }"
 									:label="item.line.title"
 									:sublabel="item.meta"
-									:chevron="item.navigable"
+									:tint="tileFor(item.reference_document_type)"
+									:chevron="item.navigable && item.read"
 									@click="open(item)"
 								>
 									<template #icon>
@@ -81,6 +82,7 @@
 </template>
 
 <script setup>
+import { tileFor } from "@/utils/iconTile"
 import dayjs from "dayjs"
 import {
 	Bell,
@@ -185,6 +187,9 @@ const KIND_ICON = {
 	"HD Ticket": LifeBuoy,
 	"Remote Checkin Request": MapPin,
 }
+//: The kind's colour, as on Home and Requests (alpha.9 D24; alpha.7 §7).
+//: Unread rows carry the dot, read rows the chevron: iOS Mail shows one mark
+//: at the trailing edge, never both.
 const kindIcon = (item) => KIND_ICON[item.reference_document_type] || Bell
 
 // Today / Yesterday / Earlier on the SITE clock. Each row carries its short

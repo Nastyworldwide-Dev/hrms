@@ -29,9 +29,11 @@
 
 				<!-- Bottom: recent leaves | upcoming holidays -->
 				<div class="flex flex-col gap-8">
-					<div>
-						<div class="flex flex-row items-baseline justify-between mb-2.5">
-							<span class="g-eyebrow">{{ __("Recent leave") }}</span>
+					<!-- An iOS section: header with its See all, then the group
+					     (alpha.9 D19: a loose header over a hand-ruled table). -->
+					<section class="g-form-section">
+						<div class="g-exp-head">
+							<h2 class="g-form-section__title">{{ __("Recent leave") }}</h2>
 							<router-link
 								:to="{ name: 'LeaveApplicationListView' }"
 								class="g-focusable g-seclink text-kra-label text-accent-ink"
@@ -39,7 +41,7 @@
 								{{ __("See all") }}
 							</router-link>
 						</div>
-						<div class="border-t-2 border-divider">
+						<div>
 							<RequestList
 								:component="markRaw(LeaveRequestItem)"
 								:items="myLeaves.data"
@@ -52,7 +54,7 @@
 								"
 							/>
 						</div>
-					</div>
+					</section>
 				</div>
 			</div>
 		</template>

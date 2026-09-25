@@ -23,9 +23,12 @@
 			<slot name="footer" />
 		</div>
 	</template>
-	<div class="flex flex-col overflow-auto" v-else-if="props.items?.length">
+	<!-- ONE inset group, rows separated as iOS does (alpha.9 D19/R1): it was a
+	     hand-ruled table under a loose header on Time off, Expenses and in
+	     See all. -->
+	<div class="g-form-group g-req-list" v-else-if="props.items?.length">
 		<div
-			class="flex flex-row py-3 items-center justify-between border-b border-divider cursor-pointer"
+			class="g-focusable g-req-list__row"
 			v-for="link in props.items"
 			:key="link.name"
 			role="button"
@@ -51,11 +54,8 @@
 		>
 			<!-- A text control under a list, the same one "See all" uses — not a
 			     frappe-ui Button (no frappe-ui controls in the app). -->
-			<button
-				type="button"
-				class="g-focusable g-list-more w-full py-3 text-sm text-ink-600 bg-transparent border-none"
-				@click="navigate"
-			>
+			<!-- The group's last row, as Requests' "See all" (alpha.7 A15). -->
+			<button type="button" class="g-form-row g-form-row--action g-seeall" @click="navigate">
 				{{ __("See all") }}
 			</button>
 		</router-link>

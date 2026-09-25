@@ -13,26 +13,25 @@
 
 				<!-- Right: recent expenses + claim an expense -->
 				<div class="contents lg:flex lg:flex-col lg:gap-8 lg:border-l lg:border-divider lg:pl-8">
-					<div class="order-3 lg:order-1">
-						<div class="flex items-baseline justify-between mb-2.5">
-							<span class="g-eyebrow !text-ink-600">
-								{{ __("Recent expenses") }}
-							</span>
+					<!-- An iOS section: header with its See all, then the group
+					     (alpha.9 D19). -->
+					<section class="order-3 lg:order-1 g-form-section">
+						<div class="g-exp-head">
+							<h2 class="g-form-section__title">{{ __("Recent expenses") }}</h2>
 							<router-link
 								:to="{ name: 'ExpenseClaimListView' }"
-								class="g-seclink text-kra-label text-accent-700 cursor-pointer"
+								class="g-focusable g-seclink text-kra-label text-accent-ink"
 							>
 								{{ __("See all") }}
 							</router-link>
 						</div>
-						<hr class="h-px border-0 bg-hair" />
 						<RequestList
 							:component="markRaw(ExpenseClaimItem)"
 							:items="myClaims.data"
 							:resource="myClaims"
 							:what="__('your expense claims')"
 						/>
-					</div>
+					</section>
 
 					<!-- Claim an expense -->
 					<router-link

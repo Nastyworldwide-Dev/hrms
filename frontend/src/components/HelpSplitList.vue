@@ -17,7 +17,9 @@
 -->
 <template>
 	<div class="flex flex-col gap-2.5">
-		<span class="g-eyebrow mt-1">{{ __("Open") }}</span>
+		<!-- A section header over its group only (alpha.9 D6): over the empty
+		     state it was a loose word naming nothing. -->
+		<h2 v-if="loading || split.open.length" class="g-form-section__title">{{ __("Open") }}</h2>
 		<GListPanel v-if="loading || split.open.length" :loading="loading">
 			<GListRow
 				v-for="row in firstOpen"

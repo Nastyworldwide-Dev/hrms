@@ -1,7 +1,9 @@
 <template>
-	<div class="flex flex-col w-full">
-		<div class="flex flex-row items-baseline justify-between mb-3">
-			<span class="g-eyebrow">{{ __("Leave balance") }}</span>
+	<section class="g-form-section w-full">
+		<!-- The same section header as "Recent leave" below it (alpha.9: one
+		     header style and inset per screen). -->
+		<div class="g-exp-head">
+			<h2 class="g-form-section__title">{{ __("Leave balance") }}</h2>
 			<router-link
 				v-if="leaveBalance.data"
 				:to="{ name: 'LeaveApplicationListView' }"
@@ -61,7 +63,7 @@
 				/>
 			</template>
 		</GBalanceGrid>
-	</div>
+	</section>
 </template>
 
 <script setup>
