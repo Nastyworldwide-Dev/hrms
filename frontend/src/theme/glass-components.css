@@ -1627,7 +1627,9 @@ svg.lucide {
 
 .g-cal {
 	padding: 16px 12px;
-	border-radius: var(--g-radius-action);
+	/* One radius for every group on a screen (alpha.9 D18): the calendar is
+	   a group, so it takes the group's 26, not the action's 20. */
+	border-radius: var(--g-radius-group);
 }
 .g-cal__head {
 	display: flex;
@@ -2780,7 +2782,7 @@ textarea {
 	position: relative;
 	display: flex;
 	flex-direction: column;
-	padding: 11px 16px;
+	padding: var(--g-pad-row);
 	cursor: pointer;
 }
 .g-team-row + .g-team-row::before {
@@ -4192,7 +4194,8 @@ html {
 	flex-direction: column;
 	gap: 12px;
 	padding: 16px;
-	border-radius: var(--g-radius-panel);
+	/* alpha.9 D18: the group radius, as every other block on Home. */
+	border-radius: var(--g-radius-group);
 	background: var(--g-glass-fill-fallback);
 }
 .g-today #open-checkin-modal,

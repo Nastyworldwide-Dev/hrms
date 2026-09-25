@@ -1,6 +1,6 @@
-CLASS: content drawn outside a group (loose line, hand-ruled table) where iOS puts rows in a group under a section header
-frontend/src/views/team/TeamDashboard.vue — same-root (fixed: day = section header, each department a grouped section, hint = footer)
-frontend/src/components/ExpensesTable.vue — same-root (fixed: header + Add, rows in one group, total = footer)
-frontend/src/views/ot/OTRequestForm.vue empty reason — same-root (fixed: a row in the "Pick a day" group)
-frontend/src/views/team/TeamRoster.vue — not-affected — audit: no loose text
-all 36 screens — not-affected — ios-consistency-audit loose-text rule: 0
+CLASS: a group drawn with a second radius or an off-grid inset (one screen, two shapes)
+frontend/src/theme/glass-components.css .g-cal — same-root (fixed: group radius 26, was action 20)
+frontend/src/theme/glass-components.css .g-today — same-root (fixed: group radius 26, was panel 20)
+frontend/src/theme/glass-components.css .g-team-row — same-root (fixed: --g-pad-row, was 11px off the 4pt grid, from 085680ad0)
+.g-banner (16) on KPI — not-affected — a banner is a notice, not a group; alone on its screen
+frontend/e2e/ios-consistency-audit.mjs — not-affected — audit fixes: avatar/logo marks are not reading text; sr-only status is not a gap

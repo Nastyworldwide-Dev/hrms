@@ -46,12 +46,17 @@ for (const s of list) {
 			if (lx.length > 2) issues.push(`row text starts at ${lx.length} different x: ${lx.slice(0, 5)}`)
 			// 5. type: every visible text on the iOS ramp
 			const RAMP = [11, 12, 13, 15, 16, 17, 20, 22, 28, 34]
-			const texts = [...page.querySelectorAll("body *")].filter((e) => vis(e) && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && !e.closest("ion-tab-bar"))
+			const texts = [...page.querySelectorAll("body *")].filter((e) => vis(e) && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && !e.closest("ion-tab-bar") && !e.closest(".g-avatar, .g-logo-mark"))
+			// ^ an avatar initial and the logo letter are drawn marks, sized to
+			//   their circle/tile (iOS draws them the same), not reading text.
 			const offRamp = uniq(texts.map((e) => Math.round(parseFloat(getComputedStyle(e).fontSize))).filter((s) => !RAMP.includes(s)))
 			if (offRamp.length) issues.push(`type off the iOS ramp: ${offRamp}px`)
 			// 6. section header gap to its group
 			const heads = [...page.querySelectorAll(".g-form-section__title, .g-eyebrow")].filter(vis).filter((h) => !h.closest("ion-modal"))
-			const gaps = uniq(heads.map((h) => { const n = h.nextElementSibling || h.parentElement.nextElementSibling; return n ? R(n.getBoundingClientRect().top - h.getBoundingClientRect().bottom) : null }).filter((v) => v !== null))
+			// the next VISIBLE thing: a screen-reader-only status line (1 px, clipped)
+			// sits between some headers and their group and is not a gap
+			const nextShown = (h) => { let n = h.nextElementSibling; while (n && (!vis(n) || n.getBoundingClientRect().height <= 1)) n = n.nextElementSibling; return n || h.parentElement.nextElementSibling }
+			const gaps = uniq(heads.map((h) => { const n = nextShown(h); return n ? R(n.getBoundingClientRect().top - h.getBoundingClientRect().bottom) : null }).filter((v) => v !== null))
 			if (gaps.length > 1) issues.push(`header-to-group gaps differ: ${gaps}`)
 			const eyebrowX = uniq(heads.map((h) => R(h.getBoundingClientRect().left + parseFloat(getComputedStyle(h).paddingLeft))))
 			if (eyebrowX.length > 1) issues.push(`section headers start at different x: ${eyebrowX}`)

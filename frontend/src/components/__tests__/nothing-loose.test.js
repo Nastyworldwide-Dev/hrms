@@ -53,3 +53,9 @@ test("D2 Team: the day is a section header, each department a grouped section", 
 	assert.match(src, /<section\s+v-for="group in departmentGroups"[\s\S]*?<div class="g-form-group">\s*<div\s+v-for="member in group\.members"/)
 	assert.match(src, /<p class="g-form-footer" v-if="teamStatus\.data\?\.members\?\.length">/)
 })
+
+test("D18 one radius: the Today card and the calendar are groups (26)", () => {
+	const css = read("../../theme/glass-components.css")
+	assert.match(css, /\.g-cal \{[^}]*border-radius: var\(--g-radius-group\);/)
+	assert.match(css, /\.g-today \{[^}]*border-radius: var\(--g-radius-group\);/)
+})
