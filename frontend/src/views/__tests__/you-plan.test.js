@@ -21,8 +21,9 @@ test("the page is called You", () => {
 })
 
 test("manager and shift are on the page", () => {
-	assert.match(template, /__\(["']Your manager is \{0\}["']/)
-	assert.match(template, /__\(["']Your shift: \{0\}["']/)
+	// alpha.8: label/value rows in the account group (you-account-card.test.js)
+	assert.match(template, /__\(["']Manager["']\)/)
+	assert.match(template, /__\(["']Shift["']\)/)
 	assert.match(view, /default_shift/)
 })
 

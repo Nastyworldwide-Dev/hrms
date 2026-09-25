@@ -7,32 +7,32 @@
 				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
 					<div class="flex flex-col gap-5 p-4">
 						<!-- Who I am (audit-pages §4 "You"): name, role, and where. -->
-						<div class="flex flex-row items-center gap-4">
-							<div class="shrink-0">
+						<!-- As iOS Settings draws the account (alpha.8, measured): a 60 pt
+						     circle and the name beside it, in one grouped row. -->
+						<div class="g-form-group g-account">
+							<div class="g-account__row">
 								<GAvatar
 									:image="user.data?.user_image"
 									:label="user.data?.first_name"
-									:size="72"
+									:size="60"
+									round
 								/>
+								<div class="g-account__text">
+									<span class="g-account__name">{{ employee?.data?.employee_name }}</span>
+									<span v-if="roleLine" class="g-account__sub">{{ roleLine }}</span>
+								</div>
 							</div>
-							<div class="flex flex-col gap-1 min-w-0">
-								<span
-									class="font-sans font-bold text-screen-title tracking-tight text-inkbase break-words"
-									>{{ employee?.data?.employee_name }}</span
-								>
-								<span v-if="roleLine" class="text-caption text-ink-600">{{ roleLine }}</span>
+							<!-- On the page, not in sheets (PAGE-23; shift pattern by owner
+							     ruling 3, 23 Sep), now as label/value rows of the same group
+							     instead of loose lines between groups (alpha.8). -->
+							<div v-if="managerName" class="g-form-row g-form-row--readonly">
+								<span class="g-form-row__label">{{ __("Manager") }}</span>
+								<span class="g-form-row__value">{{ managerName }}</span>
 							</div>
-						</div>
-
-						<!-- On the page, not in two sheets (PAGE-23); the shift pattern
-						     by owner ruling 3 (23 Sep). Each line only when known. -->
-						<div v-if="managerName || shiftName" class="flex flex-col gap-1">
-							<p v-if="managerName" class="text-card-title font-normal text-ink">
-								{{ __("Your manager is {0}", [managerName]) }}
-							</p>
-							<p v-if="shiftName" class="text-card-title font-normal text-ink">
-								{{ __("Your shift: {0}", [shiftName]) }}
-							</p>
+							<div v-if="shiftName" class="g-form-row g-form-row--readonly">
+								<span class="g-form-row__label">{{ __("Shift") }}</span>
+								<span class="g-form-row__value">{{ shiftName }}</span>
+							</div>
 						</div>
 
 						<!-- Details and work: one row, one sheet (was three rows). -->

@@ -4385,3 +4385,40 @@ ion-modal.g-mustread {
 	letter-spacing: 0.4px;
 	color: var(--g-ink);
 }
+
+/* The You page's person, as iOS Settings draws the account (alpha.8). */
+.g-account__row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 16px;
+}
+.g-account__text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.g-account__name {
+	font-family: var(--g-font-ui);
+	font-size: 22px;
+	line-height: 28px;
+	font-weight: 700;
+	color: var(--g-ink);
+	overflow-wrap: anywhere;
+}
+.g-account__sub {
+	font-size: 15px;
+	line-height: 20px;
+	color: var(--g-ink2);
+}
+/* A separator under the account row, from the text (60 + 12 + 16 = 88). */
+.g-account__row + .g-form-row::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 88px;
+	right: 16px;
+	height: 1px;
+	background: var(--g-hair);
+}
