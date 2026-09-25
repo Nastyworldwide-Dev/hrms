@@ -43,16 +43,24 @@
 		     line, "Annual 6 · Medical 13 · All balances ›" — the two cards took
 		     a third of the phone. The numbers are what is LEFT; the "of 14" and
 		     any expiry are one tap away, in the All balances sheet. -->
-		<div v-if="shownLeave.length" class="flex items-center justify-between gap-3">
-			<p class="text-sm text-ink" data-testid="balances-line">{{ line }}</p>
-			<button
-				type="button"
-				class="g-focusable g-list-more px-2 text-sm text-ink-600 bg-transparent border-none"
-				@click="openAll"
-			>
-				{{ __("All balances") }} ›
-			</button>
-		</div>
+		<!-- A header and one row (25 Sep 2026: "where do I check my AL
+		     balance?" — it was an unlabelled grey line). The row opens every
+		     balance. -->
+		<section v-if="shownLeave.length" class="g-form-section">
+			<h2 class="g-form-section__title">{{ __("Leave left") }}</h2>
+			<div class="g-form-group">
+				<button
+					type="button"
+					class="g-form-row g-form-row--action g-balances-row"
+					:aria-label="`${line}. ${__('All balances')}`"
+					@click="openAll"
+				>
+					<span class="g-form-row__label" data-testid="balances-line">{{ line }}</span>
+					<span class="g-balances-row__all">{{ __("All") }}</span>
+					<ChevronRight class="g-balances-row__chevron" aria-hidden="true" />
+				</button>
+			</div>
+		</section>
 		<GModal :is-open="allOpen" :title="__('All balances')" @did-dismiss="allOpen = false">
 			<GListPanel>
 				<GListRow
@@ -87,6 +95,7 @@
 </template>
 
 <script setup>
+import { ChevronRight } from "lucide-vue-next"
 import { countOf } from "@/utils/countWords"
 import { formatCurrency } from "@/utils/formatters"
 import { hoursAsTime } from "@/utils/daySheet"

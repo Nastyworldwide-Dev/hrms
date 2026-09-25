@@ -83,7 +83,7 @@ test("balances are one line, not cards", () => {
 	const src = read("../../components/RequestBalances.vue")
 	assert.doesNotMatch(src, /GBalanceCard/, "the two cards are gone")
 	assert.match(src, /balancesLine\(shownLeave\.value\)/, "the line is built from the pinned pair")
-	assert.match(src, /__\("All balances"\)/, "with the door to every balance")
+	assert.match(src, /__\(["']All balances["']\)/, "with the door to every balance")
 	assert.match(src, /const PINNED = \[\/annual\|privilege\|earned\/i, \/medical\|sick\/i\]/)
 })
 

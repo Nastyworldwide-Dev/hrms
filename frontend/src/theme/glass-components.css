@@ -4299,3 +4299,24 @@ ion-modal.g-mustread {
 	border-bottom-color: var(--g-hair);
 	background: var(--g-bg);
 }
+
+/* The leave balances row on Requests (25 Sep 2026). */
+.g-balances-row {
+	justify-content: space-between;
+	text-align: left;
+}
+.g-balances-row > .g-form-row__label {
+	max-width: none;
+	flex: 1 1 auto;
+	font-variant-numeric: tabular-nums;
+}
+.g-form-row.g-balances-row > .g-balances-row__all {
+	flex: 0 0 auto;
+	color: var(--g-ink2);
+}
+.g-form-row.g-balances-row > .g-balances-row__chevron {
+	flex: 0 0 16px;
+	width: 16px;
+	height: 16px;
+	color: var(--g-ink3);
+}

@@ -166,7 +166,7 @@ test("owner ruling R2: Annual and Medical, then All balances; the full list is c
 	// Two cards fit one row on a phone; the rest open in a sheet as the same
 	// compact rows, never a wall of big cards.
 	assert.match(component, /const LEAVE_SHOWN = 2/)
-	assert.match(component, /__\("All balances"\)/)
+	assert.match(component, /__\(["']All balances["']\)/)
 	assert.match(component, /<GModal :is-open="allOpen"[\s\S]*<GListRow[\s\S]*v-for="row in rankedLeave"/)
 	assert.doesNotMatch(component, /__\("Show fewer leave types"\)/)
 })
