@@ -45,7 +45,7 @@ typography, all pages, sheets, dialogs. Plan it the Apple way."
 | D3 ✅ 284caf4bb | Notifications | "67 unread" loose text above the list |
 | D4 ✅ 284caf4bb | Who to ask | "Your manager / No manager is set for you" and "HR / HR hasn't listed contacts yet" are all loose small text |
 | D5 ✅ 0f5e6667b | Approvals | "Nothing is waiting on you." loose text |
-| D6 | Help, HR Issues | "Open" as a loose label above an empty state |
+| D6 ✅ 14d222d74 | Help, HR Issues | "Open" as a loose label above an empty state |
 | D7 ✅ 085680ad0 | Overtime (new) | "No overtime recorded in this period…" loose text above the form |
 | D8 ✅ 085680ad0 | Expense (new, detail) | "Expenses RM 0 +" loose header row; "Paid back RM 0" group of one |
 | D9 ✅ 284caf4bb | You | "Version 2.0.0-alpha.7 · 2026-09-25 07:11" loose (iOS: a footer or About row) |
@@ -70,17 +70,17 @@ typography, all pages, sheets, dialogs. Plan it the Apple way."
 | # | Where | What |
 |---|---|---|
 | D18 ✅ 02d619463 | Home, Calendar | two radii on one screen (26 and 20): the Today card and the calendar still use 20 |
-| D19 | Time off dashboard, Expense dashboard | big "No leave allocated yet" card with an empty state INSIDE a card, then a second empty state below: two empty states on one screen |
-| D20 | Expense dashboard | lime "Total claimed" card: lime used as a surface, not an action (R10) |
-| D21 ◐ 0f5e6667b (Leave left always answers) | Requests (approver) | "Your last 5" header then an empty state with no group; balances line missing when there is no allocation — the screen is mostly blank |
-| D22 | Calendar | "What the colours mean" row inside the calendar card at a different inset from the rows below |
-| D23 | Every list screen | Filter and + in the bar; the + duplicates "New request" on Requests (two ways, R10) |
-| D24 | Notifications | 12 identical rows "W0 employee asked for …" with a grey tile each — no kind colour (R5), unread dot AND chevron on every row |
+| D19 ✅ 14d222d74 | Time off dashboard, Expense dashboard | big "No leave allocated yet" card with an empty state INSIDE a card, then a second empty state below: two empty states on one screen |
+| D20 ✅ 14d222d74 | Expense dashboard | lime "Total claimed" card: lime used as a surface, not an action (R10) |
+| D21 ✅ 0f5e6667b + 14d222d74 | Requests (approver) | "Your last 5" header then an empty state with no group; balances line missing when there is no allocation — the screen is mostly blank |
+| D22 ✅ 14d222d74 | Calendar | "What the colours mean" row inside the calendar card at a different inset from the rows below |
+| D23 ✅ no change needed (Requests has no +; + is the list screens' only create) | Every list screen | Filter and + in the bar; the + duplicates "New request" on Requests (two ways, R10) |
+| D24 ✅ 14d222d74 | Notifications | 12 identical rows "W0 employee asked for …" with a grey tile each — no kind colour (R5), unread dot AND chevron on every row |
 
 ### Sheets and dialogs (not yet audited on screen)
 | # | Where | What |
 |---|---|---|
-| D25 | All sheets | the audit above covers pages; sheets and alerts need the same script pass (opened by the sheet crawler) |
+| D25 ✅ b0337e3db | All sheets | the audit above covers pages; sheets and alerts need the same script pass (opened by the sheet crawler) |
 
 ## Plan (order = impact)
 
@@ -91,6 +91,14 @@ typography, all pages, sheets, dialogs. Plan it the Apple way."
 5. **D19–D24** screen structure: one empty state per screen, lime only on the action, notifications with kind tiles, one way to create.
 6. **D25** sheets and dialogs through the same script.
 7. Prove: the script at 0 findings on all 36 screens + sheets, WebKit audit, journeys, gates; screenshots side by side with the iOS reference.
+
+## Result (25 Sep 2026)
+
+All 25 defects closed. Locked in by `design/gates/ios.mjs` (plan step 6):
+four WebKit audits in one gate, each at 0 — pages (gutter, one radius, type
+ramp, header inset/gap, button height, nothing loose), sheets (same rules),
+page moves (overscroll + shifts, first and return visit), sheet moves.
+`node design/gates/run.mjs` now fails on any of them.
 
 ## Motion and scroll (alpha.8 r3, 25 Sep — owner: "turn off zoom … overflow
 ## scrolling … jumpy stuff on pages and sheets … every bit measured")
