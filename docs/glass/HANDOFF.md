@@ -1,11 +1,11 @@
 # HANDOFF
-prompt:   half day AM/PM (not late) + Fix a day keeps typed hours — same release as alpha.9
+prompt:   alpha.10 — midnight check-out, after-shift OT, own approver, kit sheets, frame, version
 status:   done
-commit:   ed55d1e7c on nz-glass
-files:    hrms/utils/half_day_session.py, hrms/api/half_day.py, hrms/utils/request_hours.py
-          hrms/hr/doctype/{shift_type,leave_application,attendance_request}/*.py
-          hrms/patches/v16_0/leave_half_day_session.py
-          frontend/src/views/leave/Form.vue, utils/halfDaySession.js, FormView.vue
-verify:   Time off > Half day > Which half shows "AM · start 13:30"; approve an AM half day on a day marked late -> late cleared
-flags:    old half days keep a blank session (no guess); pay/deduction rules unchanged
-next:     deploy nz-glass
+commit:   see git log nz-glass (7361f0142 release + baselines)
+files:    hrms/api/remote_checkin.py, hrms/utils/callback_session.py, hrms/hr/utils.py
+          frontend/src/utils/checkinSession.js, noOverscroll.js, CheckInPanel.vue
+          frontend/src/components/RemoteCheckinDialog.vue (+5 kit rebuilds)
+          hrms/hr/report/missed_checkouts_after_midnight
+verify:   set -a && . ./.env && set +a && node design/gates/ios.mjs  (all four audits 0)
+flags:    damaged midnight days are listed for HR, never auto-fixed; after-shift OT since 16 Sep counts once on deploy
+next:     deploy nz-glass; HR opens "Missed Check-outs After Midnight" and fixes each with Fix a day
