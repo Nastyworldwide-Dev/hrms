@@ -425,18 +425,27 @@ def reject(request: str, approver_remarks: str = "") -> dict:
 	return _decide(request, "Rejected", approver_remarks)
 
 
-def _session_is_live(in_time, now) -> bool:
-	"""A session stays open until 06:00 the morning after its check-in — the same
-	cutoff `unresolved_stale_in` uses to decide when to raise the forgot-to-
-	check-out banner. One rule, so the banner and the punch can never disagree
-	about whether somebody is still on shift."""
+def session_open_until(in_time, shift_actual_end=None):
+	"""When a check-in's session stops being "still on shift": 06:00 the morning
+	after it, or its shift's own check-out window if that ends later (a 22:00-
+	06:00 shift checks out until 07:00). ONE rule for the button, Home's timer,
+	the punch and the forgot-to-check-out banner (employee report, 25 Sep 2026:
+	the phone gave up after 16 h and offered Check in at 01:00-03:00)."""
 	from datetime import timedelta
 
+	in_time = get_datetime(in_time)
 	cutoff = (in_time + timedelta(days=1)).replace(hour=6, minute=0, second=0, microsecond=0)
-	return now < cutoff
+	if shift_actual_end:
+		cutoff = max(cutoff, get_datetime(shift_actual_end))
+	return cutoff
 
 
-def resolve_punch_type(recent_rows, requested: str, now):
+def _session_is_live(in_time, now, shift_actual_end=None) -> bool:
+	"""Still the same session: before `session_open_until`."""
+	return now < session_open_until(in_time, shift_actual_end)
+
+
+def resolve_punch_type(recent_rows, requested: str, now, window_now=None):
 	"""The type a punch MUST carry, given the employee's recent log.
 
 	`log_type` used to be whatever the browser said. CheckInPanel's nextAction
@@ -560,13 +569,25 @@ def resolve_punch_type(recent_rows, requested: str, now):
 			get_datetime(open_in.get("shift_actual_end")) if open_in.get("shift_actual_end") else None
 		)
 		if not shift_close or now >= shift_close:
-			logger.info(
-				"[remote_checkin] %s in the 00:00-06:00 band with no live shift (close %s) — leaving as asked",
-				requested,
-				shift_close,
-			)
-			return requested, None
-	if not _session_is_live(get_datetime(open_in.time), now):
+			# The open day shift is over but its session is not (06:00): is this
+			# tap the check-out, or a NEW shift's arrival? `window_now` is the
+			# shift occurrence whose check-in window covers `now`, found by the
+			# caller: a later occurrence than the open IN's = an arrival (an
+			# early shift, yesterday's check-out forgotten); none at all = the
+			# person is still going and this ends the day (employee report,
+			# 25 Sep 2026: "worked till 3 am, had to check in again").
+			# Unknown (None, a caller that did not look) keeps the old rule.
+			arrival = window_now and get_datetime(window_now.actual_start) > get_datetime(open_in.time)
+			if window_now is None or arrival:
+				logger.info(
+					"[remote_checkin] %s in the 00:00-06:00 band, shift closed %s, new shift %s — leaving as asked",
+					requested,
+					shift_close,
+					bool(arrival),
+				)
+				return requested, None
+			logger.info("[remote_checkin] %s at %s ends the open session %s", requested, now, open_in.name)
+	if not _session_is_live(get_datetime(open_in.time), now, open_in.get("shift_actual_end")):
 		return "IN", None
 	# A second IN minutes after the open one is the same tap, not a one-minute
 	# session: stored as asked and stamped noise by `is_burst_tap`, so the day
@@ -582,6 +603,17 @@ def resolve_punch_type(recent_rows, requested: str, now):
 		open_in.name,
 	)
 	return "OUT", open_in
+
+
+def _window_now(employee, when):
+	"""The shift occurrence whose check-in window covers `when`, or False when
+	none does. Only asked for in the small hours (the one place it decides)."""
+	if get_datetime(when).hour >= 6:
+		return None
+	from hrms.hr.doctype.shift_assignment.shift_assignment import get_actual_start_end_datetime_of_shift
+
+	window = get_actual_start_end_datetime_of_shift(employee, get_datetime(when), True)
+	return window or False
 
 
 @frappe.whitelist(methods=["POST"])
@@ -749,7 +781,9 @@ def punch(
 			)
 		)
 		requested_type = log_type
-		resolved_type, closing = resolve_punch_type(recent, log_type, get_datetime(punch_time))
+		resolved_type, closing = resolve_punch_type(
+			recent, log_type, get_datetime(punch_time), window_now=_window_now(employee, punch_time)
+		)
 		if resolved_type != log_type:
 			logger.warning(
 				"[remote_checkin] %s asked for %s, recorded %s (session %s still open)",
@@ -968,6 +1002,7 @@ def get_unresolved_stale_in() -> dict:
 					"skip_auto_attendance",
 					"shift",
 					"shift_start",
+					"shift_actual_end",
 				],
 				order_by="time desc",
 				limit=200,
@@ -1002,7 +1037,7 @@ def get_unresolved_stale_in() -> dict:
 		next_row = rows[i + 1] if i + 1 < len(rows) else None
 		if next_row and next_row.log_type == "OUT":
 			continue  # session closed (a pending late-OUT also closes it)
-		if _session_is_live(get_datetime(row.time), now):
+		if _session_is_live(get_datetime(row.time), now, row.get("shift_actual_end")):
 			continue  # still a live session (button shows Check Out)
 		unresolved = {
 			"name": row.name,

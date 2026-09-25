@@ -201,6 +201,7 @@
 </template>
 
 <script setup>
+import { sessionIsOpen } from "@/utils/checkinSession"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import { holdScreen, releaseScreen } from "@/utils/wakeLock"
 import { Check, ChevronRight, Clock, TriangleAlert } from "lucide-vue-next"
@@ -326,6 +327,7 @@ const checkins = createListResource({
 		"requires_remote_approval",
 		"remote_approval_status",
 		"is_abandoned",
+		"shift_actual_end",
 	],
 	filters: {
 		employee: employee.data.name,
@@ -459,43 +461,17 @@ const lastLog = computed(() => {
 // `lastLogType` went with the "Last check-out was at …" line: the NOW BAR
 // states what happened last, in words that say what it means (revamp §2).
 
-// Sessions roll over at 06:00 local the day after check-in.
-// If a user checks IN late at night, they can still check OUT during OT
-// up until 06:00 the next morning. After that the open IN is treated as
-// stale and the button flips back to "Check In".
-// §16.7 #2 — the button state derives from the employee's OPEN SHIFT, not the
-// calendar date. The old rule expired an open IN at 6am the following day,
-// which fires *during* a night shift: someone who punched in at 22:05 on a
-// 22:00–07:00 shift was offered "Check In" at 06:30, still on shift, and again
-// at 07:10 having simply forgotten to punch out — creating a second open IN
-// either way. Reproduced before this change; see the phase 7 HANDOFF.
-//
-// A punch session stays open until it has run longer than any real shift, or
-// until the server's nightly sweeper marks it abandoned — which is the
-// authoritative "this session is over" signal and already drives the
-// forgot-to-check-out banner above.
-const MAX_OPEN_SHIFT_HOURS = 16
-
+// ONE session rule, the server's (utils/checkinSession.js mirrors
+// remote_checkin.session_open_until): an open IN is still the session until
+// 06:00 the next morning, or its shift's check-out window if later. The 16-hour
+// cap that stood here offered "Check in" at 01:00-03:00 to people still working
+// (employee report, 25 Sep 2026; reproduced in WebKit), and their tap became a
+// second IN with no OUT. The server's abandoned flag still ends it early.
 function isSessionStale(log) {
-	const checkinTime = log?.time
-	if (!checkinTime) return true
-	// Frappe datetimes are "YYYY-MM-DD HH:mm:ss" (space, no T). Safari — iOS
-	// especially — parses that as Invalid Date, which made every open IN look
-	// stale: the button flipped to "Check In" and check-out created a SECOND
-	// open session. Normalise the space to a T so every browser parses it as
-	// local time (unchanged behaviour where new Date already worked).
-	const t = new Date(String(checkinTime).replace(" ", "T"))
-	if (Number.isNaN(t.getTime())) return true
-	// The server has ruled on THIS session; the client does not second-guess it.
-	// Matched by name on purpose: the banner points at the newest IN already
-	// past its 06:00 cutoff — never today's fresh check-in. Applying that row's
-	// abandoned flag to whatever happened to be the newest log left anyone with
-	// one forgotten check-out stuck on "Check In" forever, however recently
-	// they had just checked in.
 	if (unresolvedStaleIn.data?.is_abandoned && unresolvedStaleIn.data?.name === log?.name) {
 		return true
 	}
-	return Date.now() - t.getTime() >= MAX_OPEN_SHIFT_HOURS * 60 * 60 * 1000
+	return !sessionIsOpen(log)
 }
 
 const liveAction = computed(() => {

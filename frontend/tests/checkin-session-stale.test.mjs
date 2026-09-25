@@ -28,18 +28,23 @@ function buildRule(staleData) {
 	assert.ok(from !== -1, `anchor not found in the component: ${START}`)
 	assert.ok(to > from, `anchor not found after the rule: ${END}`)
 	const body = SOURCE.slice(from, to)
-	// Parsed, never hardcoded: injecting a literal let the ceiling test pass
-	// unchanged when the component's ceiling was set to 4.
-	const MAX_OPEN_SHIFT_HOURS = Number(
-		SOURCE.match(/const MAX_OPEN_SHIFT_HOURS = (\d+)/)?.[1]
-	)
-	assert.ok(MAX_OPEN_SHIFT_HOURS, "ceiling constant not found in the component")
 	const unresolvedStaleIn = { data: staleData }
+	// The ONE session rule (utils/checkinSession.js), injected as the real
+	// module's contract: open until 06:00 the next morning (25 Sep 2026: the
+	// 16-hour ceiling that stood here offered "Check in" at 01:00-03:00).
+	const sessionIsOpen = (log) => {
+		const t = log?.time && new Date(String(log.time).replace(" ", "T"))
+		if (!t || Number.isNaN(t.getTime())) return false
+		const until = new Date(t)
+		until.setDate(until.getDate() + 1)
+		until.setHours(6, 0, 0, 0)
+		return Date.now() < until.getTime()
+	}
 	return new Function(
-		"MAX_OPEN_SHIFT_HOURS",
+		"sessionIsOpen",
 		"unresolvedStaleIn",
 		`${body}; return isSessionStale`
-	)(MAX_OPEN_SHIFT_HOURS, unresolvedStaleIn)
+	)(sessionIsOpen, unresolvedStaleIn)
 }
 
 function minutesAgo(n) {
@@ -70,29 +75,24 @@ test("the abandoned session itself is still stale", () => {
 	assert.strictEqual(isSessionStale(old), true)
 })
 
-test("the ceiling is 16 hours - a shift plus overtime, not a working day", () => {
-	// The behavioural tests follow whatever the constant says, so the value
-	// itself needs pinning or a typo changes how long a session stays open.
-	const ceiling = Number(
-		SOURCE.match(/const MAX_OPEN_SHIFT_HOURS = (\d+)/)?.[1]
-	)
-	assert.strictEqual(ceiling, 16)
+test("the component asks the ONE session rule, not its own ceiling", () => {
+	// SUPERSEDED 25 Sep 2026 (employee report: "worked till 3 am, had to check
+	// in again"): the 16-hour ceiling disagreed with the server's 06:00 session.
+	assert.doesNotMatch(SOURCE, /MAX_OPEN_SHIFT_HOURS/)
+	assert.match(SOURCE, /return !sessionIsOpen\(log\)/)
 })
 
-test("an open session past the component's own ceiling is stale", () => {
-	const ceiling = Number(
-		SOURCE.match(/const MAX_OPEN_SHIFT_HOURS = (\d+)/)?.[1]
-	)
-	assert.ok(ceiling, "ceiling constant not found in the component")
+test("an IN from yesterday morning is still open before 06:00 and closed after", () => {
 	const isSessionStale = buildRule(null)
-	assert.strictEqual(
-		isSessionStale({ name: "X", time: minutesAgo((ceiling + 1) * 60) }),
-		true
-	)
-	assert.strictEqual(
-		isSessionStale({ name: "X", time: minutesAgo((ceiling - 1) * 60) }),
-		false
-	)
+	const yesterday9 = new Date()
+	yesterday9.setDate(yesterday9.getDate() - 1)
+	yesterday9.setHours(9, 0, 0, 0)
+	const pad = (x) => String(x).padStart(2, "0")
+	const s = `${yesterday9.getFullYear()}-${pad(yesterday9.getMonth() + 1)}-${pad(yesterday9.getDate())} 09:00:00`
+	const beforeSix = new Date().getHours() < 6
+	assert.strictEqual(isSessionStale({ name: "X", time: s }), !beforeSix)
+	// two days back is past any session
+	assert.strictEqual(isSessionStale({ name: "X", time: minutesAgo(48 * 60) }), true)
 })
 
 test("a missing or unparseable time is stale", () => {

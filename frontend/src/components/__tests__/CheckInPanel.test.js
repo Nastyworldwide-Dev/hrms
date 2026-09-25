@@ -36,14 +36,15 @@ test("the duplicate guard arms on a successful punch and on a lost answer, never
 	assert.match(punchBlock, /checkins\.reload\(\)/)
 })
 
-test("session staleness parses Frappe datetimes iOS-safely (space -> T)", () => {
+test("session staleness parses Frappe datetimes iOS-safely", () => {
 	// new Date("YYYY-MM-DD HH:mm:ss") is Invalid Date on Safari, which made
 	// every open IN look stale and spawned duplicate sessions on check-out.
-	assert.match(
-		src,
-		/String\(checkinTime\)\.replace\(" ", "T"\)/,
-		"must normalise the space to T before new Date"
-	)
+	// The rule now lives in utils/checkinSession.js, which reads site-clock
+	// strings through siteTime (dayjs.tz), never new Date.
+	const rule = readFileSync(fileURLToPath(new URL("../../utils/checkinSession.js", import.meta.url)), "utf8")
+	assert.match(rule, /import \{ siteTime \} from "\.\/siteTime\.js"/)
+	assert.doesNotMatch(rule, /new Date\(/)
+	assert.match(src, /return !sessionIsOpen\(log\)/)
 })
 
 test("a failed punch frees the frozen button by resetting the camera", () => {

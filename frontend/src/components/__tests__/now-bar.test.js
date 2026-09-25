@@ -82,13 +82,15 @@ test("the detail line disappears, but the state never does", () => {
 	assert.match(bar, /v-if="detail"/)
 })
 
-test("a forgotten punch is not a running session", () => {
-	// The check-in button gives up on an open IN after 16 hours and offers IN
-	// again. A live timer beside it would be the screen contradicting itself.
-	assert.match(api, /MAX_OPEN_SESSION_HOURS = 16/)
-	assert.match(api, /if hours > MAX_OPEN_SESSION_HOURS/)
+test("a forgotten punch is not a running session, by the ONE session rule", () => {
+	// SUPERSEDED 25 Sep 2026 (employee report: "worked till 3 am, had to check
+	// in again"): a 16-hour cap on the button and on Home disagreed with the
+	// server's 06:00 session. All three read remote_checkin.session_open_until.
+	assert.match(api, /from hrms\.api\.remote_checkin import session_open_until/)
+	assert.doesNotMatch(api, /MAX_OPEN_SESSION_HOURS/)
 	const panel = code(read("components/CheckInPanel.vue"))
-	assert.match(panel, /MAX_OPEN_SHIFT_HOURS = 16/, "the two agree on the number")
+	assert.doesNotMatch(panel, /MAX_OPEN_SHIFT_HOURS/)
+	assert.match(panel, /sessionIsOpen\(log\)/)
 })
 
 test("the shift window survives a single-digit hour", () => {

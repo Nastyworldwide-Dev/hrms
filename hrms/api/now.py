@@ -23,19 +23,21 @@ from frappe.utils import flt, get_datetime
 
 logger = logging.getLogger(__name__)
 
-#: Past this an open IN is not a session, it is a forgotten punch. Mirrors
-#: MAX_OPEN_SHIFT_HOURS in CheckInPanel.vue — the same 16 hours, because two
-#: different answers to "is this still running" would put a live timer on
-#: Home for a punch the check-in button has already given up on.
-MAX_OPEN_SESSION_HOURS = 16
-
 
 def _open_session(employee, now):
-	"""The newest IN with no OUT after it, if it is still plausibly running."""
+	"""The newest IN with no OUT after it, while its session is still open.
+
+	The SAME rule the check-in button and the punch use
+	(remote_checkin.session_open_until: 06:00 the next morning, or the
+	shift's check-out window if later). It was a separate 16-hour cap, so
+	after 16 h Home dropped the timer and the button offered Check in while
+	the person was still working (employee report, 25 Sep 2026)."""
+	from hrms.api.remote_checkin import session_open_until
+
 	last = frappe.get_all(
 		"Employee Checkin",
 		filters={"employee": employee},
-		fields=["name", "time", "log_type"],
+		fields=["name", "time", "log_type", "shift_actual_end"],
 		order_by="time desc",
 		limit=1,
 		ignore_permissions=True,
@@ -43,14 +45,12 @@ def _open_session(employee, now):
 	if not last or last[0].log_type != "IN":
 		return None
 	started = get_datetime(last[0].time)
-	hours = (now - started).total_seconds() / 3600
-	if hours > MAX_OPEN_SESSION_HOURS:
-		# Not a session. The check-in button already treats this as a forgotten
-		# punch and offers IN again; a running timer beside it would be the
-		# screen contradicting itself.
-		logger.info("[now] employee=%s open IN is %0.1fh old — not a session", employee, hours)
+	until = session_open_until(started, last[0].shift_actual_end)
+	if now >= until:
+		logger.info("[now] employee=%s open IN %s ended at %s — not a session", employee, started, until)
 		return None
-	return {"since": str(started), "hours": flt(hours, 2)}
+	hours = (now - started).total_seconds() / 3600
+	return {"since": str(started), "hours": flt(hours, 2), "open_until": str(until)}
 
 
 def _shift_window(employee, on_date):

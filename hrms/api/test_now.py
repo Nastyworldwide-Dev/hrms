@@ -15,7 +15,7 @@ from frappe.utils import add_to_date, now_datetime
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
-from hrms.api.now import MAX_OPEN_SESSION_HOURS, _hhmm, _state, get_now
+from hrms.api.now import _hhmm, _state, get_now
 from hrms.tests.test_utils import create_company
 
 
@@ -83,10 +83,11 @@ class TestNowBar(FrappeTestCase):
 		self.assertIsNone(self._now()["session"])
 
 	def test_a_forgotten_punch_is_not_a_session(self):
-		"""The check-in button gives up on an open IN after 16 hours and offers
-		IN again. A live timer beside it would be the screen contradicting
-		itself, and the number would be nonsense besides."""
-		self._punch("IN", add_to_date(now_datetime(), hours=-(MAX_OPEN_SESSION_HOURS + 2)))
+		"""An IN past its session's end (06:00 the next morning, the rule the
+		button and the punch share) is a forgotten punch, not a timer. A 16-hour
+		cap here used to drop the timer while the person was still working
+		(employee report, 25 Sep 2026); two days back is past any session."""
+		self._punch("IN", add_to_date(now_datetime(), days=-2))
 		self.assertIsNone(self._now()["session"])
 
 	def test_no_punches_at_all_is_not_an_error(self):

@@ -1145,3 +1145,67 @@ class TheAnswerCarriesTheAccuracyItJudgedOn(unittest.TestCase):
 			answer,
 			"it must be the accuracy the DECISION used, not a re-read of anything",
 		)
+
+
+class TestTheSmallHoursAreStillTheSameSession(unittest.TestCase):
+	"""Employee report, 25 Sep 2026: "worked till about 3 am (or 12 am) and had to
+	check in again". A day-shift IN is open until 06:00 the next morning, so a
+	tap in the small hours while it is still open is the CHECK-OUT, whatever
+	the phone asked: the band used to store it as asked once the shift window
+	had passed, and a second IN with no OUT was saved.
+	Early-shift arrivals keep their protection: a session already closed, or
+	past 06:00, still takes an IN."""
+
+	def setUp(self):
+		from hrms.api import remote_checkin
+
+		self.mod = remote_checkin
+		self.day = datetime.datetime(2026, 9, 24)
+
+	def at(self, hour, minute=0, next_day=False):
+		return self.day.replace(hour=hour, minute=minute) + datetime.timedelta(days=1 if next_day else 0)
+
+	def open_in(self, start):
+		return [
+			frappe._dict(
+				name="IN-OPEN",
+				log_type="IN",
+				time=start,
+				shift_actual_end=self.at(19, 0),
+			)
+		]
+
+	def test_a_tap_at_midnight_closes_the_day(self):
+		# no shift window covers 00:01 for a 9-6 worker: they are still going
+		resolved, closing = self.mod.resolve_punch_type(
+			self.open_in(self.at(9)), "IN", self.at(0, 1, True), window_now=False
+		)
+		self.assertEqual((resolved, closing and closing.name), ("OUT", "IN-OPEN"))
+
+	def test_a_tap_at_3am_closes_the_day(self):
+		resolved, _ = self.mod.resolve_punch_type(
+			self.open_in(self.at(9)), "IN", self.at(3, 0, True), window_now=False
+		)
+		self.assertEqual(resolved, "OUT")
+
+	def test_an_early_shift_arrival_is_still_an_arrival(self):
+		# a 00:30 shift's check-in window covers 00:20: yesterday was forgotten
+		window = frappe._dict(actual_start=self.at(23, 30))
+		resolved, _ = self.mod.resolve_punch_type(
+			self.open_in(self.at(9)), "IN", self.at(0, 20, True), window_now=window
+		)
+		self.assertEqual(resolved, "IN")
+
+	def test_after_06_00_it_is_a_new_day(self):
+		resolved, _ = self.mod.resolve_punch_type(self.open_in(self.at(9)), "IN", self.at(6, 1, True))
+		self.assertEqual(resolved, "IN")
+
+	def test_a_night_shift_checks_out_after_06_00_inside_its_window(self):
+		# 22:00-06:00, check-out allowed to 07:00: 06:30 is its check-out
+		rows = [frappe._dict(name="N", log_type="IN", time=self.at(22), shift_actual_end=self.at(7, 0, True))]
+		self.assertEqual(self.mod.resolve_punch_type(rows, "IN", self.at(6, 30, True))[0], "OUT")
+
+	def test_one_open_until_rule(self):
+		until = self.mod.session_open_until
+		self.assertEqual(until(self.at(9), self.at(19)), self.at(6, 0, True))
+		self.assertEqual(until(self.at(22), self.at(7, 0, True)), self.at(7, 0, True))
