@@ -1,3 +1,3 @@
-GOAL: no page moves while it loads (owner 25 Sep: "jumpy jumpy stuff … every bit measured")
-DONE WHEN: scroll-and-shift-audit shows 0 shifts on 36 screens, cold AND warm cache; tests + gates green
-CHECK: cd frontend && node e2e/scroll-and-shift-audit.mjs; yarn test; node design/gates/run.mjs
+GOAL: sheets hold still and their scroll stops at their own edge
+DONE WHEN: sheet-shift-audit: every reachable sheet 0 shifts, 0 extra, overscroll contain
+CHECK: cd frontend && node e2e/sheet-shift-audit.mjs

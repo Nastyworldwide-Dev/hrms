@@ -2327,6 +2327,10 @@ html[data-transparency="reduce"] .g-modal::part(content) {
    through the bar and no second blur is stacked (D3: no glass on glass). */
 .g-sheet {
 	padding-top: 0;
+	/* alpha.8 r3 (measured: every sheet was "auto"): a drag that reaches the
+	   end of a sheet's list bounces inside the sheet and stops there, as an
+	   iOS sheet does; it never carries on into the page behind. */
+	overscroll-behavior-y: contain;
 }
 .g-sheet__head {
 	position: sticky;

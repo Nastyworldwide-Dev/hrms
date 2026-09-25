@@ -1,14 +1,4 @@
-CLASS: a loading placeholder (or a late block) whose size differs from the answer that replaces it — the page jumps when data lands
-frontend/src/theme/glass-components.css (un-hydrated ion-modal takes flex gap) — same-root (fixed: overlays without .ios/.md are display:none)
-frontend/src/components/NeedsYou.vue (17pt line vs 51pt skeleton; skeleton on cached refresh) — same-root (fixed: same row, skeleton on first read only)
-frontend/src/views/Approvals.vue (3 skeleton rows -> 1 line; uncached) — same-root (fixed: 1 row both, personal cache)
-frontend/src/components/RequestBalances.vue (51pt headerless skeleton -> header+row or nothing) — same-root (fixed: same header+row, always drawn)
-frontend/src/components/RequestPanel.vue (visible "Refreshing…" line) — same-root (fixed: screen-reader only)
-frontend/src/components/glass/GListPanel.vue (27px skeleton outside the well: 51 vs 54pt row) — same-root (fixed)
-frontend/src/components/Announcements.vue (2-row skeleton vs 1 quiet row) — same-root (fixed)
-frontend/src/components/CheckInPanel.vue (button appears after uncached settings) — same-root (fixed: 48px skeleton, same margin)
-frontend/src/components/NowBar.vue (detail line appears late; skeleton row 18 vs 20) — same-root (fixed: min-heights from type tokens)
-frontend/src/views/Profile.vue (Manager/Shift rows appear late) — same-root (fixed: always drawn, None when unset)
-frontend/src/views/ot/OTRequestForm.vue (form painted before days line) — same-root (fixed: paints once days answer)
-frontend/src/components/LeaveBalance.vue — not-affected — audit 0 shifts both passes (grid skeleton sized like cards)
-frontend/src/components/AttendanceCalendar.vue — not-affected — its 24pt jump was the modal class above; 320px skeleton not seen (cached month)
+CLASS: a sheet's scroll chains into the page behind it (overscroll-behavior auto on the sheet scroller)
+frontend/src/theme/glass-components.css .g-sheet — same-root (fixed: overscroll-behavior-y contain)
+frontend/src/components/glass/GModal.vue — not-affected — renders .g-sheet; the rule lives on the class, one place
+frontend/src/components/ListView.vue — not-affected — page scroller is ion-content; the document never scrolls (html overflow hidden, d13122051)

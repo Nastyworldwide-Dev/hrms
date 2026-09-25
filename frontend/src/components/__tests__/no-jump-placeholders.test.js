@@ -65,3 +65,7 @@ test("the quiet board is the skeleton's shape: one form row", () => {
 	assert.doesNotMatch(src, /<GListPanel loading :rows="2" \/>/)
 	assert.match(src, /<div class="g-form-row"><GSkeleton/)
 })
+
+test("a sheet's scroll never carries on into the page behind it", () => {
+	assert.match(css, /\.g-sheet \{\s*padding-top: 0;[^}]*overscroll-behavior-y: contain;/)
+})
