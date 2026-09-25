@@ -55,6 +55,7 @@
 			v-else-if="props.fieldtype === 'Link'"
 			:doctype="props.options"
 			:modelValue="modelValue"
+			:display="props.display"
 			:filters="props.linkFilters"
 			:placeholder="$attrs.placeholder || rowPlaceholder"
 			:disabled="isReadOnly"
@@ -249,6 +250,8 @@ const props = defineProps({
 	options: [String, Array],
 	linkFilters: Object,
 	documentList: Array,
+	//: The words to show for a Link's value, when the caller already has them.
+	display: { type: String, default: "" },
 	readOnly: [Boolean, Number],
 	reqd: [Boolean, Number],
 	hidden: {

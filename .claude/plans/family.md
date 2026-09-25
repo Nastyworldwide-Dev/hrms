@@ -1,5 +1,7 @@
-CLASS: a Desk list formatter that the Report view never reads (report cells format through the docfield)
-hrms/hr/doctype/ot_request/ot_request_list.js claimed_hours — same-root (fixed: formatter on the docfield, list keeps its own)
-hrms/hr/doctype/attendance/attendance_list.js working_hours — ticket alpha9-desk-hours — same class, not asked for yet; owner ruled OT report only
-hrms/hr/doctype/goal/goal_list.js — not-affected — formats a status/Link, not a stored-precision number
-hrms/hr/doctype/job_requisition/job_requisition_list.js — not-affected — not a precision field
+CLASS: a saved request shows a record ID or noise where a person expects words (link value drawn raw)
+frontend/src/components/FormView.vue employee row — same-root (fixed: stored employee_name via display)
+frontend/src/components/FormView.vue company row — same-root (fixed: hidden on the viewer's own request)
+frontend/src/components/Link.vue selectedLabel — same-root (display wins over the raw ID)
+frontend/src/components/FormField.vue — same-root (passes display through)
+leave_approver / expense_approver ("Goes to") — not-affected — measured: shows "W0 approver" (the select's label), the login is only the hidden value
+frontend/src/views/Profile.vue — not-affected — its own rows, no FormView

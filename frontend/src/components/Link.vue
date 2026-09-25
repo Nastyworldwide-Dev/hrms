@@ -95,6 +95,9 @@ const props = defineProps({
 	},
 	//: Shown while nothing is chosen, e.g. "All" in a filter (alpha.7 0.6).
 	placeholder: { type: String, default: "" },
+	//: The chosen record's title, when the caller has it (a saved request
+	//: stores employee_name): shown instead of the ID (alpha.9 D10).
+	display: { type: String, default: "" },
 	filters: {
 		type: Object,
 		// Vue requires a factory here — a literal default is the SAME object
@@ -178,6 +181,7 @@ const options = createResource({
 // the trigger shows the option's title when it is loaded
 const selectedLabel = computed(() => {
 	if (!props.modelValue) return ""
+	if (props.display) return props.display
 	const hit = (options.data || []).find((o) => o.value === props.modelValue)
 	return hit?.label || props.modelValue
 })

@@ -108,6 +108,7 @@
 												:options="field.options"
 												:linkFilters="field.linkFilters"
 												:documentList="field.documentList"
+												:display="displayFor(field)"
 												:readOnly="isFieldReadOnly(field)"
 												:reqd="Boolean(field.reqd)"
 												:hidden="Boolean(field.hidden)"
@@ -167,6 +168,7 @@
 										:options="field.options"
 										:linkFilters="field.linkFilters"
 										:documentList="field.documentList"
+										:display="displayFor(field)"
 										:readOnly="isFieldReadOnly(field)"
 										:reqd="Boolean(field.reqd)"
 										:hidden="Boolean(field.hidden)"
@@ -626,16 +628,35 @@ watch(
 //: On a saved request the header chip states the status, so a read-only
 //: status row would say it a second time (alpha.7 B7: status once).
 const STATUS_ROWS = ["status", "approval_status"]
+//: alpha.9 D11: on the viewer's OWN saved request, Company says nothing they
+//: do not know. An approver still sees it (a person may work in two).
+const OWN_REQUEST_NOISE = ["company"]
+const isOwnRequest = computed(
+	() => Boolean(props.id) && formModel.value?.employee === currentEmployee?.data?.name
+)
 const shownFields = computed(() =>
 	dropEmptySections(
 		props.id
-			? props.fields.filter((f) => !(STATUS_ROWS.includes(f.fieldname) && isFieldReadOnly(f)))
+			? props.fields.filter(
+					(f) =>
+						!(STATUS_ROWS.includes(f.fieldname) && isFieldReadOnly(f)) &&
+						!(isOwnRequest.value && OWN_REQUEST_NOISE.includes(f.fieldname))
+			  )
 			: props.fields,
 		formModel.value,
 		isFieldReadOnly
 	)
 )
 const tabFields = computed(() => splitFieldsByTab(shownFields.value, props.tabs))
+//: alpha.9 D10: a saved link row shows the stored title, never the record ID
+//: ("Who W0 employee", not "Who HR-EMP-00009"). Every request doctype stores
+//: employee_name beside employee, so no extra read is needed.
+const LINK_TITLES = {
+	employee: (model) => model.employee_name,
+}
+const displayFor = (field) =>
+	(props.id && LINK_TITLES[field.fieldname]?.(formModel.value || {})) || ""
+
 //: Whether a row draws, for the one-row-section rule (alpha.7 B13).
 const rowShown = (field) => isShown(field, formModel.value, isFieldReadOnly)
 

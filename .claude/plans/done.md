@@ -1,3 +1,3 @@
-GOAL: HR's OT Request report shows Claimed Hours as 1.50, not 1.500000000; storage stays 9 decimals
-DONE WHEN: Frappe's real formatter renders 1.50 for the report call; list the same; precision "9" untouched
-CHECK: node --test hrms/hr/doctype/ot_request/ot_request_list.test.js
+GOAL: request details say the person's name, and drop Company on your own request (alpha.9 D10, D11)
+DONE WHEN: approver sees "Who W0 employee" on all 5 request types; employee sees no Company row
+CHECK: node --test frontend/src/components/__tests__/request-detail-names.test.js
