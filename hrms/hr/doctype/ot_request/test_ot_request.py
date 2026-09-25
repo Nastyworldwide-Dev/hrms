@@ -168,6 +168,24 @@ class TestOTRequest(FrappeTestCase):
 		request.save()
 		self.assertEqual(request.compensation, "Overtime Pay")
 
+	def test_a_pay_claim_records_its_day_type_and_rate(self):
+		"""HR, 25 Sep 2026: "for overtime claim, I need the rate: 1.5, 2.0 or
+		3.0", beside the day type, in the OT Request report. Read from the
+		shift's own rules, the way payroll prices it."""
+		frappe.db.set_value("Employee", self.employee, "eligible_for_overtime_pay", 1)
+		make_ot_checkins(self.employee, today())
+		with patch("hrms.utils.ot_calculation._classify_day", return_value="normal"):
+			request = make_ot_request(self.employee, claimed_hours=3, submit=False)
+		self.assertEqual(request.day_type, "Normal Day")
+		self.assertEqual(request.ot_rate, "1.5×")
+
+	def test_a_replacement_leave_claim_carries_no_rate(self):
+		# Owner, 25 Sep: pay claims only. Leave is days, not a rate.
+		make_ot_checkins(self.employee, today())
+		request = make_ot_request(self.employee, claimed_hours=3, submit=False)
+		self.assertEqual(request.compensation, "Replacement Leave")
+		self.assertFalse(request.ot_rate)
+
 	def test_duplicate_day_rejected(self):
 		make_ot_checkins(self.employee, today())
 		make_ot_request(self.employee, submit=False)

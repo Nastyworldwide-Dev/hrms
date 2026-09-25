@@ -19,6 +19,8 @@
   "claimed_hours",
   "column_break_claim",
   "compensation",
+  "day_type",
+  "ot_rate",
   "reason_section",
   "explanation",
   "leave_allocation",
@@ -126,6 +128,23 @@
    "label": "Compensation",
    "options": "\nOvertime Pay\nReplacement Leave",
    "read_only": 1
+  },
+  {
+   "fieldname": "day_type",
+   "fieldtype": "Data",
+   "label": "Day Type",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "description": "Normal Day, Rest Day, Off Day or Public Holiday, read from the work date's holiday calendar (pay claims only).",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ot_rate",
+   "fieldtype": "Data",
+   "label": "OT Rate",
+   "read_only": 1,
+   "description": "The rate the claimed hours are paid at, from the shift's Overtime Rates (e.g. 1.5×; an Off Day past its first band shows both).",
+   "in_list_view": 1
   },
   {
    "fieldname": "reason_section",

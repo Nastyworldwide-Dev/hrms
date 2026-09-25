@@ -107,6 +107,7 @@ class OTRequest(Document, PWANotificationsMixin):
 		else:
 			logger.debug("[ot_request] retaining filed punch cap for rejected request")
 		self.validate_duplicate_request()
+		self.set_day_type_and_rate()
 
 	def validate_filing_window(self):
 		# A previously filed employee/date may be processed after its window
@@ -172,6 +173,38 @@ class OTRequest(Document, PWANotificationsMixin):
 			self.punch_ot_hours,
 			self.compensation,
 		)
+
+	def set_day_type_and_rate(self):
+		"""What HR needs beside the hours (25 Sep 2026): the day type and the
+		rate the claim is paid at, from the shift's own Overtime Rates and the
+		work date's calendar, split in band order exactly as payroll prices it.
+		Pay claims only; replacement leave is days, not a rate."""
+		from hrms.utils.ot_calculation import (
+			DAY_TYPE_LABELS,
+			_classify_day,
+			_get_shift_ot_config,
+			_ot_bands_for_day,
+			_per_day_contributions,
+		)
+		from hrms.utils.ot_rate_label import rate_label
+
+		if self.compensation != "Overtime Pay" or not self.ot_date:
+			self.day_type = self.ot_rate = None
+			return
+		# The shift the overtime was WORKED on, from the punches (the same read
+		# the cap uses); the claim's own shift is only copied from Attendance.
+		day = getdate(self.ot_date)
+		worked = _per_day_contributions(self.employee, day, day).get(day) or []
+		shift = worked[0]["shift"] if worked else self.shift
+		config = _get_shift_ot_config(shift)
+		if not config:
+			self.day_type = self.ot_rate = None
+			return
+		key = _classify_day(self.employee, day, "normal", shift=shift)
+		bands = _ot_bands_for_day(flt(self.claimed_hours), 0, key, config)
+		self.day_type = DAY_TYPE_LABELS.get(key, key)
+		self.ot_rate = rate_label(bands)
+		logger.info("[ot_request] %s %s: %s at %s", self.name, self.ot_date, self.day_type, self.ot_rate)
 
 	def validate_claimed_hours(self):
 		claimed = stored_ot_hours(self.claimed_hours)
