@@ -10,6 +10,46 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.10] — 2026-09-25
+
+Working late, working after the shift, and nobody choosing their own
+approver. Plan and evidence: `docs/glass/plan/NADI_2.0.0-alpha.10_PLAN.md`.
+
+### Fixed
+- **Working past midnight no longer asks you to check in again.** The button
+  gave up after 16 hours (a 9 am check-in showed "Check in" at 1 am) and the
+  tap was saved as a second check-in. One rule now: a check-in stays open
+  until 6 am the next morning, or the end of its shift's check-out window.
+- **Nobody chooses their approver.** Time off, Expense and Shift requests
+  go to your own approver; "Goes to" shows who, and cannot be changed.
+- The check-in banner names the approver, never their email address.
+- Pages stop at their top and bottom; "Pull to refresh" shows only on a real
+  pull; the bell and profile are one size; the tab icon sits inside its pill.
+- The remote check-in, forgot-to-check-out, notifications, SOP and HR issue
+  screens are built from the design kit, not by hand.
+- An approved "Fix a day" keeps the times it carried on a day that already
+  had a record.
+
+### Added
+- **Approved work after your shift counts as that day's overtime** (a
+  remote check-in your approver said yes to). It shows in Claim OT; paid
+  only when the claim is approved. Work approved since 16 Sep counts too.
+- **Half day: AM or PM.** A morning half day is not late at lunch; an
+  afternoon one does not leave early. Each choice shows your own clock.
+- HR report **Missed Check-outs After Midnight**: the days the old button
+  broke, to fix with Fix a day.
+- The day type and OT rate in HR's OT report; hours shown as 1.50.
+
+## [2.0.0-alpha.9] — 2026-09-25
+
+Every screen and sheet to the iOS rules (names not IDs, nothing loose, one
+corner radius), locked in by the `ios` design check.
+
+## [2.0.0-alpha.8] — 2026-09-25
+
+Zoom off, pages hold still while they load, the iOS 26 frame (large titles,
+the sliding tab lens, separators, switches).
+
 ## [2.0.0-alpha.7] — 2026-09-25
 
 Nadi now looks and behaves like an iPhone app: the same colours, sizes,
