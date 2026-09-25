@@ -134,7 +134,6 @@
    "fieldtype": "Data",
    "label": "Day Type",
    "read_only": 1,
-   "in_standard_filter": 1,
    "description": "Normal Day, Rest Day, Off Day or Public Holiday, read from the work date's holiday calendar (pay claims only).",
    "in_list_view": 1
   },

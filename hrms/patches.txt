@@ -129,3 +129,4 @@ hrms.patches.v16_0.install_announcement_doctypes #2026-09-22 the announcement bo
 hrms.patches.v16_0.add_shift_reminders_field #2026-09-23 check-in / check-out reminders: staff switch them off on the You page, so each Employee needs its own on/off, ON by default
 hrms.patches.v16_0.announcement_alpha7_fields #2026-09-25 announcements: a Summary for the Home card and the push, cover image, urgent, notify on publish, re-confirm on change, and pasted images staff can see
 hrms.patches.v16_0.fill_ot_request_day_type_and_rate #2026-09-25 HR: the day type and the OT rate (1.5 / 2.0 / 3.0) beside each overtime pay claim in the OT Request report
+hrms.patches.v16_0.ot_request_report_columns #2026-09-25 HR: Day Type and OT Rate show as columns in each user's existing OT Request report view
