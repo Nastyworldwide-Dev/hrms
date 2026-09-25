@@ -1,179 +1,97 @@
 <template>
+	<!-- On the kit (owner, 25 Sep 2026: hand-rolled screens): grouped rows,
+	     the kit's input, segmented scope, picker, switches and text area, and
+	     its two buttons. Behaviour unchanged. -->
 	<GModal
 		:is-open="props.open"
 		:title="props.sopName ? __('Edit SOP') : __('New SOP')"
 		@did-dismiss="close"
 	>
-		<div class="w-full flex flex-col">
-			<!-- body -->
-			<div class="flex flex-col gap-4 px-4 pb-4">
-				<div class="flex flex-col gap-1.5">
-					<label class="m-field-label" for="sop-title">{{ __("Title") }}</label>
-					<input
-						id="sop-title"
-						v-model="form.title"
-						type="text"
-						:placeholder="__('e.g. Cash Handling Procedure')"
-						class="m-field-input"
-						:class="errors.title ? '!border-red-600' : ''"
-					/>
-					<span v-if="errors.title" class="text-kra-label font-bold text-red-600">
-						{{ __("Title is required.") }}
-					</span>
+		<div class="g-form-body">
+			<section class="g-form-section">
+				<div class="g-form-group">
+					<label class="g-form-row">
+						<span class="g-form-row__label">{{ __("Title") }}</span>
+						<GInput
+							v-model="form.title"
+							:aria-label="__('Title')"
+							:placeholder="__('e.g. Cash Handling Procedure')"
+							:error="errors.title ? __('Title is required.') : ''"
+						/>
+					</label>
 				</div>
+			</section>
 
-				<div class="flex flex-col gap-1.5">
-					<label class="m-field-label">{{ __("Scope") }}</label>
-					<div class="flex gap-2">
-						<button
-							v-for="scope in SCOPES"
-							:key="scope"
-							type="button"
-							class="g-eyebrow flex-1 min-h-11 py-2.5 px-2 border"
-							:class="
-								form.scope === scope
-									? 'bg-accent-ink text-ground border-accent-ink'
-									: 'bg-surface text-ink-700 border-divider'
-							"
-							:aria-pressed="form.scope === scope"
-							style="
-								transition: background-color var(--g-motion-state-change-duration)
-										var(--g-motion-state-change-easing),
-									color var(--g-motion-state-change-duration) var(--g-motion-state-change-easing),
-									border-color var(--g-motion-state-change-duration)
-										var(--g-motion-state-change-easing);
-							"
-							@click="setScope(scope)"
-						>
-							{{ __(scope) }}
-						</button>
+			<section class="g-form-section">
+				<h2 class="g-form-section__title">{{ __("Who sees it") }}</h2>
+				<GSegmented
+					:buttons="SCOPES.map((scope) => ({ key: scope, label: __(scope) }))"
+					:model-value="form.scope"
+					:label="__('Scope')"
+					@update:model-value="setScope"
+				/>
+				<div v-if="form.scope === 'Department'" class="g-form-group">
+					<label class="g-form-row">
+						<span class="g-form-row__label">{{ __("Department") }}</span>
+						<GSelect
+							:options="(departments.data || []).map((d) => ({ value: d.name, label: departmentLabel(d.name) }))"
+							:model-value="form.department"
+							:aria-label="__('Department')"
+							:placeholder="__('Required')"
+							@update:model-value="(v) => (form.department = v)"
+						/>
+					</label>
+				</div>
+				<p v-if="errors.department" class="g-form-footer g-field__error" role="alert">
+					{{ __("Pick a department for a department-scoped SOP.") }}
+				</p>
+			</section>
+
+			<section class="g-form-section">
+				<div class="g-form-group">
+					<div v-for="toggle in TOGGLES" :key="toggle.field" class="g-form-row">
+						<span class="g-form-row__label">{{ __(toggle.label) }}</span>
+						<GSwitch
+							class="g-form-row__switch"
+							:aria-label="__(toggle.label)"
+							:model-value="Boolean(form[toggle.field])"
+							@update:model-value="(on) => (form[toggle.field] = on)"
+						/>
 					</div>
 				</div>
+				<p class="g-form-footer">{{ TOGGLES.map((t) => __(t.hint)).join(" · ") }}</p>
+			</section>
 
-				<div class="flex flex-col gap-1.5">
-					<label class="m-field-label" for="sop-department">{{ __("Department") }}</label>
-					<select
-						id="sop-department"
-						v-model="form.department"
-						:disabled="form.scope !== 'Department'"
-						class="m-field-input disabled:opacity-45"
-						:class="errors.department ? '!border-red-600' : ''"
-					>
-						<option value="">{{ __("Select department…") }}</option>
-						<option
-							v-for="department in departments.data || []"
-							:key="department.name"
-							:value="department.name"
-						>
-							{{ departmentLabel(department.name) }}
-						</option>
-					</select>
-					<span v-if="errors.department" class="text-kra-label font-bold text-red-600">
-						{{ __("Pick a department for a department-scoped SOP.") }}
-					</span>
+			<section class="g-form-section">
+				<div class="g-form-group">
+					<div class="g-form-row g-form-row--stacked">
+						<span class="g-form-row__label">{{ __("Content") }}</span>
+						<GTextarea v-model="form.content" :aria-label="__('Content')" :placeholder="__('Write the procedure…')" />
+					</div>
 				</div>
+			</section>
 
-				<div
-					v-for="toggle in TOGGLES"
-					:key="toggle.field"
-					class="flex items-center justify-between"
-				>
-					<span class="flex flex-col gap-0.5">
-						<span class="text-card-title font-bold text-inkbase">
-							{{ __(toggle.label) }}
-						</span>
-						<span class="text-kra-label text-ink-700">{{ __(toggle.hint) }}</span>
-					</span>
+			<section class="g-form-section">
+				<div class="g-form-group">
+					<label class="g-form-row g-form-row--action">
+						<span class="g-form-row__label">{{ attachmentName || __("Add a file") }}</span>
+						<Paperclip class="g-row__chevron" aria-hidden="true" />
+						<input type="file" class="sr-only" @change="onFileSelect" />
+					</label>
 					<button
+						v-if="attachmentName"
 						type="button"
-						role="switch"
-						class="flex h-11 w-control-lg -my-2.5 -mr-1 flex-none items-center justify-center"
-						:aria-label="__(toggle.label)"
-						:aria-checked="form[toggle.field]"
-						@click="form[toggle.field] = !form[toggle.field]"
+						class="g-form-row g-form-row--action g-form-row--destructive"
+						@click="clearAttachment"
 					>
-						<!-- The track is 44x24 and the knob 20, so the travel is
-						     exactly 44 - 20 - (2 + 2) = 20px = translate-x-5. It was
-						     42 wide, which left the knob 2px short of its own end
-						     stop. -->
-						<span
-							class="relative h-icon-lg w-11"
-							:class="form[toggle.field] ? 'bg-accent-ink' : 'bg-ink-400'"
-							style="
-								transition: background-color var(--g-motion-state-change-duration)
-									var(--g-motion-state-change-easing);
-							"
-						>
-							<span
-								class="absolute top-0.5 left-0.5 h-icon-md w-icon-md bg-ground"
-								:class="form[toggle.field] ? 'translate-x-5' : ''"
-								style="
-									transition: transform var(--g-motion-state-change-duration)
-										var(--g-motion-state-change-easing);
-								"
-							></span>
-						</span>
+						{{ __("Remove file") }}
 					</button>
 				</div>
+			</section>
 
-				<div class="flex flex-col gap-1.5">
-					<label class="m-field-label" for="sop-content">{{ __("Content") }}</label>
-					<textarea
-						id="sop-content"
-						v-model="form.content"
-						rows="4"
-						:placeholder="__('Write the procedure…')"
-						class="m-field-input resize-y min-h-20"
-					/>
-				</div>
-
-				<div class="flex flex-col gap-1.5">
-					<label class="m-field-label">{{ __("Attachment") }}</label>
-					<div class="flex items-center gap-2 flex-wrap">
-						<label
-							class="g-eyebrow g-touch flex items-center gap-1.5 border border-divider rounded-input text-inkbase px-3 py-2.5 cursor-pointer hover:bg-icon-bg"
-						>
-							<Paperclip class="h-3.5 w-3.5" />
-							{{ __("Choose file") }}
-							<input type="file" class="hidden" @change="onFileSelect" />
-						</label>
-						<span
-							v-if="attachmentName"
-							class="inline-flex items-center gap-1.5 bg-accent-100 text-accent-700 px-2 py-1.5 text-kra-label font-bold"
-						>
-							{{ attachmentName }}
-							<button
-								type="button"
-								class="flex text-accent-700"
-								:aria-label="__('Remove file')"
-								@click="clearAttachment"
-							>
-								<X class="h-3 w-3" />
-							</button>
-						</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- footer -->
-			<div
-				class="sticky bottom-0 flex gap-2.5 p-4 border-t border-divider bg-ground flex-none standalone:pb-safe-bottom"
-			>
-				<button
-					type="button"
-					class="flex-1 py-3 border border-accent-ink text-accent-ink text-card-title font-bold"
-					@click="close"
-				>
-					{{ __("Cancel") }}
-				</button>
-				<button
-					type="button"
-					class="flex-1 py-3 border border-accent-ink bg-accent-ink text-ground text-card-title font-bold disabled:opacity-60"
-					:disabled="saving"
-					@click="save"
-				>
-					{{ saving ? __("Saving…") : __("Save") }}
-				</button>
+			<div class="flex flex-row gap-3">
+				<GGhostButton class="flex-1" :label="__('Cancel')" @click="close" />
+				<GButton class="flex-1" :label="__('Save')" :pending="saving" :disabled="saving" @click="save" />
 			</div>
 		</div>
 	</GModal>
@@ -181,9 +99,16 @@
 
 <script setup>
 import { departmentLabel } from "@/utils/departmentLabel"
-import { Paperclip, X } from "lucide-vue-next"
+import { Paperclip } from "lucide-vue-next"
 import { personalCacheKey } from "@/utils/personalCache"
 import GModal from "@/components/glass/GModal.vue"
+import GButton from "@/components/glass/GButton.vue"
+import GGhostButton from "@/components/glass/GGhostButton.vue"
+import GInput from "@/components/glass/GInput.vue"
+import GSegmented from "@/components/glass/GSegmented.vue"
+import GSelect from "@/components/glass/GSelect.vue"
+import GSwitch from "@/components/glass/GSwitch.vue"
+import GTextarea from "@/components/glass/GTextarea.vue"
 import { createListResource, createResource } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
 import { computed, inject, reactive, ref, watch } from "vue"
@@ -437,28 +362,3 @@ const save = async () => {
 	}
 }
 </script>
-
-<style scoped>
-/* mockup field styling — 10px label over a surface-filled square
-   input; scoped so it cannot leak into other forms */
-.m-field-label {
-	font-size: 11px;
-	font-weight: 800;
-	letter-spacing: 0.07em;
-	color: rgb(var(--g-ink2));
-	font-family: var(--g-font-display);
-}
-.m-field-input {
-	width: 100%;
-	background: rgb(var(--g-glass-fill-fallback));
-	border: 1px solid var(--g-hair);
-	padding: 10px 11px;
-	font-family: var(--g-font-ui);
-	font-size: 13px;
-	color: rgb(var(--g-ink));
-	outline: none;
-}
-.m-field-input:focus {
-	border-color: var(--g-accent-ink);
-}
-</style>

@@ -1,3 +1,3 @@
-GOAL: pages stop at their edges; no refresh words on a light pull; bell = avatar; tab icon centred in its pill
-DONE WHEN: WebKit: forceOverscroll false on every ion-content; bell 44x44 = avatar 44x44; tab gap 7/7 (was 0/14); ios gate 0/0/0/0
-CHECK: node --test frontend/src/components/__tests__/alpha10-frame.test.js; node design/gates/ios.mjs
+GOAL: the old hand-rolled sheets and screens are rebuilt on the Glass kit
+DONE WHEN: no raw textarea/select/painted button in the 6 files (test); remote check-in sheet screenshot shows grouped rows + kit buttons; ios gate 0; lint debt 77 -> 71
+CHECK: node --test frontend/src/components/__tests__/no-hand-rolled-controls.test.js

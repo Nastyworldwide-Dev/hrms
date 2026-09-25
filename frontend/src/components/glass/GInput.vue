@@ -30,6 +30,8 @@
 			:type="type"
 			:value="modelValue"
 			:placeholder="placeholder"
+			:min="min || undefined"
+			:max="max || undefined"
 			:disabled="disabled"
 			:aria-label="!label && ariaLabel ? ariaLabel : undefined"
 			:aria-invalid="error ? 'true' : undefined"
@@ -50,6 +52,9 @@ defineProps({
 	ariaLabel: { type: String, default: "" },
 	placeholder: { type: String, default: "" },
 	type: { type: String, default: "text" },
+	//: Bounds for a date / time / number input, on the input itself.
+	min: { type: String, default: "" },
+	max: { type: String, default: "" },
 	error: { type: String, default: "" },
 	disabled: { type: Boolean, default: false },
 })

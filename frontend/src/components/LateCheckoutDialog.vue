@@ -1,66 +1,59 @@
 <template>
+	<!-- On the kit (owner, 25 Sep 2026: old hand-drawn sheets): the check-in is
+	     a row, the time and the reason are the kit's fields, the count is the
+	     footer, Cancel / Send are the kit's two buttons. -->
 	<GModal :is-open="isOpen" :title="__('Forgot to check out?')" @did-dismiss="onDismiss">
-		<div class="bg-bg w-full flex flex-col pb-8">
-			<div class="w-full flex flex-col px-4 gap-3">
-				<p class="text-xs text-ink-600">
-					{{
-						__(
-							"Submit the time you actually left. Your reporting manager will review and approve."
-						)
-					}}
-				</p>
-				<div class="bg-track-solid border border-hair px-3 py-2 text-xs text-ink">
-					<div class="flex justify-between">
-						<span class="text-ink-600">{{ __("Original check-in") }}</span>
-						<span class="font-mono tabular-nums">{{ formatTimestamp(inCheckinTime) }}</span>
+		<div class="g-form-body">
+			<section class="g-form-section">
+				<div class="g-form-group">
+					<div class="g-form-row g-form-row--readonly">
+						<span class="g-form-row__label">{{ __("You checked in") }}</span>
+						<span class="g-form-row__value tabular-nums">{{ formatTimestamp(inCheckinTime) }}</span>
 					</div>
 				</div>
+				<p class="g-form-footer">
+					{{ __("Send the time you actually left. Your approver is asked to approve it.") }}
+				</p>
+			</section>
 
-				<label class="text-xs text-ink-700 tracking-wide">
-					{{ __("Time you left") }}
-				</label>
-				<input
-					type="datetime-local"
-					v-model="checkoutTime"
-					:min="minCheckoutTime"
-					:max="maxCheckoutTime"
-					class="w-full text-sm bg-track-solid border border-hair p-2 text-ink focus:outline-none focus:border-brand"
-				/>
-				<div v-if="checkoutError" class="text-xs text-danger-ink">
-					{{ checkoutError }}
+			<section class="g-form-section">
+				<div class="g-form-group">
+					<label class="g-form-row">
+						<span class="g-form-row__label">{{ __("Time you left") }}</span>
+						<GInput
+							v-model="checkoutTime"
+							type="datetime-local"
+							:aria-label="__('Time you left')"
+							:min="minCheckoutTime"
+							:max="maxCheckoutTime"
+							:error="checkoutError || ''"
+						/>
+					</label>
+					<div class="g-form-row g-form-row--stacked">
+						<span class="g-form-row__label">{{ __("Why didn't you check out then?") }}</span>
+						<GTextarea
+							v-model="reason"
+							:aria-label="__('Why didn\'t you check out then?')"
+							:placeholder="__('e.g. left in a rush, low battery, no signal')"
+							:maxlength="500"
+						/>
+					</div>
 				</div>
+				<p class="g-form-footer">{{ __("{0} of 500", [reason.length]) }}</p>
+			</section>
 
-				<label class="text-xs text-ink-700 tracking-wide mt-2">
-					{{ __("Why didn't you check out at the time?") }}
-				</label>
-				<textarea
-					v-model="reason"
-					rows="3"
-					maxlength="500"
-					class="w-full text-sm bg-track-solid border border-hair p-2 text-ink focus:outline-none focus:border-brand"
-					:placeholder="__('e.g. left in a rush, low battery, network issue, etc.')"
-				/>
-				<div class="text-caption text-ink-500 text-right">{{ reason.length }}/500</div>
-			</div>
-
-			<div class="flex flex-row gap-2.5 px-4 pt-3">
-				<button
-					class="flex-1 bg-transparent border border-hair text-ink px-3.5 py-3 font-sans font-bold text-card-title cursor-pointer text-left hover:bg-ink/[0.07] disabled:opacity-60"
-					@click="cancel"
-					:disabled="submitting"
-				>
-					{{ __("Cancel") }}
-				</button>
-				<button
-					class="flex-1 bg-brand text-on-brand border-none px-3.5 py-3 font-sans font-bold text-card-title cursor-pointer text-left hover:bg-brand disabled:opacity-60"
-					@click="submit"
+			<div class="flex flex-row gap-3">
+				<GGhostButton class="flex-1" :label="__('Cancel')" :disabled="submitting" @click="cancel" />
+				<GButton
+					class="flex-1"
+					:label="__('Send')"
+					:pending="submitting"
 					:disabled="submitting || !canSubmit || !online"
-				>
-					{{ submitting ? __("Submitting…") : __("Submit") }}
-				</button>
+					@click="submit"
+				/>
 			</div>
 			<!-- Owner ruling: never an offline check-in (audit P0-7). -->
-			<p v-if="!online" class="text-caption text-ink-600 mt-2" role="status">
+			<p v-if="!online" class="g-form-footer" role="status">
 				{{ __("You need signal to check in.") }}
 			</p>
 		</div>
@@ -69,6 +62,10 @@
 
 <script setup>
 import GModal from "@/components/glass/GModal.vue"
+import GButton from "@/components/glass/GButton.vue"
+import GGhostButton from "@/components/glass/GGhostButton.vue"
+import GInput from "@/components/glass/GInput.vue"
+import GTextarea from "@/components/glass/GTextarea.vue"
 import { useOnline } from "@/composables/useOnline"
 import { computed, inject, ref, watch } from "vue"
 import { gToast } from "@/components/glass/toast"

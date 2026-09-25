@@ -1,6 +1,9 @@
-CLASS: the app frame does not behave like a native screen (page rubber-bands, refresh words on a light pull, unequal bar controls, tab content off-centre)
-frontend/src/utils/noOverscroll.js + main.js — same-root (Ionic forces overscroll per ion-content on iOS; off for every page)
-frontend/src/theme/glass-components.css refresher — same-root (words only past the pull threshold)
-frontend/src/components/glass/GAppHeader.vue avatar — same-root (44 like the bell)
-frontend/src/theme/glass-components.css ion-tab-button height — same-root (inner link resolved to 38 of 52; content now centred 7/7)
-frontend/src/views/leave|expense_claim|attendance forms — same-root (Goes to read-only from the first frame; the ios gate caught a 68 pt jump)
+CLASS: a sheet or screen hand-drawn with raw controls and Tailwind paint instead of the Glass kit
+frontend/src/components/RemoteCheckinDialog.vue — same-root (grouped row, kit textarea, GButton/GGhostButton)
+frontend/src/components/LateCheckoutDialog.vue — same-root
+frontend/src/components/PushNotificationPrompt.vue — same-root
+frontend/src/views/sop/SopList.vue — same-root (sections of rows; New SOP a bar button)
+frontend/src/views/sop/SopFormSheet.vue — same-root (kit input, segmented, picker, switches, text area)
+frontend/src/views/issues/HRIssueBoard.vue — same-root (GSelect, GSegmented, GTextarea, GButton)
+frontend/src/components/glass/GInput.vue, GTextarea.vue — same-root (min/max, maxlength, ariaLabel so kit fields cover these uses)
+frontend/src/views/sop/SopDetail.vue — not-affected — its download link is a kit GIconButton already (report's "could be")

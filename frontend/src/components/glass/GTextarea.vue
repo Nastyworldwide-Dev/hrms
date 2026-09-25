@@ -14,6 +14,8 @@
 			:class="{ 'g-input--error': error }"
 			:value="modelValue"
 			:placeholder="placeholder"
+			:aria-label="!label && ariaLabel ? ariaLabel : undefined"
+			:maxlength="maxlength || undefined"
 			:disabled="disabled"
 			:aria-invalid="error ? 'true' : undefined"
 			:aria-describedby="error ? errorId : undefined"
@@ -30,9 +32,14 @@ import { useId } from "vue"
 defineProps({
 	modelValue: { type: String, default: "" },
 	label: { type: String, default: "" },
+	//: The name when the row's own label names it (a grouped form row).
+	ariaLabel: { type: String, default: "" },
 	placeholder: { type: String, default: "" },
 	error: { type: String, default: "" },
 	disabled: { type: Boolean, default: false },
+	//: A hard cap on the text, on the textarea itself (an unknown attribute
+	//: would fall through to the wrapping label and cap nothing).
+	maxlength: { type: Number, default: 0 },
 })
 defineEmits(["update:modelValue"])
 

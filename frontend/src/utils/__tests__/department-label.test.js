@@ -26,7 +26,7 @@ test("every screen that prints a department goes through it", () => {
 		"../../views/team/TeamRoster.vue": /member\.branch \|\| departmentLabel\(member\.department\)/,
 		"../../views/issues/HRIssueBoard.vue": /departmentLabel\(issue\.department\)/,
 		"../../views/sop/SopDetail.vue": /departmentLabel\(sop\.data\.department\)/,
-		"../../views/sop/SopFormSheet.vue": /\{\{ departmentLabel\(department\.name\) \}\}/,
+		"../../views/sop/SopFormSheet.vue": /label: departmentLabel\(d\.name\)/,
 		"../../views/sop/SopList.vue": /departmentLabel\(section\.department\)/,
 		"../../views/kpi/Dashboard.vue": /\{\{ departmentLabel\(d\) \}\}/,
 	}

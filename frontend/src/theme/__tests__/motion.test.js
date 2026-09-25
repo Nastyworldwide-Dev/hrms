@@ -67,7 +67,8 @@ test("no component references a motion variable that does not exist", () => {
 	const defined = new Set([...theme.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1]))
 	const sheet = decomment(read("views/sop/SopFormSheet.vue"))
 	const used = [...sheet.matchAll(/var\(\s*(--[a-z0-9-]+)\s*\)/g)].map((m) => m[1])
-	assert.ok(used.length, "the sheet does use variables")
+	// Since alpha.10 the sheet is built from kit components, which carry their
+	// own motion; any variable it still names must resolve.
 	assert.deepEqual(
 		used.filter((name) => name.startsWith("--g-") && !defined.has(name)),
 		[],

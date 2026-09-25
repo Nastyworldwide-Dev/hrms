@@ -1,129 +1,66 @@
 <template>
+	<!-- On the kit (owner, 25 Sep 2026: hand-rolled screens): sections of rows
+	     in inset groups, the new-SOP action a bar button. It was lime tiles, a
+	     ruled list and a floating lime square. -->
 	<BaseLayout :pageTitle="__('SOPs')">
+		<template v-if="isHR" #actions>
+			<GIconButton :label="__('New SOP')" @click="openCreate">
+				<Plus class="h-5 w-5" aria-hidden="true" />
+			</GIconButton>
+		</template>
 		<template #body>
-			<div
-				class="flex flex-col gap-4 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-4 lg:p-7"
-			>
-				<!-- Essentials (pinned) -->
-				<div v-if="isHR || pinned.length" class="flex flex-col gap-2.5">
-					<div class="flex items-center justify-between">
-						<span v-if="pinned.length" class="g-eyebrow">{{ __("Essentials") }}</span>
-						<span v-else></span>
-						<GBadge v-if="isHR" variant="accent">{{ __("HR") }}</GBadge>
-					</div>
-					<div v-if="pinned.length" class="grid grid-cols-2 gap-2.5">
-						<router-link
-							v-for="sop in pinned"
-							:key="sop.name"
-							:to="{ name: 'SopDetailView', params: { id: sop.name } }"
-							class="relative flex flex-col gap-4 bg-accent-ink text-ground p-3 no-underline active:scale-[0.97] active:bg-accent-600"
-							style="
-								transition: transform var(--g-motion-button-press-duration)
-										var(--g-motion-button-press-easing),
-									background-color var(--g-motion-button-press-duration)
-										var(--g-motion-button-press-easing);
-							"
-						>
-							<BookOpen class="h-icon-lg w-icon-lg flex-none" />
-							<button
-								v-if="isHR"
-								type="button"
-								class="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-ground"
-								:aria-label="__('Edit {0}', [sop.title])"
-								@click.prevent.stop="openEdit(sop)"
-							>
-								<PenLine class="h-icon-sm w-icon-sm" />
-							</button>
-							<span class="flex flex-col gap-0.5">
-								<span class="font-bold text-card-title leading-tight">
-									{{ sop.title }}
-								</span>
-								<span class="g-eyebrow font-bold opacity-75">
-									{{ scopeLabel(sop) }}
-								</span>
-							</span>
-						</router-link>
-					</div>
-				</div>
-
+			<div class="g-form-body w-full max-w-content-column-lg mx-auto lg:mx-0">
 				<!-- SEARCH FIRST. An SOP library is a lookup tool, not a browse
 				     tool: somebody opening it is usually after one document they
-				     half remember, and a list of sections is not how they find
-				     it.
-
-				     GSearchBar, not a hand-built input. The system already had
-				     one — with the clear control and the two-tone focus ring —
-				     and this screen grew its own, which is the drift the usage
-				     gate exists to catch and did not, because an <input> is not
-				     a G* component being bypassed. It carries 20 of the app's
-				     103 stray pixel values for the same reason. -->
+				     half remember. GSearchBar, never a hand-built input. -->
 				<GSearchBar
 					v-model="typed"
-					:placeholder="__('Search SOPs…')"
+					:placeholder="__('Search SOPs')"
 					:label="__('Search SOPs')"
 					@clear="typed = ''"
 				/>
 
-				<!-- Sections -->
-				<div v-if="!isEmpty" class="flex flex-col gap-4">
-					<div v-for="section in sections" :key="section.key" class="flex flex-col gap-2">
-						<span class="g-eyebrow">{{ sectionLabel(section) }}</span>
-						<div class="flex flex-col border-t-2 border-divider">
-							<router-link
+				<!-- Essentials (pinned) first, then each section, as iOS sections. -->
+				<section v-if="pinned.length" class="g-form-section">
+					<h2 class="g-form-section__title">{{ __("Essentials") }}</h2>
+					<GListPanel>
+						<GListRow
+							v-for="sop in pinned"
+							:key="sop.name"
+							:label="sop.title"
+							:sublabel="scopeLabel(sop)"
+							:tint="TILE.sop"
+							@click="openSop(sop)"
+						>
+							<template #icon><BookOpen class="g-row-icon" /></template>
+						</GListRow>
+					</GListPanel>
+				</section>
+
+				<template v-if="!isEmpty">
+					<section v-for="section in sections" :key="section.key" class="g-form-section">
+						<h2 class="g-form-section__title">{{ sectionLabel(section) }}</h2>
+						<GListPanel>
+							<GListRow
 								v-for="sop in section.sops"
 								:key="sop.name"
-								:to="{ name: 'SopDetailView', params: { id: sop.name } }"
-								class="flex items-center gap-2.5 bg-surface border-b border-divider p-3 no-underline active:scale-[0.985] active:bg-ink-200"
-								style="
-									transition: transform var(--g-motion-button-press-duration)
-											var(--g-motion-button-press-easing),
-										background-color var(--g-motion-button-press-duration)
-											var(--g-motion-button-press-easing);
-								"
+								:label="sop.title"
+								:sublabel="rowLine(sop)"
+								@click="openSop(sop)"
 							>
-								<span class="flex flex-col gap-0.5 flex-1 min-w-0">
-									<span class="flex items-center gap-1.5 min-w-0">
-										<span class="font-bold text-card-title text-inkbase truncate">
-											{{ sop.title }}
-										</span>
-										<GBadge
-											v-if="!sop.published"
-											variant="neutral"
-											class="!text-ink-700 flex-none"
-										>
-											{{ __("Draft") }}
-										</GBadge>
-									</span>
-									<span class="text-kra-label text-ink-700">
-										{{ __("Updated") }} {{ dayjs(sop.modified).format("D MMM YYYY") }}
-									</span>
-								</span>
-								<button
-									v-if="isHR"
-									type="button"
-									class="flex-none flex h-11 w-11 -my-2.5 -mr-1.5 items-center justify-center text-accent-700"
-									:aria-label="__('Edit {0}', [sop.title])"
-									@click.prevent.stop="openEdit(sop)"
-								>
-									<PenLine class="h-icon-sm w-icon-sm" />
-								</button>
-								<ChevronRight class="h-4 w-4 flex-none text-ink-400" />
-							</router-link>
-						</div>
-					</div>
-				</div>
+								<template v-if="!sop.published" #badge>
+									<GBadge variant="neutral">{{ __("Draft") }}</GBadge>
+								</template>
+							</GListRow>
+						</GListPanel>
+					</section>
+				</template>
 
-				<!-- Empty state -->
-				<div
+				<GEmptyState
 					v-else-if="query"
-					class="flex flex-col items-center gap-2 px-5 py-11 text-center text-ink-600"
-				>
-					<Search class="h-icon-xl w-icon-xl text-ink-300" />
-					<div class="text-card-title">
-						{{ __("No SOPs match “{0}”.", [query]) }}<br />
-						{{ __("Try a different search term.") }}
-					</div>
-				</div>
+					:title="__('No SOPs match “{0}”', [query])"
+					:body="__('Try a different search term.')"
+				/>
 				<ResourceError v-else-if="sops.error" :resource="sops" what="the SOP list" />
 				<GEmptyState
 					v-else-if="!sops.loading"
@@ -131,21 +68,6 @@
 					:body="__('Procedures for your role will appear here')"
 				/>
 			</div>
-
-			<!-- HR: create -->
-			<button
-				v-if="isHR"
-				type="button"
-				class="fixed right-4 bottom-fab z-30 flex h-control-lg w-control-lg items-center justify-center bg-accent-ink text-ground shadow-md active:scale-90 lg:bottom-8"
-				style="
-					transition: transform var(--g-motion-button-press-duration)
-						var(--g-motion-button-press-easing);
-				"
-				:aria-label="__('New SOP')"
-				@click="openCreate"
-			>
-				<Plus class="h-icon-lg w-icon-lg" />
-			</button>
 
 			<SopFormSheet
 				v-if="isHR"
@@ -160,7 +82,12 @@
 
 <script setup>
 import { departmentLabel } from "@/utils/departmentLabel"
-import { BookOpen, ChevronRight, PenLine, Plus, Search } from "lucide-vue-next"
+import { BookOpen, Plus } from "lucide-vue-next"
+import { useRouter } from "vue-router"
+import { TILE } from "@/utils/iconTile"
+import GIconButton from "@/components/glass/GIconButton.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import { personalCacheKey } from "@/utils/personalCache"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GBadge from "@/components/glass/GBadge.vue"
@@ -169,6 +96,7 @@ import { createResource } from "frappe-ui"
 import { computed, inject, onBeforeUnmount, ref, watch } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
+import ResourceError from "@/components/ResourceError.vue"
 import SopFormSheet from "./SopFormSheet.vue"
 
 import { userResource } from "@/data/user"
@@ -244,14 +172,13 @@ const sectionLabel = (section) => {
 	return isHR.value ? name : __("My Department — {0}", [name])
 }
 
+const router = useRouter()
+//: Every row reads the SOP; HR edits from its page (SopDetail's Edit).
+const openSop = (sop) => router.push({ name: "SopDetailView", params: { id: sop.name } })
+const rowLine = (sop) => `${__("Updated")} ${dayjs(sop.modified).format("D MMM YYYY")}`
+
 const openCreate = () => {
 	editingName.value = null
-	sheetOpen.value = true
-}
-
-const openEdit = (sop) => {
-	console.info("[SOP] editing:", sop.name)
-	editingName.value = sop.name
 	sheetOpen.value = true
 }
 </script>

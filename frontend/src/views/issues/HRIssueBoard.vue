@@ -32,15 +32,14 @@
 						:placeholder="__('Search name, id, text…')"
 						:label="__('Search issues')"
 					/>
-					<select
-						v-model="issueType"
-						class="w-32 text-sm bg-surface border border-divider p-2 text-inkbase focus:outline-none focus:border-accent-ink"
-					>
-						<option value="">{{ __("All types") }}</option>
-						<option v-for="type in ISSUE_TYPES" :key="type" :value="type">
-							{{ __(TYPE_SHORT[type]) }}
-						</option>
-					</select>
+					<GSelect
+						class="w-32"
+						:options="ISSUE_TYPES.map((type) => ({ value: type, label: __(TYPE_SHORT[type]) }))"
+						:model-value="issueType"
+						:placeholder="__('All types')"
+						:aria-label="__('Issue type')"
+						@update:model-value="(v) => (issueType = v)"
+					/>
 				</div>
 
 				<!-- status tabs: counts stay in the label, so the selected state
@@ -119,42 +118,27 @@
 					</template>
 				</div>
 
-				<div class="px-4 mt-4">
-					<label class="text-xs text-ink-700 tracking-wide font-bold">
-						{{ __("Status") }}
-					</label>
-					<div class="flex gap-1.5 mt-1.5">
-						<button
-							v-for="status in ISSUE_STATUSES"
-							:key="status"
-							class="g-eyebrow flex-1 py-2 border"
-							:class="
-								detail.data.status === status
-									? 'bg-accent-ink text-ground border-accent-ink'
-									: 'bg-surface text-ink-700 border-divider'
-							"
-							:disabled="saving"
-							@click="setStatus(status)"
-						>
-							{{ __(status) }}
-						</button>
-					</div>
-
-					<label class="block text-xs text-ink-700 tracking-wide font-bold mt-4">
-						{{ __("Internal HR notes") }}
-						<span class="text-ink-500 normal-case font-semibold">
-							({{ __("never shown to the employee") }})
-						</span>
-					</label>
-					<textarea
-						v-model="hrNotes"
-						rows="3"
-						class="w-full text-sm bg-surface border border-divider p-2 mt-1.5 text-inkbase focus:outline-none focus:border-accent-ink"
-						:placeholder="__('Notes for the HR team…')"
-					/>
-					<Button variant="solid" class="w-full mt-3 py-5" :loading="saving" @click="saveNotes">
-						{{ __("Save") }}
-					</Button>
+				<!-- On the kit (owner, 25 Sep 2026: hand-rolled screens). -->
+				<div class="g-form-body">
+					<section class="g-form-section">
+						<h2 class="g-form-section__title">{{ __("Status") }}</h2>
+						<GSegmented
+							:buttons="ISSUE_STATUSES.map((status) => ({ key: status, label: __(status) }))"
+							:model-value="detail.data.status"
+							:label="__('Status')"
+							@update:model-value="(status) => !saving && setStatus(status)"
+						/>
+					</section>
+					<section class="g-form-section">
+						<div class="g-form-group">
+							<div class="g-form-row g-form-row--stacked">
+								<span class="g-form-row__label">{{ __("Internal HR notes") }}</span>
+								<GTextarea v-model="hrNotes" :aria-label="__('Internal HR notes')" :placeholder="__('Notes for the HR team…')" />
+							</div>
+						</div>
+						<p class="g-form-footer">{{ __("Never shown to the employee.") }}</p>
+					</section>
+					<GButton :label="__('Save')" :pending="saving" @click="saveNotes" />
 				</div>
 			</div>
 		</GModal>
@@ -169,6 +153,9 @@ import GSearchBar from "@/components/glass/GSearchBar.vue"
 import GStatTile from "@/components/glass/GStatTile.vue"
 import GStatPanel from "@/components/glass/GStatPanel.vue"
 import GModal from "@/components/glass/GModal.vue"
+import GButton from "@/components/glass/GButton.vue"
+import GSelect from "@/components/glass/GSelect.vue"
+import GTextarea from "@/components/glass/GTextarea.vue"
 import { createListResource, createResource } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
 import { computed, inject, ref } from "vue"

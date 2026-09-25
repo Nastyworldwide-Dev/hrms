@@ -1,12 +1,16 @@
 <template>
-	<GModal
-		:is-open="isOpen"
-		:title="sheetTitle"
-		@did-dismiss="onDismiss"
-	>
-		<div class="bg-bg w-full flex flex-col pb-8">
-			<div class="w-full flex flex-col gap-1 pb-4 bg-bg px-4">
-				<span class="text-xs text-ink-600">
+	<!-- On the kit (owner, 25 Sep 2026: old hand-drawn sheets): what you get is
+	     a group of rows, the ask is the kit's one primary button, "not now" the
+	     plain one. -->
+	<GModal :is-open="isOpen" :title="sheetTitle" @did-dismiss="onDismiss">
+		<div class="g-form-body">
+			<section class="g-form-section">
+				<div v-if="step === 1" class="g-form-group">
+					<div v-for="benefit in benefits" :key="benefit" class="g-form-row g-form-row--readonly">
+						<span class="g-form-row__label">{{ benefit }}</span>
+					</div>
+				</div>
+				<p class="g-form-footer">
 					{{
 						step === 1
 							? __(
@@ -16,36 +20,16 @@
 									"Without notifications you won't know when your leave is approved or when you forget to check out. You can turn them on anytime in Settings → Notifications — we won't ask again."
 							  )
 					}}
-				</span>
-			</div>
+				</p>
+			</section>
 
-			<div v-if="step === 1" class="w-full flex flex-col px-4 gap-2">
-				<div
-					v-for="benefit in benefits"
-					:key="benefit"
-					class="flex items-center gap-2.5 bg-track-solid border border-hair px-3 py-2.5 text-xs font-semibold text-ink"
-				>
-					<span class="w-2 h-2 bg-brand shrink-0" />
-					{{ benefit }}
-				</div>
-			</div>
-
-			<div class="flex flex-col gap-2 px-4 pt-4">
-				<button
-					class="w-full bg-accent-ink text-ground border-none px-3.5 py-3 font-sans font-bold text-card-title cursor-pointer text-left hover:bg-accent-600 disabled:opacity-60 flex justify-between items-center"
-					@click="enable"
+			<div class="flex flex-col gap-3">
+				<GButton :label="__('Turn on notifications')" :pending="enabling" :disabled="enabling" @click="enable" />
+				<GGhostButton
+					:label="step === 1 ? __('Not now') : __('No thanks, don\'t ask again')"
 					:disabled="enabling"
-				>
-					<span>{{ enabling ? __("Enabling…") : __("Turn on notifications") }}</span>
-					<span aria-hidden="true">→</span>
-				</button>
-				<button
-					class="w-full bg-transparent text-ink-700 px-3.5 py-2.5 font-sans font-bold text-xs tracking-wide cursor-pointer hover:text-ink disabled:opacity-60"
 					@click="decline"
-					:disabled="enabling"
-				>
-					{{ step === 1 ? __("Not now") : __("No thanks, don't ask again") }}
-				</button>
+				/>
 			</div>
 		</div>
 	</GModal>
@@ -53,6 +37,8 @@
 
 <script setup>
 import GModal from "@/components/glass/GModal.vue"
+import GButton from "@/components/glass/GButton.vue"
+import GGhostButton from "@/components/glass/GGhostButton.vue"
 import { computed, inject, onMounted, onUnmounted, ref } from "vue"
 import { gToast } from "@/components/glass/toast"
 
