@@ -52,6 +52,7 @@ class SaveDayCase(FixDayCase):
 			("_approved_requests", lambda names: {n: self.approved[n] for n in names if n in self.approved}),
 			("_roster_shift", lambda employee, day: self.roster),
 			("_mirror_delete_allowed", lambda instance: instance in self.unlocked),
+			("_instance_open", lambda instance: instance in self.unlocked),
 			("_shift_window_of", self.shift_window_of),
 			("_day_pairing", lambda taps: STRICT),
 		):
@@ -386,3 +387,78 @@ class ItTypesNoHours(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestAPunchFromTheOldSystem(SaveDayCase):
+	"""Reported 25 Sep 2026 (Norazlin, 19 and 20 Aug): every punch before the
+	4 Sep cutover was mirrored from the old ERP, so Fix attendance refused to
+	read the day ("no counted taps") and refused to save a ticked pair ("came
+	from another site"). The one-button rewrite (21 Sep) dropped the separate
+	"take over" action, so those days could not be fixed at all. After cutover
+	this site marks attendance (owner ruling, 18 Sep), so a ticked punch from an
+	unlocked instance is taken over as part of the save."""
+
+	def test_a_ticked_mirrored_punch_is_taken_over_after_cutover(self):
+		self.norazmis_night()
+		self.store.taps["CKIN-A"]["synced_from_instance"] = "nasty-live"
+		self.unlocked.add("nasty-live")
+		answer = self.save({"in": "CKIN-A", "out": "CKIN-D"}, delete=["CKIN-B", "CKIN-C"])
+		self.assertTrue(answer["ok"])
+		self.assertIsNone(self.store.taps["CKIN-A"].get("synced_from_instance"))
+
+	def test_before_cutover_it_is_still_refused_and_says_where(self):
+		self.norazmis_night()
+		self.store.taps["CKIN-A"]["synced_from_instance"] = "nasty-live"
+		message = self.refusal(self.save, {"in": "CKIN-A", "out": "CKIN-D"}, delete=["CKIN-B", "CKIN-C"])
+		self.assertIn("nasty-live", message)
+		self.assertEqual(self.store.deleted, [])
+
+	def test_the_screen_reads_the_day_from_punches_it_may_take_over(self):
+		self.norazmis_night()
+		for name in self.store.taps:
+			self.store.taps[name]["synced_from_instance"] = "nasty-live"
+		self.unlocked.add("nasty-live")
+		claimable = fd._claimable_view(list(self.store.taps.values()))
+		self.assertTrue(all(not tap.get("synced_from_instance") for tap in claimable))
+		self.assertTrue(
+			all(tap.get("synced_from_instance") for tap in self.store.taps.values()), "a view, not a write"
+		)
+
+
+class TestASaveThatMarksNothingSaysSo(SaveDayCase):
+	"""Owner, 25 Sep 2026: Fix attendance felt "weak and not authoritative". A
+	ticked pair was saved, the engine then marked NO row (its shift's auto
+	attendance off, say) and the dialog said it worked. A fix that writes no
+	row is refused with the engine's own reason, and nothing is changed."""
+
+	def test_the_engine_marking_nothing_rolls_the_fix_back(self):
+		self.norazmis_night()
+		self.rebuild = lambda *a, **k: {
+			"action": "remarked",
+			"marked": [],
+			"errors": ["Night: auto attendance is off or not configured"],
+		}
+		p = patch.object(fd, "_rebuild", self.rebuild)
+		p.start()
+		self.addCleanup(p.stop)
+		message = self.refusal(self.save, {"in": "CKIN-A", "out": "CKIN-D"}, delete=["CKIN-B", "CKIN-C"])
+		self.assertIn("auto attendance is off", message)
+
+
+class TestMovingAPunchFromTheOldSystem(SaveDayCase):
+	"""The Move button beside each punch (25 Sep 2026 screenshots) refused a
+	pre-cutover punch too. After cutover it is taken over and moved."""
+
+	def test_move_takes_over_an_unlocked_mirrored_punch(self):
+		self.norazmis_night()
+		self.store.taps["CKIN-B"]["synced_from_instance"] = "nasty-live"
+		self.unlocked.add("nasty-live")
+		answer = fd.move_tap("CKIN-B", shift=MORNING, day=str(DAY), reason="HR read the day")
+		self.assertTrue(answer["ok"])
+		self.assertIsNone(self.store.taps["CKIN-B"].get("synced_from_instance"))
+
+	def test_move_still_refuses_a_locked_one(self):
+		self.norazmis_night()
+		self.store.taps["CKIN-B"]["synced_from_instance"] = "nasty-live"
+		message = self.refusal(fd.move_tap, "CKIN-B", shift=MORNING, day=str(DAY), reason="x")
+		self.assertIn("nasty-live", message)

@@ -762,9 +762,11 @@ def pair_taps(a: str, b: str, reason: str | None = None) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def move_tap(tap: str, shift: str | None = None, day: str | None = None, reason: str | None = None) -> dict:
-	"""Re-stamp a tap to another shift or another shift day. Both days are rebuilt."""
+	"""Re-stamp a tap to another shift or another shift day. Both days are rebuilt.
+	A pre-cutover punch is taken over by the move, as by Save & rebuild."""
 	_require_hr()
-	row = _tap(tap)
+	row = _tap(tap, mirrored_ok=True)
+	_refuse_locked_mirror(row)
 	if not shift and not day:
 		_refuse(_("Say which shift or which day this tap belongs to."))
 	emp = _require_employee(row.employee)
@@ -791,8 +793,13 @@ def move_tap(tap: str, shift: str | None = None, day: str | None = None, reason:
 	)
 	before = _before(emp.name, days, [row])
 	# released from its old row for the same reason pairing releases one
-	_write_tap(row, {**_shift_stamp(target_shift, target_day), "attendance": None})
+	fields = {**_shift_stamp(target_shift, target_day), "attendance": None}
+	if row.get("synced_from_instance"):
+		fields["synced_from_instance"] = None
+	_write_tap(row, fields)
 	note = _("moved to {0} on {1}").format(target_shift, target_day)
+	if row.get("synced_from_instance"):
+		note += _(" (taken over from {0})").format(row.get("synced_from_instance"))
 	return _finish(emp, days, "move_tap", reason, {row.name: note}, before)
 
 
@@ -1164,7 +1171,12 @@ def save_day(
 					"time": _typed_moment(given.get("time"), day, session.get("in")),
 				}
 			else:
-				tap = _tap(str(given))
+				# A ticked punch from the old system is taken over as part of the
+				# save once its instance is unlocked (25 Sep 2026, Norazlin's
+				# 19-20 Aug): the one-button rewrite dropped the separate "take
+				# over" step, so every pre-cutover day was unfixable.
+				tap = _tap(str(given), mirrored_ok=True)
+				_refuse_locked_mirror(tap)
 				if tap.employee != emp.name:
 					_refuse(_("Tap {0} belongs to somebody else.").format(tap.name))
 				if tap.name in deleting:
@@ -1290,6 +1302,9 @@ def save_day(
 			else:
 				tap = by_name[tick["name"]]
 				fields = {**stamp, "skip_auto_attendance": 0, "skipped_as_noise": 0, "attendance": None}
+				if tap.get("synced_from_instance"):
+					# taken over: this site reads it from now on (claim_tap's rule)
+					fields["synced_from_instance"] = None
 				if (tap.get("log_type") or "") != label:
 					fields["log_type"] = label
 				if (tap.get("remote_approval_status") or "") == "Rejected":
@@ -1302,7 +1317,14 @@ def save_day(
 					if "log_type" in fields
 					else ""
 				)
-				notes[name] = _("kept by Save & rebuild as this day's {0}{1}").format(label, flipped)
+				taken = (
+					_(" (taken over from {0})").format(tap.get("synced_from_instance"))
+					if tap.get("synced_from_instance")
+					else ""
+				)
+				notes[name] = _("kept by Save & rebuild as this day's {0}{1}{2}").format(
+					label, flipped, taken
+				)
 			recorded[side] = name
 		plan_pairs.append({**recorded, "shift": stamp.get("shift")})
 
@@ -1444,12 +1466,15 @@ def _screen(emp, day) -> dict:
 	rows = _day_attendance(emp.name, day)
 	taps = _day_taps(emp.name, day)
 	linked = _approved_requests([tap.get("name") for tap in taps])
-	suggested = _suggested_roles(emp, day, taps)
+	# Punches the save may take over are read as this site's (25 Sep 2026):
+	# otherwise every pre-cutover day read "no counted taps".
+	readable = _claimable_view(taps)
+	suggested = _suggested_roles(emp, day, readable)
 	# Why there is no suggestion, when there is none: the dialog pre-ticks
 	# nothing on a day the engine cannot read, instead of ticking every counted
 	# punch and refusing its own opening state (22 Sep 2026). Asked only when
 	# there IS no pair, so a readable day pays nothing for it.
-	refusal = None if suggested else suggestion_refusal(taps, pairing=_day_pairing(taps))
+	refusal = None if suggested else suggestion_refusal(readable, pairing=_day_pairing(taps))
 	return {
 		"employee": emp.name,
 		"employee_name": emp.employee_name,
@@ -1499,6 +1524,14 @@ def _finish(emp, days, action, reason, notes, before, undo_of=None, added=None, 
 		)
 	rebuild = {str(day): _rebuild(emp.name, day, f"fix day: {action}", requests_ok=True) for day in days}
 	lost = {day: verdict for day, verdict in rebuild.items() if verdict.get("action") in NOT_APPLIED}
+	# A pair was ticked, the engine marked NO row and said why (its shift's
+	# auto attendance is off, say): answering "done" there is the fix that
+	# looked like it worked and did nothing (owner, 25 Sep 2026: "weak, not
+	# authoritative"). The engine's own reason goes to HR and nothing changes.
+	if plan and plan.get("pairs") and not plan.get("leave_open"):
+		for day, verdict in rebuild.items():
+			if verdict.get("errors") and not verdict.get("marked") and day not in lost:
+				lost[day] = {"action": verdict.get("action"), "detail": "; ".join(verdict["errors"])}
 	if lost:
 		# The engine did not apply HR's fix: the shift is still running, or the
 		# database deadlocked. Logging it as done and answering
@@ -1782,6 +1815,42 @@ def _lock_employee(employee) -> None:
 	from hrms.hr.doctype.shift_type.shift_type import lock_employee_row
 
 	lock_employee_row(employee)
+
+
+def _instance_open(instance) -> bool:
+	"""Cutover: has this site taken over as the writer for `instance`?"""
+	from hrms.sync.write_block import _instance_unlocked
+
+	return _instance_unlocked(instance)
+
+
+def _refuse_locked_mirror(tap) -> None:
+	"""A punch still owned by a locked instance is that site's to change."""
+	source = tap.get("synced_from_instance")
+	if source and not _instance_open(source):
+		_refuse(
+			_("{0} came from {1}, which is still the writer for its punches; change it there.").format(
+				tap.get("name"), source
+			)
+		)
+
+
+def _claimable_view(taps) -> list:
+	"""The taps as this screen may treat them: a punch mirrored from an
+	UNLOCKED instance reads as this site's, because Save & rebuild takes it
+	over. A view for reading the day; nothing is written. Locked ones stay
+	mirrored, so the engine never reads another writer's punch."""
+	unlocked = {}
+	view = []
+	for tap in taps or []:
+		source = tap.get("synced_from_instance")
+		if source:
+			if source not in unlocked:
+				unlocked[source] = _instance_open(source)
+			if unlocked[source]:
+				tap = {**tap, "synced_from_instance": None}
+		view.append(tap)
+	return view
 
 
 def _tap(name, mirrored_ok: bool = False):
