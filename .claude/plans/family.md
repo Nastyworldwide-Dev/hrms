@@ -1,3 +1,4 @@
-CLASS: a chrome surface over dense text lets the text read through it
-frontend/src/theme/glass-components.css #frappeui-toast-root — same-root (fixed: solid fill, blur kept)
-frontend/src/theme/glass-components.css .g-tabbar/.g-header — not-affected — they sit over scrolled content with the scroll-edge fade, measured legible in alpha.8
+CLASS: nothing is drawn until the whole app has booted
+frontend/index.html #app — same-root (fixed: static launch shell with the app's grounds, gutter, radius; light/dark; reduce motion)
+hrms/www/hrms.html — same-root (build copy of index.html)
+frontend/src/main.js app.mount — not-affected — mounting after translations is correct; the shell covers the wait

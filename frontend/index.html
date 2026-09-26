@@ -206,9 +206,36 @@
 				/* storage/matchMedia unavailable — fall through to CSS default */
 			}
 		</script>
+		<!-- alpha.12 C3: the launch shell, painted from this file before any
+		     script runs (Apple, loading: "Show something as soon as possible").
+		     Same grounds, gutter and radius as the app; Vue replaces it on mount. -->
+		<style>
+			html, body { margin: 0; background: #F2F2F7; }
+			.boot-shell { box-sizing: border-box; min-height: 100vh; padding: calc(env(safe-area-inset-top, 0px) + 60px) 16px 0; }
+			.boot-shell__title { width: 132px; height: 34px; margin: 0 0 24px; border-radius: 8px; background: #E3E3E8; }
+			.boot-shell__group { max-width: 672px; margin: 0 0 24px; padding: 16px; border-radius: 26px; background: #FFFFFF; }
+			.boot-shell__row { height: 12px; margin: 16px 0; border-radius: 6px; background: #ECEDEF; animation: boot-pulse 1.4s ease-in-out infinite; }
+			.boot-shell__row:first-child { width: 40%; margin-top: 4px; }
+			.boot-shell__row:last-child { width: 70%; margin-bottom: 4px; }
+			@keyframes boot-pulse { 50% { opacity: 0.5; } }
+			@media (prefers-color-scheme: dark) {
+				html, body { background: #000000; }
+				.boot-shell__title { background: #2C2C2E; }
+				.boot-shell__group { background: #1C1C1E; }
+				.boot-shell__row { background: #313133; }
+			}
+			@media (prefers-reduced-motion: reduce) { .boot-shell__row { animation: none; } }
+			@media (min-width: 1024px) { .boot-shell { padding-left: 232px; } }
+		</style>
 	</head>
 	<body class="antialiased">
-		<div id="app"></div>
+		<div id="app">
+			<div class="boot-shell" aria-hidden="true">
+				<div class="boot-shell__title"></div>
+				<div class="boot-shell__group"><div class="boot-shell__row"></div><div class="boot-shell__row"></div><div class="boot-shell__row"></div></div>
+				<div class="boot-shell__group"><div class="boot-shell__row"></div><div class="boot-shell__row"></div><div class="boot-shell__row"></div></div>
+			</div>
+		</div>
 		<div id="modals"></div>
 		<div id="popovers"></div>
 
