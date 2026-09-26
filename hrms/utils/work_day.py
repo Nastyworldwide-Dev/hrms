@@ -28,6 +28,20 @@ def work_day(tap, open_day=None):
 	return when.date()
 
 
+def day_of_each(taps):
+	"""The work day of every tap, in the order given (time order). Pure. For a
+	caller that groups every tap, not just one day's."""
+	days, open_day = [], None
+	for tap in taps:
+		counted = work_day(tap, open_day)
+		if tap.get("log_type") == "IN":
+			open_day = counted
+		elif tap.get("log_type") == "OUT":
+			open_day = None
+		days.append(counted)
+	return days
+
+
 def taps_for_day(taps, day):
 	"""(taps that count on `day`, taps clocked on `day` but counted elsewhere).
 	`taps` is every tap from the day before to the day after, in time order."""

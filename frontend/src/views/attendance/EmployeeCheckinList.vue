@@ -17,7 +17,8 @@ import ListView from "@/components/ListView.vue"
 
 const __ = inject("$translate")
 
-const EMPLOYEE_CHECKIN_FIELDS = ["name", "log_type", "time", "latitude", "longitude"]
+// shift_start: the work day a tap counts on (utils/dayGroups workDayOf)
+const EMPLOYEE_CHECKIN_FIELDS = ["name", "log_type", "time", "shift_start", "latitude", "longitude"]
 
 const FILTER_CONFIG = [
 	{

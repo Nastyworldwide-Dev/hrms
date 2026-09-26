@@ -831,13 +831,16 @@ def _incomplete_ot_days(employee, from_date, to_date, worked, skip) -> list[dict
 			"requires_remote_approval",
 			"remote_approval_status",
 		],
+		order_by="time asc",
 		limit_page_length=0,
 	)
+	from hrms.utils.work_day import day_of_each
+
+	taps = [tap for tap in taps if (tap.get("remote_approval_status") or "") != "Rejected"]
 	by_day: dict = {}
-	for tap in taps:
-		if (tap.get("remote_approval_status") or "") == "Rejected":
-			continue
-		day = getdate(str(tap.get("shift_start") or tap.get("time"))[:10])
+	# the one work-day rule (alpha.11): a no-shift OUT after midnight stays on
+	# its IN's day, as the docstring above already promised
+	for tap, day in zip(taps, day_of_each(taps)):
 		by_day.setdefault(day, []).append(tap)
 	rows_by_day: dict = {}
 	for row in worked:

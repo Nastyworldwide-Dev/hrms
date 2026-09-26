@@ -167,12 +167,15 @@ def lone_in_days(taps, start: date, end: date) -> list[dict]:
 	any state, any provenance; `next_tap` is the first tap of any state after
 	the IN, or None.
 	"""
+	from hrms.utils.work_day import day_of_each
+
 	ordered = sorted(taps, key=lambda tap: get_datetime(tap.get("time")))
+	counted = [tap for tap in ordered if _counted(tap)]
 	by_day: dict[date, list] = {}
-	for tap in ordered:
-		if not _counted(tap):
-			continue
-		by_day.setdefault(getdate(tap.get("shift_start") or tap.get("time")), []).append(tap)
+	# the one work-day rule: a no-shift OUT after midnight closes the night
+	# before, so that night is not read as a lone IN (alpha.11)
+	for tap, day in zip(counted, day_of_each(counted)):
+		by_day.setdefault(day, []).append(tap)
 	found = []
 	for day, day_taps in sorted(by_day.items()):
 		if not (start <= day <= end) or len(day_taps) != 1 or day_taps[0].get("log_type") != "IN":

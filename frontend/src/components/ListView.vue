@@ -190,7 +190,7 @@ import { createResource, debounce } from "frappe-ui"
 import { computed, inject, markRaw, onMounted, reactive, ref, watch } from "vue"
 import { initialListTab } from "@/utils/listTab"
 import { filterCondition } from "@/utils/listFilters"
-import { dayHeading, groupByDay } from "@/utils/dayGroups"
+import { dayHeading, groupByDay, workDayOf } from "@/utils/dayGroups"
 import { siteTime, siteTimeZone } from "@/utils/siteTime"
 import { useRoute, useRouter } from "vue-router"
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
@@ -427,11 +427,11 @@ const documents = createResource({
 	},
 })
 
-//: Check-ins by their day on the site clock (alpha.7 0.8).
+//: Check-ins by their WORK day on the site clock (alpha.7 0.8; alpha.11: a
+//: check-out after midnight sits under the day it closed, not alone under the
+//: next one).
 const today = dayjs().tz(siteTimeZone()).format("YYYY-MM-DD")
-const checkinDays = computed(() =>
-	groupByDay(documents.data, (doc) => siteTime(doc.time).format("YYYY-MM-DD"))
-)
+const checkinDays = computed(() => groupByDay(documents.data, workDayOf(documents.data, siteTime)))
 
 const createPermission = createResource({
 	url: "frappe.client.has_permission",

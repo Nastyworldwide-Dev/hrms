@@ -51,3 +51,26 @@ class TestTapsForDay(unittest.TestCase):
 		day = [tap(datetime(2026, 9, 24, 9), "IN", datetime(2026, 9, 24, 9)), tap(datetime(2026, 9, 24, 18), "OUT", datetime(2026, 9, 24, 9))]
 		taps, elsewhere = taps_for_day(day, date(2026, 9, 24))
 		self.assertEqual(([t["next_day"] for t in taps], elsewhere), ([False, False], []))
+
+
+class TestEverySurfaceUsesTheRule(unittest.TestCase):
+	"""alpha.11: the lone-IN closer grouped a no-shift after-midnight OUT on its
+	clock day, so the night before read as a lone IN; `day_of_each` is the one
+	grouping for callers that need every tap's day."""
+
+	def test_day_of_each_puts_the_no_shift_out_on_its_in_day(self):
+		from hrms.utils.work_day import day_of_each
+
+		plain = [tap(datetime(2026, 9, 25, 22, 45), "IN"), tap(datetime(2026, 9, 26, 1, 41), "OUT")]
+		self.assertEqual(day_of_each(plain), [FRI, FRI])
+
+	def test_the_ot_form_groups_its_taps_by_the_rule(self):
+		# the OT form's "why no claim" list (api._incomplete_ot_days) grouped a
+		# no-shift OUT after midnight on its clock day: the night before read
+		# "no check-out" and the next day "no check-in"
+		import pathlib
+
+		src = (pathlib.Path(__file__).resolve().parent / "__init__.py").read_text()
+		body = src[src.index("def _incomplete_ot_days"):src.index("def get_replacement_leave_bank_summary")]
+		self.assertIn("day_of_each(", body)
+		self.assertIn('order_by="time asc"', body)

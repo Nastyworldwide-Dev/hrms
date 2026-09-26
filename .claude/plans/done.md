@@ -1,3 +1,3 @@
-GOAL: the two sheets no audit had opened (calendar day, approval) follow the iOS rules; every design gate green
-DONE WHEN: sheet-consistency-audit 12/12 ok, ios gate 0, coherence 0, usage 0 new, a11y 0 new; frontend tests 1383 pass
-CHECK: cd frontend && set -a && . ../.env && set +a && node e2e/sheet-consistency-audit.mjs && node ../design/gates/ios.mjs
+GOAL: the last three surfaces that read a tap's day by the clock follow the one work-day rule
+DONE WHEN: lone-IN closer, OT form's "why no claim" list and the check-ins list group a no-shift after-midnight OUT on its IN's day; tests red on HEAD, green now
+CHECK: PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/api/test_day_taps_belong_to_the_work_day.py hrms/tests/test_lone_in_closer.py && cd frontend && node --test src/utils/__tests__/dayGroups.test.js

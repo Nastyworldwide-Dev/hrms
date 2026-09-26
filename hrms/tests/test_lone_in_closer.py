@@ -397,3 +397,15 @@ class TestDoubleAppTapIsNotAnOut(unittest.TestCase):
 
 		at = datetime(2026, 8, 21, 9, 32, 28)
 		self.assertIsNone(choose_closing_punch(at, [{"name": "A", "time": datetime(2026, 8, 21, 9, 45, 0)}]))
+
+
+class TestAnAfterMidnightOutIsNotANewDay(unittest.TestCase):
+	"""alpha.11 work-day rule: a lone OUT after midnight with no shift closes the
+	IN of the night before; it must not make that day look like a lone IN."""
+
+	def test_a_no_shift_out_after_midnight_closes_its_in(self):
+		taps = [
+			_tap(datetime(2026, 9, 2, 22, 0), "IN", "EC-IN", shift=None, shift_start=None),
+			_tap(datetime(2026, 9, 3, 1, 30), "OUT", "EC-OUT", shift=None, shift_start=None),
+		]
+		self.assertEqual(closer.lone_in_days(taps, WIN.start, closer.LAST_DAY), [])
