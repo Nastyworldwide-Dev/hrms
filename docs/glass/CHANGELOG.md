@@ -67,10 +67,14 @@ approver. Plan and evidence: `docs/glass/plan/NADI_2.0.0-alpha.10_PLAN.md`.
 
 ## [2.0.0-alpha.9] — 2026-09-25
 
+Shipped in 2.0.0-alpha.10 (no separate build or tag).
+
 Every screen and sheet to the iOS rules (names not IDs, nothing loose, one
 corner radius), locked in by the `ios` design check.
 
 ## [2.0.0-alpha.8] — 2026-09-25
+
+Shipped in 2.0.0-alpha.10 (no separate build or tag).
 
 Zoom off, pages hold still while they load, the iOS 26 frame (large titles,
 the sliding tab lens, separators, switches).

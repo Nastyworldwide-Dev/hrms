@@ -1,3 +1,3 @@
-GOAL: release 2.0.0-alpha.11 — version, changelog, plan with evidence
-DONE WHEN: package.json 2.0.0-alpha.11, changelog newest entry matches, version.test passes
-CHECK: cd frontend && node --test ../design/gates/version.test.mjs
+GOAL: every Nadi release has its tag and a GitHub Release; one script makes both
+DONE WHEN: release-tags test passes; scripts/release.sh --backfill lists a release per v2.0.0 tag
+CHECK: node --test design/gates/release-tags.test.mjs && gh release list --limit 20
