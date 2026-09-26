@@ -9,12 +9,17 @@ const STORAGE_KEY = "hrms:theme"
 const TRANSPARENCY_KEY = "hrms:reduce-transparency"
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)")
 
-export const THEME_MODES = ["light", "dark", "system"]
-
+// Always the phone's appearance (alpha.12, owner ruling R4). Apple
+// (dark-mode): "Avoid offering an app-specific appearance setting." A Light
+// or Dark chosen before is cleared, so nobody is left stuck on it with the
+// picker gone.
+try {
+	localStorage.removeItem(STORAGE_KEY)
+} catch {
+	// storage unavailable: nothing was stored to clear
+}
 export const theme = reactive({
-	mode: THEME_MODES.includes(localStorage.getItem(STORAGE_KEY))
-		? localStorage.getItem(STORAGE_KEY)
-		: "system",
+	mode: "system",
 })
 
 export function resolvedTheme(mode = theme.mode) {

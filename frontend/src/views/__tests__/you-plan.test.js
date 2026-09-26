@@ -33,9 +33,9 @@ test("one details row, one sheet", () => {
 	assert.doesNotMatch(view, /ContactInfoSheet/)
 })
 
-test("theme and notifications are on the page; Settings is gone", () => {
-	// alpha.6 B3: Appearance is a menu row (HIG Pickers), not a segmented bar.
-	assert.match(template, /<GSelect[\s\S]*?THEME_OPTIONS/)
+test("notifications are on the page; the theme follows the phone; Settings is gone", () => {
+	// alpha.12 R4 supersedes alpha.6 B3: no Appearance picker (Apple dark-mode).
+	assert.doesNotMatch(template, /THEME_OPTIONS/)
 	assert.match(template, /__\(['"]Notifications['"]\)/)
 	assert.doesNotMatch(view, /name: "Settings"/)
 	assert.ok(!existsSync(at("../AppSettings.vue")), "the Settings page is deleted")

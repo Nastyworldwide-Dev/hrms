@@ -75,13 +75,13 @@ test("the role gate is still the server's verdict", () => {
 // does." The switches sat on the LEFT, outside any group, with their hints
 // floating underneath. Apple HIG Toggles: a switch lives in a list row, the
 // row text is its label, the switch trails; guidance goes in the group footer.
-// Appearance is a pop-up menu row (HIG Pickers: short list -> menu button).
-test("app settings are one grouped list: Appearance menu, then switch rows", () => {
+// SUPERSEDED 26 Sep 2026 (alpha.12, owner ruling R4): no Appearance row at
+// all — Apple (dark-mode): "Avoid offering an app-specific appearance setting."
+test("app settings are one grouped list of switch rows, with no Appearance picker", () => {
 	const group = view.slice(view.indexOf('class="g-form-group g-you-settings"'))
 	assert.ok(group.length > 0, "the settings group exists")
 	const block = group.slice(0, group.indexOf("</div>\n"))
-	assert.match(block, /Appearance/)
-	assert.match(block, /<GSelect/)
+	assert.doesNotMatch(block, /Appearance/)
 	assert.match(view, /class="g-form-row__switch"[\s\S]*?Notifications|Notifications[\s\S]*?class="g-form-row__switch"/)
 	assert.doesNotMatch(view, /<GSegmented/, "no three-button theme bar")
 	assert.doesNotMatch(view, /g-switch-row/, "no floating switch rows")

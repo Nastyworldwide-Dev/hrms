@@ -62,20 +62,11 @@
 						</GListPanel>
 
 						<!-- How the app behaves (alpha.6 B3): ONE grouped list, iOS Settings
-						     style. Appearance is a menu row (HIG Pickers: a short list is a
-						     pop-up button); each on/off is a switch TRAILING its row (HIG
-						     Toggles); what they do is the group footer, not a floating line. -->
+						     style; each on/off is a switch TRAILING its row (HIG Toggles); what
+						     they do is the group footer, not a floating line. No Appearance
+						     row: the app follows the phone (alpha.12 R4, Apple dark-mode). -->
 						<section class="g-form-section">
 							<div class="g-form-group g-you-settings">
-								<label class="g-form-row">
-									<span class="g-form-row__label">{{ __("Appearance") }}</span>
-									<GSelect
-										:options="THEME_OPTIONS"
-										:model-value="theme.mode"
-										:aria-label="__('Appearance')"
-										@update:model-value="setTheme"
-									/>
-								</label>
 								<!-- Only where the site can push: a switch that cannot work is
 								     not offered (audit-pages §4, "actionable only"). -->
 								<div v-if="canPush" class="g-form-row">
@@ -162,7 +153,6 @@ import ResourceError from "@/components/ResourceError.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
-import GSelect from "@/components/glass/GSelect.vue"
 
 import { showErrorAlert } from "@/utils/dialogs"
 import { formatCurrency } from "@/utils/formatters"
@@ -171,7 +161,6 @@ import ProfileInfoModal from "@/components/ProfileInfoModal.vue"
 
 import { pendingCountResource } from "@/data/remoteCheckin"
 import { isApprover } from "@/data/team"
-import { theme, setTheme, THEME_MODES } from "@/data/theme"
 import {
 	arePushNotificationsEnabled,
 	enablePushNotifications as requestPushEnable,
@@ -254,10 +243,6 @@ const rows = computed(() => [
 	},
 ])
 
-// __("Light"), __("Dark"), __("System")
-const THEME_LABELS = { light: "Light", dark: "Dark", system: "Automatic" }
-//: iOS names this "Appearance: Light / Dark / Automatic".
-const THEME_OPTIONS = THEME_MODES.map((mode) => ({ value: mode, label: __(THEME_LABELS[mode]) }))
 
 //: Offered only where the site can push (push relay configured and the
 //: server allows it); otherwise there is nothing the switch could do.
