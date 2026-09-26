@@ -8,6 +8,10 @@
 //                           moves while loading (first visit AND return visit)
 //   sheet-shift-audit       sheets: nothing moves after opening, no overrun,
 //                           scroll stays in the sheet
+//   page-audit (402, 1280)  alpha.12: alignment edges, type pairs/weights,
+//                           contrast, 44 pt targets, overflow â€” phone AND desktop
+//   states-audit            alpha.12: forced slow / 500 / offline on every
+//                           screen: a placeholder, "Try again", the banner
 // Needs a served site and AUDIT_PW; SKIPs without, like a11y/visual/coherence.
 
 import { spawnSync } from "node:child_process";
@@ -16,10 +20,13 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const AUDITS = [
-	"ios-consistency-audit",
-	"sheet-consistency-audit",
-	"scroll-and-shift-audit",
-	"sheet-shift-audit",
+	["ios-consistency-audit"],
+	["sheet-consistency-audit"],
+	["scroll-and-shift-audit"],
+	["sheet-shift-audit"],
+	["page-audit", { W: "402", H: "874", SCHEME: "light" }, "page-audit-phone"],
+	["page-audit", { W: "1280", H: "800", SCHEME: "light" }, "page-audit-desktop"],
+	["states-audit"],
 ];
 
 const skip = (why) => {
@@ -31,12 +38,13 @@ if (!process.env.AUDIT_PW && !process.env.HRMS_E2E_PW) skip("could not sign in â
 
 let failed = 0;
 const counts = {};
-for (const audit of AUDITS) {
-	const res = spawnSync(process.execPath, [join("e2e", `${audit}.mjs`)], {
+for (const [script, env = {}, name = script] of AUDITS) {
+	const audit = name;
+	const res = spawnSync(process.execPath, [join("e2e", `${script}.mjs`)], {
 		cwd: join(ROOT, "frontend"),
 		encoding: "utf8",
-		timeout: 15 * 60 * 1000,
-		env: process.env,
+		timeout: 25 * 60 * 1000,
+		env: { ...process.env, ...env },
 	});
 	const out = (res.stdout || "") + (res.stderr || "");
 	if (/login failed|401|ECONNREFUSED/i.test(out) && !/GATE_COUNT/.test(out)) skip(`${audit}: no served site`);

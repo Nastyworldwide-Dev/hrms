@@ -11,36 +11,14 @@
 			</div>
 		</div>
 
-		<!-- GStatPanel, not a hand-rolled grid. It is the §15.2 flattened stat
-		     row - ONE glass surface with internal hair dividers - and until now
-		     it rendered on no production screen at all, only the design
-		     specimen, while this screen open-coded the same shape without the
-		     panel. Same class of drift as the four avatars in RC18. -->
-		<GStatPanel>
-			<GStatTile
-				:value="formatCurrency(summary.data?.total_pending_amount || 0, company_currency)"
-				:label="__('Pending')"
-			/>
-			<GStatTile
-				:value="formatCurrency(summary.data?.total_approved_amount || 0, company_currency)"
-				:label="__('Approved')"
-			/>
-			<!-- Was `text-accent-700`, which resolves to --g-accent-ink and
-			     therefore to --g-brand in dark: a REJECTED figure rendered in the
-			     brand colour. All three cells are neutral now - the label is the
-			     signal, per §14.1's rule that colour is never the only one. -->
-			<GStatTile
-				:value="
-					formatCurrency(
-						(summary.data?.total_rejected_amount || 0) +
-							((summary.data?.total_claimed_in_approved || 0) -
-								(summary.data?.total_approved_amount || 0)),
-						company_currency
-					)
-				"
-				:label="__('Rejected')"
-			/>
-		</GStatPanel>
+		<!-- One row per status, amount trailing, as iOS Wallet lists them
+		     (alpha.12 A6). Three 110 pt tiles cut "RM 1,250.00" off and said
+		     each label twice (measured). The label is the signal, never colour. -->
+		<GListPanel>
+			<GListRow :label="__('Waiting')" :amount="pendingAmount" :tappable="false" :chevron="false" />
+			<GListRow :label="__('Approved')" :amount="approvedAmount" :tappable="false" :chevron="false" />
+			<GListRow :label="__('Rejected')" :amount="rejectedAmount" :tappable="false" :chevron="false" />
+		</GListPanel>
 	</div>
 	<!-- Without this the component rendered NOTHING when its request failed:
 	     no calendar, no message, nothing to search for. Four features were
@@ -61,8 +39,8 @@ import { computed } from "vue"
 
 import { expenseClaimSummary as summary } from "@/data/claims"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
-import GStatPanel from "@/components/glass/GStatPanel.vue"
-import GStatTile from "@/components/glass/GStatTile.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 
 import { formatCurrency } from "@/utils/formatters"
 
@@ -75,4 +53,19 @@ const total_claimed_amount = computed(() => {
 })
 
 const company_currency = computed(() => summary.data?.currency)
+
+const pendingAmount = computed(() =>
+	formatCurrency(summary.data?.total_pending_amount || 0, company_currency.value)
+)
+const approvedAmount = computed(() =>
+	formatCurrency(summary.data?.total_approved_amount || 0, company_currency.value)
+)
+//: Rejected outright, plus the part of approved claims that was cut.
+const rejectedAmount = computed(() =>
+	formatCurrency(
+		(summary.data?.total_rejected_amount || 0) +
+			((summary.data?.total_claimed_in_approved || 0) - (summary.data?.total_approved_amount || 0)),
+		company_currency.value
+	)
+)
 </script>

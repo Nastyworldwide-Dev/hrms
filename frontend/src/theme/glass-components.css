@@ -3830,6 +3830,13 @@ ion-router-outlet {
 	flex: 1 1 0;
 	min-width: 0;
 }
+/* ...and whatever sits in that trailing space sits at the TRAILING edge, as an
+   iOS row puts its value and accessory (Apple, lists-and-tables). A plain
+   trailing text like "See all" filled the space left-aligned and read as
+   floating mid-row (alpha.12 A5, measured on Home). */
+.g-form-row > span:not(.g-form-row__label):last-child {
+	text-align: end;
+}
 .g-form-row > .g-form-row__label {
 	flex: 1 0 auto;
 }
