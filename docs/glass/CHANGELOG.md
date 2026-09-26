@@ -10,6 +10,31 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.11] — 2026-09-26
+
+One work-day rule everywhere, the last two sheets checked, and a to-do list
+for HR. Plan and evidence: `docs/glass/plan/NADI_2.0.0-alpha.11_PLAN.md`.
+
+### Fixed
+- **A check-out after midnight counts on the day you started.** The
+  Calendar, Team, "Your check-ins", worked days, unmarked days, the OT
+  "why no claim" list and the night-shift closer read it by the clock and
+  showed the next day by itself. Now it says "next day" on its own day, and
+  "Counted on …" on the clock date.
+- The Calendar's "What the colours mean" draws the real dots and rings.
+- The calendar day and approval sheets follow the same layout as every
+  other sheet (they had never been checked).
+- "See all" on Time off and Expenses: tapping its lower half opened the
+  first row instead.
+
+### Added
+- **Missed Check-outs After Midnight** now suggests the check-out time and
+  has a **Punches** button that opens Fix attendance on that day. HR
+  confirms it with the person; nothing is changed automatically.
+- A real-life check pack: nine day shapes (normal, past midnight, two
+  sessions, late arrival, forgotten check-out, call-back, unapproved,
+  rest day, lunch) run on a test site before release.
+
 ## [2.0.0-alpha.10] — 2026-09-25
 
 Working late, working after the shift, and nobody choosing their own
