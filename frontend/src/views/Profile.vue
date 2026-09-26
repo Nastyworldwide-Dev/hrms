@@ -28,12 +28,15 @@
 							<!-- Always both rows (alpha.8 r3: they appeared once the record
 							     loaded and pushed the page down 44 pt). "None" when unset, as
 							     iOS Settings says it; a placeholder while loading. -->
-							<div class="g-form-row g-form-row--readonly">
+							<!-- A failed read says so, with Try again, instead of two
+							     placeholders that never resolve (alpha.12 C2). -->
+							<ResourceError :resource="employeeDoc.get" :what="__('your details')" />
+							<div v-if="!employeeDoc.get.error" class="g-form-row g-form-row--readonly">
 								<span class="g-form-row__label">{{ __("Manager") }}</span>
 								<GSkeleton v-if="managerLoading" width="96px" height="11px" />
 								<span v-else class="g-form-row__value">{{ managerName || __("None") }}</span>
 							</div>
-							<div class="g-form-row g-form-row--readonly">
+							<div v-if="!employeeDoc.get.error" class="g-form-row g-form-row--readonly">
 								<span class="g-form-row__label">{{ __("Shift") }}</span>
 								<GSkeleton v-if="!employeeDoc.doc" width="96px" height="11px" />
 								<span v-else class="g-form-row__value">{{ shiftName || __("None") }}</span>
@@ -155,6 +158,7 @@ import GSwitch from "@/components/glass/GSwitch.vue"
 import ShellHeader from "@/components/ShellHeader.vue"
 import GAvatar from "@/components/glass/GAvatar.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
+import ResourceError from "@/components/ResourceError.vue"
 import GBadge from "@/components/glass/GBadge.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"

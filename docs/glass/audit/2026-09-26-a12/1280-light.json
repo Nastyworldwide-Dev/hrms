@@ -1,0 +1,886 @@
+[
+ {
+  "path": "/home",
+  "issues": [
+   "T9 line height off pair: 12/18,17/20",
+   "A3 large title x 232 vs row text x 432"
+  ],
+  "titleX": 232,
+  "groupLeft": [
+   416
+  ],
+  "groupRight": [
+   1080
+  ],
+  "headX": [
+   416
+  ],
+  "pads": [
+   "0/0",
+   "16/16"
+  ],
+  "gaps": [
+   16
+  ],
+  "sizes": [
+   "12/400",
+   "13/400",
+   "17/400",
+   "17/600",
+   "34/700"
+  ]
+ },
+ {
+  "path": "/requests",
+  "issues": [
+   "T9 line height off pair: 17/20",
+   "A3 large title x 232 vs row text x 432"
+  ],
+  "titleX": 232,
+  "groupLeft": [
+   416
+  ],
+  "groupRight": [
+   1080
+  ],
+  "headX": [
+   432
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [],
+  "sizes": [
+   "13/400",
+   "15/400",
+   "17/400",
+   "17/600",
+   "22/700",
+   "34/700"
+  ]
+ },
+ {
+  "path": "/dashboard/attendance",
+  "issues": [
+   "T9 line height off pair: 17/20,12/18",
+   "G9 contrast: 7 (\"Sun\" 3.26, \"Mon\" 3.26, \"Tue\" 3.26)",
+   "A3 large title x 232 vs row text x 432"
+  ],
+  "titleX": 232,
+  "groupLeft": [
+   416
+  ],
+  "groupRight": [
+   1080
+  ],
+  "headX": [],
+  "pads": [
+   "16/16",
+   "0/0"
+  ],
+  "gaps": [],
+  "sizes": [
+   "12/400",
+   "15/400",
+   "15/600",
+   "17/400",
+   "17/600",
+   "34/700"
+  ]
+ },
+ {
+  "path": "/dashboard/leaves",
+  "issues": [
+   "T9 line height off pair: 17/20"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   416
+  ],
+  "groupRight": [
+   1080
+  ],
+  "headX": [
+   432
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [],
+  "sizes": [
+   "13/400",
+   "15/400",
+   "15/600",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/dashboard/expense-claims",
+  "issues": [
+   "T9 line height off pair: 34/34,16/24,22/22,17/20",
+   "A4 inline title off the column centre by 291",
+   "T10 text cut off: 3 (\"RM 0 Pending\",\"RM 0 Approved\")"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   244
+  ],
+  "groupRight": [
+   670
+  ],
+  "headX": [
+   751
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   12
+  ],
+  "sizes": [
+   "12/400",
+   "13/400",
+   "15/400",
+   "15/600",
+   "16/400",
+   "17/600",
+   "22/700",
+   "34/700"
+  ]
+ },
+ {
+  "path": "/dashboard/kpi",
+  "issues": [
+   "T9 line height off pair: 17/20",
+   "A3 large title x 232 vs row text x 408"
+  ],
+  "titleX": 232,
+  "groupLeft": [
+   392
+  ],
+  "groupRight": [
+   1104
+  ],
+  "headX": [],
+  "pads": [
+   "12/17"
+  ],
+  "gaps": [],
+  "sizes": [
+   "12/400",
+   "17/600",
+   "34/700"
+  ]
+ },
+ {
+  "path": "/issues",
+  "issues": [
+   "T9 line height off pair: 17/20"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   416
+  ],
+  "groupRight": [
+   1080
+  ],
+  "headX": [],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   16
+  ],
+  "sizes": [
+   "15/400",
+   "17/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/issues/new",
+  "issues": [
+   "T9 line height off pair: 17/20",
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   24
+  ],
+  "sizes": [
+   "13/400",
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/hr/issues",
+  "issues": [
+   "T9 line height off pair: 17/20"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   416
+  ],
+  "groupRight": [
+   1080
+  ],
+  "headX": [],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   16
+  ],
+  "sizes": [
+   "15/400",
+   "17/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/sop",
+  "issues": [],
+  "titleX": null,
+  "groupLeft": [],
+  "groupRight": [],
+  "headX": [],
+  "pads": [],
+  "gaps": [],
+  "sizes": [
+   "15/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/team",
+  "issues": [
+   "T9 line height off pair: 17/20,12/18",
+   "G9 contrast: 7 (\"Sun\" 3.26, \"Mon\" 3.26, \"Tue\" 3.26)"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   416
+  ],
+  "groupRight": [
+   1080
+  ],
+  "headX": [
+   432
+  ],
+  "pads": [
+   "16/16"
+  ],
+  "gaps": [
+   20
+  ],
+  "sizes": [
+   "12/400",
+   "13/400",
+   "15/400",
+   "15/600",
+   "15/700",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/more",
+  "issues": [
+   "A3 large title x 232 vs row text x 432"
+  ],
+  "titleX": 232,
+  "groupLeft": [
+   416
+  ],
+  "groupRight": [
+   1080
+  ],
+  "headX": [],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [],
+  "sizes": [
+   "17/400",
+   "17/600",
+   "34/700"
+  ]
+ },
+ {
+  "path": "/profile",
+  "issues": [
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   20
+  ],
+  "sizes": [
+   "13/400",
+   "15/400",
+   "17/400",
+   "17/600",
+   "22/700",
+   "24/700"
+  ]
+ },
+ {
+  "path": "/notifications",
+  "issues": [
+   "T2 weights: 420 (\"Show more\")",
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   12
+  ],
+  "sizes": [
+   "12/400",
+   "13/400",
+   "13/420",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/settings",
+  "issues": [
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   20
+  ],
+  "sizes": [
+   "13/400",
+   "15/400",
+   "17/400",
+   "17/600",
+   "22/700",
+   "24/700"
+  ]
+ },
+ {
+  "path": "/change-password",
+  "issues": [
+   "T9 line height off pair: 17/20",
+   "A4 inline title off the column centre by 340"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   584
+  ],
+  "headX": [],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [],
+  "sizes": [
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/hr-contacts",
+  "issues": [
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   24
+  ],
+  "sizes": [
+   "13/400",
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/remote-approvals",
+  "issues": [],
+  "titleX": null,
+  "groupLeft": [
+   416
+  ],
+  "groupRight": [
+   1080
+  ],
+  "headX": [],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   16
+  ],
+  "sizes": [
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/invalid-employee",
+  "issues": [
+   "T9 line height off pair: 12/18,17/20",
+   "A3 large title x 232 vs row text x 432"
+  ],
+  "titleX": 232,
+  "groupLeft": [
+   416
+  ],
+  "groupRight": [
+   1080
+  ],
+  "headX": [
+   416
+  ],
+  "pads": [
+   "0/0",
+   "16/16"
+  ],
+  "gaps": [
+   16
+  ],
+  "sizes": [
+   "12/400",
+   "13/400",
+   "17/400",
+   "17/600",
+   "34/700"
+  ]
+ },
+ {
+  "path": "/attendance-requests",
+  "issues": [],
+  "titleX": null,
+  "groupLeft": [],
+  "groupRight": [],
+  "headX": [],
+  "pads": [],
+  "gaps": [],
+  "sizes": [
+   "15/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/attendance-requests/new",
+  "issues": [
+   "T9 line height off pair: 17/20",
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   24
+  ],
+  "sizes": [
+   "13/400",
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/attendance-requests/HR-ARQ-26-09-00003",
+  "issues": [
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   24
+  ],
+  "sizes": [
+   "13/400",
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/shift-requests",
+  "issues": [],
+  "titleX": null,
+  "groupLeft": [],
+  "groupRight": [],
+  "headX": [],
+  "pads": [],
+  "gaps": [],
+  "sizes": [
+   "15/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/shift-requests/new",
+  "issues": [
+   "T9 line height off pair: 17/20",
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [],
+  "sizes": [
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/shift-requests/HR-SHR-26-09-00001",
+  "issues": [
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [],
+  "sizes": [
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/shift-assignments",
+  "issues": [],
+  "titleX": null,
+  "groupLeft": [],
+  "groupRight": [],
+  "headX": [],
+  "pads": [],
+  "gaps": [],
+  "sizes": [
+   "15/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/employee-checkins",
+  "issues": [],
+  "titleX": null,
+  "groupLeft": [],
+  "groupRight": [],
+  "headX": [],
+  "pads": [],
+  "gaps": [],
+  "sizes": [
+   "15/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/expense-claims",
+  "issues": [],
+  "titleX": null,
+  "groupLeft": [],
+  "groupRight": [],
+  "headX": [],
+  "pads": [],
+  "gaps": [],
+  "sizes": [
+   "15/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/expense-claims/new",
+  "issues": [
+   "T9 line height off pair: 17/20",
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [],
+  "sizes": [
+   "13/400",
+   "15/400",
+   "17/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/expense-claims/HR-EXP-2026-00008",
+  "issues": [
+   "T9 line height off pair: 15/23",
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   24
+  ],
+  "sizes": [
+   "12/400",
+   "13/400",
+   "15/600",
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/leave-applications",
+  "issues": [],
+  "titleX": null,
+  "groupLeft": [],
+  "groupRight": [],
+  "headX": [],
+  "pads": [],
+  "gaps": [],
+  "sizes": [
+   "15/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/leave-applications/new",
+  "issues": [
+   "T9 line height off pair: 17/20",
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   24
+  ],
+  "sizes": [
+   "13/400",
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/leave-applications/HR-LAP-2026-00045",
+  "issues": [
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   24
+  ],
+  "sizes": [
+   "13/400",
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/ot-requests",
+  "issues": [],
+  "titleX": null,
+  "groupLeft": [],
+  "groupRight": [],
+  "headX": [],
+  "pads": [],
+  "gaps": [],
+  "sizes": [
+   "15/400",
+   "17/600",
+   "22/700"
+  ]
+ },
+ {
+  "path": "/ot-requests/new",
+  "issues": [
+   "T9 line height off pair: 17/20",
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [],
+  "sizes": [
+   "13/400",
+   "15/400",
+   "17/400",
+   "17/600"
+  ]
+ },
+ {
+  "path": "/ot-requests/HR-OTR-26-09-00003",
+  "issues": [
+   "A4 inline title off the column centre by 172"
+  ],
+  "titleX": null,
+  "groupLeft": [
+   232
+  ],
+  "groupRight": [
+   920
+  ],
+  "headX": [
+   248
+  ],
+  "pads": [
+   "0/0"
+  ],
+  "gaps": [
+   24
+  ],
+  "sizes": [
+   "13/400",
+   "17/400",
+   "17/600"
+  ]
+ }
+]

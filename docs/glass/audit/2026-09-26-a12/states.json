@@ -1,0 +1,1293 @@
+[
+ {
+  "path": "/home",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Today | Announcements | Announcements could not be loaded. Pull down to try again. | Saturday, 26 September | Not checked in | Nadi W0 Da",
+   "alert": [
+    "Announcements could not be loaded. Pull down to try again.",
+    "Could not load your check-in settings.Try again",
+    "We couldn't load what needs you. Pull down to try again."
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Today | Announcements | No new announcements | See all | Saturday, 26 September",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/requests",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Requests | New request | Your balances could not be loaded. Pull down to try again. | Your last 5 | Could not load your requests. | Try a",
+   "alert": [
+    "Your balances could not be loaded. Pull down to try again.",
+    "Could not load your requests.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Requests | New request | Leave left | None allocated yet | Your last 5 | Nothin",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/dashboard/attendance",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Calendar | September 2026 | Sun | Mon | Tue | Wed | Thu | Fri | Sat | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 1",
+   "alert": [
+    "Could not load your shifts.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Calendar | September 2026 | Sun | Mon | Tue | Wed | Thu | Fri | Sat | 1 | 2 | 3",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/dashboard/leaves",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Leave balance | See all | Could not load your leave balance. | Try again | Ask for time off | Recent leave | See all | Could not load you",
+   "alert": [
+    "Could not load your leave balance.Try again",
+    "Could not load your leave.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Leave balance | See all | No leave allocated yet | People & Culture are setting",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/dashboard/expense-claims",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Total claimed | RM 0 | RM 0 Pending | RM 0 | Pending | RM 0 Approved | RM 0 | Approved | RM 0 Rejected | RM 0 | Rejected | Recent expense",
+   "alert": [
+    "Could not load your expense claims.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Total claimed | RM 0 | RM 0 Pending | RM 0 | Pending | RM 0 Approved | RM 0 | A",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/dashboard/kpi",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 1,
+   "spinner": 0,
+   "text": "Skip to main content | Score | Could not load your KPI dashboard. | Try again | Loading your KPIs…",
+   "alert": [
+    "Could not load your KPI dashboard.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Score | No review scheduled yet | HR has not opened one that includes you. Noth",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/issues",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | HR | IT | Could not load your HR issues. | Try again | Nothing open | Something wrong with your pay, leave or records? Tap Report an issu",
+   "alert": [
+    "Could not load your HR issues.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Nothing open | Something wrong with your pay, leave or records? Tap Report an i",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/issues/new",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the issue form. | Try again | Back",
+   "alert": [
+    "Could not load the issue form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Issue | What are you reporting? | Urgency | Describe the issue | Add a file | S",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/hr/issues",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | HR | IT | Could not load your HR issues. | Try again | Nothing open | Something wrong with your pay, leave or records? Tap Report an issu",
+   "alert": [
+    "Could not load your HR issues.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Nothing open | Something wrong with your pay, leave or records? Tap Report an i",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/sop",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the SOP list. | Try again",
+   "alert": [
+    "Could not load the SOP list.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | No SOPs yet | Procedures for your role will appear here",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/team",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | September 2026 | Sun | Mon | Tue | Wed | Thu | Fri | Sat | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18",
+   "alert": [
+    "Could not load your team's status.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | September 2026 | Sun | Mon | Tue | Wed | Thu | Fri | Sat | 1 | 2 | 3 | 4 | 5 | ",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/more",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | More | Help | SOPs | Announcements | Public holidays",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | More | Help | SOPs | Announcements | Public holidays",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/profile",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 2,
+   "spinner": 0,
+   "text": "Skip to main content | W | W0 approver | Nadi W0 A - NW0A | Manager | Shift | Your details | Approvals | Change password | Appearance | Shift reminders | Shift ",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | W | W0 approver | Nadi W0 A - NW0A | Manager | None | Shift | Nadi W0 Day | You",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/notifications",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Today | W0 employee asked for time off | 9:09 am | W0 employee asked for time off | 9:05 am | W0 employee asked for time off | 8:23 am | ",
+   "alert": [
+    "Could not load your notifications.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Today · 70 unread | W0 employee asked for time off | 9:09 am | W0 employee aske",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/settings",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 2,
+   "spinner": 0,
+   "text": "Skip to main content | W | W0 approver | Nadi W0 A - NW0A | Manager | Shift | Your details | Approvals | Change password | Appearance | Shift reminders | Shift ",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | W | W0 approver | Nadi W0 A - NW0A | Manager | None | Shift | Nadi W0 Day | You",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/change-password",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Current | New | Confirm | Update password",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Current | New | Confirm | Update password",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/hr-contacts",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Your manager | No manager is set for you. | HR | Could not load HR contacts. | Try again",
+   "alert": [
+    "Could not load HR contacts.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Your manager | No manager is set for you. | HR | HR hasn't listed contacts yet.",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/remote-approvals",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load your approvals. | Try again | Requests you've already answered | Check-ins you've already answered",
+   "alert": [
+    "Could not load your approvals.Try again"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Nothing is waiting on you. | Requests you've already answered | Check-ins you'v",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/invalid-employee",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Today | Announcements | Announcements could not be loaded. Pull down to try again. | Saturday, 26 September | Not checked in | Nadi W0 Da",
+   "alert": [
+    "Announcements could not be loaded. Pull down to try again.",
+    "Could not load your check-in settings.Try again",
+    "We couldn't load what needs you. Pull down to try again."
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Today | Announcements | No new announcements | See all | Saturday, 26 September",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/attendance-requests",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No attendance requests yet | Ask for a day to be corrected and it will appear here",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | No attendance requests yet | Ask for a day to be corrected and it will appear h",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/attendance-requests/new",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the attendance request form. | Try again | Back",
+   "alert": [
+    "Could not load the attendance request form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | From | To | Half day | Include holidays | Shift | Optional | In | Out | Reason ",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/attendance-requests/HR-ARQ-26-09-00003",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the attendance request form. | Try again | Back",
+   "alert": [
+    "Could not load the attendance request form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Who | W0 employee | Company | Nadi W0 A | From | 18 Sep 2026 | To | 18 Sep 2026",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/shift-requests",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No shift requests yet | Ask to work a different shift and it will appear here",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | No shift requests yet | Ask to work a different shift and it will appear here",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/shift-requests/new",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the shift request form. | Try again | Back",
+   "alert": [
+    "Could not load the shift request form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | New shift | Required | From | To | Send",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/shift-requests/HR-SHR-26-09-00001",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the shift request form. | Try again | Back",
+   "alert": [
+    "Could not load the shift request form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | New shift | NP Night 19-4 | Who | W0 employee | Company | Nadi W0 A | Goes to |",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/shift-assignments",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No shifts assigned yet | Your roster appears here once your manager publishes it",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | No shifts assigned yet | Your roster appears here once your manager publishes i",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/employee-checkins",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No check-ins recorded | Check in from Home and your record appears here",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | No check-ins recorded | Check in from Home and your record appears here",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/expense-claims",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No expense claims yet | Paid for something for work? Use New above to claim it",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | No expense claims yet | Paid for something for work? Use New above to claim it",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/expense-claims/new",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the expense claim form. | Try again | Back",
+   "alert": [
+    "Could not load the expense claim form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Expenses | No expenses added | Add each item you paid for with the + above | Ad",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/expense-claims/HR-EXP-2026-00008",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the expense claim form. | Try again | Back",
+   "alert": [
+    "Could not load the expense claim form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Who | W0 employee | Company | Nadi W0 A | Goes to | Expenses | Travel | Approve",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/leave-applications",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No leave taken this year | Time off you ask for shows up here.",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | No leave taken this year | Time off you ask for shows up here.",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/leave-applications/new",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the leave application form. | Try again | Back",
+   "alert": [
+    "Could not load the leave application form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Kind of leave | Dates & reason | From | To | Half day | Reason | Add a file | S",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/leave-applications/HR-LAP-2026-00045",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the leave application form. | Try again | Back",
+   "alert": [
+    "Could not load the leave application form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Who | W0 employee | Kind of leave | Company | Nadi W0 A | Dates & reason | From",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/ot-requests",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No overtime claims yet | Stay past your shift end, check out, then tap New",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | No overtime claims yet | Stay past your shift end, check out, then tap New",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading",
+   "O1 error not shown"
+  ]
+ },
+ {
+  "path": "/ot-requests/new",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the overtime request form. | Try again | Back",
+   "alert": [
+    "Could not load the overtime request form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Pick a day | No overtime recorded in this period, so there is nothing to claim ",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ },
+ {
+  "path": "/ot-requests/HR-OTR-26-09-00003",
+  "slow": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "",
+   "alert": [],
+   "retry": false,
+   "banner": []
+  },
+  "error": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | Could not load the overtime request form. | Try again | Back",
+   "alert": [
+    "Could not load the overtime request form.Try againBack"
+   ],
+   "retry": true,
+   "banner": []
+  },
+  "offline": {
+   "skeleton": 0,
+   "spinner": 0,
+   "text": "Skip to main content | No connection. Anything you send now will not reach us. | Who | W0 employee | Company | Nadi W0 A | Day you worked | 16 Sep 2026 | Shift ",
+   "alert": [],
+   "retry": false,
+   "banner": [
+    "Nadi\n\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\t\t\n\n\t\t\n\t\thtml.plt-mobile ion-app{-we",
+    "No connection. Anything you send now will not reach us.",
+    ""
+   ]
+  },
+  "verdict": [
+   "D1 blank while loading"
+  ]
+ }
+]

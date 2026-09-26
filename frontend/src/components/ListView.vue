@@ -120,7 +120,7 @@
 				<ResourceError
 					v-else-if="documents.error"
 					:resource="documents"
-					:what="props.doctype?.toLowerCase()"
+					:what="listNoun"
 				/>
 
 				<!-- §11.1: an empty screen is an invitation to act. The copy is per
@@ -136,8 +136,10 @@
 				     create action is now a GButton too, so an action here made
 				     "New" appear twice on the same screen. The copy references it
 				     instead. -->
+				<!-- Only after the list really answered: before that (or when the
+				     request never ran) "No … yet" would be a false statement. -->
 				<GEmptyState
-					v-else
+					v-else-if="listAnswered"
 					class="mt-5"
 					:icon="EMPTY_ICON[props.doctype]"
 					:title="emptyCopy.title"
@@ -197,6 +199,7 @@ import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import EmployeeCheckinItem from "@/components/EmployeeCheckinItem.vue"
 import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
+import { REQUEST_KIND } from "@/utils/requestKind"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GModal from "@/components/glass/GModal.vue"
@@ -433,6 +436,18 @@ const documents = createResource({
 const today = dayjs().tz(siteTimeZone()).format("YYYY-MM-DD")
 const checkinDays = computed(() => groupByDay(documents.data, workDayOf(documents.data, siteTime)))
 
+//: The list request finished with an answer (possibly an empty one).
+const listAnswered = computed(() => Array.isArray(documents.data))
+
+//: What failed, in the words the screen uses ("your time off"), never the
+//: doctype ("leave application"): the plain-words rule W1.
+const listNoun = computed(() => {
+	const other = { "Employee Checkin": "your check-ins", "Shift Assignment": "your shifts" }
+	if (other[props.doctype]) return __(other[props.doctype])
+	const kind = REQUEST_KIND[props.doctype]
+	return kind ? __("your {0} requests", [__(kind).toLowerCase()]) : __("this list")
+})
+
 const createPermission = createResource({
 	url: "frappe.client.has_permission",
 	// Frappe's Pydantic-validated handler rejects `docname: null` — pass an
@@ -577,9 +592,16 @@ onMounted(async () => {
 	// register — this exact line leaked one permanent handler per mount.
 	useListUpdate(socket, props.doctype, () => fetchDocumentList())
 
+	// The workflow only names an extra column. A failed lookup must not stop
+	// the list request, or the screen falls through to "No … yet" as if the
+	// person had no records (alpha.12 C2, measured with forced 500s).
 	const workflow = useWorkflow(props.doctype)
-	await workflow.workflowDoc.promise
-	workflowStateField.value = workflow.getWorkflowStateField()
+	try {
+		await workflow.workflowDoc.promise
+		workflowStateField.value = workflow.getWorkflowStateField()
+	} catch (error) {
+		console.warn("[ListView] workflow lookup failed; listing without it:", props.doctype, error)
+	}
 	fetchDocumentList()
 })
 </script>

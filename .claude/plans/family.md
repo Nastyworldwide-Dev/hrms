@@ -1,5 +1,8 @@
-CLASS: a release step (tag, GitHub Release) done by hand and so sometimes skipped
-scripts/release.sh — same-root (new: one command tags, pushes, creates the GitHub Release)
-design/gates/release-tags.test.mjs — same-root (new: every changelog version has a tag or names the build that carried it)
-docs/glass/CHANGELOG.md alpha.8/alpha.9 — same-root (say they shipped in alpha.10)
-.github/workflows/build-and-commit-assets.yml — not-affected — its assets-* rolling release is the Frappe asset bundle, not a version release
+CLASS: a failed read renders as the empty state (or as endless placeholders), so a person reads "no records"
+frontend/src/components/ListView.vue onMounted — same-root (fixed: workflow lookup guarded, list always requested)
+frontend/src/components/ListView.vue GEmptyState — same-root (fixed: only after the list answered)
+frontend/src/components/ListView.vue ResourceError what — same-root (fixed: plain words, not the doctype)
+frontend/src/views/Profile.vue Manager/Shift — same-root (fixed: ResourceError instead of placeholders forever)
+frontend/src/views/More.vue — not-affected — static rows, reads nothing from the server
+frontend/src/views/ChangePassword.vue — not-affected — reads nothing until Update password (its own error toast)
+frontend/src/views/Settings (Profile.vue route) — same-root (same component as Profile)
