@@ -290,9 +290,17 @@ function summaryLine(member) {
 		return `${type} · ${__("until")} ${dayjs(member.leave_until).format("D MMM")}`
 	}
 	if (member.first_in || member.last_out) {
-		return `${__("IN")} ${formatPunch(member.first_in)} · ${__("OUT")} ${formatPunch(
-			member.last_out
-		)}`
+		// A check-out after midnight says so (owner, 26 Sep 2026): it belongs
+		// to this work day, and "OUT 01:41" alone read as a missed check-out.
+		const out = formatPunch(member.last_out)
+		return `${__("IN")} ${formatPunch(member.first_in)} · ${__("OUT")} ${
+			member.out_next_day ? __("{0} (next day)", [out]) : out
+		}`
+	}
+	if (member.counted_on) {
+		// Worked past midnight into this date: nothing to show here, and where
+		// it counted instead of a bare, confusing tap.
+		return __("Worked past midnight · counted on {0}", [dayjs(member.counted_on).format("ddd D MMM")])
 	}
 	if (member.status === "Not In Yet" && member.shift_start) {
 		return `${__("Shift")} ${formatTime(member.shift_start)}–${formatTime(

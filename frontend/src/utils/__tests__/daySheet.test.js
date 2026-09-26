@@ -101,7 +101,12 @@ test("the heading's status word follows the day", () => {
 	assert.equal(dayStatusWord(day({ status: "On Leave", punches: [] }), TODAY), "Leave")
 	assert.equal(dayStatusWord(day({ status: "Holiday", punches: [] }), TODAY), "Rest day")
 	assert.equal(dayStatusWord(day({ status: "Absent", punches: [] }), TODAY), "Absent")
-	assert.equal(dayStatusWord(day({ date: TODAY, status: null }), TODAY), "In progress")
+	// "In progress" only while a check-in is open (owner, 26 Sep 2026: a date
+	// holding only last night's check-out read as a day still being worked).
+	const open = day({ date: TODAY, status: null, punches: [{ log_type: "IN" }] })
+	assert.equal(dayStatusWord(open, TODAY), "In progress")
+	const lastNight = day({ date: TODAY, status: null, punches: [{ log_type: "OUT" }] })
+	assert.equal(dayStatusWord(lastNight, TODAY), "Today")
 	const future = day({ date: "2026-09-30", status: null, punches: [] })
 	assert.equal(dayStatusWord(future, TODAY), "Coming up")
 })

@@ -68,7 +68,7 @@ class TestDayShift(unittest.TestCase):
 			patch("hrms.api.now._is_rest_day", return_value=rest_day),
 			patch.object(frappe.db, "get_value", side_effect=get_value),
 			patch.object(frappe, "get_all", side_effect=get_all, create=True),
-			patch.object(calendar, "_my_punches", return_value=[]),
+			patch.object(calendar, "_my_punches", return_value=([], [])),
 		):
 			return calendar._my_day("E1", calendar.getdate("2026-09-22"))
 

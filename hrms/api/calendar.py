@@ -430,33 +430,41 @@ def get_month_flags(from_date: str, to_date: str) -> dict:
 
 
 def _my_punches(employee: str, day) -> list[dict]:
-	"""The taps themselves, in order, as a timeline.
+	"""The taps that COUNT on this day, in order, as a timeline.
 
-	The raw record rather than a computed total: an employee checking a day is
-	usually checking whether a specific tap registered, and a single "8h 03m"
-	cannot answer that.
+	By work day, not clock date (owner, 26 Sep 2026): a check-out after
+	midnight belongs to the day its session started, as the attendance
+	record books it, and carries `next_day`. Read from the day before to the
+	day after, so a session that crossed either midnight is whole.
 	"""
+	from datetime import timedelta
+
+	from hrms.utils.work_day import taps_for_day
+
 	rows = frappe.get_all(
 		"Employee Checkin",
 		filters={
 			"employee": employee,
-			"time": ("between", [f"{day} 00:00:00", f"{day} 23:59:59"]),
+			"time": ("between", [f"{day - timedelta(days=1)} 00:00:00", f"{day + timedelta(days=1)} 23:59:59"]),
 		},
-		fields=["name", "time", "log_type", "skip_auto_attendance"],
+		fields=["name", "time", "log_type", "skip_auto_attendance", "shift_start"],
 		order_by="time asc",
 		ignore_permissions=True,
 	)
-	return [
+	mine, elsewhere = taps_for_day(rows, day)
+	taps = [
 		{
-			"time": str(row.time),
-			"log_type": row.log_type,
+			"time": str(row["time"]),
+			"log_type": row["log_type"],
 			# A skipped punch is shown, never hidden: "my tap is missing" and
 			# "my tap was set aside" are different problems with different
 			# answers, and hiding the second makes it look like the first.
-			"skipped": bool(row.skip_auto_attendance),
+			"skipped": bool(row.get("skip_auto_attendance")),
+			"next_day": row["next_day"],
 		}
-		for row in rows
+		for row in mine
 	]
+	return taps, elsewhere
 
 
 def _day_shift(employee: str, day, attendance) -> str | None:
@@ -508,6 +516,7 @@ def _my_day(employee: str, day) -> dict:
 		["name", "status", "working_hours", "ot_hours", "shift", "leave_type"],
 		as_dict=True,
 	)
+	punches, counted_elsewhere = _my_punches(employee, day)
 	shift = _day_shift(employee, day, attendance)
 	window = None
 	if shift:
@@ -522,7 +531,10 @@ def _my_day(employee: str, day) -> dict:
 		"worked_hours": flt(attendance.working_hours) if attendance else 0.0,
 		"ot_hours": flt(attendance.ot_hours) if attendance else 0.0,
 		"shift": window,
-		"punches": _my_punches(employee, day),
+		"punches": punches,
+		# Taps clocked on this date but counted on another work day (a check-out
+		# after midnight): the sheet says where they went, never shows them bare.
+		"counted_elsewhere": counted_elsewhere,
 		"claim": _day_claim(employee, day),
 	}
 

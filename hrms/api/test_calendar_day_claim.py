@@ -50,7 +50,7 @@ def _day(claims, approvers=("hafiz@example.com",)):
 	with (
 		patch.object(frappe.db, "get_value", side_effect=get_value),
 		patch.object(frappe, "get_all", side_effect=get_all, create=True),
-		patch.object(calendar, "_my_punches", return_value=[]),
+		patch.object(calendar, "_my_punches", return_value=([], [])),
 		# Named the way OT notifications route (review): designated approvers.
 		patch("hrms.hr.utils.get_designated_approvers", return_value=approvers, create=True),
 	):

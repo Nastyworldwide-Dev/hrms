@@ -30,12 +30,30 @@
 				     §4). No explaining paragraph. -->
 				<p class="text-card-title text-ink-600">{{ shiftLine }}</p>
 
-				<GListPanel v-if="me.punches.length">
+				<section v-if="me.punches.length" class="g-form-section">
+					<GListPanel>
+						<GListRow
+							v-for="(punch, index) in me.punches"
+							:key="index"
+							:label="punchLabel(punch)"
+							:sublabel="punch.skipped ? __('Set aside by HR') : null"
+							:chevron="false"
+						/>
+					</GListPanel>
+					<!-- Said once, under the taps (owner, 26 Sep 2026: "special
+					     wording so it's clear it was cleared out"). -->
+					<p v-if="me.punches.some((p) => p.next_day)" class="g-form-footer">
+						{{ __("Worked past midnight: the check-out after 12 am counts on this day.") }}
+					</p>
+				</section>
+				<!-- A date that only holds a check-out from the night before: where
+				     it counted, never a bare tap that reads as "In progress". -->
+				<GListPanel v-else-if="(me.counted_elsewhere || []).length">
 					<GListRow
-						v-for="(punch, index) in me.punches"
+						v-for="(tap, index) in me.counted_elsewhere"
 						:key="index"
-						:label="punchLabel(punch)"
-						:sublabel="punch.skipped ? __('Set aside by HR') : null"
+						:label="__('{0} {1}', [__(tapWord(tap.log_type)), $dayjs(tap.time).format('HH:mm')])"
+						:sublabel="__('Counted on {0}', [$dayjs(tap.counted_on).format('ddd D MMM')])"
 						:chevron="false"
 					/>
 				</GListPanel>
@@ -134,11 +152,12 @@ const hoursLine = computed(() => {
 		: worked
 })
 
-//: "In 09:31", never the raw "IN" (D12).
+//: "In 09:31", never the raw "IN" (D12); "Out 01:41 · next day" after midnight.
 function punchLabel(punch) {
 	const word = tapWord(punch.log_type)
 	const time = $dayjs(punch.time).format("HH:mm")
-	return word ? `${__(word)} ${time}` : time
+	const label = word ? `${__(word)} ${time}` : time
+	return punch.next_day ? `${label} · ${__("next day")}` : label
 }
 
 function fixDay() {

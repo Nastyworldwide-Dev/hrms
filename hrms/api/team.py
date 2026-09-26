@@ -225,22 +225,40 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 			ignore_permissions=True,
 		)
 	}
-	punches = {}
+	# Taps by WORK day, not clock date (owner, 26 Sep 2026): a check-out after
+	# midnight is the day its session started, so the senior no longer sees
+	# "IN — OUT 01:41" on the next day for someone who worked late.
+	from datetime import timedelta
+
+	from hrms.utils.work_day import taps_for_day
+
+	by_member = {}
 	for row in frappe.get_all(
 		"Employee Checkin",
 		filters={
 			"employee": ("in", ids),
-			"time": ("between", [f"{day} 00:00:00", f"{day} 23:59:59"]),
+			"time": ("between", [f"{day - timedelta(days=1)} 00:00:00", f"{day + timedelta(days=1)} 23:59:59"]),
 		},
-		fields=["employee", "log_type", "time"],
+		fields=["employee", "log_type", "time", "shift_start"],
 		order_by="time asc",
 		ignore_permissions=True,
 	):
-		slot = punches.setdefault(row.employee, {"first_in": None, "last_out": None})
-		if row.log_type == "IN" and not slot["first_in"]:
-			slot["first_in"] = row.time
-		elif row.log_type == "OUT":
-			slot["last_out"] = row.time
+		by_member.setdefault(row.employee, []).append(row)
+	punches = {}
+	for member_id, rows in by_member.items():
+		mine, elsewhere = taps_for_day(rows, day)
+		slot = punches.setdefault(
+			member_id, {"first_in": None, "last_out": None, "out_next_day": False, "counted_on": None}
+		)
+		for row in mine:
+			if row["log_type"] == "IN" and not slot["first_in"]:
+				slot["first_in"] = row["time"]
+			elif row["log_type"] == "OUT":
+				slot["last_out"] = row["time"]
+				slot["out_next_day"] = row["next_day"]
+		if not mine and elsewhere:
+			# worked past midnight into this date: say where it counted
+			slot["counted_on"] = elsewhere[-1]["counted_on"]
 
 	shift_bounds = {}
 
@@ -296,6 +314,8 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 				"shift_end": str(shift_end) if shift_end else None,
 				"first_in": punch.get("first_in"),
 				"last_out": punch.get("last_out"),
+				"out_next_day": punch.get("out_next_day", False),
+				"counted_on": punch.get("counted_on"),
 				"leave_type": leave and leave.leave_type,
 				"leave_until": str(leave.to_date) if leave else None,
 				"half_day": bool(leave and leave.half_day),

@@ -62,7 +62,9 @@ export function dayStatusWord(day, today) {
 	if (day.status === "Absent") return "Absent"
 	if (WORKED.has(day.status)) return "Worked"
 	if (day.date > today) return "Coming up"
-	if (day.date === today) return (day.punches || []).length ? "In progress" : "Today"
+	// "In progress" only while a check-in is still open: a date holding only
+	// last night's check-out is not a day being worked (owner, 26 Sep 2026).
+	if (day.date === today) return (day.punches || []).at(-1)?.log_type === "IN" ? "In progress" : "Today"
 	return ""
 }
 
