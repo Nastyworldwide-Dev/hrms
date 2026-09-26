@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Check-in card, the Apple way</title>
+<style>
+:root {
+	--bg: #F2F2F7; --surface: #FFFFFF; --ink: #0B0C10; --ink2: #545C68; --track: #E5E5EA;
+	--brand: #C8FF00; --brand-ink: #3F5C00; --warn: #FF9500; --warn-ink: #9A5B00; --green: #34C759; --radius: 26px;
+	--font: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+	--spring: cubic-bezier(.2, .8, .2, 1);
+}
+:root[data-theme="dark"] {
+	--bg: #000000; --surface: #1C1C1E; --ink: #FFFFFF; --ink2: #A8AEB8; --track: #38383A; --brand-ink: #C8FF00; --warn-ink: #FFB340;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--bg: #000000; --surface: #1C1C1E; --ink: #FFFFFF; --ink2: #A8AEB8; --track: #38383A; --brand-ink: #C8FF00; --warn-ink: #FFB340;
+	}
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); }
+.banner { position: sticky; top: 0; z-index: 5; padding: 8px 16px; background: #FF3B30; color: #fff; font: 600 13px/18px var(--font); text-align: center; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.side { flex: 1 1 360px; max-width: 560px; }
+h1 { font: 700 28px/34px var(--font); margin: 0 0 8px; }
+.lede { color: var(--ink2); font: 400 15px/20px var(--font); margin: 0 0 16px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.controls button { min-height: 44px; padding: 0 14px; border-radius: 22px; border: 0; background: var(--surface); color: var(--ink); font: 600 15px/20px var(--font); cursor: pointer; }
+.controls button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.phone { flex: none; width: 402px; max-width: 100%; background: var(--bg); border-radius: 44px; padding: 16px; box-shadow: 0 0 0 1px var(--track); }
+.bar { display: flex; justify-content: space-between; align-items: center; height: 44px; }
+.logo { width: 32px; height: 32px; border-radius: 9px; background: var(--brand); display: grid; place-items: center; font: 700 18px/1 var(--font); color: #0B0C10; }
+.icon-btn { width: 44px; height: 44px; border-radius: 22px; border: 0; background: var(--surface); display: grid; place-items: center; cursor: pointer; color: var(--ink); position: relative; }
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn .badge { position: absolute; top: 9px; right: 10px; width: 9px; height: 9px; border-radius: 5px; background: var(--brand); box-shadow: 0 0 0 2px var(--surface); opacity: 0; }
+.icon-btn.has .badge { opacity: 1; }
+.bounce { animation: bounce 520ms var(--spring) 1; }
+@keyframes bounce { 30% { transform: translateY(-5px) scale(1.06); } 60% { transform: translateY(1px); } }
+.title { font: 700 34px/41px var(--font); letter-spacing: .4px; margin: 4px 0 16px; }
+
+.today { background: var(--surface); border-radius: var(--radius); padding: 16px; overflow: hidden; }
+.date { font: 400 13px/18px var(--font); color: var(--ink2); margin: 0 0 8px; }
+.state-row { display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.dot { width: 10px; height: 10px; border-radius: 5px; background: var(--warn); flex: none; }
+.today.working .dot { background: var(--green); animation: breathe 2s ease-in-out infinite; }
+.today.over .dot { background: var(--warn); animation: none; }
+@keyframes breathe { 50% { opacity: .35; transform: scale(.8); } }
+.state { font: 600 17px/22px var(--font); margin: 0; display: flex; gap: 6px; align-items: baseline; }
+.clock { display: inline-flex; font-variant-numeric: tabular-nums; }
+.digit { display: inline-block; overflow: hidden; height: 22px; }
+.digit span { display: block; transition: transform 380ms var(--spring); }
+.detail { font: 400 13px/18px var(--font); color: var(--ink2); margin: 2px 0 0; }
+
+/* Apple gauge, capacity style: labelled ends, fill to the current value, colour at a significant level */
+.gauge { margin-top: 14px; display: none; }
+.today.working .gauge, .today.over .gauge { display: block; }
+.gauge-track { position: relative; height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; }
+.gauge-fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 3px; background: var(--brand-ink); transition: width 700ms var(--spring), background 300ms; }
+.today.over .gauge-fill { background: var(--warn); }
+.gauge-ends { display: flex; justify-content: space-between; margin-top: 6px; font: 400 12px/16px var(--font); color: var(--ink2); font-variant-numeric: tabular-nums; }
+.gauge-ends b { font-weight: 600; color: var(--brand-ink); }
+.today.over .gauge-ends b { color: var(--warn-ink); }
+
+.forgot { display: none; margin-top: 12px; font: 400 15px/20px var(--font); color: var(--warn-ink); }
+.today.forgot-state .forgot { display: flex; align-items: center; gap: 8px; }
+.wiggle { animation: wiggle 600ms ease-in-out 1; }
+@keyframes wiggle { 20% { transform: translateX(-3px); } 40% { transform: translateX(3px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(2px); } }
+
+.btn { margin-top: 16px; width: 100%; min-height: 50px; border: 0; border-radius: 25px; background: var(--brand); color: #0B0C10; font: 600 17px/22px var(--font); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; position: relative; }
+.btn:active { transform: scale(.98); }
+.spinner { width: 18px; height: 18px; border-radius: 9px; border: 2.5px solid rgba(11,12,16,.25); border-top-color: #0B0C10; animation: spin 700ms linear infinite; display: none; }
+.btn.busy .spinner { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.tick { width: 22px; height: 22px; display: none; }
+.tick path { stroke: #0B0C10; stroke-width: 2.5; fill: none; stroke-dasharray: 24; stroke-dashoffset: 24; }
+.btn.done .tick { display: block; }
+.btn.done .tick path { animation: draw 380ms var(--spring) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.link { display: none; margin-top: 4px; width: 100%; min-height: 44px; border: 0; background: transparent; color: var(--brand-ink); font: 600 15px/20px var(--font); cursor: pointer; }
+.today.forgot-state .link { display: block; }
+.swap { animation: swap 420ms var(--spring) 1; }
+@keyframes swap { 0% { opacity: 0; transform: translateY(6px) scale(.98); } 100% { opacity: 1; transform: none; } }
+
+:root.reduce * { animation: none !important; transition: none !important; }
+:root.reduce .btn.done .tick path { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) {
+	* { animation: none !important; transition: none !important; }
+	.btn.done .tick path { stroke-dashoffset: 0; }
+}
+.list { margin: 0; padding-left: 20px; }
+.list li { font: 400 15px/20px var(--font); color: var(--ink2); margin: 6px 0; }
+.list b { color: var(--ink); font-weight: 600; }
+h3 { font: 600 17px/22px var(--font); margin: 20px 0 8px; }
+</style>
+</head>
+<body>
+<div class="banner">MOCKUP — not the live app. Tap the button on the card, and the controls.</div>
+<div class="wrap">
+	<div class="phone">
+		<div class="bar">
+			<div class="logo">n</div>
+			<button class="icon-btn" id="bell" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="badge"></span></button>
+		</div>
+		<div class="title">Today</div>
+		<div class="today" id="card" aria-live="polite">
+			<p class="date">Saturday, 26 September</p>
+			<div id="body">
+				<div class="state-row"><span class="dot" aria-hidden="true"></span><p class="state" id="state"></p></div>
+				<p class="detail">Nadi W0 Day · 09:00–18:00</p>
+				<div class="gauge" aria-hidden="true">
+					<div class="gauge-track"><div class="gauge-fill" id="fill"></div></div>
+					<div class="gauge-ends"><span>09:00</span><b id="left"></b><span>18:00</span></div>
+				</div>
+				<p class="forgot" id="forgot"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Your shift ended at 18:00. Forgot to check out?</p>
+			</div>
+			<button class="btn" id="btn" type="button"><span class="spinner" aria-hidden="true"></span><svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="btnLabel">Check in</span></button>
+			<button class="link" type="button">I left earlier · fix the time</button>
+		</div>
+	</div>
+	<div class="side">
+		<h1>The check-in card, the Apple way</h1>
+		<p class="lede">Built from Apple's own patterns: a gauge (a progress bar with its ends labelled), a live time, and short icon animations. Each moves once, for a reason, and all of them stop when Reduce Motion is on.</p>
+		<div class="controls" role="group" aria-label="State">
+			<button data-s="before" aria-pressed="true">Before shift</button>
+			<button data-s="working" aria-pressed="false">Working</button>
+			<button id="minute">+1 minute</button>
+			<button data-s="over" aria-pressed="false">Past shift end</button>
+			<button data-s="forgot" aria-pressed="false">Forgot?</button>
+			<button id="notify">New notification</button>
+			<button id="reduce" aria-pressed="false">Reduce Motion</button>
+			<button id="theme" aria-pressed="false">Dark</button>
+		</div>
+		<h3>What moves, and Apple's reason</h3>
+		<ul class="list">
+			<li><b>Check in:</b> a spinner inside the button while it saves, then a tick <b>draws itself</b>, and the card turns into "Working" (Apple: Draw On, content replace).</li>
+			<li><b>Working:</b> the green dot <b>breathes</b> softly, like a recording indicator (Apple: Breathe, "an activity is taking place").</li>
+			<li><b>The time rolls</b> when a minute passes, the way the Clock app's digits change.</li>
+			<li><b>The gauge</b> fills from 09:00 to 18:00 and turns orange past the end (Apple gauges: "change the fill colour when the value reaches significant levels").</li>
+			<li><b>Forgot?</b> The line <b>wiggles once</b> so it's not missed (Apple: Wiggle, "a call to action a person might overlook").</li>
+			<li><b>New notification:</b> the bell <b>bounces once</b> (Apple: Bounce, "an action occurred").</li>
+		</ul>
+		<h3>Left out, on purpose</h3>
+		<ul class="list">
+			<li>Rings (Apple reserves them for Fitness), confetti, sounds, looping glows, anything that celebrates overtime.</li>
+		</ul>
+	</div>
+</div>
+<script>
+const card = document.getElementById("card"), btn = document.getElementById("btn")
+let mode = "before", minutes = 0
+const START = 9 * 60, END = 18 * 60
+
+function setClock(text) {
+	const el = document.getElementById("state").querySelector(".clock")
+	if (!el) return
+	const old = el.textContent
+	el.innerHTML = ""
+	for (let i = 0; i < text.length; i++) {
+		const ch = text[i], d = document.createElement("span")
+		d.className = "digit"
+		const inner = document.createElement("span")
+		inner.textContent = ch
+		if (old[i] !== undefined && old[i] !== ch && /\d/.test(ch)) {
+			inner.style.transform = "translateY(100%)"
+			requestAnimationFrame(() => requestAnimationFrame(() => (inner.style.transform = "translateY(0)")))
+		}
+		d.appendChild(inner)
+		el.appendChild(d)
+	}
+}
+const fmt = (m) => (m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : `${m}m`)
+
+function render(animateSwap) {
+	card.classList.remove("working", "over", "forgot-state")
+	const state = document.getElementById("state")
+	if (mode === "before") {
+		state.innerHTML = "Not checked in"
+		document.getElementById("btnLabel").textContent = "Check in"
+	} else {
+		const worked = minutes
+		const now = START + worked
+		const past = now - END
+		if (mode === "forgot") card.classList.add("over", "forgot-state")
+		else if (past > 0) card.classList.add("over")
+		else card.classList.add("working")
+		state.innerHTML = past > 0 ? `Past shift end · <span class="clock"></span>` : `Working · <span class="clock"></span>`
+		setClock(past > 0 ? `+${fmt(past)}` : fmt(worked))
+		document.getElementById("fill").style.width = `${Math.min(100, (worked / (END - START)) * 100)}%`
+		document.getElementById("left").textContent = past > 0 ? `+${fmt(past)}` : `${fmt(END - now)} left`
+		document.getElementById("btnLabel").textContent = mode === "forgot" ? "Check out now" : "Check out"
+		if (mode === "forgot") {
+			const f = document.getElementById("forgot")
+			f.classList.remove("wiggle"); void f.offsetWidth; f.classList.add("wiggle")
+		}
+	}
+	if (animateSwap) {
+		const b = document.getElementById("body")
+		b.classList.remove("swap"); void b.offsetWidth; b.classList.add("swap")
+	}
+}
+function setMode(m, mins) {
+	mode = m
+	if (mins !== undefined) minutes = mins
+	document.querySelectorAll("[data-s]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.s === m)))
+	btn.classList.remove("done", "busy")
+	render(true)
+}
+document.querySelectorAll("[data-s]").forEach((b) =>
+	b.addEventListener("click", () => {
+		const s = b.dataset.s
+		setMode(s, s === "before" ? 0 : s === "working" ? 200 : s === "over" ? 580 : 720)
+	})
+)
+document.getElementById("minute").addEventListener("click", () => {
+	if (mode === "before") return
+	minutes += 1
+	render(false)
+})
+btn.addEventListener("click", () => {
+	if (btn.classList.contains("busy")) return
+	btn.classList.remove("done")
+	btn.classList.add("busy")
+	const going = mode === "before" ? "working" : "before"
+	setTimeout(() => {
+		btn.classList.remove("busy")
+		btn.classList.add("done")
+		document.getElementById("btnLabel").textContent = "Saved"
+		setTimeout(() => setMode(going, going === "working" ? 0 : 0), 700)
+	}, 650)
+})
+document.getElementById("notify").addEventListener("click", () => {
+	const bell = document.getElementById("bell")
+	bell.classList.add("has")
+	bell.classList.remove("bounce"); void bell.offsetWidth; bell.classList.add("bounce")
+})
+document.getElementById("reduce").addEventListener("click", (e) => {
+	const on = document.documentElement.classList.toggle("reduce")
+	e.currentTarget.setAttribute("aria-pressed", String(on))
+})
+document.getElementById("theme").addEventListener("click", (e) => {
+	const dark = document.documentElement.dataset.theme !== "dark"
+	document.documentElement.dataset.theme = dark ? "dark" : "light"
+	e.currentTarget.setAttribute("aria-pressed", String(dark))
+	e.currentTarget.textContent = dark ? "Light" : "Dark"
+})
+setMode("before", 0)
+</script>
+</body>
+</html>

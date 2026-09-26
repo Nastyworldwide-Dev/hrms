@@ -3446,11 +3446,123 @@ ion-router-outlet {
 	background: var(--g-ink3);
 }
 .g-now--working .g-now__dot {
-	background: var(--g-brand);
-	/* A gentle presence, not an animation: something IS running, and the bar
-	   is on screen for as long as the shift is. A pulse here would be motion
-	   the reader never asked for, all day. */
-	box-shadow: 0 0 0 4px rgb(var(--g-brand-rgb) / 0.18);
+	background: var(--g-success);
+	box-shadow: 0 0 0 4px rgb(var(--g-success-rgb) / 0.18);
+	/* alpha.12, the owner's "Apple way" card: Apple's Breathe effect, "an
+	   activity is taking place, like an ongoing recording". Slow (0.5 Hz, clear
+	   of the 0.2 Hz Apple warns about) and stopped by the reduced-motion block. */
+	animation: g-breathe var(--g-motion-breathe-duration) var(--g-motion-breathe-easing)
+		var(--g-motion-breathe-iteration);
+}
+.g-now--past .g-now__dot {
+	background: var(--g-warn);
+	box-shadow: none;
+	animation: none;
+}
+@keyframes g-breathe {
+	50% {
+		opacity: 0.4;
+		transform: scale(0.8);
+	}
+}
+/* The running time rolls up to its new value (Apple: content replace). */
+.g-now__clock {
+	display: inline-block;
+	font-variant-numeric: tabular-nums;
+}
+.g-roll-enter-active,
+.g-roll-leave-active {
+	transition:
+		transform var(--g-motion-symbol-duration) var(--g-motion-symbol-easing),
+		opacity var(--g-motion-symbol-duration) var(--g-motion-symbol-easing);
+}
+.g-roll-enter-from {
+	opacity: 0;
+	transform: translateY(40%);
+}
+.g-roll-leave-to {
+	opacity: 0;
+	transform: translateY(-40%);
+}
+/* The shift gauge: Apple's capacity style, both ends labelled. */
+.g-now__gauge {
+	margin-top: 12px;
+}
+.g-now__gauge-track {
+	position: relative;
+	height: 6px;
+	border-radius: 3px;
+	background: var(--g-track-solid);
+	overflow: hidden;
+}
+.g-now__gauge-fill {
+	position: absolute;
+	inset: 0 auto 0 0;
+	border-radius: 3px;
+	background: var(--g-accent-ink);
+	transition:
+		width var(--g-motion-progress-duration) var(--g-motion-progress-easing),
+		background-color var(--g-motion-state-change-duration) var(--g-motion-state-change-easing);
+}
+.g-now--past .g-now__gauge-fill {
+	background: var(--g-warn);
+}
+.g-now__gauge-ends {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 4px;
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	line-height: var(--g-type-caption-line-height);
+	color: var(--g-ink2);
+	font-variant-numeric: tabular-nums;
+}
+.g-now__gauge-ends b {
+	font-weight: 600;
+	color: var(--g-accent-ink);
+}
+.g-now--past .g-now__gauge-ends b {
+	color: var(--g-warn-ink);
+}
+/* The saved-punch tick on the Today button (Apple: Draw On). */
+.g-btn__tick {
+	width: 20px;
+	height: 20px;
+}
+.g-btn__tick path {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-dasharray: 24;
+	stroke-dashoffset: 24;
+	animation: g-draw var(--g-motion-symbol-duration) var(--g-motion-symbol-easing) forwards;
+}
+@keyframes g-draw {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+/* Long past the end: said once, with one wiggle (Apple: Wiggle). */
+.g-now__forgot {
+	margin: 8px 0 0;
+	font-family: var(--g-type-row-label-family);
+	font-size: var(--g-type-row-label-size);
+	line-height: var(--g-type-row-label-line-height);
+	color: var(--g-warn-ink);
+	animation: g-wiggle var(--g-motion-symbol-duration) var(--g-motion-symbol-easing) 1;
+}
+@keyframes g-wiggle {
+	25% {
+		transform: translateX(-3px);
+	}
+	50% {
+		transform: translateX(3px);
+	}
+	75% {
+		transform: translateX(-2px);
+	}
 }
 .g-now--done .g-now__dot {
 	background: var(--g-success);

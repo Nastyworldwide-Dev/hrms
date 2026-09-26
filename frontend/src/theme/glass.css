@@ -235,8 +235,13 @@
 	--g-type-tab-label-tracking: 0;
 	--g-type-tab-label-weight: 600;
 	/* motion */
+	--g-motion-breathe-duration: 2000ms;
+	--g-motion-breathe-easing: ease-in-out;
+	--g-motion-breathe-iteration: infinite;
 	--g-motion-button-press-duration: 120ms;
 	--g-motion-button-press-easing: cubic-bezier(.2,.8,.3,1);
+	--g-motion-progress-duration: 600ms;
+	--g-motion-progress-easing: cubic-bezier(.2,.8,.2,1);
 	--g-motion-row-tap-duration: 90ms;
 	--g-motion-row-tap-easing: ease-out;
 	--g-motion-skeleton-shimmer-duration: 1400ms;
@@ -244,6 +249,8 @@
 	--g-motion-skeleton-shimmer-iteration: infinite;
 	--g-motion-state-change-duration: 200ms;
 	--g-motion-state-change-easing: cubic-bezier(.2,0,0,1);
+	--g-motion-symbol-duration: 420ms;
+	--g-motion-symbol-easing: cubic-bezier(.2,.8,.2,1);
 	--g-motion-tab-lens-duration: 500ms;
 	--g-motion-tab-lens-easing: cubic-bezier(.32,1.28,.5,1);
 }

@@ -186,17 +186,23 @@ module.exports = {
 		"stack-sm": "var(--g-stack-sm)",
 	},
 	transitionDuration: {
+		breathe: "var(--g-motion-breathe-duration)",
 		"button-press": "var(--g-motion-button-press-duration)",
+		progress: "var(--g-motion-progress-duration)",
 		"row-tap": "var(--g-motion-row-tap-duration)",
 		"skeleton-shimmer": "var(--g-motion-skeleton-shimmer-duration)",
 		"state-change": "var(--g-motion-state-change-duration)",
+		symbol: "var(--g-motion-symbol-duration)",
 		"tab-lens": "var(--g-motion-tab-lens-duration)",
 	},
 	transitionTimingFunction: {
+		breathe: "var(--g-motion-breathe-easing)",
 		"button-press": "var(--g-motion-button-press-easing)",
+		progress: "var(--g-motion-progress-easing)",
 		"row-tap": "var(--g-motion-row-tap-easing)",
 		"skeleton-shimmer": "var(--g-motion-skeleton-shimmer-easing)",
 		"state-change": "var(--g-motion-state-change-easing)",
+		symbol: "var(--g-motion-symbol-easing)",
 		"tab-lens": "var(--g-motion-tab-lens-easing)",
 	},
 	zIndex: {

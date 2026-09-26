@@ -55,10 +55,18 @@
 			<GButton
 				id="open-checkin-modal"
 				class="mt-3"
-				:label="nextAction.label"
+				:label="justSaved ? __('Saved') : nextAction.label"
 				:disabled="!online"
 				@click="handleEmployeeCheckin"
 			>
+				<!-- A saved punch, confirmed where the person tapped: a tick draws
+				     itself once (Apple: Draw On), then the button settles on the
+				     next action (the owner's "Apple way" card). -->
+				<template v-if="justSaved" #trailing>
+					<svg class="g-btn__tick" viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M5 12.5l4.5 4.5L19 7.5" />
+					</svg>
+				</template>
 			</GButton>
 			<!-- Owner ruling: never an offline check-in. The reason sits at the
 			     action, not only in the top banner (audit P0-7). -->
@@ -928,6 +936,18 @@ const handleEmployeeCheckin = async () => {
 // is a window in which another tap lands.
 const DUPLICATE_WINDOW_MS = 60 * 1000
 const submitting = ref(false)
+
+//: The tick on the Today button after a saved punch: shown for long enough to
+//: be seen (the draw plus a beat), then the button says its next action.
+const SAVED_MS = 1400
+const justSaved = ref(false)
+let savedTimer = null
+function flashSaved() {
+	clearTimeout(savedTimer)
+	justSaved.value = true
+	console.info("[CheckInPanel] punch saved; tick on the Today button")
+	savedTimer = setTimeout(() => (justSaved.value = false), SAVED_MS)
+}
 const lastSubmit = ref({ action: null, at: 0 })
 
 // A retry after a lost answer is the SAME tap. The server stored IN 09:00 but
@@ -1244,6 +1264,7 @@ const runSubmitLog = async (logType) => {
 				}
 			}
 
+			flashSaved()
 			gToast({
 				title: __("Success"),
 				// The STORED type, not the requested one. The server records an
@@ -1400,6 +1421,7 @@ useListUpdate(socket, DOCTYPE, () => {
 
 onBeforeUnmount(() => {
 	sheetSession += 1
+	clearTimeout(savedTimer)
 	stopCamera()
 	stopWatchingLocation()
 })
