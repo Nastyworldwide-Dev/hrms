@@ -2493,8 +2493,12 @@ html[data-transparency="reduce"] .g-modal::part(content) {
    re-verify on the 0.1.278 upgrade (DECISION 6). */
 /* Glass: toasts are chrome (owner ruling D3), same recipe and fallbacks as
    the tab bar. */
+/* alpha.12 C5 (measured: the page title read through "Try again"): the banner
+   lands on the header, over the densest text on screen, so it takes the solid
+   fill. Apple (feedback): feedback must be perceivable; glass that lets the
+   title through fails that. */
 #frappeui-toast-root .pointer-events-auto > div {
-	background: var(--g-glass-fill) !important;
+	background: var(--g-glass-fill-fallback) !important;
 	-webkit-backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
 	backdrop-filter: blur(var(--g-blur-panel)) saturate(180%);
 	border-color: var(--g-glass-rim) !important;
