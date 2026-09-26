@@ -94,6 +94,42 @@ app.provide("$employee", employeeResource)
 app.provide("$socket", socket)
 app.provide("$dayjs", dayjs)
 
+//: Phones installed before alpha.12 carry a worker at /assets/hrms/frontend/
+//: that never controlled the app. It is removed once the app-root worker is
+//: registered, so it stops holding a stale precache and a second push path.
+const OLD_WORKER_SCOPE = "/assets/hrms/frontend/"
+
+async function retireOldWorker() {
+	try {
+		const registrations = await navigator.serviceWorker.getRegistrations()
+		const old = registrations.filter((r) => new URL(r.scope).pathname === OLD_WORKER_SCOPE)
+		await Promise.all(old.map((r) => r.unregister()))
+		if (old.length) console.info("[sw] retired the pre-alpha.12 worker at", OLD_WORKER_SCOPE)
+	} catch (error) {
+		console.warn("[sw] could not retire the old worker:", error)
+	}
+}
+
+//: A push token belongs to the worker it was made with. Someone who turned
+//: notifications on before alpha.12 holds a token tied to the retired worker;
+//: without this they would silently stop receiving notifications. Re-subscribe
+//: on the app-root worker, once, only if they had push on.
+const PUSH_MOVED_KEY = "hrms:push-moved-to-app-worker"
+
+async function movePushToAppWorker() {
+	const push = window.frappePushNotification
+	try {
+		if (!push?.isNotificationEnabled?.() || localStorage.getItem(PUSH_MOVED_KEY)) return
+		if (typeof Notification === "undefined" || Notification.permission !== "granted") return
+		push.token = null
+		await push.enableNotification()
+		localStorage.setItem(PUSH_MOVED_KEY, "1")
+		console.info("[sw] push moved to the app-root worker")
+	} catch (error) {
+		console.warn("[sw] could not move push to the app-root worker:", error)
+	}
+}
+
 const registerServiceWorker = async () => {
 	window.frappePushNotification = new FrappePushNotification("hrms")
 
@@ -123,9 +159,11 @@ const registerServiceWorker = async () => {
 			.then((registration) => {
 				if (config) {
 					window.frappePushNotification.initialize(registration).then(() => {
-						console.log("Frappe Push Notification initialized")
+						console.info("[sw] Frappe Push Notification initialized")
+						return movePushToAppWorker()
 					})
 				}
+				retireOldWorker()
 			})
 			.catch((err) => {
 				console.error("Failed to register service worker", err)
