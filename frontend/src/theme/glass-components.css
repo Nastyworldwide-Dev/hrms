@@ -1701,7 +1701,9 @@ svg.lucide {
 	font-size: var(--g-type-micro-label-size);
 	font-weight: var(--g-type-micro-label-weight);
 	letter-spacing: var(--g-type-micro-label-tracking);
-	color: var(--g-ink3);
+	/* secondary, not tertiary: 12 pt text needs 4.5:1 (Apple accessibility);
+	   ink3 measured 3.26 light / 3.52 dark (alpha.12 audit) */
+	color: var(--g-ink2);
 }
 /* every day cell is a 44px touch target (§5) without moving the 10.5px numeral */
 .g-cal__day {
@@ -4627,6 +4629,24 @@ ion-modal.g-mustread {
 	font-weight: 700;
 	letter-spacing: 0.4px;
 	color: var(--g-ink);
+}
+
+/* alpha.12: one desktop column. At >= 1024 the bar row, the tab root's large
+   title and every screen's content share ONE centred column of
+   --g-content-column-lg (672, Apple's readable width; owner ruling R2), so the
+   title, the section headers and the groups start on the same edge and an
+   inline title is centred over the content, not over the window. Measured
+   before: title x 232 vs content 416; inline titles 172-340 pt off centre;
+   five column widths. The content columns already cap at the same token. */
+@media (min-width: 1024px) {
+	.g-header,
+	.g-large-title {
+		box-sizing: border-box;
+		width: 100%;
+		max-width: var(--g-content-column-lg);
+		margin-inline: auto;
+		padding-inline: var(--g-screen-gutter);
+	}
 }
 
 /* The You page's person, as iOS Settings draws the account (alpha.8). */

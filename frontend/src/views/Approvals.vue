@@ -10,7 +10,7 @@
 			     opens the same sheet that decides it. -->
 			<GPullRefresh @refresh="refresh" />
 			<div
-				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
+				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:py-7"
 			>
 				<ResourceError :resource="waiting" what="your approvals" />
 

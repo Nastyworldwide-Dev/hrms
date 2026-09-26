@@ -2,7 +2,7 @@
 	<BaseLayout :pageTitle="__('More')">
 		<template #body>
 			<div
-				class="flex flex-col gap-3 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-4 lg:p-7"
+				class="flex flex-col gap-3 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-4 lg:py-7"
 			>
 				<!-- one glass surface for the whole list (§15.1): the panel and its
 				     rows count as ONE, not one per row -->

@@ -17,7 +17,7 @@
 		</ShellHeader>
 		<ion-content class="ion-padding g-page__content">
 			<div class="flex flex-col min-h-full w-full">
-				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
+				<div class="w-full max-w-content-column-lg mx-auto">
 					<div class="flex flex-col gap-3 p-4">
 
 						<GListPanel v-if="firstLoad" :loading="firstLoad" :rows="5" />

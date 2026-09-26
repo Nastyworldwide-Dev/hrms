@@ -5,7 +5,7 @@
 	     and server row scope is the real fence. -->
 	<div>
 		<div class="flex flex-col w-full pt-2 pb-8">
-			<!-- same column as the pill row above it (centred, lg:px-7 = px-4 + lg:px-3) -->
+			<!-- same column as the pill row above it (centred, = px-4 + lg:px-3) -->
 			<div class="w-full max-w-content-column-lg mx-auto lg:px-3">
 				<div class="px-4 pt-4">
 					<span class="g-eyebrow">{{ __("HR · People & Culture") }}</span>

@@ -157,11 +157,15 @@ test("every signed-in route renders under a shell with the side nav", async () =
 	assert.equal(paths.Approvals, "/approvals")
 })
 
-test("lists and forms sit in the one content column, left-aligned at lg", () => {
+// SUPERSEDED 26 Sep 2026 (alpha.12, owner ruling R2): "left-aligned at lg"
+// left the large title, the inline title and centred screens on different
+// edges (measured). Every column is now the same centred one.
+test("lists and forms sit in the one content column, centred at lg like every screen", () => {
 	for (const file of ["components/ListView.vue", "components/FormView.vue"]) {
 		const text = code(read(file))
 		assert.doesNotMatch(text, /sm:max-w-2xl/, `${file} uses the column token`)
-		assert.match(text, /max-w-content-column-lg mx-auto lg:mx-0/, `${file} left-aligns at lg`)
+		assert.match(text, /max-w-content-column-lg mx-auto/, `${file} uses the one column`)
+		assert.doesNotMatch(text, /max-w-content-column-lg mx-auto lg:mx-0/, `${file} does not pin left at lg`)
 	}
 })
 

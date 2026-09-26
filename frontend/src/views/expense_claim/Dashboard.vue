@@ -2,20 +2,20 @@
 	<BaseLayout :pageTitle="__('Expense claims')">
 		<template #body>
 			<div
-				class="flex flex-col gap-8 px-4 pt-6 pb-8 lg:grid lg:grid-cols-[1fr_1.2fr] lg:gap-x-0 lg:p-7 lg:items-start"
+				class="flex flex-col gap-8 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:py-7"
 			>
 				<!-- Left: summary poster -->
-				<div class="contents lg:flex lg:flex-col lg:gap-8 lg:pr-8">
+				<div class="contents">
 					<div class="order-1">
 						<ExpenseClaimSummary />
 					</div>
 				</div>
 
 				<!-- Right: recent expenses + claim an expense -->
-				<div class="contents lg:flex lg:flex-col lg:gap-8 lg:border-l lg:border-divider lg:pl-8">
+				<div class="contents">
 					<!-- An iOS section: header with its See all, then the group
 					     (alpha.9 D19). -->
-					<section class="order-3 lg:order-1 g-form-section">
+					<section class="order-3 g-form-section">
 						<div class="g-exp-head">
 							<h2 class="g-form-section__title">{{ __("Recent expenses") }}</h2>
 							<router-link
@@ -37,7 +37,7 @@
 					<router-link
 						:to="{ name: 'ExpenseClaimFormView' }"
 						v-slot="{ navigate }"
-						class="order-2 lg:order-2"
+						class="order-2"
 					>
 						<GButton :label="__('Claim an expense')" @click="navigate">
 							<template #trailing>

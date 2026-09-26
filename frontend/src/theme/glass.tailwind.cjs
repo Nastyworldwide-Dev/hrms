@@ -80,23 +80,23 @@ module.exports = {
 	fontSize: {
 		badge: ["0.75rem", {
 			fontWeight: "600",
-			letterSpacing: "0",
-			lineHeight: "1.2",
+			letterSpacing: "0px",
+			lineHeight: "1.3333",
 		}],
 		"button-label": ["1.0625rem", {
 			fontWeight: "600",
-			letterSpacing: "-0.01em",
-			lineHeight: "1.2",
+			letterSpacing: "-0.43px",
+			lineHeight: "1.2941",
 		}],
 		caption: ["0.75rem", {
 			fontWeight: "400",
-			letterSpacing: "0",
-			lineHeight: "1.45",
+			letterSpacing: "0px",
+			lineHeight: "1.3333",
 		}],
 		"card-title": ["0.9375rem", {
 			fontWeight: "600",
-			letterSpacing: "0",
-			lineHeight: "1.4",
+			letterSpacing: "-0.23px",
+			lineHeight: "1.3333",
 		}],
 		clock: ["2.125rem", {
 			fontWeight: "700",
@@ -105,8 +105,8 @@ module.exports = {
 		}],
 		"data-system": ["0.75rem", {
 			fontWeight: "400",
-			letterSpacing: "0",
-			lineHeight: "1.5",
+			letterSpacing: "0px",
+			lineHeight: "1.3333",
 		}],
 		"display-number": ["2.125rem", {
 			fontWeight: "700",
@@ -115,28 +115,28 @@ module.exports = {
 		}],
 		eyebrow: ["0.8125rem", {
 			fontWeight: "400",
-			letterSpacing: "0",
-			lineHeight: "1.3",
+			letterSpacing: "-0.08px",
+			lineHeight: "1.3846",
 		}],
 		"field-label": ["0.8125rem", {
 			fontWeight: "400",
-			letterSpacing: "0",
-			lineHeight: "1.3",
+			letterSpacing: "-0.08px",
+			lineHeight: "1.3846",
 		}],
 		"kra-label": ["0.9375rem", {
 			fontWeight: "600",
-			letterSpacing: "0",
-			lineHeight: "1.4",
+			letterSpacing: "-0.23px",
+			lineHeight: "1.3333",
 		}],
 		"micro-label": ["0.75rem", {
 			fontWeight: "400",
-			letterSpacing: "0",
-			lineHeight: "1.3",
+			letterSpacing: "0px",
+			lineHeight: "1.3333",
 		}],
 		"panel-title": ["1.0625rem", {
 			fontWeight: "600",
-			letterSpacing: "-0.01em",
-			lineHeight: "1.2",
+			letterSpacing: "-0.43px",
+			lineHeight: "1.2941",
 		}],
 		"ring-centre": ["1.75rem", {
 			fontWeight: "700",
@@ -145,13 +145,13 @@ module.exports = {
 		}],
 		"row-label": ["0.9375rem", {
 			fontWeight: "400",
-			letterSpacing: "0",
-			lineHeight: "1.4",
+			letterSpacing: "-0.23px",
+			lineHeight: "1.3333",
 		}],
 		"screen-title": ["1.25rem", {
 			fontWeight: "600",
-			letterSpacing: "-0.01em",
-			lineHeight: "1.15",
+			letterSpacing: "-0.45px",
+			lineHeight: "1.25",
 		}],
 		"stat-number": ["1.375rem", {
 			fontWeight: "700",
@@ -161,7 +161,7 @@ module.exports = {
 		"tab-label": ["11px", {
 			fontWeight: "600",
 			letterSpacing: "0",
-			lineHeight: "1.2",
+			lineHeight: "1.1818",
 		}],
 	},
 	maxWidth: {

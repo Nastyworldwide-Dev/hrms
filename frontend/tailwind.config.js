@@ -36,6 +36,21 @@ export default {
 			// self-hosted Inter via theme/fonts.css; -apple-system leads (spec §4.1)
 			sans: "var(--g-font-ui)",
 		},
+		// frappe-ui's preset sizes (13 px at weight 420 with +0.02em tracking for
+		// text-sm, 14 px for text-base...) are not the iOS ramp and not a system
+		// weight; 56 templates still use them. Redefined onto iOS text styles so
+		// every one of them lands on the ramp at once (alpha.12 T1/T3, Apple
+		// typography default table): xs = Caption 1, sm = Footnote, base = Subhead,
+		// lg = Body, xl = Title 3.
+		fontSize: {
+			xs: ["12px", { lineHeight: "16px", letterSpacing: "0px", fontWeight: "400" }],
+			sm: ["13px", { lineHeight: "18px", letterSpacing: "-0.08px", fontWeight: "400" }],
+			base: ["15px", { lineHeight: "20px", letterSpacing: "-0.23px", fontWeight: "400" }],
+			lg: ["17px", { lineHeight: "22px", letterSpacing: "-0.43px", fontWeight: "400" }],
+			xl: ["20px", { lineHeight: "25px", letterSpacing: "-0.45px", fontWeight: "400" }],
+			"p-sm": ["13px", { lineHeight: "18px", letterSpacing: "-0.08px", fontWeight: "400" }],
+			"p-base": ["15px", { lineHeight: "20px", letterSpacing: "-0.23px", fontWeight: "400" }],
+		},
 		extend: {
 			// Glass semantic scales: backdropBlur, borderRadius (panel/action/…,
 			// additive — the zeroed scale above is untouched), boxShadow.lift,

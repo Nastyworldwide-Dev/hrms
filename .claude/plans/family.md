@@ -1,8 +1,8 @@
-CLASS: a library imported by name pulls its whole component set into every first download
-frontend/vite.config.js alias frappe-ui -> src/frappeUiLean.js — same-root (only the data helpers, toast, ErrorMessage)
-frontend/vite.config.js alias Toast icon -> src/toastIcons.js — same-root (6 glyphs instead of all of feather-icons)
-frontend/vite.config.js manualChunks frappe-ui — same-root (removed: forced the whole library into one chunk)
-frontend/src/components/FormField.vue TextEditor — same-root (loaded only when a rich-text field shows)
-frontend/src/main.js Button/Input/FormControl — same-root (unused global registrations removed)
-frontend/src/components/PdfInlineViewer.vue — not-affected — already lazy (SOP page only)
-@ionic/core (542 KB) — ticket: next largest; needs per-component imports, own slice
+CLASS: text and columns that each screen sized and placed its own way
+design/tokens.json type scale — same-root (Apple leading/size, SF tracking; one-line numerals kept 1.0)
+frontend/tailwind.config.js fontSize — same-root (frappe-ui 13px/420/+0.02em -> iOS styles; 56 templates)
+frontend/src/theme/glass-components.css .g-cal__dow — same-root (contrast 3.26 -> ink2)
+design/tokens.json content-column-lg — same-root (672, owner ruling R2)
+frontend/src/theme/glass-components.css one desktop column — same-root (bar row + large title on the content column)
+frontend/src/views/*.vue, ListView/FormView/WorkflowActionSheet — same-root (no lg:mx-0 / lg:p-7 / max-w-3xl / sm:w-96 / two-column split)
+design/tokens.json tab-label tracking — not-affected — kept 0 to fit 320 px

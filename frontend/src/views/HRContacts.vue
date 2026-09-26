@@ -10,7 +10,7 @@
 			</template>
 		</ShellHeader>
 		<ion-content class="ion-padding g-page__content">
-			<div class="w-full max-w-content-column-lg mx-auto lg:mx-0 p-4">
+			<div class="w-full max-w-content-column-lg mx-auto p-4">
 				<WhoToAsk />
 			</div>
 		</ion-content>

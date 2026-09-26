@@ -1,3 +1,3 @@
-GOAL: first paint on a slow phone drops from 10.4 s by shipping only what the first screen needs
-DONE WHEN: main bundle 1.27 MB -> 654 KB; FCP 10.4 s -> 6.3 s on 4x CPU / 150 ms / 1.6 Mbps; toast icons still draw; all tests green
-CHECK: cd frontend && yarn test && yarn build
+GOAL: one visual system: Apple's type pairs and weights, readable contrast, and one aligned column on desktop
+DONE WHEN: page-audit phone 20 -> 6 screens, desktop 23 -> 6 (only small type details left); every design gate green; tests green
+CHECK: cd frontend && yarn test && W=1280 H=800 node e2e/page-audit.mjs && node ../design/gates/ios.mjs

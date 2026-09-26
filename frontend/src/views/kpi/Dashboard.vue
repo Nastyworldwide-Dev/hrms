@@ -1,7 +1,7 @@
 <template>
 	<BaseLayout :pageTitle="__('Score')">
 		<template #body>
-			<div class="flex flex-col w-full max-w-3xl mx-auto px-4 py-7 gap-8 lg:px-7 lg:py-9">
+			<div class="flex flex-col w-full max-w-content-column-lg mx-auto px-4 py-7 gap-8 lg:py-9">
 				<!-- Whose KPI. GSegmented refuses to draw a one-option control, so
 				     for everyone but the CEO this line renders nothing at all and the
 				     page is exactly what it was. -->

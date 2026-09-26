@@ -8,7 +8,7 @@
 			     without the Helpdesk app the row must go too, not leave a spacer -->
 			<div
 				v-if="tabButtons.length > 1"
-				class="px-4 pt-4 w-full lg:px-7 lg:pt-6 max-w-content-column-lg mx-auto"
+				class="px-4 pt-4 w-full lg:pt-6 max-w-content-column-lg mx-auto"
 			>
 				<GSegmented
 					:modelValue="tab"
@@ -22,7 +22,7 @@
 			<!-- alpha.5: the lists, then "Who to ask" (a sheet, not a trip to
 			     another page), then ONE primary action at the bottom. -->
 			<div
-				class="flex flex-col gap-4 px-4 pt-4 pb-8 w-full lg:px-7 lg:pb-7 max-w-content-column-lg mx-auto"
+				class="flex flex-col gap-4 px-4 pt-4 pb-8 w-full lg:pb-7 max-w-content-column-lg mx-auto"
 			>
 				<GListPanel>
 					<GListRow :label="whoToAsk" @click="whoOpen = true" />

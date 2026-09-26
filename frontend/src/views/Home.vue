@@ -21,7 +21,7 @@
 			     the arithmetic: src/views/__tests__/home-fold-budget.test.js. -->
 			<GPullRefresh @refresh="refresh" />
 			<div
-				class="g-rows--compact flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
+				class="g-rows--compact flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:py-7"
 			>
 				<!-- alpha.7 Home (plan §3, §10.3; owner + senior, 25 Sep).
 				     1. Announcements FIRST, the same place every day, never gone:

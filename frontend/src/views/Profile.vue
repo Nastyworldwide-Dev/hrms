@@ -4,7 +4,7 @@
 		<ShellHeader :title="__('You')" />
 		<ion-content class="ion-padding g-page__content">
 			<div class="flex flex-col min-h-full w-full">
-				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
+				<div class="w-full max-w-content-column-lg mx-auto">
 					<div class="flex flex-col gap-5 p-4">
 						<!-- Who I am (audit-pages §4 "You"): name, role, and where. -->
 						<!-- As iOS Settings draws the account (alpha.8, measured): a 60 pt

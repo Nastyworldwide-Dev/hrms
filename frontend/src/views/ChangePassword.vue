@@ -7,7 +7,7 @@
 			     GPage, and a hardcoded `bg-white` painted over the theme so the dark
 			     capture rendered a white page with a near-white primary on it. -->
 			<div class="flex flex-col h-full w-full">
-				<div class="w-full h-full sm:w-96 flex flex-col">
+				<div class="w-full h-full max-w-content-column-lg mx-auto flex flex-col">
 					<div class="grow overflow-y-auto">
 						<!-- One inset group, like every form (alpha.6 B2; iOS Settings >
 						     Password). Each field is a row: label leading, entry trailing. -->
@@ -53,7 +53,7 @@
 					</div>
 
 					<div
-						class="px-4 pt-4 pb-4 standalone:pb-safe-bottom sm:w-96 bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
+						class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 					>
 						<GButton
 							:label="__('Update password')"

@@ -1,7 +1,7 @@
 <template>
 	<!-- body only: the page chrome (header, HR / IT pills, Who to ask and the
 	     one "Report an issue" button) belongs to views/helpdesk/HelpdeskHub.vue -->
-	<div class="flex flex-col gap-4 px-4 pt-4 w-full lg:px-7 max-w-content-column-lg mx-auto">
+	<div class="flex flex-col gap-4 px-4 pt-4 w-full max-w-content-column-lg mx-auto">
 		<ResourceError :resource="myIssues" what="your HR issues" />
 		<HelpSplitList
 			:rows="myIssues.data || []"

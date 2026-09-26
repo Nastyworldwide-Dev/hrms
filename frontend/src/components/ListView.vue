@@ -50,7 +50,7 @@
 		<!-- One scroller: ion-content's (alpha.8 r3). A second overflow box
 		     here scrolled every list 28 px past its content. -->
 		<div
-			class="flex flex-col items-center p-4 w-full max-w-content-column-lg mx-auto lg:mx-0"
+			class="flex flex-col items-center p-4 w-full max-w-content-column-lg mx-auto"
 			:aria-label="pageTitle"
 		>
 			<div class="w-full">

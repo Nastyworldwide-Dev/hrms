@@ -22,7 +22,7 @@
 		<template #body>
 			<GPullRefresh @refresh="refreshRequests" />
 			<div
-				class="flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:p-7"
+				class="flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:py-7"
 			>
 				<!-- Owner-approved one-screen layout (23 Sep 2026): the action
 				     first, then the numbers as one line, then what needs you, then

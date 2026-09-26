@@ -7,7 +7,7 @@
 				: 'flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4',
 		]"
 	>
-		<div :class="props.view === 'form' ? 'w-full sm:max-w-2xl sm:mx-auto' : 'contents'">
+		<div :class="props.view === 'form' ? 'w-full max-w-content-column-lg mx-auto' : 'contents'">
 			<GButton
 				v-if="props.view === 'form' || actions.length > 2"
 				:label="__('Actions')"

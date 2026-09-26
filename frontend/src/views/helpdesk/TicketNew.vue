@@ -5,7 +5,7 @@
 		<ShellHeader :title="__('New ticket')" :back="goBack" />
 		<ion-content class="g-page__content">
 			<div
-				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:p-7 max-w-content-column-lg mx-auto lg:mx-0"
+				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:py-7 max-w-content-column-lg mx-auto"
 			>
 				<!-- Same gate as the hub's IT pill: only an ANSWERED "no" is unavailable,
 				     and the form (with its get_options fetch) waits for an answered yes. -->

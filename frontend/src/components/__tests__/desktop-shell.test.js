@@ -29,13 +29,14 @@ const tokens = JSON.parse(readFileSync(join(SRC, "../../design/tokens.json"), "u
 
 test("the desktop column is a decision, not a placeholder", () => {
 	const column = tokens.layout["content-column-lg"]
-	assert.equal(column.value, "720px", "the width the owner signed off")
+	// 672 from 26 Sep 2026 (owner ruling R2): Apple's readable width; was 720
+	assert.equal(column.value, "672px", "the width the owner ruled")
 	assert.doesNotMatch(
 		column.description,
 		/starting value|expected to be tuned|provisional/i,
 		"it was accepted on 22 Sep 2026; a token that still calls itself provisional invites a re-litigation"
 	)
-	assert.match(column.description, /signed off|accepted/i, "and says so")
+	assert.match(column.description, /signed off|accepted|ruling/i, "and says so")
 })
 
 test("the desktop and the phone read one list", () => {

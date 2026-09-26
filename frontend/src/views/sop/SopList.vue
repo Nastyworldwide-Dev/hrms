@@ -9,7 +9,7 @@
 			</GIconButton>
 		</template>
 		<template #body>
-			<div class="g-form-body w-full max-w-content-column-lg mx-auto lg:mx-0">
+			<div class="g-form-body w-full max-w-content-column-lg mx-auto">
 				<!-- SEARCH FIRST. An SOP library is a lookup tool, not a browse
 				     tool: somebody opening it is usually after one document they
 				     half remember. GSearchBar, never a hand-built input. -->

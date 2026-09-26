@@ -7,7 +7,7 @@
 			     claim list lives on Requests, the grid already shows the counts,
 			     and a day's own fix starts from its day sheet. -->
 			<div
-				class="flex flex-col px-4 pt-6 pb-8 gap-5 w-full max-w-content-column-lg mx-auto lg:p-7"
+				class="flex flex-col px-4 pt-6 pb-8 gap-5 w-full max-w-content-column-lg mx-auto lg:py-7"
 			>
 				<AttendanceCalendar ref="calendar" />
 				<ResourceError :resource="shifts" what="your shifts" />

@@ -51,7 +51,7 @@
 			>
 				<!-- The one content column (§20.3): 720px, left-aligned against the
 				     side nav at lg:. It was sm:max-w-2xl (672px) centred. -->
-				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
+				<div class="w-full max-w-content-column-lg mx-auto">
 					<slot name="beforeFields"></slot>
 					<!-- Tabs -->
 					<template v-if="tabbedView">
@@ -227,7 +227,7 @@
 				v-if="!showFormButton"
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
-				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
+				<div class="w-full max-w-content-column-lg mx-auto">
 					<slot name="formButton"></slot>
 				</div>
 			</div>
@@ -248,7 +248,7 @@
 				v-else-if="canReview"
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
-				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
+				<div class="w-full max-w-content-column-lg mx-auto">
 					<GButton :label="__('Review request')" @click="openReviewSheet" />
 				</div>
 			</div>
@@ -258,7 +258,7 @@
 				v-else-if="isFormDirty || (!workflow?.hasWorkflow && formButton && !cancelAsRow)"
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
-				<div class="w-full max-w-content-column-lg mx-auto lg:mx-0">
+				<div class="w-full max-w-content-column-lg mx-auto">
 					<ErrorMessage
 						class="mb-2"
 						:message="
