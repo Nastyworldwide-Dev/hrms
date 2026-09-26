@@ -1,11 +1,11 @@
 # HANDOFF
-prompt:   alpha.11 — one work-day rule, real-life pack, last sheets audited, HR missed-checkout suggestions
+prompt:   alpha.12 — top-tier UI/UX pass (Apple rules), states, offline, speed, desktop, Apple-way Today card
 status:   done
-commit:   27159520f on nz-glass (tag v2.0.0-alpha.11)
-files:    hrms/utils/work_day.py, hrms/sync/lone_in_closer.py, hrms/api/__init__.py
-          frontend/src/utils/dayGroups.js, ListView.vue, DaySheet.vue, RequestActionSheet.vue
-          hrms/hr/report/missed_checkouts_after_midnight/
-          hrms/scenarios/attendance_pack.py
-verify:   bench --site fresh.local execute hrms.scenarios.attendance_pack.pack  (9/9 PASS)
-flags:    damaged past days stay HR-confirmed, never auto-fixed; checkin_recovery left as is
-next:     deploy nz-glass; HR opens "Missed Check-outs After Midnight", ticks a row, presses Punches
+commit:   ff00aac77 on nz-glass (tag v2.0.0-alpha.12, GitHub Release published)
+files:    frontend/src/components/NowBar.vue, CheckInPanel.vue, ListView.vue, FormView.vue
+          frontend/public/sw.js, hrms/www/service_worker.py, hrms/hooks.py
+          frontend/vite.config.js, src/frappeUiLean.js, src/theme/glass-components.css
+          design/tokens.json, design/gates/ios.mjs, scripts/release.sh
+verify:   set -a && . ./.env && set +a && node design/gates/ios.mjs  (7 audits, all 0)
+flags:    service worker moved to /hrms/sw.js: old installs unregister the old one and re-subscribe push once; theme picker removed
+next:     deploy nz-glass; open Home while checked in and see the shift gauge
