@@ -859,19 +859,32 @@ def _explain_no_overtime(employee, day) -> str:
 	so a caller that already holds a window of taps can explain many days
 	without a read per day.
 	"""
+	# The WORK day's taps (hrms/utils/work_day.py), not the clock date's: a
+	# check-out after midnight belongs to the day its session started, so a
+	# call-back ending at 01:41 is explained on the day it was worked.
+	from hrms.utils.work_day import taps_for_day
+
+	day = getdate(day)
 	rows = frappe.get_all(
 		"Employee Checkin",
-		filters={"employee": employee, "time": ["between", [f"{day} 00:00:00", f"{day} 23:59:59"]]},
+		filters={
+			"employee": employee,
+			"time": ["between", [f"{day - timedelta(days=1)} 00:00:00", f"{day + timedelta(days=1)} 23:59:59"]],
+		},
 		fields=[
+			"time",
 			"log_type",
 			"shift",
+			"shift_start",
 			"offshift",
 			"skip_auto_attendance",
 			"requires_remote_approval",
 			"remote_approval_status",
 		],
+		order_by="time asc",
 	)
-	return explain_no_overtime_rows(rows)[1]
+	mine, _elsewhere = taps_for_day(rows, day)
+	return explain_no_overtime_rows([frappe._dict(row) for row in mine])[1]
 
 
 def get_ot_claim_capacity(

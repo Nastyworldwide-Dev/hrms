@@ -182,18 +182,24 @@ def _unmarked() -> dict:
 	# Only days with a PUNCH. A day nobody worked is not an unmarked day — it
 	# is a day off, and counting it would put a number on the screen that never
 	# goes to zero and that nobody can act on.
-	worked = set(
-		frappe.get_all(
+	# The WORK day of each tap (hrms/utils/work_day.py): the shift's own start
+	# date, never the check-in WINDOW's start, which opens an hour early and
+	# put a 00:30 shift's day on the date before.
+	from hrms.utils.work_day import work_day
+
+	worked_days = {
+		work_day(row)
+		for row in frappe.get_all(
 			"Employee Checkin",
 			filters={
 				"employee": employee,
 				"time": ("between", [f"{from_date} 00:00:00", f"{to_date} 23:59:59"]),
+				"shift": ("is", "set"),
 			},
-			pluck="shift_actual_start",
+			fields=["time", "log_type", "shift_start"],
 			ignore_permissions=True,
 		)
-	)
-	worked_days = {getdate(value) for value in worked if value}
+	}
 	gaps = sorted(day for day in worked_days if day not in marked)
 	logger.info(
 		"[requests_summary] unmarked employee=%s window=%s..%s gaps=%d",

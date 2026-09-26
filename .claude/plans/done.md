@@ -1,3 +1,3 @@
-GOAL: "What the colours mean" shows each key as the calendar draws it, not as stretched bars
-DONE WHEN: WebKit: swatch 29x29 (was 117 wide); dot kinds a dot in a ring, open a ring; light + dark screenshots; scale gate ok
-CHECK: node --test frontend/src/components/glass/__tests__/calendar-key.test.js
+GOAL: every surface decides a tap's day by the one work-day rule; a real-life pack proves the day shapes
+DONE WHEN: bench pack 9/9 PASS (normal, past midnight, owner two-session call-back, late arrival, lone IN, call-back, unapproved, rest day, lunch)
+CHECK: bench --site fresh.local execute hrms.scenarios.attendance_pack.pack

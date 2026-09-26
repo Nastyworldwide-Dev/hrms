@@ -31,6 +31,8 @@ DAY = "2026-09-03"
 
 def _row(**kw):
 	base = {
+		# a time on DAY: the explanation reads the WORK day's taps (work_day.py)
+		"time": f"{DAY} 10:00:00",
 		"log_type": "IN",
 		"shift": "Day Shift",
 		"offshift": 0,

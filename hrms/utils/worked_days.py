@@ -37,14 +37,18 @@ def punch_days(employee: str, start, end) -> tuple[set, set]:
 			"employee": employee,
 			"time": ("between", [f"{start} 00:00:00", f"{getdate(end) + timedelta(days=1)} 23:59:59"]),
 		},
-		fields=["time", "log_type"],
+		fields=["time", "log_type", "shift_start"],
 		order_by="time asc",
 		ignore_permissions=True,
 	)
+	from hrms.utils.work_day import work_day
+
 	paired, open_in, open_at = set(), None, None
 	for row in sorted(punches, key=lambda r: r.time):
 		if row.log_type == "IN":
-			open_in, open_at = getdate(row.time), get_datetime(row.time)
+			# the WORK day (hrms/utils/work_day.py), the one rule every screen
+			# and the attendance record use: the shift's start date
+			open_in, open_at = work_day(row), get_datetime(row.time)
 		elif row.log_type == "OUT" and open_in is not None:
 			# A shift is under a day long. An IN left open for days that meets
 			# a later OUT is a forgotten check-out, not a worked day.

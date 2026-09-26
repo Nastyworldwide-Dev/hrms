@@ -351,18 +351,21 @@ def get_month_flags(from_date: str, to_date: str) -> dict:
 			ignore_permissions=True,
 		)
 	}
+	# The WORK day (hrms/utils/work_day.py), not the check-in window's start.
+	from hrms.utils.work_day import work_day
+
 	worked = {}
-	for value in frappe.get_all(
+	for row in frappe.get_all(
 		"Employee Checkin",
 		filters={
 			"employee": employee,
 			"time": ("between", [f"{start} 00:00:00", f"{end} 23:59:59"]),
+			"shift": ("is", "set"),
 		},
-		pluck="shift_actual_start",
+		fields=["time", "log_type", "shift_start"],
 		ignore_permissions=True,
 	):
-		if value:
-			worked[getdate(value)] = True
+		worked[work_day(row)] = True
 
 	# ONE rule for "worked" (hrms/utils/worked_days.py): an IN followed by an
 	# OUT is a worked day even before auto-attendance writes its row, and
