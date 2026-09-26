@@ -96,9 +96,19 @@
 
 	<GModal :is-open="legendOpen" :title="__('What the colours mean')" @did-dismiss="legendOpen = false">
 		<div class="g-form-group g-cal__legend">
+			<!-- A key row: the swatch drawn like a day tile, then its word, as
+			     an iOS list row with a leading icon (owner, 26 Sep 2026: the
+			     swatches stretched into bars and pushed the words right). -->
 			<span v-for="key in legend" :key="key.state" class="g-form-row g-cal__key">
-				<span class="g-cal__swatch" :class="`g-cal__swatch--${key.state}`" aria-hidden="true" />
-				{{ key.label }}
+				<!-- A tile for the day's colour; a dot inside an empty tile for the
+				     marks the calendar draws as dots (travel, training, open, fix),
+				     so the key looks like what it explains. -->
+				<span
+					class="g-cal__swatch"
+					:class="[`g-cal__swatch--${key.state}`, { 'g-cal__swatch--mark': DOT_KEYS.has(key.state) }]"
+					aria-hidden="true"
+				/>
+				<span class="g-form-row__label">{{ key.label }}</span>
 			</span>
 		</div>
 	</GModal>
@@ -110,6 +120,8 @@ import { Info } from "lucide-vue-next"
 import GModal from "./GModal.vue"
 
 const __ = inject("$translate", (t) => t)
+//: The keys the calendar draws as a DOT under the date, not as the tile.
+const DOT_KEYS = new Set(["travel", "training", "open", "needs_you"])
 const legendOpen = ref(false)
 
 const props = defineProps({

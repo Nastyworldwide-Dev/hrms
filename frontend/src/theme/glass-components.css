@@ -1808,6 +1808,54 @@ html[data-theme="dark"] .g-cal__day--present {
 	line-height: 22px;
 	color: var(--g-ink);
 }
+/* The swatch keeps its size: the form row's "control fills the rest" rule
+   (.g-form-row > :not(label) { flex: 1 1 0 }) stretched it into a bar
+   (measured, 26 Sep 2026). A 29 pt tile, the size of a row's icon well, with
+   the day tile's own shape. */
+.g-form-row.g-cal__key > .g-cal__swatch {
+	flex: 0 0 29px;
+	width: 29px;
+	height: 29px;
+	border-radius: 8px;
+}
+/* A dot key: the mark as the calendar draws it, a small dot centred in a
+   plain round tile, never a filled tile of its colour. The tile is the swatch
+   (a hairline ring); the dot is ::after, taking the swatch's own colour. */
+.g-form-row.g-cal__key > .g-cal__swatch--mark {
+	position: relative;
+	border-radius: 50%;
+	outline: 1px solid var(--g-hair);
+	outline-offset: -1px;
+	background: transparent !important;
+}
+.g-form-row.g-cal__key > .g-cal__swatch--mark::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	margin: auto;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--g-key-dot);
+}
+.g-cal__swatch--mark.g-cal__swatch--travel {
+	--g-key-dot: var(--g-success-ink);
+}
+.g-cal__swatch--mark.g-cal__swatch--training {
+	--g-key-dot: var(--g-ink);
+}
+.g-cal__swatch--mark.g-cal__swatch--needs_you {
+	--g-key-dot: var(--g-warn);
+}
+/* Open request is a RING on the calendar (a request not decided yet), so
+   its key is a small ring in the tile, not a hidden transparent dot. */
+.g-cal__swatch--mark.g-cal__swatch--open {
+	--g-key-dot: transparent;
+	box-shadow: none;
+}
+.g-cal__swatch--mark.g-cal__swatch--open::after {
+	box-shadow: inset 0 0 0 1.5px var(--g-warn-ink);
+}
 .g-cal__info {
 	display: inline-flex;
 	align-items: center;
@@ -3764,7 +3812,9 @@ ion-router-outlet {
 	color: var(--g-ink);
 }
 /* The control takes the rest of the row, its value trailing. */
-.g-form-row > :not(.g-form-row__label):not(.g-form-row__switch) {
+/* A key's swatch is a mark, not a control: it keeps its own size (the
+   calendar key stretched into bars when this matched it, 26 Sep 2026). */
+.g-form-row > :not(.g-form-row__label):not(.g-form-row__switch):not(.g-cal__swatch) {
 	flex: 1 1 0;
 	min-width: 0;
 }

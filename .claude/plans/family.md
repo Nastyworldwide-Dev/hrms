@@ -1,6 +1,4 @@
-CLASS: a screen groups taps by CLOCK date while attendance books them to the WORK day (session start)
-hrms/api/calendar.py _my_punches — same-root (fixed: taps_for_day; next_day flag; counted_elsewhere)
-hrms/api/team.py get_team_status punches — same-root (fixed: same rule; out_next_day / counted_on)
-frontend/src/components/DaySheet.vue, views/team/TeamDashboard.vue, utils/daySheet.js — same-root (the wording; In progress only while an IN is open)
-hrms/api/now.py _open_session — not-affected — reads the latest tap and the one session rule (830dbb0b0)
-hrms/hr/doctype/shift_type attendance engine — not-affected — already books by shift start (the record was right: 25 Sep 13.78 h)
+CLASS: a form row's "control fills the rest" rule stretches a fixed-size mark placed in the row
+frontend/src/theme/glass-components.css .g-form-row fill rule — same-root (excludes .g-cal__swatch; key swatch 29 pt)
+frontend/src/components/glass/GCalendar.vue legend — same-root (dot marks keyed as dots, open as a ring; label in its own span)
+.g-row__well (icon tiles in GListRow) — not-affected — GListRow is not a .g-form-row, and its well is flex: none (measured 29 pt)

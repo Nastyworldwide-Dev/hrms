@@ -91,7 +91,8 @@ test("an open request is a ring, not a fill, and its key matches", () => {
 	const rule = dot.slice(0, dot.indexOf("}"))
 	assert.match(rule, /background: transparent/)
 	assert.match(rule, /box-shadow: inset 0 0 0 1px var\(--g-/)
-	const key = css.slice(css.indexOf(".g-cal__swatch--open {"))
+	// the base key rule (the sheet's ring-in-a-tile rule also names the class)
+	const key = css.slice(css.indexOf("\n.g-cal__swatch--open {"))
 	assert.match(key.slice(0, key.indexOf("}")), /background: transparent/)
 })
 
