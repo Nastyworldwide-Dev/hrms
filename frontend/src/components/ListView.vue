@@ -243,13 +243,14 @@ const props = defineProps({
 		type: String,
 		required: true,
 	},
-	// Field + direction to sort by, e.g. "time desc". Defaults to modified desc.
-	// Employee Checkin history must sort by the PUNCH time, not modified — a synced
-	// or edited checkin bumps modified and jumps out of chronological order.
+	// Field + direction to sort by, e.g. "time desc". Defaults to creation desc:
+	// newest request first, in the order they were asked (alpha.12 Q1). It was
+	// modified desc, so an old request an approver touched jumped to the top.
+	// Employee Checkin history sorts by the PUNCH time, for the same reason.
 	orderBy: {
 		type: String,
 		required: false,
-		default: "modified desc",
+		default: "creation desc",
 	},
 })
 

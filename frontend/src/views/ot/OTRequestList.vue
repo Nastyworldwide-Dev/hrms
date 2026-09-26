@@ -2,7 +2,7 @@
 	<GPage>
 		<ListView
 			doctype="OT Request"
-			:pageTitle="__('Your overtime')"
+			:pageTitle="__('Overtime')"
 			:fields="OT_REQUEST_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>

@@ -1,6 +1,7 @@
-CLASS: a row, figure or state that no gate measured, so it drifted unseen
-frontend/src/theme/glass-components.css trailing span — same-root (See all and every trailing text at the trailing edge)
-frontend/src/components/ExpenseClaimSummary.vue — same-root (three cut-off tiles -> one grouped list, amounts trailing)
-frontend/e2e/states-audit.mjs — same-root (service worker blocked, launch shell counted, static screens exempt, exit code)
-frontend/e2e/page-audit.mjs — same-root (reviewed baseline T9=6, exit code)
-design/gates/ios.mjs — same-root (runs page-audit at 402 and 1280, and states-audit)
+CLASS: words that repeat what the person already knows, or an order that moves under them
+frontend/src/components/FormView.vue OWN_REQUEST_NOISE — same-root (adds employee, employee_name; approver still sees them)
+frontend/src/views/*List.vue page titles — same-root (plain nouns, as Apple's apps title lists)
+frontend/src/views/attendance/Dashboard.vue "Your shifts" — not-affected — kept: beside team rows "Shifts" alone is ambiguous
+frontend/src/utils/plainLabel.js posting date — same-root ("Date" -> "Sent on")
+frontend/src/components/ListView.vue orderBy — same-root (modified desc -> creation desc)
+frontend/src/views/attendance/EmployeeCheckinList.vue — not-affected — already time desc

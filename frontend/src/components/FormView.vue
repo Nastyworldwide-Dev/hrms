@@ -633,7 +633,8 @@ watch(
 const STATUS_ROWS = ["status", "approval_status"]
 //: alpha.9 D11: on the viewer's OWN saved request, Company says nothing they
 //: do not know. An approver still sees it (a person may work in two).
-const OWN_REQUEST_NOISE = ["company"]
+//: alpha.12 W: nor does "Who" — it is always the viewer on their own request.
+const OWN_REQUEST_NOISE = ["company", "employee", "employee_name"]
 const isOwnRequest = computed(
 	() => Boolean(props.id) && formModel.value?.employee === currentEmployee?.data?.name
 )

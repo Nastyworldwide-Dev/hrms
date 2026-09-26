@@ -32,3 +32,10 @@ test("the failure names the list in plain words, never the doctype", () => {
 	assert.doesNotMatch(src, /:what="props\.doctype\?\.toLowerCase\(\)"/)
 	assert.match(src, /:what="listNoun"/)
 })
+
+// alpha.12 Q1: lists are in the order things were asked, newest first. By
+// `modified` an old request jumped to the top whenever anyone touched it.
+test("a list is newest-first by when it was sent, not when it was last touched", () => {
+	assert.match(src, /default: "creation desc"/)
+	assert.doesNotMatch(src, /default: "modified desc"/)
+})

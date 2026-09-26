@@ -40,7 +40,8 @@ export const PLAIN_LABELS = {
 	"employee name": "Name",
 	"from employee": "Who",
 	"employee details": "Who",
-	"posting date": "Date",
+	// the day the request was sent, not a "date" of the request itself
+	"posting date": "Sent on",
 	"total amount reimbursed": "Paid back",
 	"total claimed amount": "Total",
 }

@@ -22,8 +22,8 @@ test("the person row shows the stored name, never the ID", () => {
 	assert.match(link, /if \(props\.display\) return props\.display/)
 })
 
-test("Company is not drawn on the viewer's own request", () => {
-	assert.match(view, /OWN_REQUEST_NOISE = \["company"\]/)
+test("Company and Who are not drawn on the viewer's own request", () => {
+	assert.match(view, /OWN_REQUEST_NOISE = \["company", "employee", "employee_name"\]/)
 	assert.match(view, /formModel\.value\?\.employee === currentEmployee\?\.data\?\.name/)
 })
 

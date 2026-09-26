@@ -2,7 +2,7 @@
 	<GPage>
 		<ListView
 			doctype="Expense Claim"
-			:pageTitle="__('Your expenses')"
+			:pageTitle="__('Expenses')"
 			:fields="EXPENSE_CLAIM_FIELDS"
 			groupBy="`tabExpense Claim`.name"
 			:filterConfig="FILTER_CONFIG"

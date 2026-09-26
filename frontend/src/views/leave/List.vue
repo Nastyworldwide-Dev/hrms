@@ -2,7 +2,7 @@
 	<GPage>
 		<ListView
 			doctype="Leave Application"
-			:pageTitle="__('Your time off')"
+			:pageTitle="__('Time off')"
 			:fields="LEAVE_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>
