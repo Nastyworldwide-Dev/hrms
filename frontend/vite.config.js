@@ -97,9 +97,15 @@ export default defineConfig({
 		}),
 	],
 	resolve: {
-		alias: {
-			"@": path.resolve(__dirname, "src"),
-		},
+		alias: [
+			// Only the frappe-ui parts this app uses (src/frappeUiLean.js). Exact
+			// match: "frappe-ui/vite" and "frappe-ui/src/..." resolve as before.
+			{ find: /^frappe-ui$/, replacement: path.resolve(__dirname, "src/frappeUiLean.js") },
+			// The toast's icon component, with only the icons a toast draws
+			// (src/toastIcons.js) instead of all of feather-icons (157 KB).
+			{ find: /^\.\/FeatherIcon\.vue$/, replacement: path.resolve(__dirname, "src/toastIcons.js") },
+			{ find: "@", replacement: path.resolve(__dirname, "src") },
+		],
 	},
 	build: {
 		outDir: "../hrms/public/frontend",
@@ -124,9 +130,10 @@ export default defineConfig({
 		sourcemap: false,
 		rollupOptions: {
 			output: {
-				manualChunks: {
-					"frappe-ui": ["frappe-ui"],
-				},
+				// frappe-ui as one forced chunk put its whole component set (rich
+				// text editor, charts, calendar) in every first download: 900 KB of
+				// JS before anything drew on a slow phone (alpha.12 C4, FCP 10.4 s).
+				// Rollup now splits it by what each route actually imports.
 			},
 		},
 	},

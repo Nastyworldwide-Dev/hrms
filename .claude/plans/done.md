@@ -1,3 +1,3 @@
-GOAL: offline launch works from the worker's own cache, not by luck of the browser cache; old installs move cleanly
-DONE WHEN: precache holds /assets/hrms/frontend/* as real JS; offline relaunch with the HTTP cache cleared loads Today; old worker retired; push re-subscribed once
-CHECK: cd frontend && node --test src/__tests__/sw.test.js
+GOAL: first paint on a slow phone drops from 10.4 s by shipping only what the first screen needs
+DONE WHEN: main bundle 1.27 MB -> 654 KB; FCP 10.4 s -> 6.3 s on 4x CPU / 150 ms / 1.6 Mbps; toast icons still draw; all tests green
+CHECK: cd frontend && yarn test && yarn build

@@ -232,10 +232,12 @@ import GDatePicker from "@/components/glass/GDatePicker.vue"
 import GDateTimePicker from "@/components/glass/GDateTimePicker.vue"
 import GSelect from "@/components/glass/GSelect.vue"
 import GSwitch from "@/components/glass/GSwitch.vue"
-import { TextEditor } from "frappe-ui"
+// Loaded only when a rich-text field is on screen (alpha.12 C4): a static
+// import pulled the whole editor into every page's first download.
+const TextEditor = defineAsyncComponent(() => import("frappe-ui/src/components/TextEditor/TextEditor.vue"))
 import { sentenceCase } from "@/utils/sentenceCase"
 import { plainLabel } from "@/utils/plainLabel"
-import { computed, onMounted, inject } from "vue"
+import { computed, defineAsyncComponent, onMounted, inject } from "vue"
 
 import Link from "@/components/Link.vue"
 

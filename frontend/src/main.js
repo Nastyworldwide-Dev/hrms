@@ -7,7 +7,7 @@ import App from "./App.vue"
 import router from "./router"
 import { initSocket } from "./socket"
 
-import { Button, Input, resourcesPlugin, FormControl, frappeRequest } from "frappe-ui"
+import { resourcesPlugin, frappeRequest } from "frappe-ui"
 import { translationsPlugin } from "./plugins/translationsPlugin.js"
 import ResourceError from "@/components/ResourceError.vue"
 import { applyProductName } from "@/utils/productName"
@@ -62,15 +62,10 @@ const socket = initSocket()
 app.use(resourcesPlugin)
 app.use(translationsPlugin)
 
-// Deliberate: registers frappe-ui's raw Button/Input globally so bare
-// <Button>/<Input> resolve everywhere without a per-file import. GTag exists
-// specifically to stop this from ever shadowing a real <button>/<input> in
-// the glass rows and cards it renders — see GTag.test.js.
-// eslint-disable-next-line vue/no-reserved-component-names
-app.component("Button", Button)
-// eslint-disable-next-line vue/no-reserved-component-names
-app.component("Input", Input)
-app.component("FormControl", FormControl)
+// frappe-ui's Button, Input and FormControl were registered globally here.
+// Nothing rendered them any more (tests/audit/no-frappe-ui-controls bans
+// them), and the registration was the trap GTag exists to dodge. Removed in
+// alpha.12 C4: they kept feather-icons (157 KB) in every first download.
 // EmptyState was registered here too until 8.11. It was the app's SECOND
 // empty-state design — a bare centred sentence, or a thick dashed box for table
 // fields — sitting beside GEmptyState's §10.1 #11 treatment, which is why one

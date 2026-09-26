@@ -1,5 +1,8 @@
-CLASS: moving the service worker changed what its relative URLs mean
-frontend/public/sw.js precacheAndRoute — same-root (fixed: entries re-based onto /assets/hrms/frontend/)
-frontend/src/main.js retireOldWorker — same-root (new: unregister the pre-alpha.12 worker at /assets/hrms/frontend/)
-frontend/src/main.js movePushToAppWorker — same-root (new: re-subscribe push once for people who had it on)
-frontend/public/sw.js NavigationRoute nadi-pages — not-affected — absolute allowlist, network first; a cached page holds only site-level boot data (hrms.py get_boot)
+CLASS: a library imported by name pulls its whole component set into every first download
+frontend/vite.config.js alias frappe-ui -> src/frappeUiLean.js — same-root (only the data helpers, toast, ErrorMessage)
+frontend/vite.config.js alias Toast icon -> src/toastIcons.js — same-root (6 glyphs instead of all of feather-icons)
+frontend/vite.config.js manualChunks frappe-ui — same-root (removed: forced the whole library into one chunk)
+frontend/src/components/FormField.vue TextEditor — same-root (loaded only when a rich-text field shows)
+frontend/src/main.js Button/Input/FormControl — same-root (unused global registrations removed)
+frontend/src/components/PdfInlineViewer.vue — not-affected — already lazy (SOP page only)
+@ionic/core (542 KB) — ticket: next largest; needs per-component imports, own slice

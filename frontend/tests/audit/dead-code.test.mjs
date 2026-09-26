@@ -61,6 +61,8 @@ const ENTRY_POINTS = new Set([
 	"src/resourceConfig.js",
 	"src/router/index.js",
 	"src/views/DesignSpecimen.vue", // dev-only route, pushed in router/index.js under import.meta.env.DEV
+	"src/frappeUiLean.js", // every bare "frappe-ui" import resolves here (vite.config.js alias)
+	"src/toastIcons.js", // frappe-ui's Toast icon import resolves here (vite.config.js alias)
 ])
 
 test("every component and module file is imported by something", () => {
@@ -151,7 +153,9 @@ test("every named export is imported by another module or reached by a test", ()
 		if (
 			!file.endsWith(".js") ||
 			file.includes("/src/router/") ||
-			rel(file) === "src/main.js"
+			rel(file) === "src/main.js" ||
+			// reached through the "frappe-ui" alias; checked on its own below
+			rel(file) === "src/frappeUiLean.js"
 		)
 			continue
 		const used = importedNames.get(file) || new Set()
@@ -164,6 +168,26 @@ test("every named export is imported by another module or reached by a test", ()
 		}
 	}
 	assert.deepEqual(dead, [], `exported but never imported:\n${dead.join("\n")}`)
+})
+
+// src/frappeUiLean.js is what every bare "frappe-ui" import resolves to
+// (vite.config.js alias). Each name it re-exports must be one src/ imports
+// from "frappe-ui", and each name src/ imports must be there — or the build
+// quietly grows back to the whole library, or fails on a missing export.
+test("the lean frappe-ui entry exports exactly what the app imports from frappe-ui", () => {
+	const lean = read(`${SRC}/frappeUiLean.js`)
+	const offered = new Set()
+	for (const m of lean.matchAll(/^export\s*\{([^}]+)\}/gm))
+		for (const part of m[1].split(",")) offered.add(part.trim().split(/\s+as\s+/).pop())
+	const wanted = new Set()
+	for (const file of files)
+		for (const m of read(file).matchAll(/import\s*\{([^}]+)\}\s*from\s*"frappe-ui"/g))
+			for (const part of m[1].split(","))
+				if (part.trim()) wanted.add(part.trim().split(/\s+as\s+/)[0])
+	const missing = [...wanted].filter((n) => !offered.has(n)).sort()
+	const unused = [...offered].filter((n) => !wanted.has(n)).sort()
+	assert.deepEqual(missing, [], "imported from frappe-ui but not in frappeUiLean.js")
+	assert.deepEqual(unused, [], "in frappeUiLean.js but never imported")
 })
 
 // ---------------------------------------------------------------------------
