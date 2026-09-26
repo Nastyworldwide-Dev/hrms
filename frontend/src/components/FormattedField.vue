@@ -1,5 +1,5 @@
 <template>
-	<div v-if="!props.value" class="text-ink-600 text-base">-</div>
+	<div v-if="!props.value" class="text-ink-600 text-row-label">-</div>
 
 	<!-- One status map (utils/requestStatus.js via GStatusChip): the local
 	     three-entry colour table this used to carry disagreed with every list. -->
@@ -9,7 +9,7 @@
 		:label="__(props.value)"
 	/>
 
-	<div v-else-if="props.fieldtype === 'Date'" class="text-inkbase text-base">
+	<div v-else-if="props.fieldtype === 'Date'" class="text-inkbase text-row-label">
 		{{ dayjs(props.value).format("D MMM YYYY") }}
 	</div>
 
@@ -25,7 +25,7 @@
 
 	<div
 		v-else-if="['Small Text', 'Text', 'Long Text'].includes(props.fieldtype)"
-		class="text-inkbase text-sm bg-surface border border-divider py-3 px-3 mt-2"
+		class="text-inkbase text-row-label bg-surface border border-divider py-3 px-3 mt-2"
 	>
 		{{ props.value }}
 	</div>
@@ -55,7 +55,7 @@
 		</iframe>
 	</div>
 
-	<div v-else class="text-inkbase text-base">{{ props.value }}</div>
+	<div v-else class="text-inkbase text-row-label">{{ props.value }}</div>
 </template>
 
 <script setup>

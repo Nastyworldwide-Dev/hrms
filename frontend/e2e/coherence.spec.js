@@ -243,8 +243,13 @@ test("coherence: profile every screen", async () => {
 							!![...document.querySelectorAll("div,p,span")].find(
 								(e) =>
 									vis(e) &&
-									!e.closest(".g-empty-line, .g-row, .g-list-panel, .g-card") &&
-									!e.querySelector(".g-empty-line") &&
+									// An empty row IN a group is the designed empty state
+									// (alpha.9 D4/D7); the kit's group classes are .g-list and
+									// .g-form-group — ".g-list-panel" never existed. A box that
+									// HOLDS groups is a layout, not an empty state: its text
+									// joined across sections ("No manager…" + "…yet") (alpha.11).
+									!e.closest(".g-empty-line, .g-row, .g-list, .g-form-group, .g-card") &&
+									!e.querySelector(".g-empty-line, .g-list, .g-form-group") &&
 									![...e.children].some((c) => /nothing|no .*(yet|found|added)|all caught up/i.test((c.textContent || "").slice(0, 80))) &&
 									/nothing|no .*(yet|found|added)|all caught up/i.test(
 										(e.textContent || "").slice(0, 80)

@@ -19,7 +19,7 @@
 			:image="employee?.image"
 			:size="px"
 		/>
-		<div class="text-base text-ink-800 grow">
+		<div class="text-row-label text-ink-800 grow">
 			{{ employee?.employee_name }}
 		</div>
 	</div>

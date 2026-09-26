@@ -1,28 +1,29 @@
 <template>
 	<div v-if="document?.doc" class="bg-ground w-full flex flex-col pb-5 max-h-sheet">
-		<!-- Header -->
-		<div
-			class="w-full flex flex-row gap-2 pt-6 pb-4 px-4 border-b border-divider justify-between items-center"
-		>
-			<div class="flex flex-col gap-1">
-				<div class="g-eyebrow">{{ __("Request") }}</div>
-				<span class="text-inkbase font-bold text-stat-number leading-tight">
-					{{ __(kindLabel) }}
-				</span>
-				<!-- WHEN, under WHAT: read off the document itself, so the sheet an
-				     approver opens from Approvals says which day it is deciding. -->
-				<span v-if="whenLine" class="text-sm text-ink-600">{{ whenLine }}</span>
+		<!-- Header: an iOS section (alpha.11 — the sheet audit found "Time off"
+		     and its date as loose lines over the rows): what the request is and
+		     WHEN, read off the document itself, so the sheet an approver opens
+		     from Approvals says which day it is deciding. -->
+		<section class="g-form-section px-4 pt-4 pb-2">
+			<div class="flex flex-row items-center justify-between">
+				<h2 class="g-form-section__title">{{ __("Request") }}</h2>
+				<GIconButton v-if="props.showOpenForm" :label="__('Open the form')" @click="openFormView">
+					<ExternalLink class="h-4 w-4" aria-hidden="true" />
+				</GIconButton>
 			</div>
-			<ExternalLink
-				v-if="props.showOpenForm"
-				class="h-4 w-4 text-ink-600 cursor-pointer shrink-0"
-				@click="openFormView"
-			/>
-		</div>
+			<GListPanel>
+				<GListRow
+					:label="__(kindLabel)"
+					:sublabel="whenLine || ''"
+					:tappable="false"
+					:chevron="false"
+				/>
+			</GListPanel>
+		</section>
 
 		<!-- Request Summary -->
 		<div class="w-full px-4 overflow-auto">
-			<div class="flex flex-col w-full">
+			<GListPanel class="flex flex-col w-full px-4">
 				<div
 					v-for="field in fieldsWithValues"
 					:key="field.fieldname"
@@ -74,7 +75,7 @@
 						</li>
 					</ul>
 				</div>
-			</div>
+			</GListPanel>
 		</div>
 
 		<!-- Actions -->
@@ -232,6 +233,9 @@ import { modalController } from "@ionic/vue"
 import { createDocumentResource, createResource } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
 import GButton from "@/components/glass/GButton.vue"
+import GIconButton from "@/components/glass/GIconButton.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import { computed, defineAsyncComponent, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import FilePreviewModal from "@/components/FilePreviewModal.vue"

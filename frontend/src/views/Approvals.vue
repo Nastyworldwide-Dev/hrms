@@ -17,7 +17,7 @@
 				<GListPanel v-if="waiting.loading && !waiting.data" loading :rows="1" />
 
 				<template v-else-if="!waiting.error">
-					<p v-if="rows.length" class="text-card-title text-ink-600">
+					<p v-if="rows.length" class="g-form-footer">
 						{{ summary }}
 					</p>
 					<!-- The same 51 pt row as the skeleton above (alpha.8 r3: three

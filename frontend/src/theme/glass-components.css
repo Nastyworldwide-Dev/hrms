@@ -850,6 +850,12 @@ html[data-theme="dark"] .g-badge--open {
 	position: relative;
 	display: inline-block;
 }
+/* The group under a section header painted over the lower half of the
+   link's 44 pt target, so a tap there opened the first row instead (alpha.11,
+   measured by hit-test on Time off and Expenses). The link sits above it. */
+.g-seclink {
+	z-index: 1;
+}
 /* One expander, two names: .g-seclink for section-header links, .g-touch-area
    for any control whose visual is deliberately smaller than its target (the
    push toggle). Expands in BOTH axes to the minimum, centred, so a narrow

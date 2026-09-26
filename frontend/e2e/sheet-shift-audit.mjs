@@ -7,26 +7,28 @@
 //   cd frontend && set -a && . ../.env && set +a && node e2e/sheet-shift-audit.mjs
 import { webkit } from "playwright"
 import { BASE, PW } from "./screens.mjs"
+import { withPendingLeave } from "./pendingRequest.mjs"
 
 const SHEETS = [
 	["staff", "/requests", /^new request$/i, "New request"],
 	["staff", "/requests", /all balances|leave left/i, "All balances"],
 	["staff", "/requests", /^see all$/i, "All your requests"],
 	["staff", "/home", /^check in$/i, "Check in"],
-	["staff", "/dashboard/attendance", /^\d{1,2} \w+, /, "Day (calendar)"],
+	["staff", "/dashboard/attendance", /^\d{1,2} \w+ \d{4}, /, "Day (calendar)"],
 	["staff", "/dashboard/attendance", /what the colours mean/i, "Colours"],
 	["staff", "/more", /public holidays/i, "Public holidays"],
 	["staff", "/profile", /your details/i, "Your details"],
 	["staff", "/support", /who to ask/i, "Who to ask"],
 	["staff", "/expense-claims/new", /add an expense/i, "New expense item"],
-	["approver", "/approvals", /W0 employee · \d+ request/i, "Approval"],
 	["approver", "/approvals", /already answered/i, "Answered"],
+	["approver", "/approvals", /W0 employee/i, "Approval"],
 ]
 const who = { staff: "nadi.w0.employee@example.invalid", approver: "nadi.w0.approver@example.invalid" }
 
 const browser = await webkit.launch()
 const ctxs = {}
 let bad = 0
+await withPendingLeave(browser, async () => {
 for (const [persona, path, opener, name] of SHEETS) {
 	if (!ctxs[persona]) {
 		ctxs[persona] = await browser.newContext({ viewport: { width: 402, height: 874 }, hasTouch: true, colorScheme: "dark" })
@@ -96,6 +98,7 @@ for (const [persona, path, opener, name] of SHEETS) {
 	console.log(JSON.stringify(row))
 	await page.close()
 }
+})
 console.log("sheets", SHEETS.length, "moving", bad)
 const FAILED = bad
 console.log(`GATE_COUNT ${FAILED}`)

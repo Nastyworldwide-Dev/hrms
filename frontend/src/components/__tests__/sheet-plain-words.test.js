@@ -13,7 +13,7 @@ const sheet = read("../RequestActionSheet.vue")
 const fields = read("../../data/config/requestSummaryFields.js")
 
 test("the heading is the plain kind, not the doctype", () => {
-	assert.match(sheet, /\{\{ __\(kindLabel\) \}\}/)
+	assert.match(sheet, /:label="__\(kindLabel\)"/)
 	assert.match(sheet, /REQUEST_KIND\[document\?\.doctype\]/)
 	assert.doesNotMatch(sheet, /\{\{ __\(document\?\.doctype\) \}\}/)
 })

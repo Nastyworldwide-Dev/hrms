@@ -17,7 +17,7 @@
 -->
 <template>
 	<GModal :is-open="open" :title="heading" @did-dismiss="$emit('close')">
-		<div class="flex flex-col gap-4">
+		<div class="g-form-body">
 			<ResourceError :resource="daySheet" what="this day" />
 
 			<template v-if="daySheet.loading && !me">
@@ -26,12 +26,12 @@
 			</template>
 
 			<template v-else-if="me">
-				<!-- One line of shift, the taps, the hours (approved Calendar plan
-				     §4). No explaining paragraph. -->
-				<p class="text-card-title text-ink-600">{{ shiftLine }}</p>
-
-				<section v-if="me.punches.length" class="g-form-section">
-					<GListPanel>
+				<!-- iOS sections (alpha.11: the audit, opening this sheet for the
+				     first time, found three loose lines): the shift is the header
+				     over the taps, the hours and any note are their footers. -->
+				<section class="g-form-section">
+					<h2 class="g-form-section__title">{{ shiftLine }}</h2>
+					<GListPanel v-if="me.punches.length">
 						<GListRow
 							v-for="(punch, index) in me.punches"
 							:key="index"
@@ -40,28 +40,27 @@
 							:chevron="false"
 						/>
 					</GListPanel>
+					<!-- A date that only holds a check-out from the night before:
+					     where it counted, never a bare tap read as "In progress". -->
+					<GListPanel v-else-if="(me.counted_elsewhere || []).length">
+						<GListRow
+							v-for="(tap, index) in me.counted_elsewhere"
+							:key="index"
+							:label="__('{0} {1}', [__(tapWord(tap.log_type)), $dayjs(tap.time).format('HH:mm')])"
+							:sublabel="__('Counted on {0}', [$dayjs(tap.counted_on).format('ddd D MMM')])"
+							:chevron="false"
+						/>
+					</GListPanel>
+					<GListPanel v-else>
+						<GListRow :label="__('You didn\'t check in this day.')" :tappable="false" />
+					</GListPanel>
 					<!-- Said once, under the taps (owner, 26 Sep 2026: "special
 					     wording so it's clear it was cleared out"). -->
 					<p v-if="me.punches.some((p) => p.next_day)" class="g-form-footer">
 						{{ __("Worked past midnight: the check-out after 12 am counts on this day.") }}
 					</p>
+					<p v-if="hoursLine" class="g-form-footer">{{ hoursLine }}</p>
 				</section>
-				<!-- A date that only holds a check-out from the night before: where
-				     it counted, never a bare tap that reads as "In progress". -->
-				<GListPanel v-else-if="(me.counted_elsewhere || []).length">
-					<GListRow
-						v-for="(tap, index) in me.counted_elsewhere"
-						:key="index"
-						:label="__('{0} {1}', [__(tapWord(tap.log_type)), $dayjs(tap.time).format('HH:mm')])"
-						:sublabel="__('Counted on {0}', [$dayjs(tap.counted_on).format('ddd D MMM')])"
-						:chevron="false"
-					/>
-				</GListPanel>
-				<p v-else class="text-card-title text-ink-600">
-					{{ __("You didn't check in this day.") }}
-				</p>
-
-				<p v-if="hoursLine" class="text-card-title text-inkbase">{{ hoursLine }}</p>
 
 				<!-- ONE team line for managers and team leads, their direct team
 				     only (owner ruling 1, 23 Sep; AUDIT-PLAN "Team line"). The line
@@ -76,7 +75,7 @@
 				<GButton v-if="action.kind === 'claim'" :label="__(action.label)" @click="claimOt" />
 				<GButton v-else-if="action.kind === 'fix'" :label="__(action.label)" @click="fixDay" />
 				<GButton v-else-if="action.kind === 'leave'" :label="__(action.label)" @click="askDayOff" />
-				<p v-else-if="action.note" class="text-card-title text-ink-600">
+				<p v-else-if="action.note" class="g-form-footer">
 					{{ __(action.note, action.noteArgs) }}
 				</p>
 			</template>

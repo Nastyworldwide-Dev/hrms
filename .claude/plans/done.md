@@ -1,3 +1,3 @@
-GOAL: HR's missed-checkout list suggests the check-out time and opens the one Fix attendance door; nothing is applied automatically
-DONE WHEN: each row carries suggested_out = the tap saved as a check-in, a "Punches" button opens the Employee Checkin list, bench probe shows it
-CHECK: PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/hr/report/missed_checkouts_after_midnight/ hrms/tests/test_fix_day_screen.py
+GOAL: the two sheets no audit had opened (calendar day, approval) follow the iOS rules; every design gate green
+DONE WHEN: sheet-consistency-audit 12/12 ok, ios gate 0, coherence 0, usage 0 new, a11y 0 new; frontend tests 1383 pass
+CHECK: cd frontend && set -a && . ../.env && set +a && node e2e/sheet-consistency-audit.mjs && node ../design/gates/ios.mjs
