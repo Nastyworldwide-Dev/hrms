@@ -1,3 +1,3 @@
-GOAL: one visual system: Apple's type pairs and weights, readable contrast, and one aligned column on desktop
-DONE WHEN: page-audit phone 20 -> 6 screens, desktop 23 -> 6 (only small type details left); every design gate green; tests green
-CHECK: cd frontend && yarn test && W=1280 H=800 node e2e/page-audit.mjs && node ../design/gates/ios.mjs
+GOAL: the keyboard fits the field and never hides what you are typing or the Send button
+DONE WHEN: hours/money get the decimal pad, Int the number pad; Return says next/go; login autofills; with the visual viewport at 538 the Send bar bottom is 538
+CHECK: cd frontend && node --test src/components/__tests__/keyboard-fits-the-field.test.js src/utils/__tests__/keyboardSafe.test.js

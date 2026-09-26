@@ -32,6 +32,9 @@
 			:placeholder="placeholder"
 			:min="min || undefined"
 			:max="max || undefined"
+			:inputmode="inputmode || undefined"
+			:enterkeyhint="enterkeyhint || undefined"
+			:autocomplete="autocomplete || undefined"
 			:disabled="disabled"
 			:aria-label="!label && ariaLabel ? ariaLabel : undefined"
 			:aria-invalid="error ? 'true' : undefined"
@@ -55,6 +58,11 @@ defineProps({
 	//: Bounds for a date / time / number input, on the input itself.
 	min: { type: String, default: "" },
 	max: { type: String, default: "" },
+	//: The keyboard iOS shows (alpha.12 K21): "decimal" for hours and money,
+	//: "numeric" for whole numbers. What Return says: "next", "send", "done".
+	inputmode: { type: String, default: "" },
+	enterkeyhint: { type: String, default: "" },
+	autocomplete: { type: String, default: "" },
 	error: { type: String, default: "" },
 	disabled: { type: Boolean, default: false },
 })

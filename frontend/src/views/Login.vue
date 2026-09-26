@@ -26,12 +26,15 @@
 							:label="__('Email')"
 							:placeholder="__('johndoe@mail.com')"
 							autocomplete="username"
+							inputmode="email"
+							enterkeyhint="next"
 						/>
 						<GInput
 							v-model="password"
 							type="password"
 							:label="__('Password')"
 							placeholder="••••••"
+							enterkeyhint="go"
 							:error="errorMessage"
 							autocomplete="current-password"
 						/>

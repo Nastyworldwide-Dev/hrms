@@ -109,6 +109,7 @@
 		<!-- Data field -->
 		<GInput
 			v-else-if="props.fieldtype === 'Data'"
+			enterkeyhint="next"
 			:model-value="modelValue"
 			:aria-label="label"
 			:placeholder="rowPlaceholder"
@@ -138,10 +139,13 @@
 			"
 		/>
 
-		<!-- Float/Int field -->
+		<!-- Float/Int field. The decimal pad for hours and money, the number pad
+		     for whole numbers (alpha.12 K21); type stays number for validation. -->
 		<GInput
 			v-else-if="isNumberType"
 			type="number"
+			:inputmode="numericMode"
+			enterkeyhint="next"
 			:model-value="modelValue"
 			:aria-label="label"
 			:placeholder="rowPlaceholder"
@@ -301,6 +305,9 @@ const isStacked = computed(() =>
 const isNumberType = computed(() => {
 	return ["Int", "Float", "Currency"].includes(props.fieldtype)
 })
+
+//: Int -> the whole-number pad; Float and Currency -> the pad with a point.
+const numericMode = computed(() => (props.fieldtype === "Int" ? "numeric" : "decimal"))
 
 const isReadOnly = computed(() => {
 	return Boolean(props.readOnly)

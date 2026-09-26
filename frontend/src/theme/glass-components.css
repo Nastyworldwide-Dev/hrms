@@ -4631,6 +4631,13 @@ ion-modal.g-mustread {
 	color: var(--g-ink);
 }
 
+/* alpha.12 K23: a form's sticky Send bar rides above the iPhone keyboard.
+   src/utils/keyboardSafe.js sets --g-keyboard-inset from the visual viewport
+   (Android resizes the page itself: interactive-widget in index.html). */
+.g-page .sticky.bottom-0 {
+	bottom: var(--g-keyboard-inset, 0px);
+}
+
 /* alpha.12: one desktop column. At >= 1024 the bar row, the tab root's large
    title and every screen's content share ONE centred column of
    --g-content-column-lg (672, Apple's readable width; owner ruling R2), so the
