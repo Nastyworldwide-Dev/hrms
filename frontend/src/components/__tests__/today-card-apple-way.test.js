@@ -55,3 +55,14 @@ test("the gauge's 'now' is the employee's wall clock from the server, not the de
 	assert.match(bar, /data\.value\.time/)
 	assert.doesNotMatch(bar, /siteTime\(new Date\(\)\.toISOString\(\)\)/)
 })
+
+// A NEW notification (the unread count went up) bounces the bell once
+// (Apple: Bounce, "communicate that an action occurred"). Not on first load,
+// not when the count falls.
+const header = read("../glass/GAppHeader.vue")
+test("the bell bounces once when the unread count rises, never on load", () => {
+	assert.match(header, /watch\(\s*\(\) => props\.unread/)
+	assert.match(header, /next > \(prev \?\? next\)/)
+	assert.match(header, /'g-header__action--bounce': bouncing/)
+	assert.match(css, /\.g-header__action--bounce \.g-icon\s*\{[^}]*animation:\s*g-bounce var\(--g-motion-symbol-duration\)/)
+})

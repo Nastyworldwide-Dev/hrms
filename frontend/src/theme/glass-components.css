@@ -3524,6 +3524,18 @@ ion-router-outlet {
 .g-now--past .g-now__gauge-ends b {
 	color: var(--g-warn-ink);
 }
+/* A new notification: the bell bounces once (Apple: Bounce). */
+.g-header__action--bounce .g-icon {
+	animation: g-bounce var(--g-motion-symbol-duration) var(--g-motion-symbol-easing) 1;
+}
+@keyframes g-bounce {
+	35% {
+		transform: translateY(-4px) scale(1.08);
+	}
+	70% {
+		transform: translateY(1px);
+	}
+}
 /* The saved-punch tick on the Today button (Apple: Draw On). */
 .g-btn__tick {
 	width: 20px;

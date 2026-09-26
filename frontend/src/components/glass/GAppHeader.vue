@@ -75,6 +75,7 @@
 		<button
 			type="button"
 			class="g-header__action g-focusable"
+			:class="{ 'g-header__action--bounce': bouncing }"
 			:aria-label="unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'"
 			@click="$emit('notifications', $event)"
 		>
@@ -101,7 +102,7 @@
 </template>
 
 <script setup>
-import { inject } from "vue"
+import { inject, onBeforeUnmount, ref, watch } from "vue"
 import GIconButton from "./GIconButton.vue"
 import GAvatar from "./GAvatar.vue"
 import GLogo from "./GLogo.vue"
@@ -112,13 +113,34 @@ const showBack = inject("gShowBack", false)
 //: BaseLayout's scroll says when the large title has gone (alpha.7 §5.1).
 const collapsed = inject("gTitleCollapsed", false)
 
-defineProps({
+const props = defineProps({
 	title: { type: String, default: "" },
 	unread: { type: Number, default: 0 },
 	avatarUrl: { type: String, default: "" },
 	avatarLabel: { type: String, default: "" },
 })
 defineEmits(["notifications", "profile", "back"])
+
+//: One bounce when something new arrives (Apple: Bounce, "an action
+//: occurred"): the count ROSE. Not on first load (prev unknown), not when
+//: reading notifications lowers it.
+const BOUNCE_MS = 450
+const bouncing = ref(false)
+let bounceTimer = null
+watch(
+	() => props.unread,
+	(next, prev) => {
+		if (!(next > (prev ?? next))) return
+		console.info("[GAppHeader] new notification; bell bounces once")
+		bouncing.value = false
+		clearTimeout(bounceTimer)
+		requestAnimationFrame(() => {
+			bouncing.value = true
+			bounceTimer = setTimeout(() => (bouncing.value = false), BOUNCE_MS)
+		})
+	}
+)
+onBeforeUnmount(() => clearTimeout(bounceTimer))
 </script>
 
 <!-- No scoped style for theme-owned classes (8.16). A scoped rule carries a
