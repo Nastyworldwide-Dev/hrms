@@ -46,3 +46,19 @@ class TestFindMissed(unittest.TestCase):
 			p("A", datetime(2026, 9, 25, 3), "IN", remote_approval_status="Rejected"),
 		]
 		self.assertEqual(self.rows(punches), [])
+
+
+class TestTheSuggestion(unittest.TestCase):
+	"""alpha.11: each row carries a suggested check-out HR confirms, never applies."""
+
+	def test_the_suggested_check_out_is_the_tap_that_was_saved_as_a_check_in(self):
+		out = list(
+			find_missed(
+				[p("A", datetime(2026, 9, 24, 9), "IN"), p("A", datetime(2026, 9, 25, 3, 12), "IN")],
+				date(2026, 9, 1),
+				date(2026, 9, 30),
+			)
+		)
+		self.assertEqual(out[0]["suggested_out"], datetime(2026, 9, 25, 3, 12))
+		self.assertIn("Punches", out[0]["what_to_do"])
+		self.assertIn("confirm", out[0]["what_to_do"])

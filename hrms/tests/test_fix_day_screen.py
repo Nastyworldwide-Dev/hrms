@@ -221,6 +221,15 @@ class TestTheOneDoor(unittest.TestCase):
 		# the master edit's own HR gate already wraps setup_toolbar
 		self.assertIn("if (sa_enabled()) sa_grid(report).setup_toolbar();", js)
 
+	def test_missed_checkouts_links_to_the_punches_and_opens_nothing(self):
+		# alpha.11: the report suggests a check-out; HR confirms it on the one door.
+		js = read(ROOT / "hr/report/missed_checkouts_after_midnight/missed_checkouts_after_midnight.js")
+		self.assertNotIn("fix_day.bundle.js", js)
+		self.assertNotIn("hrms.fix_day", js)
+		self.assertIn('add_inner_button(__("Punches")', js)
+		self.assertIn(self.PUNCHES, js)
+		self.assertIn("MC_HR_ROLES", js)
+
 	def test_the_attendance_list_links_to_the_punches_and_opens_nothing(self):
 		self.assertNotIn("hrms.fix_day.from_attendance", read(BUNDLE))
 		listing = read(ROOT / "hr/doctype/attendance/attendance_list.js")

@@ -57,7 +57,13 @@ def _columns():
 			"fieldtype": "Datetime",
 			"width": 220,
 		},
-		{"fieldname": "what_to_do", "label": _("What to do"), "fieldtype": "Data", "width": 320},
+		{
+			"fieldname": "suggested_out",
+			"label": _("Suggested check-out (confirm it)"),
+			"fieldtype": "Datetime",
+			"width": 200,
+		},
+		{"fieldname": "what_to_do", "label": _("What to do"), "fieldtype": "Data", "width": 420},
 	]
 
 
@@ -106,8 +112,13 @@ def find_missed(punches, from_date, to_date):
 					"day": first.date(),
 					"first_in": first,
 					"second_in": again,
+					# alpha.11: a SUGGESTION, never applied here. The tap the old
+					# button saved as a check-in is the likeliest real check-out;
+					# only HR, who can ask the person, confirms it.
+					"suggested_out": again,
 					"what_to_do": _(
-						"Fix a day: the second tap was the check-out. Use the real time they left."
-					),
+						"Tick the row, press Punches, then Fix attendance: tick the {0} tap as the "
+						"check-out if the person confirms that is when they left, or type the real time."
+					).format(again.strftime("%H:%M")),
 				}
 		previous = row

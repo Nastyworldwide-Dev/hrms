@@ -1,3 +1,3 @@
-GOAL: every surface decides a tap's day by the one work-day rule; a real-life pack proves the day shapes
-DONE WHEN: bench pack 9/9 PASS (normal, past midnight, owner two-session call-back, late arrival, lone IN, call-back, unapproved, rest day, lunch)
-CHECK: bench --site fresh.local execute hrms.scenarios.attendance_pack.pack
+GOAL: HR's missed-checkout list suggests the check-out time and opens the one Fix attendance door; nothing is applied automatically
+DONE WHEN: each row carries suggested_out = the tap saved as a check-in, a "Punches" button opens the Employee Checkin list, bench probe shows it
+CHECK: PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/hr/report/missed_checkouts_after_midnight/ hrms/tests/test_fix_day_screen.py
