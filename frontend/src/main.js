@@ -98,7 +98,10 @@ const registerServiceWorker = async () => {
 	window.frappePushNotification = new FrappePushNotification("hrms")
 
 	if ("serviceWorker" in navigator) {
-		let serviceWorkerURL = "/assets/hrms/frontend/sw.js"
+		// At the app root, not /assets/hrms/frontend/: a worker controls only pages
+		// under its own folder, so from there it never controlled /hrms and the
+		// app had no offline launch (alpha.12 C1). hrms/www/service_worker.py.
+		let serviceWorkerURL = "/hrms/sw.js"
 		let config = ""
 
 		if (window.frappe?.boot?.push_relay_server_url) {
@@ -115,6 +118,7 @@ const registerServiceWorker = async () => {
 		navigator.serviceWorker
 			.register(serviceWorkerURL, {
 				type: "classic",
+				scope: "/hrms",
 			})
 			.then((registration) => {
 				if (config) {

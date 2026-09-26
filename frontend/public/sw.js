@@ -1,5 +1,7 @@
 import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching"
 import { clientsClaim } from "workbox-core"
+import { NavigationRoute, registerRoute } from "workbox-routing"
+import { NetworkFirst } from "workbox-strategies"
 
 import { initializeApp } from "firebase/app"
 import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw"
@@ -9,6 +11,18 @@ precacheAndRoute(self.__WB_MANIFEST)
 
 // Clean up old caches
 cleanupOutdatedCaches()
+
+// The app page itself (alpha.12 C1). Frappe renders /hrms per user — it carries
+// the CSRF token and boot — so it is not in the build's precache, and the
+// installed app opened offline to a browser error. Network first: online it is
+// always fresh; offline the last good copy opens and the app's own offline
+// banner says so. Only /hrms pages; Desk and the API are never touched.
+registerRoute(
+	new NavigationRoute(
+		new NetworkFirst({ cacheName: "nadi-pages", networkTimeoutSeconds: 4 }),
+		{ allowlist: [/^\/hrms(\/|$)/] }
+	)
+)
 
 const jsonConfig = new URL(location).searchParams.get("config")
 

@@ -37,6 +37,12 @@ export default defineConfig({
 			registerType: "prompt",
 			strategies: "injectManifest",
 			injectRegister: null,
+			// registerSW (UpdatePrompt) names the SAME worker main.js registers:
+			// served at /hrms/sw.js by hrms/www/service_worker.py, scope /hrms.
+			// Two different URLs would be two workers fighting over the page.
+			buildBase: "/hrms/",
+			scope: "/hrms",
+			filename: "sw.js",
 			devOptions: {
 				enabled: true,
 			},

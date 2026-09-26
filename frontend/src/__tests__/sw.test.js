@@ -41,3 +41,15 @@ test("the notification URL is stored on data for every browser", () => {
 		"data.url set before/without the isChrome branch"
 	)
 })
+
+// alpha.12 C1: the installed app opened offline to a browser error. The app's
+// page is rendered per user by Frappe (it carries the CSRF token and boot), so
+// it is not in the build's precache. The worker keeps the last good copy of
+// each /hrms page, network first, and serves it when the network is gone.
+test("an /hrms page is served network-first with an offline fallback", () => {
+	assert.match(src, /from "workbox-routing"/)
+	assert.match(src, /from "workbox-strategies"/)
+	assert.match(src, /new NavigationRoute\(/)
+	assert.match(src, /new NetworkFirst\(/)
+	assert.match(src, /allowlist:\s*\[\s*\/\^\\\/hrms/)
+})

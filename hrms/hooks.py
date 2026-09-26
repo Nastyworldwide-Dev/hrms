@@ -81,10 +81,15 @@ calendars = ["Leave Application"]
 # automatically create page for each record of this doctype
 website_generators = ["Job Opening"]
 
+# /hrms/sw.js is matched first (werkzeug ranks a static rule above a converter
+# rule) and served by ServiceWorkerPage: a worker controls only pages under its
+# own folder, so it must live at /hrms to make the app work offline (alpha.12 C1).
 website_route_rules = [
+	{"from_route": "/hrms/sw.js", "to_route": "hrms/sw.js"},
 	{"from_route": "/hrms/<path:app_path>", "to_route": "hrms"},
 	{"from_route": "/hr/<path:app_path>", "to_route": "roster"},
 ]
+page_renderer = ["hrms.www.service_worker.ServiceWorkerPage"]
 # Jinja
 # ----------
 
