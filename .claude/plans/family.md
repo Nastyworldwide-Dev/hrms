@@ -1,3 +1,4 @@
-CLASS: a new notification arrived with no sign on screen but a dot
-frontend/src/components/glass/GAppHeader.vue — same-root (bounce once when unread rises; never on load or on read)
-frontend/src/theme/glass-components.css g-bounce — same-root (motion scale, stopped by reduced motion)
+CLASS: release bookkeeping (no code)
+frontend/package.json — version 2.0.0-alpha.12
+docs/glass/CHANGELOG.md — alpha.12 entry
+docs/glass/plan/NADI_2.0.0-alpha.12_PLAN.md — plan, evidence, carried items

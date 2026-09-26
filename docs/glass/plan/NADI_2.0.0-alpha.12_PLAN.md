@@ -165,3 +165,28 @@ Rulebook → gates go red → slices 0–18 in order, each red → green, one co
 - R2 Desktop column 672 (Apple readable width, recommended) or 720?
 - R3 Publish GitHub Releases (the repo is public)?
 - R4 Remove the in-app Light/Dark picker and follow the phone (Apple)? (recommended)
+
+---
+
+## 5. Shipped in 2.0.0-alpha.12 (evidence)
+
+| Slice | Commit | Before → after |
+|---|---|---|
+| 0 Release tags | b3951f68e | 0 → 8 GitHub Releases; `scripts/release.sh`; release-tags test |
+| C2 Error is not empty | e136eca1f | 11 screens said "No … yet" on a forced 500 → "Could not load … Try again" |
+| C5 Toast legibility | e638afc9d | title read through the banner → solid fill |
+| C3 Launch shell | c46fab8a8 | blank white until boot → shell at 500 ms, light and dark |
+| C1 Offline launch | 6a1f33315, 83956547e | no controller, offline reload failed → worker at /hrms, offline relaunch opens Today with the HTTP cache cleared (verifier REFUTED the first cut; fixed) |
+| C4 Performance | 1bc9c3be9 | main JS 1.27 MB → 654 KB; FCP 10.4 s → 6.3 s (4× CPU, 150 ms, 1.6 Mbps) |
+| T1–T3 + desktop | 0d9a0bd90 | page-audit phone 20 → 6, desktop 23 → 6; contrast 0; one 672 column |
+| Keyboard | 66e04810b | no inputmode anywhere → decimal/numeric pads, Return=next, Send bar at the keyboard edge (538/538) |
+| Trailing + gate | 77c7f2567 | See all mid-row → trailing; ios gate 4 → 7 audits, all 0 |
+| Words + order | 5e2d036ef | Who/Company on own request, "Your …" titles, "Date", modified-desc order → fixed |
+| R4 Theme | e29321971 | in-app picker → follows the phone |
+| R1 Apple-way card | 2849a6c68, 71620e9f3 | state only → shift gauge (live: 4h 13m left, 53%), breathe, rolling time, drawn tick, forgot prompt, bell bounce |
+
+## 6. Carried to the next release
+
+- **Ionic core (542 KB)**: the next largest first-load cost; needs per-component imports.
+- **Notifications grouping** (70 near-identical rows), **request timeline**, **Calendar month summary**.
+- Six reviewed line-height findings (T9) kept as a baseline in the page-audit.

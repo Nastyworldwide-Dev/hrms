@@ -10,6 +10,48 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.12] — 2026-09-26
+
+Top-tier pass, measured on every screen at phone and desktop size, in light
+and dark, with slow loading, server errors and offline forced on purpose.
+Every rule is quoted from Apple's guidelines. Plan and evidence:
+`docs/glass/plan/NADI_2.0.0-alpha.12_PLAN.md`.
+
+### Fixed
+- **A failed load no longer says "No requests yet".** It says "Could not
+  load your time off requests" with a **Try again** button.
+- **No more blank white screen while the app loads.** A calm placeholder
+  in your phone's light or dark shows at once.
+- **The installed app opens offline**, showing your last screen with the
+  "No connection" banner. Before, it never worked offline at all.
+- **Opens faster**: first screen on a slow phone in 6.3 s, down from 10.4 s
+  (half the download).
+- **Desktop lines up**: one content column, the title on the same edge as
+  the content, and sub-page titles centred over it.
+- **Text follows Apple's sizes and spacing** on every screen; faint calendar
+  letters are now readable.
+- **The keyboard fits the field**: a number pad for hours and money, Return
+  goes to the next field, and Send stays above the keyboard.
+- "See all" sits on the right edge; expense totals are no longer cut off.
+- The error banner no longer shows the page title through it.
+- Your own request no longer shows "Who: you" or your company; "Date" now
+  says "Sent on"; lists are newest first by when you sent them.
+
+### Changed
+- **Light or dark follows your phone.** The Appearance setting is gone, as
+  Apple asks.
+- List titles are plain: "Time off", "Expenses", "Check-ins".
+
+### Added
+- **The Today card shows your shift.** A bar from your shift's start to its
+  end says how much is left and turns orange past the end. The working dot
+  breathes, the time rolls each minute, a saved check-in draws a tick, and
+  three hours past the end it asks "Forgot to check out?". The bell bounces
+  once when something new arrives. All of it holds still with Reduce Motion.
+- Every release is now on the GitHub Releases page, with its notes.
+- The design check now measures desktop as well as phone, and forces slow,
+  failed and offline loading on every screen.
+
 ## [2.0.0-alpha.11] — 2026-09-26
 
 One work-day rule everywhere, the last two sheets checked, and a to-do list
