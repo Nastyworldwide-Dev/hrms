@@ -1,3 +1,3 @@
-GOAL: a leader's things are one "Your team" group on More (Approvals, Team, Roster), each server-gated; You is only you; the Approvals count is everything waiting.
-DONE WHEN: Approvals gone from Profile; More teamItems gated by isApprover/hasTeam; badge = needs_you total + checkins.
-CHECK: node --test frontend/src/views/__tests__/your-team-group.test.js frontend/tests/profile-approver-entry.test.mjs; WebKit: approver sees Your team → Approvals, employee sees no group, neither has Approvals on You
+GOAL: no Desk write endpoint in hrms can be triggered by a GET (CSRF skipped); the device ingestion endpoint is the one named exception.
+DONE WHEN: 15 functions methods=["POST"]; test_desk_writes_are_post_only walks every whitelisted writer outside hrms/api.
+CHECK: PYTHONPATH=. python3 hrms/tests/test_desk_writes_are_post_only.py; bench frappe.handler.is_valid_http_method: GET refused / POST allowed on update_status, send_exit_questionnaire, expire_allocation

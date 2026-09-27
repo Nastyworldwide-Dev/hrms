@@ -107,7 +107,7 @@ class JobApplicant(Document):
 KANBAN_COLUMNS = ["Open", "Replied", "Shortlisted", "Accepted"]
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_kanban_board(board_name: str) -> dict:
 	frappe.has_permission("Job Applicant", throw=True)
 
@@ -156,7 +156,7 @@ def create_interview(job_applicant: str, interview_type: str) -> Document:
 	return interview
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def schedule_interview(
 	job_applicant: str,
 	interview_type: str,

@@ -390,7 +390,7 @@ def add_log_based_on_employee_field(
 	return doc
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def bulk_fetch_shift(checkins: list[str] | str) -> None:
 	if isinstance(checkins, str):
 		checkins = frappe.json.loads(checkins)
