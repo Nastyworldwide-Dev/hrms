@@ -160,3 +160,39 @@ Then: every gate at 402 / 820 / 1280 with safe areas, light and dark → full vi
 - **R11:** Lock past roster weeks after the pay cut-off (16th–15th) for everyone except HR? *(recommended: yes)*
 - **R12:** The release name list: a plain theme (for example Malaysian rivers: Klang, Pahang, Rajang, …)? *(owner's choice)*
 - **R8:** Approve the balance strip mockup, and **R13** the Calendar Me | Team mockup, before they are built.
+
+
+---
+
+## Shipped (evidence, 27 Sep 2026)
+
+| Item | Commit | Measured |
+|---|---|---|
+| 0 Installed-iPhone journey gate | 16a38960d | red on HEAD: J1 ×5 (double title after Back), J2 ×29 (21 pt band); 0 after |
+| C double title | c2ae0aa07 | journey J1 0 |
+| D top band | 1dcc97700 | journey J2 0; bar = 44 pt row |
+| S1 page copy on shared phone | 26dee5f1b | Chromium: /hrms/home copy gone after logout, only a Guest page |
+| S2 push GET | 1c802b294 | bench: GET 403, POST no CSRF 400, POST+CSRF handled |
+| B check-in time | 398d149af | time ends at 342, chevron 354 (was 263 / 275–370) |
+| F long values | 996bc885f | 36-char manager name under its label |
+| I, J form fit | 8d914bd50 | "Required" whole; no spinner |
+| A check-in sheet | 27e4f4c9a | photo loads (480 px); stranger + guest 403 |
+| attachments preview | e6c05c3d2 | PDF mark + image thumbnail; ticket picks now kept |
+| P version name, no date | b56499be9 | You: "Nadi 2.0.0-alpha.13", no date/time |
+| G, H, M decided requests | ad5b63574, 9635038cc, 380f306db, d350c09e4 | no Add a file; status a row; no stale balance |
+| K empty lists | a7eda6117 | one voice + New in place |
+| L Score row | 5cb26c4d1 | no colour bar |
+| N words | 1334108aa | password rule live (bench policy on, then off) |
+| O Your team | b32f6880b | approver sees Approvals on More; You has none |
+| S4 Desk GET writes | 3b127a650 | 15 POST-only, GET refused by Frappe's own check |
+| P1 first paint | ec01c46c3 | FCP 5.68 → 5.28 s; JS 492 → 467 KB; CSS 182 → 150 KB |
+| Roster Patterns report | c2879a177 | HR 22 rows sorted; staff refused |
+| Found by the release gate | d350c09e4, cdd790d4c, fd3e816d5, 2ef868243 | loose status line; Time off 191 pt jump; start-up hang on a failed read (16/16 after); stale HR contacts |
+| Mockups for sign-off | 4891e26a2 | balance strip (3 options), Team calendar |
+
+Carried to alpha.15:
+- **Balance strip:** build it after the owner signs off the mockup.
+- **Team calendar:** build it after the owner signs off the mockup.
+- **Roster:** design it from the live Roster Patterns numbers.
+- **First paint under 5 s:** not reached. What remains is Vue, the router and Ionic's core.
+- **helpdesk.get_ticket:** its permission check still needs to be verified on a site with Helpdesk installed.

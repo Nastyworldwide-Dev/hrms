@@ -10,6 +10,57 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.14] — Clear Screens and Safer Sign-in — 2026-09-27
+
+A whole-app pass: the screens you reported, the same kinds of fault
+everywhere else, three security fixes, a lighter first download, and a
+check that walks the app the way it runs on an iPhone. Plan and evidence:
+`docs/glass/plan/NADI_2.0.0-alpha.14_PLAN.md`.
+
+### Added
+- **A check-in opens as what it is**: "In · 8:58 am", the day, your photo,
+  and where in plain words ("Inside the work area · 40 m"). The coordinates
+  stay as a small line under it; tap to copy.
+- **Every attachment shows what it is**: a photo as a thumbnail, a PDF or
+  other file with its type. Tap to open it.
+- **You shows the release by name**: "Nadi 2.0.0-alpha.14 · Clear Screens
+  and Safer Sign-in". No date or time anywhere in the app.
+- **Your team, on More**: Approvals, Team and Roster in one group, shown to
+  leaders only. The Approvals number counts everything waiting on you.
+- **Change password says what the site needs as you type**, before you
+  press Update.
+- **For HR, in Desk: Roster Patterns** — how each person is really rostered
+  (fixed, weekly, rotating, day by day), read-only, before the roster
+  feature is designed.
+
+### Fixed
+- **The title showed twice** after coming back to a tab.
+- **A gap sat above every page**: the top bar is now iPhone height.
+- **Check-ins**: the time sat in the middle of the row; it is beside the
+  arrow now.
+- **A long manager name** wrapped into three short lines on You; it sits
+  under its label on one line.
+- **Forms**: "Requirec" (a cut-off word) on the Issue form, and a stray box
+  after Hours on Overtime.
+- **A decided request** no longer offers "Add a file", shows its status on
+  the page instead of squeezed into the top bar, and no longer shows an old
+  "Days left" figure.
+- **Empty lists** say one plain thing each and offer New in place.
+- **Time off jumped** as it loaded for anyone with no leave allocated; it
+  holds still and says "None allocated yet".
+- **The app could stay blank** when the server failed at start-up; it now
+  opens and says what could not load, with Try again.
+- **HR contacts** kept an old saved list; they refresh every time you open
+  Who to ask.
+- **Opens faster**: first screen in about 5.3 s on a slow phone (was 5.7 s).
+
+### Security
+- On a shared phone, the last person's page stayed saved for offline use
+  after they logged out. It is cleared at log out and log in.
+- Another website could sign your phone up for, or off, notifications.
+- Fifteen Desk actions (among them sending an exit questionnaire and
+  expiring a leave allocation) could be triggered by a link on another page.
+
 ## [2.0.0-alpha.13] — 2026-09-27
 
 Each request shows its history, the month is summed up, notifications fold,
