@@ -204,6 +204,9 @@
 							@handleFileDelete="handleFileDelete"
 						/>
 
+						<!-- The request's story: sent, then each decision (alpha.13). -->
+						<RequestTimeline v-if="props.id" :doctype="props.doctype" :name="props.id" />
+
 						<!-- Cancel a sent request = a red row at the end, as iOS
 						     does for a destructive action on a record (alpha.7 B6);
 						     it still asks first (the confirm dialog). -->
@@ -415,6 +418,7 @@ import { sentenceCase } from "@/utils/sentenceCase"
 import { sendLabel } from "@/utils/sendLabel"
 import { plainLabel } from "@/utils/plainLabel"
 import FileUploaderView from "@/components/FileUploaderView.vue"
+import RequestTimeline from "@/components/RequestTimeline.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
 import GModal from "@/components/glass/GModal.vue"
