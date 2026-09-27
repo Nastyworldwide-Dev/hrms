@@ -3992,7 +3992,10 @@ ion-router-outlet {
 /* The control takes the rest of the row, its value trailing. */
 /* A key's swatch is a mark, not a control: it keeps its own size (the
    calendar key stretched into bars when this matched it, 26 Sep 2026). */
-.g-form-row > :not(.g-form-row__label):not(.g-form-row__switch):not(.g-cal__swatch) {
+/* An icon (a chevron, a mark) keeps its own size too: this grew the check-in
+   row's 16 pt chevron into a 95 pt slot and left the time mid-row (owner,
+   27 Sep 2026). */
+.g-form-row > :not(.g-form-row__label):not(.g-form-row__switch):not(.g-cal__swatch):not(svg) {
 	flex: 1 1 0;
 	min-width: 0;
 }

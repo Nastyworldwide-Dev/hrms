@@ -1,16 +1,14 @@
-fix(security): any page could sign a phone off notifications
+fix(lists): the check-in time floated in the middle of its row
 
-Push subscribe and unsubscribe change which phones receive a person's
-notifications, but they took GET, as Frappe's own endpoints do. Frappe
-skips its CSRF check on GET, so any page the person visited could sign
-their phone up or off with a plain link, silently cutting them off
-approvals and check-in reminders. The 18-endpoint GET sweep missed
-these two because they override Frappe's names rather than declare
-new ones. The FCM token also travelled in the URL, which lands in
-server logs.
+The owner's screenshot of Check-ins showed each time sitting mid-row.
+Measured: the time ended at x 263 while the chevron's box ran from
+275 to 370. The shared row rule ".g-form-row > :not(label)" gives
+every non-label child flex 1 1 0, and it outranked the chevron's own
+rule on specificity, so a 16 pt icon took a 95 pt slot. An icon in a
+row keeps its size now; the time ends beside the chevron (342 / 354).
 
-Both are POST only now; the PWA sends POST with the CSRF token and the
-token in the body. On the bench: GET 403, POST without the token 400,
-POST with it reaches the handler.
+Also points two tests at this change and the last one: the swatch
+selector test, and the cache-isolation harness, which now loads the
+page-copy helper that session.js imports.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

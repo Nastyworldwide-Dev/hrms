@@ -12,7 +12,7 @@ const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "ut
 const css = read("../../../theme/glass-components.css")
 
 test("the fill rule never stretches a key swatch", () => {
-	assert.match(css, /\.g-form-row > :not\(\.g-form-row__label\):not\(\.g-form-row__switch\):not\(\.g-cal__swatch\) \{\s*flex: 1 1 0;/)
+	assert.match(css, /\.g-form-row > :not\(\.g-form-row__label\):not\(\.g-form-row__switch\):not\(\.g-cal__swatch\):not\(svg\) \{\s*flex: 1 1 0;/)
 	assert.match(css, /\.g-form-row\.g-cal__key > \.g-cal__swatch \{\s*flex: 0 0 29px;\s*width: 29px;\s*height: 29px;/)
 })
 

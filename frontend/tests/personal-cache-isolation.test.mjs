@@ -96,6 +96,8 @@ function browser(
 	const helper = new URL("src/utils/personalCache.js", root)
 	if (existsSync(fileURLToPath(helper)))
 		vm.runInContext(executable(readFileSync(helper, "utf8")), context)
+	// alpha.14: session.js also clears the offline page copy; no Cache Storage here
+	vm.runInContext(executable(source("src/utils/cachedPages.js")), context)
 	vm.runInContext(executable(source("src/resourceConfig.js")), context)
 	vm.runInContext(executable(source("src/data/overtime.js")), context)
 	vm.runInContext(executable(source("src/data/notifications.js")), context)
