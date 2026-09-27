@@ -1,3 +1,17 @@
-docs(handoff): alpha.14 done
+test(gates): check sheets in dark mode, and open the request sheet
+
+The owner's screenshot showed the request sheet with a black box inside
+it, 12 pt labels and a name cut at the edge. The sheet audit passed it
+for three reasons: it ran in light mode only, where the page colour and
+the sheet colour are the same grey, so a page-coloured box is
+invisible; it only checked the kit's own row classes, and this sheet
+drew rows by hand; and it never opened the sheet from Requests or Time
+off at all.
+
+It now runs in dark and light (both in the iOS gate), opens the sheet
+from Requests' last five, Time off and Check-ins, and flags a box in
+the page colour, row labels under body size in any markup, and text
+at the sheet's edge. On the old code it reports the request sheet in
+all three places, and "Your details" on You.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

@@ -1,3 +1,3 @@
-GOAL: no view reads employee.data.<field> while the page is set up (the rest of cdd790d4c's class).
-DONE WHEN: ShiftRequestForm, leave Form, expense claim Form, IssueList guarded; a test walks every view's setup lines.
-CHECK: node --test frontend/src/views/__tests__/you-without-employee.test.js (red with the old leave Form line, green now)
+GOAL: the sheet check catches what the owner saw (a page-coloured box in a sheet, 12 pt row labels) in dark mode, and opens the request sheet from Requests and Time off.
+DONE WHEN: sheet audit runs dark AND light in the iOS gate; new rules + 3 new openers; red on the old RequestActionSheet (5 sheets), 0 after the fix.
+CHECK: SCHEME=dark node frontend/e2e/sheet-consistency-audit.mjs (old sheet: 5 issues; now 0); SCHEME=light 0

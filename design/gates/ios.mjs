@@ -25,7 +25,8 @@ import { fileURLToPath } from "node:url";
 const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const AUDITS = [
 	["ios-consistency-audit"],
-	["sheet-consistency-audit"],
+	["sheet-consistency-audit", { SCHEME: "dark" }, "sheet-consistency-dark"],
+	["sheet-consistency-audit", { SCHEME: "light" }, "sheet-consistency-light"],
 	["scroll-and-shift-audit"],
 	["sheet-shift-audit"],
 	["page-audit", { W: "402", H: "874", SCHEME: "light" }, "page-audit-phone"],

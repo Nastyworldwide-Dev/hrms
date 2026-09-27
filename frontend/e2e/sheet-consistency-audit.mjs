@@ -21,6 +21,10 @@ const SHEETS = [
 	["staff", "/expense-claims/new", /add an expense/i, "New expense item"],
 	["approver", "/approvals", /already answered/i, "Answered"],
 	["approver", "/approvals", /W0 employee/i, "Approval"],
+	// the sheet a sent request opens (owner screenshot, 27 Sep): Requests' last five
+	["staff", "/requests", /^(overtime|time off|expense|shift change|fix a day) · /i, "Your request"],
+	["staff", "/dashboard/leaves", /nadi w0 annual/i, "Request from Time off"],
+	["staff", "/employee-checkins", /^(in|out)\b/i, "Check-in"],
 ]
 const who = { staff: "nadi.w0.employee@example.invalid", approver: "nadi.w0.approver@example.invalid" }
 
@@ -30,7 +34,10 @@ let bad = 0
 await withPendingLeave(browser, async () => {
 for (const [persona, path, opener, name] of SHEETS) {
 	if (!ctxs[persona]) {
-		ctxs[persona] = await browser.newContext({ viewport: { width: 402, height: 874 }, hasTouch: true })
+		// alpha.14: the owner's phone is in dark mode, where the page colour and
+		// the sheet colour differ; in light they are the same grey and a page-
+		// coloured box inside a sheet cannot be seen. SCHEME picks one.
+		ctxs[persona] = await browser.newContext({ viewport: { width: 402, height: 874 }, hasTouch: true, colorScheme: process.env.SCHEME || "dark" })
 		await ctxs[persona].addInitScript(() => localStorage.setItem("hrms:install-prompt-dismissed", String(Date.now())))
 		await ctxs[persona].request.post(`${BASE}/api/method/login`, { form: { usr: who[persona], pwd: PW } })
 	}
@@ -67,6 +74,32 @@ for (const [persona, path, opener, name] of SHEETS) {
 			if (loose.length) out.push(`loose text: ${loose.length} (${loose.slice(0, 2).map((e) => JSON.stringify(e.textContent.trim().slice(0, 28))).join(", ")})`)
 			const btns = uniq([...box.querySelectorAll(".g-btn")].filter(vis).map((x) => R(x.getBoundingClientRect().height)))
 			if (btns.length > 1) out.push(`button heights differ: ${btns}`)
+			// alpha.14 (owner screenshot, 27 Sep): the request sheet drew a black
+			// page-coloured box inside the sheet, 12 px grey labels, a value cut at
+			// the right edge and a text field inside a row. iOS: a sheet is the
+			// grouped background; groups sit on it; nothing is a box in a box.
+			const sheetBg = getComputedStyle(sheet).getPropertyValue("--background").trim()
+			const bgOf = (e) => getComputedStyle(e).backgroundColor
+			const opaque = (c) => c && c !== "rgba(0, 0, 0, 0)" && c !== "transparent"
+			const boxes = [...box.querySelectorAll("div, section")].filter(vis).filter((e) => {
+				if (e.closest(".g-form-group, .g-list, .g-sheet__group, .g-sheet__head, .g-btn, .g-chips, .g-segmented, .g-cal, .g-clock, .g-selfie, .g-toast, .g-attachment, img, .g-map")) return false
+				const r = e.getBoundingClientRect()
+				// the sheet's own colour (its --background) is the sheet, not a box
+				const probe = document.createElement("i")
+				probe.style.color = sheetBg
+				document.body.append(probe)
+				const sheetRgb = getComputedStyle(probe).color
+				probe.remove()
+				return opaque(bgOf(e)) && r.width > sheetBox.width * 0.6 && r.height > 60 && bgOf(e) !== sheetRgb && !e.classList.contains("g-sheet")
+			})
+			if (boxes.length) out.push(`a box inside the sheet: ${boxes.slice(0, 2).map((e) => `${String(e.className).split(" ").slice(0, 3).join(".")} ${bgOf(e)}`).join(", ")}`)
+			// every row reads at body size: a label beside a value, in any list
+			// markup (the request sheet drew 12 pt labels in hand-made rows)
+			const rowsLike = [...box.querySelectorAll("*")].filter((e) => vis(e) && e.children.length >= 2 && getComputedStyle(e).display === "flex" && getComputedStyle(e).flexDirection === "row" && e.getBoundingClientRect().height >= 36 && e.getBoundingClientRect().height <= 80 && !e.closest(".g-btn, .g-sheet__head, .g-chips, .g-segmented, .g-seg, .g-cal, .g-request-sheet__bar, .g-attachment, .g-exp-head"))
+			const tinyLabels = rowsLike.map((r) => [...r.children].find((c) => vis(c) && c.textContent.trim())).filter((c) => c && !c.querySelector("svg, img, .g-avatar") && R(parseFloat(getComputedStyle(c).fontSize)) < 15)
+			if (tinyLabels.length) out.push(`row labels under body size: ${tinyLabels.length} (${tinyLabels.slice(0, 2).map((e) => JSON.stringify(e.textContent.trim().slice(0, 18))).join(", ")})`)
+			const cut = texts.filter((e) => { const r = e.getBoundingClientRect(); return r.right > sheetBox.right - 8 || r.left < sheetBox.left + 8 })
+			if (cut.length) out.push(`text at the sheet edge: ${cut.length} (${cut.slice(0, 2).map((e) => JSON.stringify(e.textContent.trim().slice(0, 18))).join(", ")})`)
 			return out
 		})
 		if (issues.length) bad++
