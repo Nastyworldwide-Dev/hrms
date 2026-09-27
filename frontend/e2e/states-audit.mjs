@@ -65,7 +65,14 @@ for (const s of list) {
 	await p.reload({ waitUntil: "networkidle" }).catch(() => {})
 	// the launch shell holds until Vue mounts; give the error branch time to draw
 	await p.waitForFunction(() => !document.querySelector(".boot-shell"), null, { timeout: 8000 }).catch(() => {})
-	await p.waitForTimeout(1200)
+	// Wait for the page's own answer, not a fixed delay: a screen that loads
+	// several things draws its "Try again" when the LAST one fails (Profile
+	// missed a fixed 1.2 s once, 27 Sep 2026, and passed 3/3 when waited for).
+	if (!STATIC.has(s.path))
+		await p
+			.waitForFunction(() => [...document.querySelectorAll("button")].some((e) => /try again|retry/i.test(e.textContent) && e.getBoundingClientRect().height > 0), null, { timeout: 5000 })
+			.catch(() => {})
+	await p.waitForTimeout(300)
 	row.error = await p.evaluate(look).catch((e) => ({ err: String(e).slice(0, 60) }))
 	await p.screenshot({ path: `${OUT}/error${s.path.replaceAll("/", "_")}.png` }).catch(() => {})
 	await p.close()
