@@ -28,7 +28,8 @@ createResource({
 })
 
 export function getEmployeeInfo(employeeID) {
-	if (!employeeID) employeeID = employeeResource.data.name
+	// the employee read may have failed (navigationGate lets that through)
+	if (!employeeID) employeeID = employeeResource.data?.name
 
 	return employeesByID[employeeID]
 }

@@ -1,6 +1,5 @@
-import { personalCacheKey } from "@/utils/personalCache"
+import { personalCacheKey, sessionUser } from "@/utils/personalCache"
 import { createResource, createListResource } from "frappe-ui"
-import { userResource } from "./user"
 import { setBadge } from "@/utils/appBadge"
 
 // No localStorage cache: this is a live counter. Caching it restored a stale
@@ -17,7 +16,9 @@ export const unreadNotificationsCount = createResource({
 
 export const notifications = createListResource({
 	doctype: "PWA Notification",
-	filters: { to_user: userResource.data.name },
+	// The cookie's user, not userResource.data: that read may have failed, and
+	// reading .name off null here threw on import and hung every page (alpha.14).
+	filters: { to_user: sessionUser() },
 	fields: [
 		"name",
 		"from_user",

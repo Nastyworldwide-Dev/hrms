@@ -1,3 +1,3 @@
-GOAL: a request's status is a row inside a group (not loose text); Time off does not jump for someone with no allocation.
-DONE WHEN: FormView status is a one-row group "Status  Rejected"; LeaveBalance empty = one "None allocated yet" row + footer.
-CHECK: ios-consistency-audit 0 (was 5 loose), scroll-and-shift-audit 0 (was /dashboard/leaves 191 pt); yarn test 1500/1500
+GOAL: no page hangs on the launch placeholder when a server read fails during start-up.
+DONE WHEN: notifications filter from the cookie user; You builds without an employee; employees.js guarded; data modules never read resource.data.<field> unguarded (test).
+CHECK: forced-500 reload x8 on /settings and /profile: 16/16 Try again, 0 page errors (was 5 hangs, TypeError L.data.name); states-audit 0 twice; yarn test 1504

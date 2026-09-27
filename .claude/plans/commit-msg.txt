@@ -1,16 +1,21 @@
-fix(layout): a loose status line, and Time off jumped for no allocation
+fix(startup): a failed read at start-up could leave the app blank
 
-The iOS gate before release found two things.
+The states audit (every server call answers 500) found You and
+/settings stuck on the launch placeholder in about one run in three.
+The navigation gate lets a person through when their user or employee
+record could not be read, which is right offline; but two modules
+read `.data.name` off that record while the page was being set up.
+When the read had failed, data was null, a TypeError was thrown, and
+the page never mounted:
+- data/notifications.js filtered by userResource.data.name at import,
+  and the header imports it on every page. It now uses the user from
+  the session cookie; the server fences the list to to_user anyway.
+- You built its details from employee.data.name. Without an employee
+  it now shows "Could not load your details" with Try again.
+employees.js had the same read and is guarded. A test keeps every
+data module from reading resource.data.<field> unguarded.
 
-The request status moved out of the top bar (9635038cc) sat on the page
-as loose text, outside any group, on five request screens; iOS keeps
-content in groups. It is now a one-row group, "Status  Rejected", the
-status as coloured text at body size.
-
-Time off jumped 191 pt for anyone with no leave allocated: a one-card
-skeleton (97 pt) gave way to a 288 pt empty box. It says so in one
-row, "None allocated yet", with a footer that HR sets it up, the same
-words as the Requests tab, so the answer is the height of its
-placeholder. Seen on both cold and warm opens; 0 after.
+Forced-500 reloads, 8 each on /settings and /profile: 16 of 16 now
+show Try again, no page errors (before: 5 hangs). States audit 0 twice.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

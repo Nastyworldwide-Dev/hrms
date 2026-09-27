@@ -302,16 +302,31 @@ function toggleReminders(on) {
 	setReminders.submit({ enabled: on ? 1 : 0 })
 }
 
-const employeeDoc = createDocumentResource({
-	doctype: DOCTYPE,
-	name: employee.data.name,
-	fields: "*",
-	auto: true,
-	transform: (data) => {
-		data.ctc = formatCurrency(data.ctc, data.salary_currency)
-		return data
-	},
-})
+//: The employee record may not be read yet: the navigation gate lets a person
+//: through when that read failed or they are offline ("employee unknown").
+//: Built from `employee.data.name` directly, this threw during setup and You
+//: never mounted (alpha.14, states audit). Without an employee it is a failed
+//: read like any other, and Try again reads the employee first.
+function detailsResource() {
+	if (employee.data?.name)
+		return createDocumentResource({
+			doctype: DOCTYPE,
+			name: employee.data?.name,
+			fields: "*",
+			auto: true,
+			transform: (data) => {
+				data.ctc = formatCurrency(data.ctc, data.salary_currency)
+				return data
+			},
+		})
+	console.warn("[You] employee not read yet; details wait for Try again")
+	return {
+		doc: null,
+		get: { error: new Error("employee unknown"), loading: false, reload: () => employee.reload().then(() => location.reload()) },
+		reload: () => employee.reload().then(() => location.reload()),
+	}
+}
+const employeeDoc = detailsResource()
 
 const roleLine = computed(() => {
 	const doc = employeeDoc.doc || employee.data || {}
@@ -378,7 +393,7 @@ const logout = async () => {
 // handler ref tore down every OTHER component's list_update listener too — and
 // rejoins on reconnect.
 useListUpdate(socket, DOCTYPE, (name) => {
-	if (name === employee.data.name) employeeDoc.reload()
+	if (name === employee.data?.name) employeeDoc.reload()
 })
 
 </script>
