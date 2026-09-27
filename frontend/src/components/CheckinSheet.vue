@@ -7,10 +7,11 @@
 -->
 <template>
 	<div class="g-form-body">
-		<section class="g-form-section">
+		<!-- the sheet's heading: the tap, then its day as the header's footnote -->
+		<header class="g-checkin-sheet__head">
 			<h2 class="g-checkin-sheet__title">{{ title }}</h2>
-			<p class="g-checkin-sheet__day">{{ day }}</p>
-		</section>
+			<span class="g-form-footer g-checkin-sheet__day">{{ day }}</span>
+		</header>
 
 		<!-- The photo itself (owner: every attachment shows a preview). Private
 		     file: the browser loads it through Frappe's permission check. -->

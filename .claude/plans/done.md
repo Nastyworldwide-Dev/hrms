@@ -1,3 +1,3 @@
-GOAL: the sheet check catches what the owner saw (a page-coloured box in a sheet, 12 pt row labels) in dark mode, and opens the request sheet from Requests and Time off.
-DONE WHEN: sheet audit runs dark AND light in the iOS gate; new rules + 3 new openers; red on the old RequestActionSheet (5 sheets), 0 after the fix.
-CHECK: SCHEME=dark node frontend/e2e/sheet-consistency-audit.mjs (old sheet: 5 issues; now 0); SCHEME=light 0
+GOAL: every request sheet (Requests, Time off, list pages, Approvals) and Your details is one group of kit rows on the sheet's background; no black box, 17 pt rows, long values under their label, notes as text.
+DONE WHEN: RequestActionSheet + ProfileInfoModal use g-form-group/g-form-row + v-value-row; action bar in --g-sheet-bg; CheckinSheet day line is a header footnote.
+CHECK: sheet audit dark + light 0 (old code: 5); WebKit dark+light screenshots with a 32-char name; yarn test 1505+

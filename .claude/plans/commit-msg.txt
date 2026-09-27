@@ -1,17 +1,20 @@
-test(gates): check sheets in dark mode, and open the request sheet
+fix(sheets): the request sheet drew its own black box and tiny rows
 
-The owner's screenshot showed the request sheet with a black box inside
-it, 12 pt labels and a name cut at the edge. The sheet audit passed it
-for three reasons: it ran in light mode only, where the page colour and
-the sheet colour are the same grey, so a page-coloured box is
-invisible; it only checked the kit's own row classes, and this sheet
-drew rows by hand; and it never opened the sheet from Requests or Time
-off at all.
+The owner's screenshot: tapping a sent request showed a black box
+inside the sheet, 12 pt grey labels, a long name cut off at the right
+edge and the note as a field inside a row. The sheet (the same one
+Requests, Time off, the list pages and Approvals open) drew its own
+rows and painted the page colour inside the sheet, so in dark mode it
+was a black slab on grey.
 
-It now runs in dark and light (both in the iOS gate), opens the sheet
-from Requests' last five, Time off and Check-ins, and flags a box in
-the page colour, row labels under body size in any markup, and text
-at the sheet's edge. On the old code it reports the request sheet in
-all three places, and "Your details" on You.
+It is now one group of the kit's rows on the sheet's own background:
+17 pt labels and values, a long value under its label, the note as
+text, the status as coloured text at row size, the person's initial
+beside their name, and the Withdraw / Edit / Approve bar in the
+sheet's colour. "Your details" on You had the same hand-made rows and
+gets the same group; the check-in sheet's day line was loose text.
+
+Proven with a 32-character name in dark and light. The sheet audit,
+now run in both themes, is 0 (it reported 5 on the old code).
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

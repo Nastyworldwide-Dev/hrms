@@ -4939,11 +4939,15 @@ ion-modal.g-mustread {
 	font-weight: 700;
 	color: var(--g-ink);
 }
-.g-checkin-sheet__day {
-	margin: 0;
+.g-checkin-sheet__head {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.g-checkin-sheet__day.g-form-footer {
+	padding: 0;
 	font-size: 15px;
 	line-height: 20px;
-	color: var(--g-ink2);
 }
 .g-checkin-sheet__photo {
 	display: block;
@@ -5045,4 +5049,59 @@ ion-modal.g-mustread {
 	line-height: 22px;
 	font-weight: 600;
 	letter-spacing: -0.4px;
+}
+
+/* The request sheet (alpha.14; owner screenshot 27 Sep): groups on the sheet's
+   own background, nothing painted in the page colour inside it. The actions
+   bar stays pinned at the bottom in the sheet's colour, over a hairline. */
+.g-request-sheet {
+	padding: 0 0 16px;
+}
+.g-form-row.g-form-row--readonly > .g-request-sheet__text,
+.g-form-row.g-form-row--readonly > span.g-request-sheet__text:last-child {
+	white-space: pre-wrap;
+	text-align: start;
+	color: var(--g-ink);
+}
+.g-request-sheet__bar {
+	position: sticky;
+	bottom: 0;
+	z-index: 2;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	width: 100%;
+	margin-top: 8px;
+	padding: 12px 0 0;
+	border-top: 1px solid var(--g-hair);
+	background: var(--g-sheet-bg);
+}
+.g-request-sheet__bar.flex-col {
+	flex-direction: column;
+}
+/* In a row, a value is a value (body 17, secondary ink), whether it is a
+   plain word, a status or a person: the badge and avatar-label sizes are for
+   lists, not for a row's trailing value. The person keeps their initial
+   beside their name, at the trailing edge. */
+.g-request-sheet .g-form-row__value,
+.g-request-sheet .g-form-row__value .g-badge,
+.g-request-sheet .g-form-row__value .text-row-label {
+	font-size: 17px;
+	line-height: 22px;
+	letter-spacing: -0.4px;
+}
+.g-request-sheet .g-form-row__value .g-badge {
+	padding: 0;
+	font-weight: 600;
+}
+.g-request-sheet .g-form-row__value > div {
+	display: inline-flex;
+	justify-content: flex-end;
+}
+.g-request-sheet .g-form-row__value .grow,
+.g-request-sheet .g-form-row__value .text-inkbase {
+	flex-grow: 0;
+	color: var(--g-ink2);
 }

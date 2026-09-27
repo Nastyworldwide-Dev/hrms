@@ -1,11 +1,14 @@
 <template>
-	<div v-if="document?.doc" class="bg-ground w-full flex flex-col pb-5 max-h-sheet">
-		<!-- Header: an iOS section (alpha.11 — the sheet audit found "Time off"
-		     and its date as loose lines over the rows): what the request is and
-		     WHEN, read off the document itself, so the sheet an approver opens
-		     from Approvals says which day it is deciding. -->
-		<section class="g-form-section px-4 pt-4 pb-2">
-			<div class="flex flex-row items-center justify-between">
+	<!-- alpha.14 (owner screenshot, 27 Sep 2026): this sheet drew its own black
+	     box inside the sheet, 12 pt grey labels, a name cut off at the right
+	     edge and the note as a field inside a row. It is now what every other
+	     sheet is: groups on the sheet's own grouped background, 17 pt rows,
+	     long values under their label (v-value-row), long text stacked. -->
+	<div v-if="document?.doc" class="g-form-body g-request-sheet">
+		<!-- What the request is and WHEN (alpha.11), with the open-form link in
+		     the header, as iOS puts an action beside a section title. -->
+		<section class="g-form-section">
+			<div class="g-exp-head">
 				<h2 class="g-form-section__title">{{ __("Request") }}</h2>
 				<GIconButton v-if="props.showOpenForm" :label="__('Open the form')" @click="openFormView">
 					<ExternalLink class="h-4 w-4" aria-hidden="true" />
@@ -21,48 +24,46 @@
 			</GListPanel>
 		</section>
 
-		<!-- Request Summary -->
-		<div class="w-full px-4 overflow-auto">
-			<GListPanel class="flex flex-col w-full px-4">
-				<div
-					v-for="field in fieldsWithValues"
-					:key="field.fieldname"
-					:class="[
-						['Small Text', 'Text', 'Long Text', 'Table', 'geolocation'].includes(field.fieldtype)
-							? 'flex-col gap-1'
-							: 'flex-row items-center justify-between gap-4',
-						'flex w-full py-3 border-b border-divider last:border-b-0',
-					]"
-				>
-					<div class="text-ink-600 text-xs shrink-0">
-						{{ sentenceCase(__(plainLabel(field.label), null, props.modelValue?.doctype)) }}
+		<section class="g-form-section">
+			<div class="g-form-group">
+				<template v-for="field in fieldsWithValues" :key="field.fieldname">
+					<!-- a table (expense items) or a map is its own block in the row -->
+					<div
+						v-if="['Table', 'geolocation'].includes(field.fieldtype)"
+						class="g-form-row g-form-row--stacked g-form-row--readonly"
+					>
+						<span class="g-form-row__label">
+							{{ sentenceCase(__(plainLabel(field.label), null, props.modelValue?.doctype)) }}
+						</span>
+						<component v-if="field.fieldtype === 'Table'" :is="field.component" :doc="document?.doc" />
+						<FormattedField v-else :value="field.value" :fieldtype="field.fieldtype" :fieldname="field.fieldname" />
 					</div>
-					<component
-						v-if="field.fieldtype === 'Table'"
-						:is="field.component"
-						:doc="document?.doc"
-					/>
-					<FormattedField
-						v-else
-						class="text-sm text-inkbase text-right"
-						:value="field.value"
-						:fieldtype="field.fieldtype"
-						:fieldname="field.fieldname"
-					/>
-				</div>
+					<!-- long text: label on top, the words under it, as a sent reason reads -->
+					<div
+						v-else-if="['Small Text', 'Text', 'Long Text'].includes(field.fieldtype)"
+						class="g-form-row g-form-row--stacked g-form-row--readonly"
+					>
+						<span class="g-form-row__label">
+							{{ sentenceCase(__(plainLabel(field.label), null, props.modelValue?.doctype)) }}
+						</span>
+						<span class="g-form-row__value g-request-sheet__text">{{ field.value }}</span>
+					</div>
+					<div v-else v-value-row class="g-form-row g-form-row--readonly">
+						<span class="g-form-row__label">
+							{{ sentenceCase(__(plainLabel(field.label), null, props.modelValue?.doctype)) }}
+						</span>
+						<span class="g-form-row__value">
+							<FormattedField :value="field.value" :fieldtype="field.fieldtype" :fieldname="field.fieldname" />
+						</span>
+					</div>
+				</template>
+			</div>
+		</section>
 
-				<!-- Attachments -->
-				<div class="flex flex-col gap-2 w-full py-3" v-if="attachedFiles?.data?.length">
-					<div class="g-eyebrow">{{ __("Attachments") }}</div>
-					<GAttachmentRow
-						v-for="file in attachedFiles.data"
-						:key="file.name"
-						:file="file"
-						@open="showFilePreview"
-					/>
-				</div>
-			</GListPanel>
-		</div>
+		<section v-if="attachedFiles?.data?.length" class="g-form-section">
+			<h2 class="g-form-section__title">{{ __("Attachments") }}</h2>
+			<GAttachmentRow v-for="file in attachedFiles.data" :key="file.name" :file="file" @open="showFilePreview" />
+		</section>
 
 		<!-- Actions -->
 		<!-- YOUR OWN draft: edit it or withdraw it. You can't approve your own
@@ -75,7 +76,7 @@
 				!hasPermission('approval') &&
 				!hasPermission('submit')
 			"
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
+			class="g-request-sheet__bar"
 		>
 			<GButton
 				@click="askWithdraw"
@@ -98,7 +99,7 @@
 
 		<div
 			v-else-if="decidedAs || (isPending && hasPermission('approval'))"
-			class="flex w-full flex-col gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
+			class="g-request-sheet__bar flex-col"
 		>
 			<!-- The live balance cannot cover these dates. Approve stays: the server
 			     decides, and some leave types may go negative. -->
@@ -155,7 +156,7 @@
 				['Approved', 'Rejected'].includes(document?.doc?.[approvalField]) &&
 				hasPermission('submit')
 			"
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
+			class="g-request-sheet__bar"
 		>
 			<GButton
 				@click="updateDocumentStatus({ docstatus: 1 })"
@@ -169,7 +170,7 @@
 				(cancelOffer === 'approved' && approvedCancel) ||
 				(cancelOffer === 'own' && hasPermission('cancel'))
 			"
-			class="flex w-full flex-row items-center justify-between gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
+			class="g-request-sheet__bar"
 		>
 			<GButton
 				@click="
