@@ -1,22 +1,10 @@
-fix(overtime): rest-day overtime is paid in half-hours, like weekdays
+test(overtime): the storage-precision check follows the rest-day ruling
 
-The owner's rest-day claim (26 Sep, 8h 52m 37s) showed 8.876944444
-hours. A weekday claim is banded to HR's 30-minute pay rule (0-29 min
-down, 30-49 to the half hour, 50 and up to the hour); a rest-day or
-public-holiday claim skipped it and was kept exact to the second. The
-question was raised on 8 Sep and never ruled. Owner ruling, 27 Sep:
-"round like weekday".
-
-The claim's holiday part now passes through the same rounding as the
-weekday part, in get_ot_claim_capacity, which sizes the form, the
-claimable-days list and the save cap alike, so all three agree. Pay is
-priced from the approved claimed hours, so it follows. The worked
-record keeps every minute; only what is claimed and paid is banded. A
-day worked partly as weekday and partly as rest day bands each part
-on its own.
-
-Rest day 10:08-13:22 now claims 3.0 h (was 3.233); the owner's day
-claims 9.0 h. Four tests that pinned the exact figure are updated to
-the ruling; three new ones pin it. Proven on the bench in a savepoint.
+585f14fd7 bands rest-day claims to 30 minutes (owner ruling, 27 Sep).
+test_ot_storage_precision still expected the exact 1-minute and 3h 14m
+figures. It now pins the banded ones (1 min -> 0, 3h 14m -> 3.0,
+50 min -> 1.0, 3h 30m -> 3.5). As on a weekday, a rest-day claim under
+30 minutes is 0. Should have gone with that commit; the attendance
+suite run afterwards found it.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

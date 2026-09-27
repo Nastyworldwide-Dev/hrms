@@ -81,7 +81,10 @@ class TestOTStoragePrecision(unittest.TestCase):
 
 	def test_public_claim_capacity_uses_saved_representation(self):
 		ot = importlib.import_module("hrms.utils.ot_calculation")
-		for seconds, expected in ((60, 0.016666667), (194 * 60, 3.233333333)):
+		# Owner ruling, 27 Sep 2026: rest-day claims are banded like weekday pay,
+		# so 1 min -> 0 and 3h 14m -> 3.0; the saved representation still holds
+		# (50 min -> 1.0, 3h 30m -> 3.5).
+		for seconds, expected in ((60, 0.0), (194 * 60, 3.0), (50 * 60, 1.0), (210 * 60, 3.5)):
 			with patch.object(
 				ot,
 				"_iter_day_ot",
