@@ -1,22 +1,8 @@
-chore(home): remove a dead translator binding, guard against dead links
+docs(plan): alpha.14 whole-app plan and roster facts still missing
 
-Home kept `__` injected with no uses left after the quick links moved out.
-ESLint cannot flag that — a template might use it — so it sat there.
+The owner asked for a plan that covers the whole app, not only the
+screens he reported, and ruled R10-R12. The roster is a new feature
+whose real patterns (fixed, weekly, day-by-day) are not in any local
+data, so its design waits on facts instead of a guess.
 
-A quick link navigates by route name, and a name that does not exist throws at
-the moment somebody taps it: not at build, not in any other test. Moving six
-links between screens is exactly when one gets mistyped, so every name they
-carry is now resolved against the router. This is a GUARD rather than a
-regression test: all six were already correct, and the check passes on the code
-before it — which is why this is a chore and not a fix.
-
-My first pass at that check reported the helpdesk link missing. It was not —
-the route is registered under a constant, and a literal search cannot see
-through one. The test resolves the import, which is the difference between a
-guard and a false alarm somebody eventually mutes.
-
-Also confirmed the CSS warning in every build today is noise: the minifier
-reports a position inside a comment, and the rule that follows is present and
-correct in the built output. Checked the output, not the source.
-
-Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
