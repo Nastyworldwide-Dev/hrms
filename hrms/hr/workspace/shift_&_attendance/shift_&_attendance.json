@@ -130,7 +130,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 6,
+   "link_count": 7,
    "onboard": 0,
    "type": "Card Break",
    "idx": 11
@@ -173,13 +173,26 @@
   {
    "hidden": 0,
    "is_query_report": 1,
+   "label": "Roster Patterns",
+   "link_count": 0,
+   "link_to": "Roster Patterns",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link",
+   "report_ref_doctype": "Shift Assignment",
+   "dependencies": "Shift Assignment",
+   "idx": 15
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
    "label": "Employee Hours Utilization Based On Timesheet",
    "link_count": 0,
    "link_to": "Employee Hours Utilization Based On Timesheet",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link",
-   "idx": 15
+   "idx": 16
   },
   {
    "hidden": 0,
@@ -190,7 +203,7 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link",
-   "idx": 16
+   "idx": 17
   },
   {
    "hidden": 0,
@@ -201,7 +214,7 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link",
-   "idx": 17
+   "idx": 18
   },
   {
    "hidden": 0,
@@ -211,7 +224,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break",
-   "idx": 18
+   "idx": 19
   },
   {
    "hidden": 0,
@@ -222,7 +235,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 19
+   "idx": 20
   },
   {
    "hidden": 0,
@@ -233,7 +246,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 20
+   "idx": 21
   },
   {
    "hidden": 0,
@@ -244,7 +257,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 21
+   "idx": 22
   },
   {
    "hidden": 0,
@@ -255,7 +268,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 22
+   "idx": 23
   },
   {
    "hidden": 0,
@@ -266,7 +279,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 23
+   "idx": 24
   },
   {
    "hidden": 0,
@@ -277,7 +290,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 24
+   "idx": 25
   },
   {
    "hidden": 0,
@@ -288,7 +301,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 25
+   "idx": 26
   },
   {
    "hidden": 0,
@@ -298,7 +311,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break",
-   "idx": 26
+   "idx": 27
   },
   {
    "hidden": 0,
@@ -309,7 +322,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 27
+   "idx": 28
   },
   {
    "hidden": 0,
@@ -320,7 +333,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 28
+   "idx": 29
   },
   {
    "hidden": 0,
@@ -331,7 +344,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 29
+   "idx": 30
   },
   {
    "hidden": 0,
@@ -342,7 +355,7 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link",
-   "idx": 30
+   "idx": 31
   }
  ],
  "modified": "2026-09-15 20:00:00.000000",

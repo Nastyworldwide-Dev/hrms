@@ -244,12 +244,25 @@
    "icon": "",
    "indent": 0,
    "keep_closed": 0,
+   "label": "Roster Patterns",
+   "link_to": "Roster Patterns",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link",
+   "idx": 19
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "",
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Employee Hours Utilization",
    "link_to": "Employee Hours Utilization Based On Timesheet",
    "link_type": "Report",
    "show_arrow": 0,
    "type": "Link",
-   "idx": 19
+   "idx": 20
   },
   {
    "child": 1,
@@ -262,7 +275,7 @@
    "link_type": "Report",
    "show_arrow": 0,
    "type": "Link",
-   "idx": 20
+   "idx": 21
   },
   {
    "child": 0,
@@ -274,7 +287,7 @@
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Section Break",
-   "idx": 21
+   "idx": 22
   },
   {
    "child": 1,
@@ -287,7 +300,7 @@
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link",
-   "idx": 22
+   "idx": 23
   },
   {
    "child": 1,
@@ -300,7 +313,7 @@
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link",
-   "idx": 23
+   "idx": 24
   },
   {
    "child": 1,
@@ -313,7 +326,7 @@
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link",
-   "idx": 24
+   "idx": 25
   },
   {
    "child": 1,
@@ -326,7 +339,7 @@
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link",
-   "idx": 25
+   "idx": 26
   },
   {
    "child": 1,
@@ -339,7 +352,7 @@
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link",
-   "idx": 26
+   "idx": 27
   },
   {
    "child": 0,
@@ -353,7 +366,7 @@
    "navigate_to_tab": "shift_and_attendance_tab",
    "show_arrow": 0,
    "type": "Link",
-   "idx": 27
+   "idx": 28
   }
  ],
  "modified": "2026-09-15 20:00:00.000000",

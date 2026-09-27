@@ -1,8 +1,14 @@
-docs(plan): alpha.14 whole-app plan and roster facts still missing
+feat(roster): HR can see how each person is really rostered
 
-The owner asked for a plan that covers the whole app, not only the
-screens he reported, and ruled R10-R12. The roster is a new feature
-whose real patterns (fixed, weekly, day-by-day) are not in any local
-data, so its design waits on facts instead of a guess.
+The roster is a new feature and the owner ruled out designing it on
+guesses. Nothing on hand says how many people work one fixed shift, a
+weekly rota, a rotation or day by day: the test sites hold only test
+shifts. This read-only report sorts each active employee by their last
+full weeks of real Shift Assignments, says who set them (by hand, a
+weekly schedule or a location rule), and counts each pattern, so the
+roster design starts from the live numbers.
+
+HR roles only, fenced to the caller's companies inside the query.
+Linked next to Unclaimable Days by an idempotent patch, as that one was.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

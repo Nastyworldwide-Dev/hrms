@@ -132,3 +132,4 @@ hrms.patches.v16_0.fill_ot_request_day_type_and_rate #2026-09-25 HR: the day typ
 hrms.patches.v16_0.ot_request_report_columns #2026-09-25 HR: Day Type and OT Rate show as columns in each user's existing OT Request report view
 hrms.patches.v16_0.leave_half_day_session #2026-09-25 half day AM/PM: a new half day says which half, and HR sees it as a column in the Leave Application report
 hrms.patches.v16_0.count_approved_callbacks #2026-09-25 approved work after the shift since 16 Sep becomes claimable overtime (owner yes)
+hrms.patches.v16_0.add_roster_patterns_link #2026-09-27 HR: how each person is really rostered (fixed, weekly, rotating, day by day), read-only, before the roster is designed
