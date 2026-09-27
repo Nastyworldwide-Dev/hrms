@@ -475,6 +475,8 @@ class TestSchedulerEntry(unittest.TestCase):
 				# 16 Sep 2026: the endgame repair runs itself nightly until its
 				# one-time pass over 1 Aug -> yesterday is on record.
 				"hrms.utils.attendance_endgame.run_endgame",
+				# 23 Sep 2026 (50403096f): the forgot-to-check-in/out reminders.
+				"hrms.utils.shift_reminders.send_due_reminders",
 			},
 		)
 

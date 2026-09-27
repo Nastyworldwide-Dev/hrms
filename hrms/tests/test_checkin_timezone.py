@@ -170,6 +170,10 @@ class TestPunchStampsAttendanceClock(unittest.TestCase):
 			patch.object(frappe, "local", _fresh_local()),
 			patch.object(frappe, "new_doc", return_value=doc),
 			patch.object(remote_checkin, "employee_now", return_value=_kl_now()) as employee_now,
+			# Before 06:00 punch() asks which shift window covers the tap
+			# (830dbb0b0, 25 Sep 2026); that lookup is not this test's subject
+			# and made it fail only when run between midnight and 6 am KL.
+			patch.object(remote_checkin, "_window_now", return_value=None),
 		):
 			remote_checkin.punch(employee="HR-EMP-001", log_type="IN")
 

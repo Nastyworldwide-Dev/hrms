@@ -93,6 +93,9 @@ class TestFilingEdits(unittest.TestCase):
 			patch.object(doc, "set_punch_verified_cap"),
 			patch.object(doc, "validate_claimed_hours"),
 			patch.object(doc, "validate_duplicate_request"),
+			# 25 Sep 2026 (7c02c1d2b) validate also sets the day type and rate;
+			# this suite is about the filing window, like the stubs above
+			patch.object(doc, "set_day_type_and_rate"),
 		):
 			doc.validate()
 

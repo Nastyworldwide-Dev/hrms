@@ -85,17 +85,25 @@ class OnlyThisActionSeesAMirroredTapCase(unittest.TestCase):
 		self.assertIn("came from another site", reader)
 		self.assertIn("mirrored_ok", reader)
 
-	def test_only_the_claim_asks_to_see_one(self):
-		for action in ("pair_taps", "move_tap", "ignore_tap", "restore_tap"):
+	# 25 Sep 2026 (bca921ace, owner report on pre-cutover days): moving a tap
+	# takes a mirrored punch over, as the claim and Save & rebuild do, because
+	# after cutover this site marks attendance. The other single-tap actions
+	# still refuse one.
+	TAKE_OVER = ("claim_tap", "move_tap")
+
+	def test_only_the_claim_and_the_move_ask_to_see_one(self):
+		for action in ("pair_taps", "ignore_tap", "restore_tap"):
 			with self.subTest(action=action):
 				self.assertNotIn("mirrored_ok", body(action))
-		self.assertIn("mirrored_ok=True", body("claim_tap"))
+		for action in self.TAKE_OVER:
+			self.assertIn("mirrored_ok=True", body(action))
 
-	def test_only_the_claim_writes_the_stamp(self):
-		for action in ("pair_taps", "move_tap", "ignore_tap", "restore_tap", "add_tap", "rebuild_day"):
+	def test_only_the_claim_and_the_move_write_the_stamp(self):
+		for action in ("pair_taps", "ignore_tap", "restore_tap", "add_tap", "rebuild_day"):
 			with self.subTest(action=action):
 				self.assertNotIn("synced_from_instance", body(action))
-		self.assertIn("synced_from_instance", body("claim_tap"))
+		for action in self.TAKE_OVER:
+			self.assertIn("synced_from_instance", body(action))
 
 
 class TheStampIsWritableAndRestorableCase(unittest.TestCase):

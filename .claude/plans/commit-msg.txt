@@ -1,10 +1,19 @@
-test(overtime): the storage-precision check follows the rest-day ruling
+test(attendance): four attendance tests were out of date with the code
 
-585f14fd7 bands rest-day claims to 30 minutes (owner ruling, 27 Sep).
-test_ot_storage_precision still expected the exact 1-minute and 3h 14m
-figures. It now pins the banded ones (1 min -> 0, 3h 14m -> 3.0,
-50 min -> 1.0, 3h 30m -> 3.5). As on a weekday, a rest-day claim under
-30 minutes is 0. Should have gone with that commit; the attendance
-suite run afterwards found it.
+Running every attendance and overtime test file for the owner's "check
+attendance properly" found four already failing before today's change,
+each a test left behind by a deliberate code change, not a fault in
+the app:
+- attendance_health pinned the scheduler list before the shift
+  reminders job (50403096f, 23 Sep);
+- the take-over test still said only the claim may take over a
+  pre-cutover punch, but moving a tap does too since bca921ace
+  (25 Sep, owner report on pre-cutover days);
+- ot_filing_edits did not stub the day-type and rate step added in
+  7c02c1d2b (25 Sep);
+- checkin_timezone failed only between midnight and 6 am KL, when
+  punch() asks which shift window covers the tap (830dbb0b0), so it
+  passed in daytime runs.
+All 106 attendance test files that run without a bench now pass.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
