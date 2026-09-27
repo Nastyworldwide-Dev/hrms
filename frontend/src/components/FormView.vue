@@ -261,7 +261,7 @@
 
 			<!-- save/submit/cancel -->
 			<div
-				v-else-if="isFormDirty || (!workflow?.hasWorkflow && formButton && !cancelAsRow)"
+				v-else-if="(isFormDirty && !isFormReadOnly) || (!workflow?.hasWorkflow && formButton && !cancelAsRow)"
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
 				<div class="w-full max-w-content-column-lg mx-auto">
@@ -858,7 +858,8 @@ const formButton = computed(() => {
 		}
 		// submitted-and-cancel-blocked, or any other docstatus: no button.
 		return null
-	} else if (formModel.value.docstatus !== 2) {
+	} else if (!props.id && formModel.value.docstatus !== 2) {
+		// Save is for a new request only: a sent one is read-only (27 Sep 2026)
 		return "Save"
 	}
 	return null
@@ -1068,15 +1069,11 @@ const isFormReady = computed(() => {
 
 const isFormReadOnly = computed(() => {
 	if (!isFormReady.value) return true
-	if (!props.id) return false
-
-	// submitted & cancelled docs are read only
-	if (formModel.value.docstatus !== 0) return true
-
-	// read only due to workflow based on current user's roles
-	if (workflow.value?.isReadOnly(formModel.value)) return true
-
-	return false
+	// A request once sent is read-only in the app, even while it waits (owner
+	// ruling, 27 Sep 2026). Frappe lets its owner edit an unsubmitted request;
+	// the app does not: withdraw it and send a new one. The approver decides
+	// through the review sheet, never by editing these fields.
+	return Boolean(props.id)
 })
 
 onMounted(async () => {

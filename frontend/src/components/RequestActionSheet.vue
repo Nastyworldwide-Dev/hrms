@@ -66,7 +66,7 @@
 		</section>
 
 		<!-- Actions -->
-		<!-- YOUR OWN draft: edit it or withdraw it. You can't approve your own
+		<!-- YOUR OWN draft: withdraw it. You can't approve your own
 		     request and have no delete permission on it, so without this a saved
 		     draft — already sitting in your approver's queue — was a one-way trip. -->
 		<div
@@ -78,15 +78,13 @@
 			"
 			class="g-request-sheet__bar"
 		>
+			<!-- Sent is not edited (owner ruling, 27 Sep 2026): to change a request,
+			     withdraw it and send a new one. -->
 			<GButton
 				@click="askWithdraw"
 				:pending="withdraw.loading"
 				:label="__('Withdraw')"
 				danger
-			/>
-			<GButton
-				@click="openFormView"
-				:label="__('Edit')"
 			/>
 		</div>
 

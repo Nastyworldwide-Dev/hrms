@@ -1,6 +1,5 @@
-CLASS: a sheet that draws its own rows and background instead of the kit's (page colour inside a sheet, 12 pt labels, values cut)
-frontend/src/components/RequestActionSheet.vue:1 same-root — kit group + rows, bar in sheet colour
-frontend/src/components/ProfileInfoModal.vue:1 same-root — Your details, kit rows
-frontend/src/components/CheckinSheet.vue:10 same-root — day line was loose text
-frontend/src/components/CheckinDecisionSheet.vue:1 not-affected — approver's check-in sheet passes the dark audit (Approval row)
-frontend/src/components/FormattedField.vue:27 not-affected — its boxed long text is no longer used by the sheets
+CLASS: a sent (waiting) request editable in the app because Frappe allows its owner to edit an unsubmitted document
+frontend/src/components/FormView.vue:1069 same-root — every request form (leave, OT, fix a day, shift, expense, issue) read-only once sent
+frontend/src/components/FormView.vue:839 same-root — Save only for a new request
+frontend/src/components/RequestActionSheet.vue:86 same-root — Edit removed; Withdraw stays
+frontend/src/views/ot/OTRequestForm.vue:342 not-affected — canEditClaim still gates its own summary reload; the form is read-only above it
