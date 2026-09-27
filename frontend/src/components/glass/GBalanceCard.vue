@@ -35,7 +35,8 @@
 
 		<div aria-hidden="true">
 			<div class="g-balance__head">
-				<span class="g-balance__number">{{ remaining }}</span>
+				<!-- rolls when the balance changes (alpha.13) -->
+				<GRollNumber class="g-balance__number" :value="remaining" />
 				<!-- What the number counts, on screen too (25 Sep 2026: a bare
 				     "19" did not read as a leave balance). -->
 				<span class="g-balance__unit">{{ unitLine }}</span>
@@ -58,6 +59,7 @@
 </template>
 
 <script setup>
+import GRollNumber from "./GRollNumber.vue"
 import { computed, inject } from "vue"
 
 const props = defineProps({

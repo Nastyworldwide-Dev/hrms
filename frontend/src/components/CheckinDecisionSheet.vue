@@ -35,8 +35,23 @@
 		</p>
 
 		<div class="flex flex-row gap-3">
-			<GGhostButton class="flex-1" :label="__('Not approve')" @click="askingWhy = true" />
-			<GButton class="flex-1" :label="__('Approve')" :pending="submitting" @click="approve" />
+			<GGhostButton
+				class="flex-1"
+				:label="decidedAs === 'reject' ? __('Not approved') : __('Not approve')"
+				@click="askingWhy = true"
+			/>
+			<GButton
+				class="flex-1"
+				:label="decidedAs === 'approve' ? __('Approved') : __('Approve')"
+				:pending="submitting && !decidedAs"
+				@click="approve"
+			>
+				<template v-if="decidedAs === 'approve'" #trailing>
+					<svg class="g-btn__tick" viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M5 12.5l4.5 4.5L19 7.5" />
+					</svg>
+				</template>
+			</GButton>
 		</div>
 
 		<GConfirm
@@ -80,6 +95,9 @@ const __ = inject("$translate")
 const reason = ref("")
 const askingWhy = ref(false)
 const submitting = ref(false)
+//: "approve" | "reject" while its mark draws on the button.
+const decidedAs = ref("")
+const DECIDED_MS = 650
 
 async function decide(kind, submit) {
 	submitting.value = true
@@ -95,7 +113,9 @@ async function decide(kind, submit) {
 		console.info("[CheckinDecisionSheet] decided", kind)
 		askingWhy.value = false
 		pendingCountResource.reload()
-		emit("decided")
+		// The mark draws on the button pressed, then the sheet closes (alpha.13).
+		decidedAs.value = kind
+		setTimeout(() => emit("decided"), DECIDED_MS)
 	} catch (err) {
 		console.error("[CheckinDecisionSheet] decision failed:", err)
 		gToast({

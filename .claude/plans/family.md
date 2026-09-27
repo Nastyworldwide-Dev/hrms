@@ -1,7 +1,7 @@
-CLASS: code needed by one screen or a later moment sat in everyone's first download
-frontend/src/components/WorkflowActionSheet.vue — same-root (ion-action-sheet -> GActionSheet; also passed the translated label as the workflow action)
-frontend/src/views/Profile.vue + utils/dialogs.js — same-root (Ionic alert -> gToast; dialogs.js removed)
-frontend/src/router/index.js closeSheetsOnLeave — same-root (only modals exist now; action-sheet/popover controllers dropped)
-frontend/src/{Home,Requests,Approvals,announcements/List}.vue, ListView.vue GPullRefresh — same-root (async component)
-frontend/src/utils/frappe-push-notification.js — same-root (firebase loaded on first use)
-frontend/src/utils/__tests__/frappe-push-notification.test.js — same-root (VM seam for the lazy import)
+CLASS: an action finished with no sign where it was made, or a value that jumped
+frontend/src/components/RequestActionSheet.vue — same-root (the pressed decision draws its mark; bar held while it draws; no second tap)
+frontend/src/components/CheckinDecisionSheet.vue — same-root (same for check-in decisions)
+frontend/src/views/Approvals.vue — same-root (decided rows leave; the list closes the gap)
+frontend/src/components/glass/GRollNumber.vue + GBalanceCard.vue + HomeWeek.vue + GListRow.vue — same-root (numbers roll; sublabel slot)
+frontend/src/theme/glass-components.css — same-root (pressed dim, leave transition, cross mark, roll number)
+frontend/tests/decision-capability.test.mjs — same-root (context gains decidedAs)

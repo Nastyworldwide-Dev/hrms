@@ -162,6 +162,9 @@ function liveSheet(doctype = "OT Request", nativeDocument = false) {
 			reload() {},
 		}),
 		workflow: ref(null),
+		// alpha.13: the decision's mark holds the sheet open briefly and counts
+		// as in flight; nothing is decided at the start of a test
+		decidedAs: ref(""),
 		docPermissions: { data: { permissions: { read: 1 } } },
 		onActionError: () => () => {},
 		onActionSuccess: (value) => successes.push(value),

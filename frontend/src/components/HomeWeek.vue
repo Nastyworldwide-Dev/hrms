@@ -16,6 +16,8 @@
 		</p>
 		<template v-else>
 			<GListRow :label="daysLine" :sublabel="claimLine" :tappable="hasOvertime" @click="claim">
+				<!-- the overtime line rolls when the figure changes (alpha.13) -->
+				<template #sublabel><GRollNumber :value="claimLine" /></template>
 				<template #icon>
 					<CalendarCheck class="g-row-icon" />
 				</template>
@@ -25,6 +27,7 @@
 </template>
 
 <script setup>
+import GRollNumber from "@/components/glass/GRollNumber.vue"
 import { computed, inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { CalendarCheck } from "lucide-vue-next"

@@ -530,10 +530,14 @@ html[data-transparency="reduce"] .g-sidenav {
 	overflow: hidden;
 	transition: transform var(--g-motion-button-press-duration) var(--g-motion-button-press-easing),
 		box-shadow var(--g-motion-button-press-duration) var(--g-motion-button-press-easing),
-		filter var(--g-motion-button-press-duration) var(--g-motion-button-press-easing);
+		filter var(--g-motion-button-press-duration) var(--g-motion-button-press-easing),
+		opacity var(--g-motion-button-press-duration) var(--g-motion-button-press-easing);
 }
+/* Pressed: a little smaller AND a little dimmer, as iOS buttons answer the
+   finger (Apple buttons: "a pressed state always"; alpha.13). */
 .g-btn:active:not(.g-btn--disabled):not(.g-btn--pending) {
 	transform: scale(0.98);
+	opacity: 0.8;
 }
 .g-btn--disabled {
 	background: var(--g-icon-bg);
@@ -3535,6 +3539,40 @@ ion-router-outlet {
 	70% {
 		transform: translateY(1px);
 	}
+}
+/* GRollNumber: tabular digits, so a rolling value does not shift its line. */
+.g-roll-number {
+	display: inline-flex;
+	overflow: hidden;
+	vertical-align: bottom;
+	font-variant-numeric: tabular-nums;
+}
+.g-roll-number__value {
+	display: inline-block;
+}
+/* alpha.13: a decided row leaves the approvals list and the list closes the
+   gap (the mark drew on the sheet's button first). */
+.g-leave-leave-active {
+	transition:
+		opacity var(--g-motion-symbol-duration) var(--g-motion-symbol-easing),
+		transform var(--g-motion-symbol-duration) var(--g-motion-symbol-easing);
+}
+.g-leave-leave-to {
+	opacity: 0;
+	transform: translateX(-24px);
+}
+.g-leave-move {
+	transition: transform var(--g-motion-symbol-duration) var(--g-motion-symbol-easing);
+}
+/* While a decided mark draws, the button is still guarded against a second
+   tap (pending), but the in-flight bar is not shown: the work is done. */
+.g-btn:has(.g-btn__tick) .g-btn__bar {
+	display: none;
+}
+/* A decided mark on a button: the tick, or a cross for "not approved". */
+.g-btn__tick--cross path {
+	stroke-dasharray: 34;
+	stroke-dashoffset: 34;
 }
 /* The saved-punch tick on the Today button (Apple: Draw On). */
 .g-btn__tick {

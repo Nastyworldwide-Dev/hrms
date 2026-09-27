@@ -111,7 +111,7 @@
 		/>
 
 		<div
-			v-else-if="isPending && hasPermission('approval')"
+			v-else-if="decidedAs || (isPending && hasPermission('approval'))"
 			class="flex w-full flex-col gap-3 sticky bottom-0 border-t border-divider bg-ground z-overlay p-4"
 		>
 			<!-- The live balance cannot cover these dates. Approve stays: the server
@@ -120,8 +120,11 @@
 				{{ leaveShortNotice }}
 			</p>
 			<div class="flex w-full flex-row items-center justify-between gap-3">
+				<!-- While the decision's mark draws, the button that was pressed
+				     stays: the reloaded document already says "decided", which
+				     would otherwise empty this bar before the mark is seen. -->
 				<GButton
-					v-if="hasPermission('reject')"
+					v-if="decidedAs ? decidedAs === 'Rejected' : hasPermission('reject')"
 					@click="
 						confirmDecision(
 							{ status: 'Rejected' },
@@ -133,16 +136,30 @@
 						)
 					"
 					:pending="submitting"
-					:label="__('Reject')"
+					:label="decidedAs === 'Rejected' ? __('Not approved') : __('Reject')"
 					danger
-				/>
+				>
+					<!-- The decision is confirmed where it was made: its mark draws
+					     itself, then the sheet closes (alpha.13; Apple: Draw On). -->
+					<template v-if="decidedAs === 'Rejected'" #trailing>
+						<svg class="g-btn__tick g-btn__tick--cross" viewBox="0 0 24 24" aria-hidden="true">
+							<path d="M7 7l10 10M17 7L7 17" />
+						</svg>
+					</template>
+				</GButton>
 
 				<GButton
-					v-if="hasPermission('approve')"
+					v-if="decidedAs ? decidedAs === 'Approved' : hasPermission('approve')"
 					@click="updateDocumentStatus({ status: 'Approved' })"
 					:pending="submitting"
-					:label="__('Approve')"
-				/>
+					:label="decidedAs === 'Approved' ? __('Approved') : __('Approve')"
+				>
+					<template v-if="decidedAs === 'Approved'" #trailing>
+						<svg class="g-btn__tick" viewBox="0 0 24 24" aria-hidden="true">
+							<path d="M5 12.5l4.5 4.5L19 7.5" />
+						</svg>
+					</template>
+				</GButton>
 			</div>
 		</div>
 
@@ -352,8 +369,15 @@ const finalize = createResource({ url: "hrms.api.approval.finalize" })
 // buttons so a consequential, irreversible tap shows a loading state and
 // cannot be double-fired — the backend is idempotent and row-locked, but the
 // UI should still say "working" and refuse a second tap.
+//: The decision just made, while its mark draws on the button.
+const decidedAs = ref("")
+//: Long enough to see the mark draw, short enough not to wait for it.
+const DECIDED_MS = 650
+
+//: In flight, or already decided while its mark draws: either way no second
+//: tap may reach the server (alpha.13 kept the sheet open 650 ms for the mark).
 const submitting = computed(
-	() => decision.loading || finalize.loading || document.setValue?.loading
+	() => decision.loading || finalize.loading || document.setValue?.loading || Boolean(decidedAs.value)
 )
 
 const sessionEmployee = inject("$employee")
@@ -524,8 +548,13 @@ const getFailureMessage = ({ status = "", docstatus = 0 }) => {
 	}
 }
 
+
 const onActionSuccess = ({ status, docstatus, dismiss }) => {
-	if (dismiss) modalController.dismiss()
+	if (dismiss && status) {
+		decidedAs.value = status
+		console.info("[RequestActionSheet] decided:", status)
+		setTimeout(() => modalController.dismiss(), DECIDED_MS)
+	} else if (dismiss) modalController.dismiss()
 	gToast({
 		title: __("Success"),
 		text: getSuccessMessage({ status, docstatus }),

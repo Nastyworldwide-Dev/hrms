@@ -46,13 +46,18 @@
 									<p class="g-approvals__kind text-caption text-ink-600">
 										{{ __(kind.kind) }} · {{ kind.count }}
 									</p>
-									<GListRow
-										v-for="person in shown(`${dept.key}:${kind.key}`, kind.people).rows"
-										:key="person.key"
-										:label="personLine(person, __)"
-										:sublabel="personWhen(person)"
-										@click="openPerson(person)"
-									/>
+									<!-- A decided person leaves and the list closes the gap,
+									     instead of the rows jumping when the queue reloads
+									     (alpha.13). -->
+									<TransitionGroup name="g-leave">
+										<GListRow
+											v-for="person in shown(`${dept.key}:${kind.key}`, kind.people).rows"
+											:key="person.key"
+											:label="personLine(person, __)"
+											:sublabel="personWhen(person)"
+											@click="openPerson(person)"
+										/>
+									</TransitionGroup>
 									<GroupMore
 										:page="shown(`${dept.key}:${kind.key}`, kind.people)"
 										@all="expand(`${dept.key}:${kind.key}`)"

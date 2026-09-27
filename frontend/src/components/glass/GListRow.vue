@@ -39,7 +39,9 @@
 
 		<span class="g-row__body">
 			<span class="g-row__label">{{ label }}</span>
-			<span v-if="sublabel" class="g-row__sub">{{ sublabel }}</span>
+			<!-- the #sublabel slot lets a caller animate the second line
+			     (GRollNumber, alpha.13); the prop stays the plain default -->
+			<span v-if="sublabel || $slots.sublabel" class="g-row__sub"><slot name="sublabel">{{ sublabel }}</slot></span>
 		</span>
 
 		<span v-if="amount" class="g-row__amount">{{ amount }}</span>
