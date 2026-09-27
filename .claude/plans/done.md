@@ -1,3 +1,3 @@
-GOAL: notifications read at a glance — same person + kind fold into one row with a count; opening a fold marks it read
-DONE WHEN: live approver feed shows "W0 employee asked for time off · 11"; opening it lists the 11 indented on the fold's text and the unread count drops (78 -> 67); only the caller's rows can be marked
-CHECK: PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_notification_mark_read.py && cd frontend && node --test src/utils/__tests__/foldNotifications.test.js
+GOAL: a lighter first download: code only one screen or a later moment needs loads when it is needed
+DONE WHEN: main JS 570 -> 490 KB; slow-phone first paint 6.3 -> ~5.4 s; push still starts; no page errors; tests green
+CHECK: cd frontend && node --test src/components/__tests__/no-ionic-overlays.test.js src/utils/__tests__/frappe-push-notification.test.js

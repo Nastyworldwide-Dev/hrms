@@ -46,7 +46,7 @@
 
 <script setup>
 import { TILE } from "@/utils/iconTile"
-import { inject, ref } from "vue"
+import { defineAsyncComponent, inject, ref } from "vue"
 import { CalendarCheck, CalendarClock, Clock, Palmtree, Receipt } from "lucide-vue-next"
 import { useRouter } from "vue-router"
 
@@ -55,7 +55,9 @@ import RequestBalances from "@/components/RequestBalances.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
 import GActionSheet from "@/components/glass/GActionSheet.vue"
 import GButton from "@/components/glass/GButton.vue"
-import GPullRefresh from "@/components/glass/GPullRefresh.vue"
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
 import { reloadRequestLists } from "@/data/requestLists"
 
 const __ = inject("$translate")

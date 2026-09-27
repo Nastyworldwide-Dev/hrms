@@ -55,6 +55,7 @@
 </template>
 
 <script setup>
+import { defineAsyncComponent } from "vue"
 import { homeAnnouncements } from "@/data/announcements"
 import { homeComingUp, homeWeek } from "@/data/home"
 import { needsYouResource } from "@/data/needsYou"
@@ -70,7 +71,9 @@ import HomeWeek from "@/components/HomeWeek.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import HomeComingUp from "@/components/HomeComingUp.vue"
 import BaseLayout from "@/components/BaseLayout.vue"
-import GPullRefresh from "@/components/glass/GPullRefresh.vue"
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
 
 //: The date is the header title, said once and in plain case (approved Home
 //: plan, H2/H3): "Wed 23 Sep". A fixed length, so it never crowds the bell.

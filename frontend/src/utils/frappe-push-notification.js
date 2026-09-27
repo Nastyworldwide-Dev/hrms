@@ -1,11 +1,15 @@
-import { initializeApp } from "firebase/app"
-import {
-	getMessaging,
-	getToken,
-	isSupported,
-	deleteToken,
-	onMessage as onFCMMessage,
-} from "firebase/messaging"
+// Firebase (~150 KB) loads on first use, not in the app's first download
+// (alpha.13: it sat in front of the first paint for everyone, and push only
+// starts after the app has drawn, only where a relay is configured).
+let firebase = null
+async function loadFirebase() {
+	if (!firebase) {
+		const [app, messaging] = await Promise.all([import("firebase/app"), import("firebase/messaging")])
+		firebase = { initializeApp: app.initializeApp, ...messaging }
+		console.info("[push] firebase loaded")
+	}
+	return firebase
+}
 
 class FrappePushNotification {
 	static get relayServerBaseURL() {
@@ -60,6 +64,7 @@ class FrappePushNotification {
 		}
 		this.serviceWorkerRegistration = serviceWorkerRegistration
 		const config = await this.fetchWebConfig()
+		const { getMessaging, initializeApp } = await loadFirebase()
 		this.messaging = getMessaging(initializeApp(config))
 		this.onMessage(this.onMessageHandler)
 		this.initialized = true
@@ -134,8 +139,9 @@ class FrappePushNotification {
 	onMessage(callback) {
 		if (callback == null) return
 		this.onMessageHandler = callback
-		if (this.messaging == null) return
-		onFCMMessage(this.messaging, this.onMessageHandler)
+		// messaging exists only after initialize() loaded firebase
+		if (this.messaging == null || !firebase) return
+		firebase.onMessage(this.messaging, this.onMessageHandler)
 	}
 
 	/**
@@ -154,6 +160,7 @@ class FrappePushNotification {
 	 * @returns {Promise<{permission_granted: boolean, token: string}>}
 	 */
 	async enableNotification() {
+		const { isSupported, getToken } = await loadFirebase()
 		if (!(await isSupported())) {
 			throw new Error("Push notifications are not supported on your device")
 		}
@@ -216,7 +223,7 @@ class FrappePushNotification {
 		}
 		// delete old token from firebase
 		try {
-			await deleteToken(this.messaging)
+			await (await loadFirebase()).deleteToken(this.messaging)
 		} catch (e) {
 			console.error("Failed to delete token from firebase")
 			console.error(e)

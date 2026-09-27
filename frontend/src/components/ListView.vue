@@ -189,7 +189,7 @@ import {
 import { IonContent, modalController } from "@ionic/vue"
 import ShellHeader from "@/components/ShellHeader.vue"
 import { createResource, debounce } from "frappe-ui"
-import { computed, inject, markRaw, onMounted, reactive, ref, watch } from "vue"
+import { computed, defineAsyncComponent, inject, markRaw, onMounted, reactive, ref, watch } from "vue"
 import { initialListTab } from "@/utils/listTab"
 import { filterCondition } from "@/utils/listFilters"
 import { dayHeading, groupByDay, workDayOf } from "@/utils/dayGroups"
@@ -203,7 +203,9 @@ import { REQUEST_KIND } from "@/utils/requestKind"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GModal from "@/components/glass/GModal.vue"
-import GPullRefresh from "@/components/glass/GPullRefresh.vue"
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
 import GSegmented from "@/components/glass/GSegmented.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
 import ListFiltersActionSheet from "@/components/ListFiltersActionSheet.vue"

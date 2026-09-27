@@ -154,7 +154,6 @@ import GBadge from "@/components/glass/GBadge.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 
-import { showErrorAlert } from "@/utils/dialogs"
 import { formatCurrency } from "@/utils/formatters"
 
 import ProfileInfoModal from "@/components/ProfileInfoModal.vue"
@@ -379,9 +378,14 @@ const logout = async () => {
 	try {
 		await session.logout.submit()
 	} catch (e) {
-		const msg = "An error occurred while attempting to log out!"
-		console.error(msg, e)
-		showErrorAlert(msg)
+		console.error("[Profile] log out failed", e)
+		// The app's own banner (alpha.13): Ionic's alert loaded 45 KB for
+		// everyone to show this one message.
+		gToast({
+			title: __("Could not log out"),
+			text: __("Check your connection and try again."),
+			variant: "error",
+		})
 	}
 }
 

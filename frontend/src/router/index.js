@@ -13,7 +13,7 @@ import sopRoutes from "./sop"
 import { isStaleChunkError } from "./stale-chunk"
 import { queueBehindTraversal } from "./traversalQueue"
 import { closeSheetsOnLeave } from "./sheetGuard"
-import { modalController, actionSheetController, popoverController } from "@ionic/vue"
+import { modalController } from "@ionic/vue"
 
 const routes = [
 	{
@@ -234,11 +234,11 @@ queueBehindTraversal(router)
 
 // A sheet never outlives its page: every open modal, action sheet or popover is
 // dismissed before a navigation lands. See sheetGuard.js.
+// Only modals: nothing in the app opens an Ionic action sheet or popover any
+// more (every menu is a GModal-based sheet), and asking their controllers kept
+// 79 KB of their code in every first download (alpha.13).
 closeSheetsOnLeave(router, {
-	getTop: async () =>
-		(await modalController.getTop()) ||
-		(await actionSheetController.getTop()) ||
-		(await popoverController.getTop()),
+	getTop: () => modalController.getTop(),
 })
 
 // Release focus before every navigation. Ionic keeps the outgoing page mounted

@@ -176,7 +176,7 @@
 </template>
 
 <script setup>
-import { computed, h, inject, reactive, ref, watch } from "vue"
+import { computed, defineAsyncComponent, h, inject, reactive, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 import { createResource } from "frappe-ui"
 
@@ -187,7 +187,9 @@ import ResourceError from "@/components/ResourceError.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
-import GPullRefresh from "@/components/glass/GPullRefresh.vue"
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
 import { CircleCheckBig } from "lucide-vue-next"
 import { TILE } from "@/utils/iconTile"
 import { personalCacheKey } from "@/utils/personalCache"

@@ -77,7 +77,7 @@
 
 <script setup>
 import { siteTime } from "@/utils/siteTime"
-import { computed, inject, onMounted } from "vue"
+import { computed, defineAsyncComponent, inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { CalendarDays, Megaphone, ShieldAlert, TriangleAlert } from "lucide-vue-next"
 
@@ -87,7 +87,9 @@ import GBadge from "@/components/glass/GBadge.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
-import GPullRefresh from "@/components/glass/GPullRefresh.vue"
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
 
 import { allAnnouncements } from "@/data/announcements"
 

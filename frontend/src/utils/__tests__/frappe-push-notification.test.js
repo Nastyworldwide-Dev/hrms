@@ -18,13 +18,16 @@ import { readFileSync } from "node:fs"
 const source = readFileSync(new URL("../frappe-push-notification.js", import.meta.url), "utf8")
 	.replace(/^import\s+[\s\S]*?from\s+["'][^"']+["']\s*\n/gm, "")
 	.replace(/export default /g, "")
+	// alpha.13: firebase loads on first use via import(); the VM has no module
+	// loader, so it is handed the same seams the test already provides
+	.replace(/await Promise\.all\(\[import\("firebase\/app"\), import\("firebase\/messaging"\)\]\)/, "[{ initializeApp }, { getMessaging, getToken, isSupported, deleteToken, onMessage: onFCMMessage }]")
 
 function fixture({ subscribe, unsubscribe, storedToken = null }) {
 	const store = new Map()
 	if (storedToken) store.set("firebase_token_hrms", storedToken)
 	const calls = []
 	const context = vm.createContext({
-		console: { warn() {}, error() {} },
+		console: { warn() {}, error() {}, info() {} },
 		window: { frappe: { boot: { push_relay_server_url: "https://relay" } } },
 		localStorage: {
 			getItem: (k) => (store.has(k) ? store.get(k) : null),

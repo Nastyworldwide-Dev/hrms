@@ -25,26 +25,31 @@
 					:key="action.text"
 					:label="__(action.text, null, props.doc?.doctype)"
 					:danger="action.role === 'destructive' || undefined"
-					@click="applyWorkflow({ workflowAction: action.text })"
+					@click="applyWorkflow({ workflowAction: action.data.action })"
 				/>
 			</template>
 		</div>
 	</div>
 
-	<ion-action-sheet
-		:buttons="actions"
+	<!-- The app's own action sheet, as every other menu (alpha.13): Ionic's
+	     loaded 26 KB for everyone to serve this one screen. Close is the
+	     sheet's own X; no "Dismiss" row is needed. -->
+	<GActionSheet
 		:is-open="showActionSheet"
-		@didDismiss="applyWorkflow({ event: $event })"
-	>
-	</ion-action-sheet>
+		:title="__('Actions')"
+		:actions="sheetActions"
+		@select="(key) => applyWorkflow({ workflowAction: key })"
+		@did-dismiss="showActionSheet = false"
+	/>
 </template>
 
 <script setup>
 import { Check, ChevronUp, X } from "lucide-vue-next"
 import GButton from "@/components/glass/GButton.vue"
 import GGhostButton from "@/components/glass/GGhostButton.vue"
-import { IonActionSheet, modalController } from "@ionic/vue"
-import { ref, onMounted, inject } from "vue"
+import { modalController } from "@ionic/vue"
+import { computed, ref, onMounted, inject } from "vue"
+import GActionSheet from "@/components/glass/GActionSheet.vue"
 
 const props = defineProps({
 	doc: {
@@ -102,20 +107,21 @@ const getTransitions = async () => {
 	})
 }
 
-const showTransitions = () => {
-	if (actions.value?.length > 0) {
-		// always add last action for dismissing the modal
-		actions.value.push({
-			text: __("Dismiss"),
-			role: "cancel",
-		})
-	}
+//: The transitions as sheet rows; the key is the workflow action itself.
+const sheetActions = computed(() =>
+	actions.value.map((a) => ({
+		key: a.data.action,
+		label: a.text,
+		destructive: a.role === "destructive",
+	}))
+)
 
+const showTransitions = () => {
 	showActionSheet.value = true
 }
 
-const applyWorkflow = async ({ event = "", workflowAction = "" }) => {
-	const action = workflowAction || event.detail.data?.action
+const applyWorkflow = async ({ workflowAction = "" }) => {
+	const action = workflowAction
 	if (action) {
 		await props.workflow.applyWorkflow(props.doc, action)
 		modalController.dismiss()
@@ -128,8 +134,3 @@ const applyWorkflow = async ({ event = "", workflowAction = "" }) => {
 onMounted(() => getTransitions())
 </script>
 
-<style scoped>
-ion-action-sheet {
-	--button-color: var(--g-ink);
-}
-</style>
