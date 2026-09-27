@@ -1,5 +1,4 @@
-CLASS: page content squeezed into chrome (a status truncating in the nav bar) and a read-only field keeping its typing height
-frontend/src/components/FormView.vue:16 same-root — status chip out of the bar
-frontend/src/components/FormView.vue:42 same-root — status line as the page's first line
-frontend/src/theme/glass-components.css:4062 same-root — read-only stacked text sized to content
-frontend/src/components/RequestActionSheet.vue:1 not-affected — sheet has its own header rows, no bar status
+CLASS: a stale snapshot shown as a live figure on a sent request
+frontend/src/views/leave/Form.vue:233 same-root — leave_balance moved to FIELDS_ON_NEW
+frontend/src/utils/plainLabel.js:26 same-root — "Days left"
+frontend/src/data/config/requestSummaryFields.js:41 not-affected — the approver's sheet shows the live leave_balance field ("Days left"), which an approver needs to decide

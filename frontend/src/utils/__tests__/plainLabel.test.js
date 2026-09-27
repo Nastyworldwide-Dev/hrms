@@ -24,7 +24,7 @@ test("the ERP words on the forms become the person's words", () => {
 		"Expense Claim Type": "Type",
 		"Sanctioned Amount": "Approved amount",
 		"Total Leave Days": "Days",
-		"Leave Balance Before Application": "Days left before this",
+		"Leave Balance Before Application": "Days left",
 		"Expense Date": "Date",
 		"In Time": "In",
 		"Out Time": "Out",

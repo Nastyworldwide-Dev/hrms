@@ -23,7 +23,7 @@ export const PLAIN_LABELS = {
 	"expense claim type": "Type",
 	"sanctioned amount": "Approved amount",
 	"total leave days": "Days",
-	"leave balance before application": "Days left before this",
+	"leave balance before application": "Days left",
 	"leave approver name": "Goes to",
 	"expense date": "Date",
 	"in time": "In",

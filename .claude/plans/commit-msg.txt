@@ -1,14 +1,10 @@
-fix(requests): a request's status was squeezed into the top bar
+fix(leave): a sent request showed an old balance as if it were live
 
-A sent request showed its status in the navigation bar beside the
-title, as small coloured words that truncated ("Approved, not …" on
-an expense). An iOS navigation bar holds the title and its controls;
-the state of what is on screen is content. The status is now the
-first line of the page, whole, at body size; the bar keeps Back, the
-title and the menu.
-
-Seen on the same screen: a sent reason ("screen journey") sat in a
-64 pt box with two empty lines, the room left for typing. A read-only
-reason is now as tall as its text.
+A sent leave request read "Days left before this  19": the balance as
+it stood when the request was written. On a request already sent it
+reads as a live figure the employee cannot act on, and it goes stale
+the moment anything else is approved. The balance helps while
+choosing dates, so it now shows only on a new request, as "Days
+left"; after that, the Requests balance card is the answer.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

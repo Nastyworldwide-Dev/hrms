@@ -239,10 +239,13 @@ const FIELDS = [
 	"half_day_date",
 	"total_leave_days",
 	"description",
-	"leave_balance",
 	"leave_approver",
 	"leave_approver_name",
 ]
+
+//: Only while WRITING one (alpha.14 M): the balance helps choose dates; on a
+//: sent request it is a stale snapshot ("Days left before this 19").
+const FIELDS_ON_NEW = ["leave_balance"]
 
 //: Shown only when READING an existing application — on a new one they are
 //: filled from the session, and asking is noise. Same split the blacklist made,
@@ -263,7 +266,7 @@ const FIELDS_ON_EXISTING = [
 const LAYOUT = ["Section Break", "Column Break", "Tab Break"]
 
 function getFilteredFields(fields) {
-	const wanted = props.id ? [...FIELDS, ...FIELDS_ON_EXISTING] : FIELDS
+	const wanted = props.id ? [...FIELDS, ...FIELDS_ON_EXISTING] : [...FIELDS, ...FIELDS_ON_NEW]
 	return fields.filter(
 		(field) => wanted.includes(field.fieldname) || LAYOUT.includes(field.fieldtype)
 	)
