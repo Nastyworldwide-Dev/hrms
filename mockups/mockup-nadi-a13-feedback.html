@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Everyday feedback</title>
+<style>
+:root {
+	--bg: #F2F2F7; --surface: #FFFFFF; --ink: #0B0C10; --ink2: #545C68; --track: #E5E5EA; --hair: #E5E5EA;
+	--brand: #C8FF00; --brand-ink: #3F5C00; --green: #34C759; --red: #FF3B30; --radius: 26px;
+	--font: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+	--spring: cubic-bezier(.2, .8, .2, 1);
+}
+:root[data-theme="dark"] { --bg: #000; --surface: #1C1C1E; --ink: #FFF; --ink2: #A8AEB8; --track: #38383A; --hair: #38383A; --brand-ink: #C8FF00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #000; --surface: #1C1C1E; --ink: #FFF; --ink2: #A8AEB8; --track: #38383A; --hair: #38383A; --brand-ink: #C8FF00; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); }
+.banner { position: sticky; top: 0; z-index: 5; padding: 8px 16px; background: #FF3B30; color: #fff; font: 600 13px/18px var(--font); text-align: center; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font: 700 28px/34px var(--font); margin: 0 0 8px; }
+.lede { color: var(--ink2); font: 400 15px/20px var(--font); margin: 0 0 16px; max-width: 720px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.controls button { min-height: 44px; padding: 0 14px; border-radius: 22px; border: 0; background: var(--surface); color: var(--ink); font: 600 15px/20px var(--font); cursor: pointer; }
+.controls button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.grid { display: flex; flex-wrap: wrap; gap: 24px; }
+.panel { width: 360px; max-width: 100%; }
+.panel h2 { font: 600 17px/22px var(--font); margin: 0 0 4px; }
+.panel p.why { font: 400 13px/18px var(--font); color: var(--ink2); margin: 0 0 12px; }
+.head { font: 400 13px/18px var(--font); color: var(--ink2); margin: 0 16px 8px; }
+.group { background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 16px; position: relative; transition: transform 380ms var(--spring), opacity 380ms var(--spring), max-height 380ms var(--spring), padding 380ms var(--spring); max-height: 80px; }
+.row + .row::before { content: ""; position: absolute; top: 0; left: 57px; right: 0; height: 1px; background: var(--hair); }
+.tile { width: 29px; height: 29px; border-radius: 8px; background: var(--green); display: grid; place-items: center; flex: none; color: #fff; }
+.tile svg { width: 17px; height: 17px; }
+.body { flex: 1; min-width: 0; }
+.t { font: 400 17px/22px var(--font); }
+.s { font: 400 13px/18px var(--font); color: var(--ink2); }
+.acts { display: flex; gap: 8px; }
+.act { width: 44px; height: 44px; border-radius: 22px; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--track); color: var(--ink); transition: transform 120ms var(--spring), opacity 120ms; }
+.act:active, .btn:active { transform: scale(.94); opacity: .7; }
+.act.ok { background: var(--brand); color: #0B0C10; }
+.act svg { width: 20px; height: 20px; }
+.mark { width: 28px; height: 28px; display: none; }
+.mark path { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 30; stroke-dashoffset: 30; }
+.row.decided .acts { display: none; }
+.row.decided .mark { display: block; }
+.row.decided .mark path { animation: draw 380ms var(--spring) forwards; }
+.row.approved .mark path { stroke: var(--green); }
+.row.rejected .mark path { stroke: var(--red); }
+.row.leaving { transform: translateX(-30%); opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.stat { display: flex; justify-content: space-between; align-items: center; min-height: 52px; padding: 0 16px; }
+.stat + .stat { border-top: 1px solid var(--hair); }
+.num { font: 600 17px/22px var(--font); font-variant-numeric: tabular-nums; display: inline-flex; overflow: hidden; height: 22px; }
+.num span { display: block; transition: transform 380ms var(--spring); }
+.btn { width: 100%; min-height: 50px; margin-top: 12px; border: 0; border-radius: 25px; background: var(--brand); color: #0B0C10; font: 600 17px/22px var(--font); cursor: pointer; transition: transform 120ms var(--spring), opacity 120ms; }
+.btn.ghost { background: var(--track); color: var(--ink); }
+.empty { padding: 16px; font: 400 15px/20px var(--font); color: var(--ink2); text-align: center; display: none; }
+.group.done .empty { display: block; }
+:root.reduce * { animation: none !important; transition: none !important; }
+:root.reduce .row.decided .mark path { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } .row.decided .mark path { stroke-dashoffset: 0; } }
+.notes { margin-top: 28px; max-width: 760px; }
+.notes li { font: 400 15px/20px var(--font); color: var(--ink2); margin: 6px 0; }
+.notes b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="banner">MOCKUP — not the live app. Tap Approve / Not approve, the +/- buttons, and press the buttons.</div>
+<div class="wrap">
+	<h1>alpha.13: feedback on everyday actions</h1>
+	<p class="lede">Same rules as the Today card: Apple's own effects, each once, for a reason, and all of it still with Reduce Motion on.</p>
+	<div class="controls">
+		<button id="reset">Reset</button>
+		<button id="reduce" aria-pressed="false">Reduce Motion</button>
+		<button id="theme" aria-pressed="false">Dark</button>
+	</div>
+	<div class="grid">
+		<div class="panel">
+			<h2>1. Approve or not approve</h2>
+			<p class="why">The mark draws itself (Apple: Draw On), then the row slides out; the list closes the gap.</p>
+			<div class="head">Yours · <span id="count">3</span></div>
+			<div class="group" id="list">
+				<div class="empty">Nothing waiting on you.</div>
+			</div>
+		</div>
+		<div class="panel">
+			<h2>2. Numbers roll to their new value</h2>
+			<p class="why">Leave left, overtime hours and the unread count change the way the Clock app's digits do (Apple: content replace), never jump.</p>
+			<div class="head">Leave left</div>
+			<div class="group">
+				<div class="stat"><span class="t">Annual</span><span class="num" id="n1"><span>18</span></span></div>
+				<div class="stat"><span class="t">Overtime to claim</span><span class="num" id="n2"><span>2h 00m</span></span></div>
+			</div>
+			<div class="controls" style="margin-top:12px">
+				<button id="minus">Take 1 day</button>
+				<button id="plus">Add 30m</button>
+			</div>
+		</div>
+		<div class="panel">
+			<h2>3. Buttons answer the finger</h2>
+			<p class="why">Every button shrinks a little and dims while pressed (Apple buttons: "a pressed state always"), within 100 ms.</p>
+			<button class="btn">Send</button>
+			<button class="btn ghost">Cancel request</button>
+		</div>
+	</div>
+	<div class="notes">
+		<h3>Not included, on purpose</h3>
+		<ul>
+			<li><b>No sound, no confetti, no shaking lists.</b> One mark, one slide, one roll.</li>
+			<li><b>Rows the person did not act on never move by themselves</b> (Apple motion: avoid motion on things that happen often or without the person).</li>
+		</ul>
+	</div>
+</div>
+<script>
+const people = [["W0 employee", "Time off · Mon 14 Dec"], ["W0 employee", "Overtime · Thu 24 Sep"], ["W0 employee", "Fix a day · Wed 23 Sep"]]
+const check = '<svg class="mark" viewBox="0 0 28 28"><path d="M6 14.5l5 5L22 8.5"/></svg>'
+const cross = '<svg class="mark" viewBox="0 0 28 28"><path d="M8 8l12 12M20 8L8 20"/></svg>'
+const tile = '<span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 21h16M12 17V7M8 11l4-4 4 4"/></svg></span>'
+function build() {
+	const list = document.getElementById("list")
+	list.classList.remove("done")
+	list.querySelectorAll(".row").forEach((r) => r.remove())
+	for (const [who, what] of people) {
+		const r = document.createElement("div")
+		r.className = "row"
+		r.innerHTML = `${tile}<div class="body"><div class="t">${who}</div><div class="s">${what}</div></div><div class="acts"><button class="act no" aria-label="Not approve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button class="act ok" aria-label="Approve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div>`
+		r.querySelector(".ok").onclick = () => decide(r, "approved", check)
+		r.querySelector(".no").onclick = () => decide(r, "rejected", cross)
+		list.insertBefore(r, list.querySelector(".empty"))
+	}
+	document.getElementById("count").textContent = String(people.length)
+}
+function decide(row, kind, svg) {
+	row.insertAdjacentHTML("beforeend", svg)
+	row.classList.add("decided", kind)
+	const reduce = document.documentElement.classList.contains("reduce") || matchMedia("(prefers-reduced-motion: reduce)").matches
+	setTimeout(() => {
+		row.classList.add("leaving")
+		setTimeout(() => {
+			row.remove()
+			const left = document.querySelectorAll("#list .row").length
+			roll(document.getElementById("count"), String(left), true)
+			if (!left) document.getElementById("list").classList.add("done")
+		}, reduce ? 0 : 380)
+	}, reduce ? 300 : 700)
+}
+function roll(el, text, plain) {
+	if (plain) { el.textContent = text; return }
+	const old = el.querySelector("span")
+	const next = document.createElement("span")
+	next.textContent = text
+	next.style.transform = "translateY(100%)"
+	el.innerHTML = ""
+	el.append(next)
+	requestAnimationFrame(() => requestAnimationFrame(() => (next.style.transform = "translateY(0)")))
+}
+let annual = 18, ot = 120
+document.getElementById("minus").onclick = () => { annual = Math.max(0, annual - 1); roll(document.getElementById("n1"), String(annual)) }
+document.getElementById("plus").onclick = () => { ot += 30; roll(document.getElementById("n2"), `${Math.floor(ot / 60)}h ${String(ot % 60).padStart(2, "0")}m`) }
+document.getElementById("reset").onclick = build
+document.getElementById("reduce").onclick = (e) => { const on = document.documentElement.classList.toggle("reduce"); e.currentTarget.setAttribute("aria-pressed", String(on)) }
+document.getElementById("theme").onclick = (e) => { const dark = document.documentElement.dataset.theme !== "dark"; document.documentElement.dataset.theme = dark ? "dark" : "light"; e.currentTarget.setAttribute("aria-pressed", String(dark)); e.currentTarget.textContent = dark ? "Light" : "Dark" }
+build()
+</script>
+</body>
+</html>
