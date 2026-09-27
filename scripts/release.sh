@@ -30,7 +30,14 @@ release_for() {
 	fi
 	[[ $version == *-* ]] && pre="--prerelease"
 	notes_for "$version" > /tmp/nadi-release-notes.md
-	gh release create "$tag" $pre --verify-tag --title "Nadi $version" --notes-file /tmp/nadi-release-notes.md
+	# the name from the changelog heading "## [v] — Name — date" (alpha.14 on)
+	local name
+	name=$(grep -m1 "^## \[$version\]" "$log" | awk -F' — ' 'NF==3 { print $2 }')
+	if [[ -n $name ]]; then
+		gh release create "$tag" $pre --verify-tag --title "Nadi $version — $name" --notes-file /tmp/nadi-release-notes.md
+	else
+		gh release create "$tag" $pre --verify-tag --title "Nadi $version" --notes-file /tmp/nadi-release-notes.md
+	fi
 	echo "[release] created GitHub Release $tag"
 }
 

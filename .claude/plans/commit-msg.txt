@@ -1,18 +1,17 @@
-feat(files): every attachment shows what it is
+feat(version): You shows the release by name, never a build time
 
-Owner, 27 Sep 2026: "every attachment must show preview". Three places
-listed a file as its name alone: every request form, a request's
-sheet, and the IT ticket form. One row now: an image shows itself as a
-thumbnail, a PDF or other file shows a typed mark, and a tap opens the
-full preview.
+Owner, 27 Sep 2026: "version update with version release name
+properly. no date and time displayed in app." You read "Version
+2.0.0-alpha.13 · 2026-09-27 06:39", the time the bundle was built.
 
-Wiring the ticket form turned up a real loss: it bound GFileUpload
-with v-model, but GFileUpload only emits select, preview and remove.
-A screenshot picked there went nowhere and was never uploaded with
-the ticket. The form now keeps, previews and removes what is picked.
-(The IT Helpdesk is not installed on the test site, so this path is
-pinned by a source test rather than a screen.)
+It now reads "Nadi <version> · <release name>". The name is plain and
+says what the release delivers (ruling R12: professional, no themes).
+It lives beside the version in package.json, heads the changelog
+entry and titles the GitHub Release; the version gate holds all
+three together from alpha.14 on, and releases already shipped keep
+their number only.
 
-The two style rules the old name-only row used are removed.
+The build time still stamps diagnostics reports, where "which build"
+matters, and a gate keeps it off every screen.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

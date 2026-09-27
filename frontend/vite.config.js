@@ -7,19 +7,21 @@ import frappeui from "frappe-ui/vite"
 import path from "path"
 import fs from "fs"
 
+const PKG = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"))
+
 export default defineConfig({
 	// Stamped into the bundle so a report can say which build produced it —
-	// "it worked yesterday" is only answerable if yesterday has a name. The
-	// commit sha would be better; this is what is available without asking git
-	// at build time on a host that may be a tarball.
 	define: {
+		// Which build a diagnostics report came from ("it worked yesterday"
+		// needs yesterday to have a name). Reports only: never on screen
+		// (owner, 27 Sep 2026: no date or time in the app).
 		__APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ")),
-		// The PWA's version (SemVer), one source: package.json. Shown on You
-		// next to the build time; docs/glass/CHANGELOG.md has an entry per
-		// version, and design/gates/version.test.mjs holds them together.
-		__APP_VERSION__: JSON.stringify(
-			JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version
-		),
+		// The PWA's version (SemVer) and its release name, one source:
+		// package.json. Shown on You; no build date or time (owner, 27 Sep
+		// 2026). docs/glass/CHANGELOG.md has an entry per version, and
+		// design/gates/version.test.mjs holds them together.
+		__APP_VERSION__: JSON.stringify(PKG.version),
+		__APP_RELEASE_NAME__: JSON.stringify(PKG.releaseName || ""),
 	},
 	server: {
 		port: 8080,

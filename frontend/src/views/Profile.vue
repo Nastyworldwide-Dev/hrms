@@ -117,7 +117,7 @@
 								</button>
 							</div>
 							<p class="g-form-footer g-form-footer--center">
-								{{ __("Version {0} · {1}", [versionString, buildString]) }}
+								{{ releaseName ? __("Nadi {0} · {1}", [versionString, __(releaseName)]) : __("Nadi {0}", [versionString]) }}
 							</p>
 						</section>
 					</div>
@@ -205,7 +205,8 @@ const pendingApprovalsCount = computed(() => Number(pendingCountResource.data) |
 
 //: "Version 2.0.0-alpha.2 · 2026-09-23 14:02" — answers "which version are
 //: you on" in the report a person sends.
-const buildString = typeof __APP_BUILD__ === "string" ? __APP_BUILD__ : "dev"
+//: The release's name beside its number; no date or time (owner, 27 Sep 2026).
+const releaseName = typeof __APP_RELEASE_NAME__ === "string" ? __APP_RELEASE_NAME__ : ""
 const versionString = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev"
 
 //: Role-gated rows keep the server as the authority — `isApprover` is a

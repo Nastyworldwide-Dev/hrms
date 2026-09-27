@@ -38,8 +38,11 @@ test("the rows come from the system's list components", () => {
 test("the version is on the screen people report defects from", () => {
 	// Every phone-side defect this month began with "which version are you
 	// on". A plain line on You now (audit-pages §4), not a button.
-	assert.match(view, /Version \{0\} · \{1\}/)
-	assert.match(view, /__APP_BUILD__/, "the compile-time stamp")
+	// alpha.14: the version and its release name; the build time goes only
+	// into diagnostics reports, never on screen (owner: no date or time)
+	assert.match(view, /Nadi \{0\} · \{1\}/)
+	assert.match(view, /__APP_RELEASE_NAME__/)
+	assert.doesNotMatch(view, /__APP_BUILD__/)
 	assert.match(code(read("utils/diagnostics.js")), /__APP_BUILD__/)
 })
 
