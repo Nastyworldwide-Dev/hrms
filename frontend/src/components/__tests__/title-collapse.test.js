@@ -45,6 +45,8 @@ test("nothing animates a layout property", () => {
 // small title appears only when the large one scrolled UNDER THE BAR, i.e.
 // it is above the scroll area's top edge, never because the page was hidden.
 test("the small title shows only when the large one went up under the bar", () => {
-	assert.match(layout, /entry\.boundingClientRect\.bottom\s*<=\s*entry\.rootBounds\.top/)
+	// the rule itself (and the hidden-page case, alpha.14) is pinned in
+	// utils/__tests__/titleCollapse.test.js
+	assert.match(layout, /collapsed\.value = titleCollapsed\(entry, collapsed\.value\)/)
 	assert.match(layout, /root:\s*await/)
 })

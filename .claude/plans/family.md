@@ -1,4 +1,4 @@
-CLASS: release bookkeeping (no code)
-frontend/package.json — version 2.0.0-alpha.13
-docs/glass/CHANGELOG.md — alpha.13 entry
-docs/glass/plan/NADI_2.0.0-alpha.13_PLAN.md — evidence per slice
+CLASS: a size read from a hidden page taken as a real position (Ionic hides a tab page while a pushed screen is up; its boxes read 0x0)
+frontend/src/components/BaseLayout.vue:64 same-root — the only IntersectionObserver deciding the collapsed title; now via titleCollapsed()
+frontend/src/utils/titleCollapse.js:9 same-root — the rule, ignores 0-size roots and targets
+frontend/src/components/glass/GAppHeader.vue:127 not-affected — reads the injected state only

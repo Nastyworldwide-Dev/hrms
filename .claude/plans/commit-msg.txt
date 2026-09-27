@@ -1,19 +1,12 @@
-test(gates): measure Nadi as it is installed on an iPhone
+fix(header): coming back to a tab showed its title twice
 
-Every gate ran a 402x874 window with no safe areas, no standalone
-mode and every page opened cold from its URL. The owner's phone showed
-defects none of them could see: the title doubled after coming back
-to a tab, a band of chrome above every page, the tab bar near the
-home indicator.
+Opening a screen from a tab (the bell, a row) and coming Back left the
+bar's small title AND the large title showing, on every tab. Ionic
+hides the tab page while the pushed screen is up. A hidden page reports
+0x0 boxes, which the title observer read as "the large title went up
+under the bar", and it never fired again on return because nothing
+crossed. The installed-iPhone journey caught it on all five tabs.
 
-The new audit serves the CSS with the iPhone 16 Pro insets written in
-and walks the app as a person does: each tab, scrolled, half-scrolled,
-a pushed screen and Back. The page starts below the status bar because
-index.html uses the "default" status-bar style; a test pins that
-setting, since a first run that assumed otherwise blamed the app for a
-gap the phone never has.
-
-On HEAD it reported the double title on all five tabs and a 21 pt
-band above every large title. Those fixes follow separately.
+Only a measured page decides now; a hidden page keeps its state.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

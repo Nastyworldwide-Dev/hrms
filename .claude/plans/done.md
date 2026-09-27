@@ -1,3 +1,3 @@
-GOAL: the gates measure Nadi as installed on an iPhone (safe areas, standalone) and walk it like a person, tab to tab.
-DONE WHEN: device-journey-audit runs in the ios gate; it went red on HEAD for real defects (double title after Back, 21 pt top band).
-CHECK: node --test frontend/e2e/device.test.mjs; cd frontend && node e2e/device-journey-audit.mjs
+GOAL: coming Back to a tab shows one title, never the bar's small title and the large one together.
+DONE WHEN: a hidden tab page keeps its title state; device journey J1 = 0 on all five tabs.
+CHECK: node --test frontend/src/utils/__tests__/titleCollapse.test.js; device-journey-audit J1 0 (was 5)

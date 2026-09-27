@@ -31,6 +31,7 @@ import { IonContent } from "@ionic/vue"
 import { computed, onBeforeUnmount, onMounted, provide, ref } from "vue"
 import { useRoute } from "vue-router"
 import { TAB_ITEMS } from "@/data/navItems"
+import { titleCollapsed } from "@/utils/titleCollapse"
 
 const props = defineProps({
 	pageTitle: {
@@ -60,8 +61,7 @@ onMounted(async () => {
 	// went UP past the scroller's top edge.
 	observer = new IntersectionObserver(
 		([entry]) => {
-			if (!entry.rootBounds) return
-			collapsed.value = !entry.isIntersecting && entry.boundingClientRect.bottom <= entry.rootBounds.top
+			collapsed.value = titleCollapsed(entry, collapsed.value)
 		},
 		{ root: await content.value?.$el?.getScrollElement?.() }
 	)
