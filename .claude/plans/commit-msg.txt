@@ -1,9 +1,14 @@
-test(api): allowlist Frappe's password strength check
+feat(more): a leader's things in one "Your team" group
 
-1334108aa made Change password call frappe's test_password_strength,
-but the API contract audit (every url the PWA calls is a whitelisted
-hrms method or an allowlisted core one) was not given it, so the suite
-went red. Its real signature from frappe/core/doctype/user/user.py.
-Should have gone with that commit.
+What a leader does for others lived in two places: Approvals under
+You, Team under More, and Roster only inside Team. You is the person;
+leading is now one group on More, "Your team": Approvals, Team and
+Roster, each shown only when the server says it applies (is_approver,
+has_team). Nothing changes for staff with no one to approve.
+
+The Approvals number on You counted check-ins only
+(get_pending_count), so four leave requests waiting showed nothing.
+It now counts everything waiting on you, from the same source as
+Home's Needs you.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

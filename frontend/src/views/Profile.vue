@@ -136,9 +136,9 @@
 </template>
 
 <script setup>
-import { KeyRound, SquareCheck, User } from "lucide-vue-next"
+import { KeyRound, User } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
-import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from "vue"
+import { computed, inject, ref, watch } from "vue"
 import { useListUpdate } from "@/composables/realtime"
 import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
@@ -158,8 +158,6 @@ import { formatCurrency } from "@/utils/formatters"
 
 import ProfileInfoModal from "@/components/ProfileInfoModal.vue"
 
-import { pendingCountResource } from "@/data/remoteCheckin"
-import { isApprover } from "@/data/team"
 import {
 	arePushNotificationsEnabled,
 	enablePushNotifications as requestPushEnable,
@@ -201,16 +199,13 @@ const DETAILS = [
 ]
 const detailsOpen = ref(false)
 
-const pendingApprovalsCount = computed(() => Number(pendingCountResource.data) || 0)
-
 //: "Version 2.0.0-alpha.2 · 2026-09-23 14:02" — answers "which version are
 //: you on" in the report a person sends.
 //: The release's name beside its number; no date or time (owner, 27 Sep 2026).
 const releaseName = typeof __APP_RELEASE_NAME__ === "string" ? __APP_RELEASE_NAME__ : ""
 const versionString = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev"
 
-//: Role-gated rows keep the server as the authority — `isApprover` is a
-//: RESOURCE answered by the backend, not a role string read here.
+//: You is only you (alpha.14 O): Approvals moved to More → Your team.
 const rows = computed(() => [
 	{
 		key: "details",
@@ -222,18 +217,6 @@ const rows = computed(() => [
 			detailsOpen.value = true
 		},
 	},
-	...(isApprover.data
-		? [
-				{
-					key: "approvals",
-					icon: SquareCheck,
-					label: __("Approvals"),
-					sublabel: null,
-					badge: pendingApprovalsCount.value > 0 ? String(pendingApprovalsCount.value) : null,
-					go: () => router.push({ name: "Approvals" }),
-				},
-		  ]
-		: []),
 	{
 		key: "password",
 		icon: KeyRound,
@@ -390,10 +373,6 @@ const logout = async () => {
 	}
 }
 
-const onRemoteCheckinEvent = () => {
-	pendingCountResource.reload()
-}
-
 // Realtime: reload this employee's own doc on its updates. Via useListUpdate so
 // the handler detaches by reference — the old socket.off("list_update") with no
 // handler ref tore down every OTHER component's list_update listener too — and
@@ -402,12 +381,4 @@ useListUpdate(socket, DOCTYPE, (name) => {
 	if (name === employee.data.name) employeeDoc.reload()
 })
 
-onMounted(() => {
-	socket.on("hrms:remote_checkin_request", onRemoteCheckinEvent)
-	pendingCountResource.fetch()
-})
-
-onBeforeUnmount(() => {
-	socket.off("hrms:remote_checkin_request", onRemoteCheckinEvent)
-})
 </script>

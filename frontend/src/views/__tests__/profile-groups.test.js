@@ -55,9 +55,9 @@ test("change password has its own row", () => {
 
 test("nothing was lost in the You rework (audit-pages §4)", () => {
 	// Every destination is still reachable: from You, or where the plan moved it.
-	for (const destination of ["Approvals", "ChangePassword"]) {
-		assert.match(view, new RegExp(`name: "${destination}"`), `${destination} survives`)
-	}
+	assert.match(view, /name: "ChangePassword"/, "ChangePassword survives")
+	// alpha.14 O: Approvals moved to More → Your team, still server-gated there
+	assert.match(read("views/More.vue"), /isApprover\.data[\s\S]*name: "Approvals"/, "Approvals survives on More")
 	assert.match(
 		read("views/helpdesk/HelpdeskHub.vue"),
 		/<WhoToAsk/,
@@ -69,7 +69,7 @@ test("nothing was lost in the You rework (audit-pages §4)", () => {
 test("the role gate is still the server's verdict", () => {
 	// `isApprover` is a RESOURCE — answered by the backend — not a role string
 	// read here. The regroup moved the row; it did not move the decision.
-	assert.match(view, /isApprover\.data/)
+	assert.match(read("views/More.vue"), /isApprover\.data/)
 	assert.doesNotMatch(view, /"HR Manager"|"HR User"/, "no role literal")
 })
 

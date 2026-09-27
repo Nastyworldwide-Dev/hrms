@@ -40,6 +40,29 @@
 					<HolidayList v-if="holidaysOpen && employee.data" />
 				</GModal>
 
+				<!-- What a leader does for others, in one group (alpha.14 O): it was
+				     split between You (Approvals) and here (Team), with Roster only
+				     inside Team. Each row appears when the server says it applies. -->
+				<template v-if="teamItems.length">
+					<span class="g-eyebrow mt-1">{{ __("Your team") }}</span>
+					<GListPanel>
+						<GListRow
+							v-for="item in teamItems"
+							:key="item.key"
+							:label="item.title"
+							:tint="TILE.team"
+							@click="router.push(item.to)"
+						>
+							<template #icon>
+								<component :is="item.icon" class="h-icon-md w-icon-md" />
+							</template>
+							<template v-if="item.badge" #badge>
+								<GBadge variant="accent">{{ item.badge }}</GBadge>
+							</template>
+						</GListRow>
+					</GListPanel>
+				</template>
+
 				<!-- Sibling apps on the same site. A row here LEAVES the PWA (full
 				     navigation, not a router push — each app owns its own scope), so
 				     it trails an arrow-out glyph instead of the chevron. Second glass
@@ -72,9 +95,9 @@
 <script setup>
 import { TILE } from "@/utils/iconTile"
 import { HUB_PATH } from "@/utils/helpdeskHub"
-import { CalendarDays, ExternalLink, Users } from "lucide-vue-next"
+import { CalendarDays, CalendarRange, ExternalLink, SquareCheck, Users } from "lucide-vue-next"
 import { useRouter } from "vue-router"
-import { computed, inject, markRaw, ref } from "vue"
+import { computed, inject, markRaw, onMounted, ref } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import HolidayList from "@/components/HolidayList.vue"
@@ -83,7 +106,9 @@ import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import { MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { isSameOriginPath } from "@/data/appLinks"
-import { hasTeam } from "@/data/team"
+import { hasTeam, isApprover } from "@/data/team"
+import { needsYouResource } from "@/data/needsYou"
+import GBadge from "@/components/glass/GBadge.vue"
 import { myApps } from "@/data/myApps"
 
 const router = useRouter()
@@ -91,8 +116,6 @@ const employee = inject("$employee")
 const holidaysOpen = ref(false)
 const __ = inject("$translate")
 
-// Team is manager-only: the entry appears once has_team confirms direct reports
-// (or the caller is HR, who browse teams via the selector)
 //: One tile colour per destination (alpha.7 §7).
 const MORE_TINT = {
 	[HUB_PATH]: TILE.help,
@@ -107,11 +130,29 @@ const moreItems = computed(() => {
 		title: __(item.title),
 		tint: MORE_TINT[item.route] || TILE.neutral,
 	}))
-	if (hasTeam.data) {
-		items.push({ icon: markRaw(Users), title: __("Team"), route: "/team", tint: TILE.team })
-	}
 	return items
 })
+
+//: Approvals, Team and Roster (alpha.14 O). The server decides each:
+//: isApprover (anyone something is routed to), hasTeam (direct reports, or HR).
+//: The Approvals number is everything waiting on you, as Home's Needs you.
+const waitingOnYou = computed(
+	() => (Number(needsYouResource.data?.total) || 0) + (Number(needsYouResource.data?.checkins) || 0)
+)
+onMounted(() => {
+	if (isApprover.data) needsYouResource.reload()
+})
+const teamItems = computed(() => [
+	...(isApprover.data
+		? [{ key: "approvals", icon: markRaw(SquareCheck), title: __("Approvals"), to: { name: "Approvals" }, badge: waitingOnYou.value ? String(waitingOnYou.value) : "" }]
+		: []),
+	...(hasTeam.data
+		? [
+				{ key: "team", icon: markRaw(Users), title: __("Team"), route: "/team", to: "/team" },
+				{ key: "roster", icon: markRaw(CalendarRange), title: __("Roster"), route: "/team/roster", to: "/team/roster" },
+		  ]
+		: []),
+])
 
 // Offered by the server (hrms.api.app_links; audit F-15). An employee with neither the finance nor the
 // projects roles gets no Apps group at all — the heading goes with the rows,

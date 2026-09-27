@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
 const source = readFileSync(
-	fileURLToPath(new URL("../src/views/Profile.vue", import.meta.url)),
+	// alpha.14 O: the Approvals entry moved from You to More → Your team
+	fileURLToPath(new URL("../src/views/More.vue", import.meta.url)),
 	"utf8"
 )
 
@@ -47,14 +48,14 @@ test("the gate is never the pending count", () => {
 	)
 	assert.doesNotMatch(
 		gate,
-		/pendingApprovalsCount/,
+		/waitingOnYou|pendingApprovalsCount/,
 		"the count is not the gate"
 	)
 	// It is allowed to be the BADGE — that is a number, not a permission.
 	const row = source.slice(source.indexOf('key: "approvals"'))
 	assert.match(
 		row.slice(0, 400),
-		/badge:.*pendingApprovalsCount/s,
+		/badge:.*waitingOnYou/s,
 		"the count is a badge"
 	)
 })
