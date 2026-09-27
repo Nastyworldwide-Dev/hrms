@@ -1,4 +1,6 @@
-CLASS: a size read from a hidden page taken as a real position (Ionic hides a tab page while a pushed screen is up; its boxes read 0x0)
-frontend/src/components/BaseLayout.vue:64 same-root — the only IntersectionObserver deciding the collapsed title; now via titleCollapsed()
-frontend/src/utils/titleCollapse.js:9 same-root — the rule, ignores 0-size roots and targets
-frontend/src/components/glass/GAppHeader.vue:127 not-affected — reads the injected state only
+CLASS: chrome padding stacked on a 44 pt bar row (the bar taller than Apple's navigation bar)
+frontend/src/theme/glass-components.css:2179 same-root — .g-header padding 12 top/bottom removed, min-height 44
+frontend/src/theme/glass-components.css:4408 same-root — .g-header--large padding-bottom 8 -> 0
+frontend/src/theme/glass-components.css:4722 same-root — .g-header__mini centred on the one row (was +12)
+frontend/src/theme/glass-components.css:4748 same-root — .g-header--collapsed padding-bottom 4 -> 0
+frontend/src/theme/glass-components.css:4832 not-affected — desktop column sets only inline padding

@@ -42,3 +42,16 @@ test("bar buttons are round 44 pt; the avatar is a circle", () => {
 	assert.equal(decls(".g-header__action")["border-radius"], "50%")
 	assert.match(header, /<GAvatar[^>]*\bround\b/)
 })
+
+// alpha.14 (owner, 27 Sep 2026: "a top gap on every page"). The installed-
+// iPhone journey measured the bar at 65 pt: 12 above a 44 pt row, 8 below and
+// a hairline, so the large title sat 21 pt lower than Apple's (the navigation
+// bar row is 44 pt; the large title follows it directly). The row IS the bar.
+test("the bar is one 44 pt row with no band above or below it", () => {
+	const bar = decls(".g-header")
+	assert.equal(bar["padding"], "0 var(--g-screen-gutter)")
+	assert.equal(bar["min-height"], "var(--g-touch-target-min)")
+	assert.equal(decls(".g-header--large")["padding-bottom"], "0")
+	assert.equal(decls(".g-header--collapsed")["padding-bottom"], "0")
+	assert.equal(decls(".g-header__mini")["top"], "calc(var(--g-touch-target-min) / 2)")
+})

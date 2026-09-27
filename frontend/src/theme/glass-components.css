@@ -2180,7 +2180,11 @@ html[data-theme="dark"] .g-cal__day--present {
 	display: flex;
 	align-items: center;
 	gap: 16px;
-	padding: 12px var(--g-screen-gutter);
+	/* alpha.14: the bar IS its 44 pt row (Apple: navigation bar 44 pt; the
+	   large title follows directly). The 12 above and 8 below made a 65 pt
+	   bar and the top gap the owner saw on every page. */
+	padding: 0 var(--g-screen-gutter);
+	min-height: var(--g-touch-target-min);
 	/* TRANSPARENT, not --g-bg (Track B). The solid band was old-shell residue —
 	   an operator filed it as exactly that — and the mockup, which wins on
 	   values, has no header band at all: the top of every screen floats over
@@ -4408,7 +4412,7 @@ html {
 .g-header--large {
 	flex-wrap: wrap;
 	row-gap: 4px;
-	padding-bottom: 8px;
+	padding-bottom: 0;
 }
 .g-header--large .g-header__action,
 .g-header--large .g-header__actions {
@@ -4722,8 +4726,8 @@ ion-modal.g-mustread {
 .g-header__mini {
 	position: absolute;
 	left: 50%;
-	/* the centre of the first row: the bar's 12 pt pad + half a 44 pt control */
-	top: calc(12px + var(--g-touch-target-min) / 2);
+	/* the centre of the bar's one 44 pt row */
+	top: calc(var(--g-touch-target-min) / 2);
 	transform: translate(-50%, -50%);
 	max-width: 50%;
 	overflow: hidden;
@@ -4747,7 +4751,7 @@ ion-modal.g-mustread {
    (iOS: it scrolls under the bar). Height collapses with it, no jump. */
 .g-header--collapsed {
 	row-gap: 0;
-	padding-bottom: 4px;
+	padding-bottom: 0;
 	border-bottom-color: var(--g-hair);
 	background: var(--g-bg);
 }

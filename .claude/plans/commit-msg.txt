@@ -1,12 +1,11 @@
-fix(header): coming back to a tab showed its title twice
+fix(header): a band of empty chrome sat above every page
 
-Opening a screen from a tab (the bell, a row) and coming Back left the
-bar's small title AND the large title showing, on every tab. Ionic
-hides the tab page while the pushed screen is up. A hidden page reports
-0x0 boxes, which the title observer read as "the large title went up
-under the bar", and it never fired again on return because nothing
-crossed. The installed-iPhone journey caught it on all five tabs.
-
-Only a measured page decides now; a hidden page keeps its state.
+The owner saw a gap at the top of every page. Measured on the
+installed-iPhone profile: the bar was 65 pt tall, 12 above its 44 pt
+row, 8 below it and a hairline, so the large title started 21 pt lower
+than Apple's navigation bar puts it (44 pt row, the large title
+directly under it). The padding was spacing around the row, not part
+of it. The bar is now its 44 pt row; the small title centres on that
+row.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
