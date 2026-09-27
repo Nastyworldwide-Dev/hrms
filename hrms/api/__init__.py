@@ -154,8 +154,35 @@ def withdraw_request(doctype: str, name: str) -> None:
 		frappe.throw(_("You can only withdraw a request you filed."), frappe.PermissionError)
 	if cint(doc.docstatus) != 0:
 		frappe.throw(_("This request was already acted on and can no longer be withdrawn."))
+	# A draft was never submitted, so no live row can depend on it; what can
+	# point at its NAME is cancelled history of an earlier request that held
+	# the same name (Frappe hands a deleted newest name back to the series).
+	# Refuse on a live link only; the framework's own check, which counts the
+	# cancelled rows too, is then skipped (alpha.13, measured: 417 on a fresh
+	# draft "linked with Attendance HR-ATT-2026-00067", docstatus 2).
+	from frappe.model.delete_doc import check_if_doc_is_dynamically_linked, get_linked_docs
+
+	# dynamic links (Comment, Communication...) keep Frappe's own rule, which
+	# already skips cancelled rows; only the static check is replaced
+	check_if_doc_is_dynamically_linked(doc)
+	links = get_linked_docs(doc)
+	for link in links:
+		link["docstatus"] = frappe.db.get_value(link["reference_doctype"], link["reference_docname"], "docstatus")
+	blockers = withdraw_blockers(links)
+	if blockers:
+		frappe.throw(
+			_("This request is linked to {0} {1} and cannot be withdrawn.").format(
+				_(blockers[0]["reference_doctype"]), blockers[0]["reference_docname"]
+			),
+			frappe.LinkExistsError,
+		)
 	logger.info("[api] withdraw %s %s by %s", doctype, name, frappe.session.user)
-	frappe.delete_doc(doctype, name, ignore_permissions=True)
+	frappe.delete_doc(doctype, name, ignore_permissions=True, force=True)
+
+
+def withdraw_blockers(links) -> list[dict]:
+	"""The links that must stop a withdraw: any row that is not cancelled. Pure."""
+	return [link for link in links or [] if cint(link.get("docstatus")) != 2]
 
 
 # staff lockdown: non-HR callers get a minimal PDPA-safe directory
