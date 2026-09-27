@@ -1,7 +1,6 @@
-CLASS: a shared "fill the rest" flex rule growing a fixed-size icon, stealing the value's space
-frontend/src/theme/glass-components.css:3998 same-root — the rule now skips svg
-frontend/src/components/EmployeeCheckinItem.vue:8 same-root — the chevron that grew (fixed by the rule)
-frontend/src/components/RequestBalances.vue:1 same-root — its chevron has its own flex rule; the rule change is harmless
-frontend/src/components/RequestList.vue:1 not-affected — icons sit in .g-row, not .g-form-row
-frontend/src/components/Announcements.vue:1 not-affected — same
-frontend/src/views/Profile.vue:1 not-affected — same
+CLASS: a long value squeezed beside its label into a narrow right-aligned column
+frontend/src/views/Profile.vue:34 same-root — Manager and Shift rows
+frontend/src/components/FormField.vue:5 same-root — every form row (read-only details included)
+frontend/src/components/LateCheckoutDialog.vue:10 same-root — "You checked in" row
+frontend/src/components/RemoteCheckinDialog.vue:18 same-root — distance row
+frontend/src/theme/glass-components.css:4592 same-root — value-under layout

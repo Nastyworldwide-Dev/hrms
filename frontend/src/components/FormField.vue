@@ -4,6 +4,7 @@
 	     label on top, the text under it, on the same row surface. -->
 	<div
 		v-if="showField"
+		v-value-row
 		class="g-form-row"
 		:class="{
 			'g-form-row--stacked': isStacked,

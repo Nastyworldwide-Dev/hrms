@@ -14,7 +14,7 @@
 				     show a confident figure drawn from a reading that cannot
 				     support it. -->
 				<div v-if="reason !== 'imprecise_location' && !readingIsCoarse" class="g-form-group">
-					<div class="g-form-row g-form-row--readonly">
+					<div v-value-row class="g-form-row g-form-row--readonly">
 						<span class="g-form-row__label">{{ __("From the work area") }}</span>
 						<span class="g-form-row__value tabular-nums">{{ formattedDistance }}</span>
 					</div>

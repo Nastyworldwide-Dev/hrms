@@ -1,3 +1,3 @@
-GOAL: a row's value sits at its trailing edge beside the chevron; icons in a row keep their own size.
-DONE WHEN: the shared row fill rule skips svg; check-in row time ends at the chevron (x 342, chevron 354-370).
-CHECK: node --test frontend/src/theme/__tests__/row-accessory.test.js; page-audit 402 GATE_COUNT 0
+GOAL: a long value in a label/value row goes under its label on one line, never a narrow right-hand column (iOS value cell).
+DONE WHEN: v-value-row on every read-only row; You page: a 36-char manager name sits under "Manager", Shift stays beside.
+CHECK: node --test frontend/src/utils/__tests__/valueRow.test.js; WebKit installed profile screenshot of You

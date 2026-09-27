@@ -6,7 +6,7 @@
 		<div class="g-form-body">
 			<section class="g-form-section">
 				<div class="g-form-group">
-					<div class="g-form-row g-form-row--readonly">
+					<div v-value-row class="g-form-row g-form-row--readonly">
 						<span class="g-form-row__label">{{ __("You checked in") }}</span>
 						<span class="g-form-row__value tabular-nums">{{ formatTimestamp(inCheckinTime) }}</span>
 					</div>

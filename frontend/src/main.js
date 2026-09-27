@@ -10,6 +10,7 @@ import { initSocket } from "./socket"
 import { resourcesPlugin, frappeRequest } from "frappe-ui"
 import { translationsPlugin } from "./plugins/translationsPlugin.js"
 import ResourceError from "@/components/ResourceError.vue"
+import { vValueRow } from "@/utils/valueRow"
 import { applyProductName } from "@/utils/productName"
 import { blockZoom } from "@/utils/blockZoom"
 import { noOverscroll } from "@/utils/noOverscroll"
@@ -77,6 +78,8 @@ app.use(translationsPlugin)
 // that renders a resource, so requiring a per-file import is how it ends up on
 // none of them.
 app.component("ResourceError", ResourceError)
+// A label/value row puts a long value under its label, as iOS does (alpha.14 F).
+app.directive("value-row", vValueRow)
 
 app.use(router)
 app.use(IonicVue, getIonicConfig())

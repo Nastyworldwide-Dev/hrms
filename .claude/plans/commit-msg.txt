@@ -1,14 +1,15 @@
-fix(lists): the check-in time floated in the middle of its row
+fix(rows): a long manager name wrapped into three short lines
 
-The owner's screenshot of Check-ins showed each time sitting mid-row.
-Measured: the time ended at x 263 while the chevron's box ran from
-275 to 370. The shared row rule ".g-form-row > :not(label)" gives
-every non-label child flex 1 1 0, and it outranked the chevron's own
-rule on specificity, so a 16 pt icon took a 95 pt slot. An icon in a
-row keeps its size now; the time ends beside the chevron (342 / 354).
+On You, the owner's manager name wrapped into three right-aligned
+lines beside "Manager". A label/value row always laid the two side by
+side, so a long value was squeezed into whatever width the label left.
+iOS does it differently: side by side only while both fit on one line,
+otherwise the value goes under its label, leading-aligned.
 
-Also points two tests at this change and the last one: the swatch
-selector test, and the cache-isolation harness, which now loads the
-page-copy helper that session.js imports.
+Rows now measure their text and choose. It is on every read-only
+label/value row: You, every form field, the late check-out and
+remote check-in sheets. Proven with a 36-character manager name on
+the installed-iPhone profile. The dead-code audit now knows global
+directives the way it knows global components.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

@@ -201,6 +201,7 @@ const GLOBAL_COMPONENTS = new Set([
 	"router-view",
 	"RouterView",
 ])
+const GLOBAL_DIRECTIVES = new Set([...main.matchAll(/app\.directive\("([\w-]+)"/g)].map((m) => m[1]))
 // $slots/$emit/$attrs/$props are the component proxy; `__` is the translation
 // global registered by plugins/translationsPlugin.js
 const GLOBAL_PROPERTIES = new Set([
@@ -249,7 +250,8 @@ test("every template identifier and component tag resolves to a binding, a globa
 				)
 		}
 		for (const m of tpl.code.matchAll(/_resolveDirective\("([^"]+)"/g))
-			findings.push(`${rel(file)}: directive v-${m[1]} is not registered`)
+			if (!GLOBAL_DIRECTIVES.has(m[1]))
+				findings.push(`${rel(file)}: directive v-${m[1]} is not registered`)
 	}
 	assert.deepEqual([...new Set(findings)], [], findings.join("\n"))
 })
