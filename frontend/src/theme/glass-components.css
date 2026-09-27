@@ -4947,3 +4947,40 @@ ion-modal.g-mustread {
 	-webkit-appearance: none;
 	margin: 0;
 }
+
+/* One of your own check-ins (alpha.14 A, CheckinSheet.vue): the tap and its
+   time as the title (iOS Title 2 22/28 bold), the day under it, the photo
+   itself at the width of the groups, and the coordinates as a footer — quiet,
+   tabular, tap to copy. */
+.g-checkin-sheet__title {
+	margin: 0;
+	font-family: var(--g-font-ui);
+	font-size: 22px;
+	line-height: 28px;
+	font-weight: 700;
+	color: var(--g-ink);
+}
+.g-checkin-sheet__day {
+	margin: 0;
+	font-size: 15px;
+	line-height: 20px;
+	color: var(--g-ink2);
+}
+.g-checkin-sheet__photo {
+	display: block;
+	width: 100%;
+	max-height: 320px;
+	object-fit: cover;
+	border-radius: var(--g-radius-card);
+	background: var(--g-icon-bg);
+}
+.g-checkin-sheet__coords {
+	align-self: flex-start;
+	min-height: var(--g-touch-target-min);
+	border: 0;
+	background: transparent;
+	text-align: start;
+	cursor: pointer;
+	-webkit-user-select: text;
+	user-select: text;
+}

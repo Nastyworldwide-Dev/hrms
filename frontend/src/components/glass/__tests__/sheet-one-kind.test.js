@@ -38,7 +38,7 @@ const UNTITLED_ALLOWED = new Set([
 //: from the record they show (kind of request + open-form link; who + when),
 //: so a static title would say it twice. Follow-up: lift those heads into
 //: GModal's title and drop this list.
-const SELF_HEADED = /^\s*<(RequestActionSheet|CheckinDecisionSheet)\b/
+const SELF_HEADED = /^\s*<(RequestActionSheet|CheckinDecisionSheet|CheckinSheet)\b/
 
 test("no raw <ion-modal> outside GModal", () => {
 	const offenders = files

@@ -18,7 +18,20 @@ import ListView from "@/components/ListView.vue"
 const __ = inject("$translate")
 
 // shift_start: the work day a tap counts on (utils/dayGroups workDayOf)
-const EMPLOYEE_CHECKIN_FIELDS = ["name", "log_type", "time", "shift_start", "latitude", "longitude"]
+// and what the check-in sheet shows (alpha.14 A): where in words, the photo,
+// the quiet coordinates
+const EMPLOYEE_CHECKIN_FIELDS = [
+	"name",
+	"log_type",
+	"time",
+	"shift_start",
+	"latitude",
+	"longitude",
+	"geofence_outcome",
+	"geofence_distance_m",
+	"location_accuracy_m",
+	"selfie_image",
+]
 
 const FILTER_CONFIG = [
 	{

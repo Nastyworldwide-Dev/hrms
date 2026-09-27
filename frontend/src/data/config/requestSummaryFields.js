@@ -171,39 +171,6 @@ export const SHIFT_REQUEST_FIELDS = [
 	},
 ]
 
-export const EMPLOYEE_CHECKIN_FIELDS = [
-	{
-		fieldname: "log_type",
-		label: "Check-in type",
-		fieldtype: "Data",
-	},
-	{
-		fieldname: "date",
-		label: "Date",
-		fieldtype: "Date",
-	},
-	{
-		fieldname: "formatted_time",
-		label: "Time",
-		fieldtype: "Time",
-	},
-	{
-		fieldname: "formatted_latitude",
-		label: "Latitude",
-		fieldtype: "Data",
-	},
-	{
-		fieldname: "formatted_longitude",
-		label: "Longitude",
-		fieldtype: "Data",
-	},
-	{
-		fieldname: "geolocation",
-		label: "Geolocation",
-		fieldtype: "geolocation",
-	},
-]
-
 export const OT_REQUEST_FIELDS = [
 	{
 		fieldname: "employee",

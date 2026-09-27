@@ -167,11 +167,7 @@
 	</ion-content>
 
 	<GModal :is-open="isRequestModalOpen" @did-dismiss="closeRequestModal">
-		<RequestActionSheet
-			:fields="EMPLOYEE_CHECKIN_FIELDS"
-			:showOpenForm="false"
-			v-model="selectedRequest"
-		/>
+		<CheckinSheet v-if="selectedRequest" :punch="selectedRequest" />
 	</GModal>
 </template>
 
@@ -211,13 +207,12 @@ import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
 import ListFiltersActionSheet from "@/components/ListFiltersActionSheet.vue"
 import OTRequestItem from "@/components/OTRequestItem.vue"
 import ReplacementLeaveClaimItem from "@/components/ReplacementLeaveClaimItem.vue"
-import RequestActionSheet from "@/components/RequestActionSheet.vue"
+import CheckinSheet from "@/components/CheckinSheet.vue"
 import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
 import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
 import { useListUpdate } from "@/composables/realtime"
 
 import useWorkflow from "@/composables/workflow"
-import { EMPLOYEE_CHECKIN_FIELDS } from "@/data/config/requestSummaryFields"
 
 const __ = inject("$translate")
 const props = defineProps({
@@ -472,22 +467,8 @@ const canCreate = computed(
 
 // helper functions
 
-// A check-in captured with tracking off (or an older row) has null / 0 /
-// missing coordinates: Number(undefined).toFixed(5) rendered a literal "NaN°"
-// and Number(null) a misleading "0.00000°". Show an em dash for anything that
-// isn't a real reading.
-const formatCoord = (v) => {
-	const n = Number(v)
-	return Number.isFinite(n) && n !== 0 ? `${n.toFixed(5)}°` : "—"
-}
-
 const openRequestModal = async (request) => {
 	selectedRequest.value = request
-	selectedRequest.value.doctype = "Employee Checkin"
-	selectedRequest.value.date = request.time
-	selectedRequest.value.formatted_time = dayjs(request.time).format("h:mm a")
-	selectedRequest.value.formatted_latitude = formatCoord(request.latitude)
-	selectedRequest.value.formatted_longitude = formatCoord(request.longitude)
 	isRequestModalOpen.value = true
 }
 

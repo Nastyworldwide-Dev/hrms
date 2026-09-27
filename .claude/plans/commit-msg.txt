@@ -1,18 +1,19 @@
-fix(forms): a picker's value was cut and a stray box sat after Hours
+feat(checkins): a check-in opens as what it is, with its photo
 
-Found in the 27 Sep sweep on the installed-iPhone profile.
+Owner, 27 Sep 2026: opening a check-in showed "Employee Checkin", raw
+Latitude and Longitude rows, a map and the photo as a file name. The
+Check-ins list reused the generic request sheet with a field list.
 
-Issue form: "What are you reporting?  Requirec". The row label's rule
-let it grow (flex 1 0 auto) to 237 pt for 193 pt of text, leaving the
-picker 89 pt for a 95 pt value. The chevron is drawn inside that box,
-so it covered the last letter. A label is now its text; the picker
-reserves its chevron and ends a too-long value in an ellipsis.
+Now it is its own sheet: "In · 8:58 am" and the day as the title, the
+photo itself, and where in plain words from the outcome the server
+stored on the punch ("Inside the work area · 40 m"; "Location was
+off"). A coarse fix shows no distance, the same rule as the check-in
+dialog. The coordinates stay, as the owner asked, as a quiet footer
+line that copies on tap, for tracing a problem; a missing reading is
+nothing, not 0.00000.
 
-Overtime form: "Hours  Required" plus a small block. WebKit draws a
-number field's spin buttons; they were hidden only on read-only rows.
-iOS has no stepper there, the keypad is the control, so they are gone
-from every form number field.
-
-Page audit at 402 and 1280, sheet and iOS consistency audits: 0.
+The photo is a private file, loaded through Frappe's permission
+check. Proven with a synthetic ZZAUDIT punch (deleted after): the
+owner sees it; another employee and a guest get 403.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
