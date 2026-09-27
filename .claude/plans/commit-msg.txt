@@ -1,8 +1,3 @@
-chore(release): 2.0.0-alpha.14 — Clear Screens and Safer Sign-in
-
-The first release with a name beside its number (owner ruling R12:
-plain, professional). Changelog entry and the plan's shipped table
-record what went in and how each was measured; the iOS gate passed at
-0 on all 8 audits, including the new installed-iPhone journey.
+docs(handoff): alpha.14 done
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
