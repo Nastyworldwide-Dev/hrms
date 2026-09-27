@@ -31,28 +31,43 @@
 							<h2 class="g-form-section__title mt-2">
 								{{ groupTitle(group) }}
 							</h2>
+							<!-- alpha.13 (owner ruling R6): the same person asking for the
+							     same kind of thing is ONE row with a count; tap it to see
+							     them (iOS disclosure), and the whole fold is marked read. -->
 							<GListPanel>
-								<GListRow
-									v-for="item in group.items"
-									:key="item.name"
-									:class="{ 'n-unread': !item.read }"
-									:label="item.line.title"
-									:sublabel="item.meta"
-									:tint="tileFor(item.reference_document_type)"
-									:chevron="item.navigable && item.read"
-									@click="open(item)"
-								>
-									<template #icon>
-										<component :is="kindIcon(item)" class="g-row-icon" />
-									</template>
-									<template #badge>
-										<span
-											v-if="!item.read"
-											class="flex-none w-2 h-2 rounded-full bg-accent"
-											:aria-label="__('Unread')"
+								<template v-for="fold in group.folds" :key="fold.key">
+									<GListRow
+										:class="{ 'n-unread': fold.unread }"
+										:label="foldLabel(fold)"
+										:sublabel="fold.lead.meta"
+										:tint="tileFor(fold.lead.reference_document_type)"
+										:chevron="fold.members.length === 1 ? fold.lead.navigable && !fold.unread : false"
+										:aria-expanded="fold.members.length > 1 ? String(isOpen(fold)) : undefined"
+										@click="tapFold(fold)"
+									>
+										<template #icon>
+											<component :is="kindIcon(fold.lead)" class="g-row-icon" />
+										</template>
+										<template #badge>
+											<span
+												v-if="fold.unread"
+												class="flex-none w-2 h-2 rounded-full bg-accent"
+												:aria-label="__('Unread')"
+											/>
+										</template>
+									</GListRow>
+									<template v-if="fold.members.length > 1 && isOpen(fold)">
+										<GListRow
+											v-for="item in fold.members"
+											:key="item.name"
+											class="n-member"
+											:label="item.line.title"
+											:sublabel="item.meta"
+											:chevron="item.navigable"
+											@click="open(item)"
 										/>
 									</template>
-								</GListRow>
+								</template>
 							</GListPanel>
 						</template>
 
@@ -105,6 +120,7 @@ import ShellHeader from "@/components/ShellHeader.vue"
 
 import { notificationRoute } from "@/utils/notifications"
 import { dayGroup, notificationLine } from "@/utils/notificationLine"
+import { foldNotifications } from "@/utils/foldNotifications"
 import { siteTime, siteTimeZone } from "@/utils/siteTime"
 import { createResource, frappeRequest } from "frappe-ui"
 
@@ -226,9 +242,46 @@ const groups = computed(() => {
 			source: item,
 		})
 	}
+	for (const group of out) group.folds = foldNotifications(group.items)
 	console.info("[Notifications] grouped", notifications.data?.length || 0, "row(s) into", out.length)
 	return out
 })
+
+//: "W0 employee asked for time off · 3" — the lead's own line plus the count.
+function foldLabel(fold) {
+	const title = fold.lead.line.title
+	return fold.members.length > 1 ? __("{0} · {1}", [title, fold.members.length]) : title
+}
+
+const openFolds = ref(new Set())
+const isOpen = (fold) => openFolds.value.has(fold.key)
+
+//: A single row opens what it refers to; a fold opens in place and is read.
+function tapFold(fold) {
+	if (fold.members.length === 1) return open(fold.lead)
+	const next = new Set(openFolds.value)
+	if (next.has(fold.key)) next.delete(fold.key)
+	else next.add(fold.key)
+	openFolds.value = next
+	markFoldRead(fold)
+}
+
+const markSeveralAsRead = createResource({ url: "hrms.api.mark_notifications_as_read" })
+
+function markFoldRead(fold) {
+	const unread = fold.members.filter((m) => !m.read)
+	if (!unread.length) return
+	console.info("[Notifications] marking a fold read:", unread.length)
+	markSeveralAsRead.submit(
+		{ names: unread.map((m) => m.name) },
+		{
+			onSuccess: () => {
+				for (const m of unread) m.source.read = 1
+				unreadNotificationsCount.reload()
+			},
+		}
+	)
+}
 
 const markAllAsRead = createResource({
 	url: "hrms.api.mark_all_notifications_as_read",
@@ -295,5 +348,10 @@ function loadMore() {
 <style scoped>
 .n-unread :deep(.g-row__label) {
 	font-weight: 600;
+}
+/* An opened fold's members start on the fold's TEXT, not its icon, as iOS
+   indents a disclosed row's children (alpha.13): 16 row pad + 29 well + 12 gap. */
+.n-member {
+	padding-left: 57px;
 }
 </style>

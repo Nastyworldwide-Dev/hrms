@@ -12,7 +12,7 @@ const page = readFileSync(fileURLToPath(new URL("../Notifications.vue", import.m
 // ABOUT (time off, overtime, …), not who sent it, so a system sender can no
 // longer draw a "?" at all. The sender's name is in the second line.
 test("a row shows the kind of thing it is about, never a sender question mark", () => {
-	assert.match(page, /<component :is="kindIcon\(item\)" class="g-row-icon" \/>/)
+	assert.match(page, /<component :is="kindIcon\(fold\.lead\)" class="g-row-icon" \/>/)
 	assert.match(page, /\|\| Bell/, "anything unknown falls back to the bell")
 	assert.doesNotMatch(page, /EmployeeAvatar/)
 })

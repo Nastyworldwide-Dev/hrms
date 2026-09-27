@@ -1,3 +1,4 @@
+import json
 import logging
 
 import frappe
@@ -273,6 +274,34 @@ def mark_notification_as_read(name: str | int) -> None:
 		)
 		frappe.throw(_("Not permitted."), frappe.PermissionError)
 	frappe.db.set_value("PWA Notification", name, "read", 1, update_modified=False)
+
+
+#: A folded group is a day's worth of one person's requests; 500 is far past
+#: any real group and stops the endpoint being used to walk the table.
+MAX_MARK_READ = 500
+
+
+@frappe.whitelist(methods=["POST"])
+def mark_notifications_as_read(names) -> None:
+	"""Mark several PWA Notifications read — a folded group on the screen
+	(alpha.13: "W0 employee asked for time off · 3"). Only the caller's own
+	rows are touched, whatever names arrive: the filter is the names AND the
+	caller, exactly as mark_all scopes by the caller."""
+	if isinstance(names, str):
+		try:
+			names = json.loads(names)
+		except ValueError:
+			names = None
+	if not isinstance(names, list) or not names or len(names) > MAX_MARK_READ:
+		frappe.throw(_("Choose the notifications to mark read."), frappe.ValidationError)
+	frappe.db.set_value(
+		"PWA Notification",
+		{"name": ["in", [str(n) for n in names]], "to_user": frappe.session.user},
+		"read",
+		1,
+		update_modified=False,
+	)
+	frappe.logger("hrms").info("[api] %s marked %d notification(s) read", frappe.session.user, len(names))
 
 
 @frappe.whitelist(methods=["POST"])
@@ -840,7 +869,7 @@ def _incomplete_ot_days(employee, from_date, to_date, worked, skip) -> list[dict
 	by_day: dict = {}
 	# the one work-day rule (alpha.11): a no-shift OUT after midnight stays on
 	# its IN's day, as the docstring above already promised
-	for tap, day in zip(taps, day_of_each(taps)):
+	for tap, day in zip(taps, day_of_each(taps), strict=True):
 		by_day.setdefault(day, []).append(tap)
 	rows_by_day: dict = {}
 	for row in worked:

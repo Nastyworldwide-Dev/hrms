@@ -174,7 +174,7 @@ def lone_in_days(taps, start: date, end: date) -> list[dict]:
 	by_day: dict[date, list] = {}
 	# the one work-day rule: a no-shift OUT after midnight closes the night
 	# before, so that night is not read as a lone IN (alpha.11)
-	for tap, day in zip(counted, day_of_each(counted)):
+	for tap, day in zip(counted, day_of_each(counted), strict=True):
 		by_day.setdefault(day, []).append(tap)
 	found = []
 	for day, day_taps in sorted(by_day.items()):

@@ -83,5 +83,48 @@ class TestMarkNotificationAsRead(unittest.TestCase):
 		)
 
 
+class TestMarkSeveralAsRead(unittest.TestCase):
+	"""alpha.13 slice 3: a folded group ("W0 employee asked for time off · 3")
+	is marked read in one call. Same rule as one row: only the caller's own
+	rows are touched, whatever names are sent."""
+
+	def _call(self, names):
+		import hrms.api as api
+
+		db = MagicMock()
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "session", frappe._dict(user=ME)),
+			patch.object(frappe, "throw", side_effect=_throw),
+		):
+			api.mark_notifications_as_read(names)
+		return db
+
+	def test_the_filter_is_the_names_AND_the_caller(self):
+		db = self._call(["a", "b", "c"])
+		db.set_value.assert_called_once()
+		doctype, filters, field, value = db.set_value.call_args.args
+		self.assertEqual((doctype, field, value), ("PWA Notification", "read", 1))
+		self.assertEqual(filters["to_user"], ME)
+		self.assertEqual(filters["name"], ["in", ["a", "b", "c"]])
+
+	def test_a_json_list_from_the_browser_is_read(self):
+		db = self._call('["a", "b"]')
+		self.assertEqual(db.set_value.call_args.args[1]["name"], ["in", ["a", "b"]])
+
+	def test_an_empty_or_huge_list_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			self._call([])
+		with self.assertRaises(frappe.ValidationError):
+			self._call([str(i) for i in range(501)])
+
+	def test_it_is_whitelisted_post_only(self):
+		import pathlib
+
+		src = (pathlib.Path(__file__).resolve().parents[1] / "api" / "__init__.py").read_text()
+		i = src.index("def mark_notifications_as_read")
+		self.assertIn('@frappe.whitelist(methods=["POST"])', src[i - 60 : i])
+
+
 if __name__ == "__main__":
 	unittest.main()

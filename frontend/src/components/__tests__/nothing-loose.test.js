@@ -90,8 +90,11 @@ test("D22 the calendar's contents start at the row text's inset (16)", () => {
 
 test("D24 Notifications: each kind has its colour; one trailing mark per row", () => {
 	const src = read("../../views/Notifications.vue")
-	assert.match(src, /:tint="tileFor\(item\.reference_document_type\)"/)
-	assert.match(src, /:chevron="item\.navigable && item\.read"/)
+	// alpha.13: rows are folds (same person + kind); the rule is unchanged —
+	// the kind's colour, and one trailing mark: the dot while unread, the
+	// chevron once read (never both)
+	assert.match(src, /:tint="tileFor\(fold\.lead\.reference_document_type\)"/)
+	assert.match(src, /fold\.lead\.navigable && !fold\.unread/)
 })
 
 test("D25 Public holidays: rows in one group; none-listed is a row", () => {

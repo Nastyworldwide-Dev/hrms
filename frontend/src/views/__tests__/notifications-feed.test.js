@@ -25,7 +25,8 @@ test("the stored message is never rendered raw", () => {
 test("rows are grouped by day, one panel per group", () => {
 	assert.match(script, /dayGroup\(\s*siteTime\(/, "the group is the SITE day")
 	assert.match(markup, /v-for="group in groups"/)
-	assert.match(markup, /<GListPanel[\s\S]*?<GListRow[\s\S]*?v-for="item in group\.items"/)
+	// alpha.13: each day group's rows are folds (same person + kind)
+	assert.match(markup, /<GListPanel[\s\S]*?v-for="fold in group\.folds"/)
 	for (const word of ["Today", "Yesterday", "Earlier"]) {
 		assert.ok(script.includes(`"${word}"`), `${word} is a group`)
 	}
