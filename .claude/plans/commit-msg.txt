@@ -1,11 +1,8 @@
-fix(startup): four more pages read the employee before it was known
+test(visual): re-baseline for alpha.14
 
-cdd790d4c closed the start-up hang on You and in the notifications
-module. The same read, employee.data.<field> while a page is being set
-up, sat on four more pages: the shift request, leave and expense claim
-forms and the issue list. Each would throw, and the page stay blank,
-if the employee record had not been read. They are guarded, and a test
-now walks the setup lines of every view (it fails on the old leave form
-line).
+The screens changed on purpose in this release: a 44 pt top bar, the
+status as a row, check-in and attachment rows, empty lists, Your team
+on More. Taken after the full iOS gate (8 audits) passed at 0 on the
+release build.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
