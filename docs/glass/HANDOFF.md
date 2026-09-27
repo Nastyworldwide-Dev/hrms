@@ -1,11 +1,10 @@
 # HANDOFF
-prompt:   alpha.12 — top-tier UI/UX pass (Apple rules), states, offline, speed, desktop, Apple-way Today card
+prompt:   alpha.13 — request history, month line, folded notifications, lighter download, everyday feedback
 status:   done
-commit:   ff00aac77 on nz-glass (tag v2.0.0-alpha.12, GitHub Release published)
-files:    frontend/src/components/NowBar.vue, CheckInPanel.vue, ListView.vue, FormView.vue
-          frontend/public/sw.js, hrms/www/service_worker.py, hrms/hooks.py
-          frontend/vite.config.js, src/frappeUiLean.js, src/theme/glass-components.css
-          design/tokens.json, design/gates/ios.mjs, scripts/release.sh
+commit:   180b9e0d3 on nz-glass (tag v2.0.0-alpha.13, GitHub Release published)
+files:    hrms/api/request_history.py, hrms/api/__init__.py (withdraw, mark_notifications_as_read), hrms/api/approval.py
+          frontend/src/components/RequestTimeline.vue, AttendanceCalendar.vue, views/Notifications.vue
+          frontend/src/components/RequestActionSheet.vue, glass/GRollNumber.vue, utils/frappe-push-notification.js
 verify:   set -a && . ./.env && set +a && node design/gates/ios.mjs  (7 audits, all 0)
-flags:    service worker moved to /hrms/sw.js: old installs unregister the old one and re-subscribe push once; theme picker removed
-next:     deploy nz-glass; open Home while checked in and see the shift gauge
+flags:    first paint ~5.4 s, not under 5 s: Ionic core remains; re-used request names fixed in history, reason and withdraw
+next:     deploy nz-glass; open a sent request (History), Calendar (month line), Notifications (folded rows)
