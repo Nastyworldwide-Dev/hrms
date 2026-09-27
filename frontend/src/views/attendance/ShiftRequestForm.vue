@@ -71,7 +71,7 @@ function applyApproverOptions() {
 }
 createResource({
 	url: "hrms.api.get_shift_request_approvers",
-	params: { employee: employee.data.name },
+	params: { employee: employee.data?.name },
 	auto: !props.id,
 	onSuccess(data) {
 		approverList.value = data

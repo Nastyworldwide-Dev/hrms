@@ -36,7 +36,7 @@ function openIssue(issue) {
 // an HR user's "My Issues" personal instead of listing the whole site
 const myIssues = createListResource({
 	doctype: "Employee Issue",
-	filters: { employee: employee.data.name },
+	filters: { employee: employee.data?.name },
 	fields: ["name", "issue_type", "status", "creation", "modified"],
 	orderBy: "creation desc",
 	pageLength: 50,

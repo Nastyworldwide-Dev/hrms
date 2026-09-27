@@ -1,10 +1,11 @@
-fix(contacts): HR contacts kept a saved list and never asked again
+fix(startup): four more pages read the employee before it was known
 
-Who to ask (the Help sheet and /hr-contacts) fetched HR contacts only
-when none were saved. Once saved, a list HR had changed stayed stale
-and a failed read could not say so: the states audit caught "error
-not shown" on /hr-contacts one run in three. The saved list still
-shows at once, and it is always refreshed when opened; 5 of 5 forced
-failures now show Try again.
+cdd790d4c closed the start-up hang on You and in the notifications
+module. The same read, employee.data.<field> while a page is being set
+up, sat on four more pages: the shift request, leave and expense claim
+forms and the issue list. Each would throw, and the page stay blank,
+if the employee record had not been read. They are guarded, and a test
+now walks the setup lines of every view (it fails on the old leave form
+line).
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

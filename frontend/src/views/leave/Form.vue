@@ -56,7 +56,7 @@ const props = defineProps({
 })
 
 const sessionEmployee = inject("$employee")
-const currEmployee = ref(sessionEmployee.data.name)
+const currEmployee = ref(sessionEmployee.data?.name)
 
 // reactive object to store form data. A Calendar day's "Ask for this day off"
 // opens on that day (?date=, 01-calendar.md §4 row 13).

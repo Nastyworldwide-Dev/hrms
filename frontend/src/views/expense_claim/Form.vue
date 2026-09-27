@@ -60,8 +60,8 @@ const today = dayjs().format("YYYY-MM-DD")
 const isReadOnly = ref(false)
 
 const sessionEmployee = inject("$employee")
-const currEmployee = ref(sessionEmployee.data.name)
-const employeeCompany = ref(sessionEmployee.data.company)
+const currEmployee = ref(sessionEmployee.data?.name)
+const employeeCompany = ref(sessionEmployee.data?.company)
 
 const props = defineProps({
 	id: {
