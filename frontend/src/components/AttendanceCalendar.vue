@@ -37,6 +37,19 @@
 			</template>
 		</GCalendar>
 
+		<!-- The month in one line, under the grid as its footer (iOS: a
+		     group's summary is its footer). Counted from the tiles drawn above,
+		     so the two never disagree (alpha.13 slice 2). -->
+		<p v-if="summary" class="g-form-footer g-cal__summary">
+			{{ summary.worked === 1 ? __("1 day worked") : __("{0} days worked", [summary.worked]) }}
+			<template v-if="summary.toFix">
+				·
+				<button type="button" class="g-seclink g-focusable" @click="openFirstToFix">
+					{{ summary.toFix === 1 ? __("1 to fix") : __("{0} to fix", [summary.toFix]) }}
+				</button>
+			</template>
+		</p>
+
 		<!-- The words. One tap from the grid, so the tiles never have to carry
 		     a sentence (revamp §4). -->
 		<DaySheet :open="sheetOpen" :date="sheetDate" @close="sheetOpen = false" />
@@ -63,6 +76,7 @@ import GBanner from "@/components/glass/GBanner.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GCalendar from "@/components/glass/GCalendar.vue"
 import DaySheet from "@/components/DaySheet.vue"
+import { monthSummary } from "@/utils/monthSummary"
 
 import { monthFlags } from "@/data/calendar"
 import { isApprover } from "@/data/team"
@@ -148,6 +162,14 @@ const monthLegend = computed(() =>
 //: a button is left with `open` stuck true.
 const sheetDate = ref("")
 const sheetOpen = ref(false)
+
+const summary = computed(() => monthSummary(days.value))
+
+//: "2 to fix" opens the first of them, where the day sheet has the fix.
+function openFirstToFix() {
+	const first = days.value.find((d) => d.flags.includes("needs_you"))
+	if (first) openDay(first.day)
+}
 
 function openDay(day) {
 	sheetDate.value = firstOfMonth.value.date(day).format("YYYY-MM-DD")

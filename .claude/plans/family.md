@@ -1,5 +1,5 @@
-CLASS: a request showed its current status but not how it got there
-hrms/api/request_history.py — same-root (new: steps from Version rows, fenced by _request_read_allowed, names not logins, only history newer than the document)
-frontend/src/components/RequestTimeline.vue + utils/requestTimeline.js — same-root (new: History group under the request)
-frontend/src/components/FormView.vue — same-root (renders the timeline on a saved request)
-hrms/api/approval.py get_rejection_reason — not-affected — reused as is for the reason line
+CLASS: the month had to be counted tile by tile by the person
+frontend/src/utils/monthSummary.js — same-root (new: counts from the drawn days)
+frontend/src/components/AttendanceCalendar.vue — same-root (footer line; "to fix" opens the first)
+frontend/src/theme/glass-components.css .g-cal__summary — same-root (footer + tint link)
+hrms/api/calendar.py get_month_flags — not-affected — the payload already carried paired + needs_you

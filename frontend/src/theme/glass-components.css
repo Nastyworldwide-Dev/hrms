@@ -4762,6 +4762,20 @@ ion-modal.g-mustread {
 	color: var(--g-ink);
 }
 
+/* The Calendar's month line (alpha.13): a footer; "2 to fix" is its link,
+   in the tint that means "tap me" (Apple color: tint = interactive). */
+.g-cal__summary {
+	margin: 0;
+}
+.g-cal__summary .g-seclink {
+	padding: 0;
+	border: 0;
+	background: transparent;
+	font: inherit;
+	font-weight: 600;
+	color: var(--g-accent-ink);
+}
+
 /* alpha.12 K23: a form's sticky Send bar rides above the iPhone keyboard.
    src/utils/keyboardSafe.js sets --g-keyboard-inset from the visual viewport
    (Android resizes the page itself: interactive-widget in index.html). */
