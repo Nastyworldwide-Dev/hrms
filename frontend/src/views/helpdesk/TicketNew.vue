@@ -83,7 +83,14 @@
 						:error="errors.description"
 					/>
 
-					<GFileUpload v-model="files" :label="__('Screenshot or file')" :uploading="uploading" />
+					<GFileUpload
+						v-model="files"
+						:label="__('Screenshot or file')"
+						:uploading="uploading"
+						@select="addFiles"
+						@preview="previewFile"
+						@remove="removeFile"
+					/>
 
 					<GButton
 						type="submit"
@@ -96,6 +103,7 @@
 				</form>
 			</div>
 		</ion-content>
+		<FilePreviewModal :is-open="!!previewing" :file="previewing" @did-dismiss="previewing = null" />
 		<GConfirm
 			:is-open="showDiscardDialog"
 			:title="__('Discard this ticket?')"
@@ -118,6 +126,7 @@ import GButton from "@/components/glass/GButton.vue"
 import GInput from "@/components/glass/GInput.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"
 import GFileUpload from "@/components/glass/GFileUpload.vue"
+import FilePreviewModal from "@/components/FilePreviewModal.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
@@ -137,6 +146,19 @@ const __ = inject("$translate")
 const form = reactive({ subject: "", description: "", ticket_type: "", priority: "" })
 const errors = reactive({ subject: "", description: "" })
 const files = ref([])
+//: GFileUpload emits what was picked; it does not own the list (alpha.14:
+//: v-model alone dropped every pick, so nothing was ever uploaded).
+function addFiles(list) {
+	files.value = [...files.value, ...Array.from(list || [])]
+	console.info("[TicketNew] files picked:", files.value.length)
+}
+function removeFile(file) {
+	files.value = files.value.filter((f) => f !== file)
+}
+const previewing = ref(null)
+function previewFile(file) {
+	previewing.value = file
+}
 const uploading = ref(false)
 const errorMessage = ref("")
 // Set once the ticket exists. From then on Submit only retries uploads.

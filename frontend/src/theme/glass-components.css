@@ -2974,33 +2974,6 @@ textarea {
 	border-radius: var(--g-radius-input);
 	background: var(--g-icon-bg);
 }
-.g-file__name {
-	flex: 1;
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	font-family: var(--g-type-row-label-family);
-	font-size: var(--g-type-row-label-size);
-	color: var(--g-ink);
-	background: transparent;
-	border: 0;
-	text-align: left;
-	cursor: pointer;
-}
-.g-file__remove {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex: none;
-	width: 44px;
-	height: 44px;
-	margin: -8px -12px -8px 0;
-	border: 0;
-	background: transparent;
-	color: var(--g-ink3);
-	cursor: pointer;
-}
 .g-file__drop {
 	display: flex;
 	align-items: center;
@@ -4983,4 +4956,73 @@ ion-modal.g-mustread {
 	cursor: pointer;
 	-webkit-user-select: text;
 	user-select: text;
+}
+
+/* GAttachmentRow (alpha.14): every attached file shows what it is. A row of
+   an inset group: 44 pt thumbnail (image) or typed mark (PDF, XLSX…), the
+   name, an optional 44 pt remove. */
+.g-attachment {
+	display: flex;
+	align-items: center;
+	min-height: 60px;
+	padding: 0 0 0 16px;
+	/* the group's own material and radius (.g-form-group) */
+	background: var(--g-glass-fill-fallback);
+	border-radius: var(--g-radius-group);
+}
+.g-attachment + .g-attachment {
+	margin-top: 8px;
+}
+.g-attachment__open {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 60px;
+	padding: 8px 16px 8px 0;
+	border: 0;
+	background: transparent;
+	text-align: start;
+	cursor: pointer;
+}
+.g-attachment__thumb {
+	flex: 0 0 44px;
+	width: 44px;
+	height: 44px;
+	border-radius: 8px;
+	object-fit: cover;
+	background: var(--g-icon-bg);
+}
+.g-attachment__thumb--mark {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 11px;
+	line-height: 13px;
+	font-weight: 600;
+	color: var(--g-ink2);
+}
+.g-attachment__name {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 17px;
+	line-height: 22px;
+	color: var(--g-ink);
+}
+.g-attachment__remove {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	width: 44px;
+	height: 44px;
+	margin-right: 4px;
+	border: 0;
+	background: transparent;
+	color: var(--g-ink3);
+	cursor: pointer;
 }

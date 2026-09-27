@@ -1,19 +1,18 @@
-feat(checkins): a check-in opens as what it is, with its photo
+feat(files): every attachment shows what it is
 
-Owner, 27 Sep 2026: opening a check-in showed "Employee Checkin", raw
-Latitude and Longitude rows, a map and the photo as a file name. The
-Check-ins list reused the generic request sheet with a field list.
+Owner, 27 Sep 2026: "every attachment must show preview". Three places
+listed a file as its name alone: every request form, a request's
+sheet, and the IT ticket form. One row now: an image shows itself as a
+thumbnail, a PDF or other file shows a typed mark, and a tap opens the
+full preview.
 
-Now it is its own sheet: "In · 8:58 am" and the day as the title, the
-photo itself, and where in plain words from the outcome the server
-stored on the punch ("Inside the work area · 40 m"; "Location was
-off"). A coarse fix shows no distance, the same rule as the check-in
-dialog. The coordinates stay, as the owner asked, as a quiet footer
-line that copies on tap, for tracing a problem; a missing reading is
-nothing, not 0.00000.
+Wiring the ticket form turned up a real loss: it bound GFileUpload
+with v-model, but GFileUpload only emits select, preview and remove.
+A screenshot picked there went nowhere and was never uploaded with
+the ticket. The form now keeps, previews and removes what is picked.
+(The IT Helpdesk is not installed on the test site, so this path is
+pinned by a source test rather than a screen.)
 
-The photo is a private file, loaded through Frappe's permission
-check. Proven with a synthetic ZZAUDIT punch (deleted after): the
-owner sees it; another employee and a guest get 403.
+The two style rules the old name-only row used are removed.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

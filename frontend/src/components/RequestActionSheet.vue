@@ -54,26 +54,12 @@
 				<!-- Attachments -->
 				<div class="flex flex-col gap-2 w-full py-3" v-if="attachedFiles?.data?.length">
 					<div class="g-eyebrow">{{ __("Attachments") }}</div>
-					<ul class="w-full flex flex-col items-center gap-2">
-						<li
-							class="bg-surface border border-divider p-2 w-full"
-							v-for="file in attachedFiles.data"
-							:key="file.name"
-						>
-							<div class="flex flex-row items-center justify-between text-inkbase text-sm">
-								<span
-									class="grow g-focusable"
-									role="button"
-									tabindex="0"
-									@click="showFilePreview(file)"
-									@keydown.enter.prevent="showFilePreview(file)"
-									@keydown.space.prevent="showFilePreview(file)"
-								>
-									{{ file.file_name || file.name }}
-								</span>
-							</div>
-						</li>
-					</ul>
+					<GAttachmentRow
+						v-for="file in attachedFiles.data"
+						:key="file.name"
+						:file="file"
+						@open="showFilePreview"
+					/>
 				</div>
 			</GListPanel>
 		</div>
@@ -256,6 +242,7 @@ import GListRow from "@/components/glass/GListRow.vue"
 import { computed, defineAsyncComponent, inject, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import FilePreviewModal from "@/components/FilePreviewModal.vue"
+import GAttachmentRow from "@/components/glass/GAttachmentRow.vue"
 import FormattedField from "@/components/FormattedField.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"

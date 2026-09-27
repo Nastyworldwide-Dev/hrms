@@ -1,6 +1,7 @@
-CLASS: a form row's control squeezed or decorated past what it shows (value cut under its chevron; WebKit spin buttons)
-frontend/src/theme/glass-components.css:4009 same-root — row label flex 1 0 auto -> 0 1 auto (it grew past its text)
-frontend/src/theme/glass-components.css:4035 same-root — picker reserves its chevron, ellipsis, min width
-frontend/src/theme/glass-components.css:4925 same-root — spin buttons hidden on every form number field (was read-only only)
-frontend/src/components/glass/GSelect.vue:24 not-affected — markup unchanged
-frontend/src/components/FormField.vue:1 not-affected — markup unchanged
+CLASS: an attachment shown as its file name only (no preview); and a picked file lost because the parent never handled the picker's event
+frontend/src/components/FileUploaderView.vue:22 same-root — every request form's files
+frontend/src/components/RequestActionSheet.vue:56 same-root — a request's files in its sheet
+frontend/src/components/glass/GFileUpload.vue:42 same-root — ticket picker rows
+frontend/src/views/helpdesk/TicketNew.vue:86 same-root — v-model only: picks never reached files (GFileUpload emits select, not update:modelValue)
+frontend/src/views/sop/SopDetail.vue:46 not-affected — already previews image and PDF inline
+frontend/src/components/CheckinSheet.vue:17 not-affected — shows the photo itself (27e4f4c9a)

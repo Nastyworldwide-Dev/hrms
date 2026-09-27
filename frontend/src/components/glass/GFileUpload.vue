@@ -39,21 +39,14 @@
 			<GSkeleton width="62%" height="11px" />
 		</div>
 
-		<div v-for="file in modelValue" :key="file.file_name || file.name" class="g-file">
-			<button type="button" class="g-file__name g-focusable" @click="$emit('preview', file)">
-				{{ file.file_name || file.name }}
-			</button>
-			<button
-				type="button"
-				class="g-file__remove g-focusable"
-				:aria-label="`Remove ${file.file_name || file.name}`"
-				@click="$emit('remove', file)"
-			>
-				<svg class="g-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-					<path d="M4 4l8 8M12 4l-8 8" />
-				</svg>
-			</button>
-		</div>
+		<GAttachmentRow
+			v-for="file in modelValue"
+			:key="file.file_name || file.name"
+			:file="file"
+			removable
+			@open="$emit('preview', $event)"
+			@remove="$emit('remove', $event)"
+		/>
 
 		<slot v-if="!modelValue.length && !uploading" name="empty" />
 	</div>
@@ -61,6 +54,7 @@
 
 <script setup>
 import GSkeleton from "./GSkeleton.vue"
+import GAttachmentRow from "./GAttachmentRow.vue"
 
 defineProps({
 	modelValue: { type: Array, default: () => [] },
