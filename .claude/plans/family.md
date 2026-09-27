@@ -1,5 +1,6 @@
-CLASS: per-user data left in browser storage after the user changes (shared-phone leak; same class as audit P0-5, the idb document cache)
-frontend/src/data/session.js:44 same-root — logout now clears the page copy
-frontend/src/data/session.js:16 same-root — login clears it too (an expired session never passed through logout)
-frontend/public/sw.js:39 not-affected — the writer; NetworkFirst stays for offline opening
-frontend/src/utils/personalCache.js:88 not-affected — clears IndexedDB keys, already covered
+CLASS: a state-changing endpoint accepting GET (CSRF skipped); the 18-endpoint sweep f38f46320 missed these two because they are overrides of Frappe's own names
+hrms/api/push.py:25 same-root — subscribe POST only
+hrms/api/push.py:32 same-root — unsubscribe POST only
+frontend/src/utils/frappe-push-notification.js:291 same-root — subscribe sends POST + CSRF, token in body
+frontend/src/utils/frappe-push-notification.js:318 same-root — unsubscribe the same
+hrms/hooks.py:777 not-affected — routes the framework names here, unchanged

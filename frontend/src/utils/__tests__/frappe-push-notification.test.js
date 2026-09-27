@@ -28,7 +28,8 @@ function fixture({ subscribe, unsubscribe, storedToken = null }) {
 	const calls = []
 	const context = vm.createContext({
 		console: { warn() {}, error() {}, info() {} },
-		window: { frappe: { boot: { push_relay_server_url: "https://relay" } } },
+		URLSearchParams,
+		window: { csrf_token: "CSRF", frappe: { boot: { push_relay_server_url: "https://relay" } } },
 		localStorage: {
 			getItem: (k) => (store.has(k) ? store.get(k) : null),
 			setItem: (k, v) => store.set(k, v),
@@ -106,4 +107,18 @@ test("a confirmed unsubscribe clears the token", async () => {
 	await s.sdk.disableNotification()
 	assert.equal(s.store.has("firebase_token_hrms"), false)
 	assert.equal(s.sdk.isNotificationEnabled(), false)
+})
+
+// alpha.14 S2: subscribe/unsubscribe change who gets a person's notifications,
+// so they go as POST with the CSRF token (a GET skips Frappe's CSRF check),
+// with the token in the body, not the URL (URLs land in server logs).
+test("subscribe and unsubscribe are POSTs carrying the CSRF token", () => {
+	for (const action of ["subscribe", "unsubscribe"]) {
+		const at = source.indexOf(`frappe.push_notification.${action}`)
+		const call = source.slice(at, source.indexOf("subscriptionConfirmed", at))
+		assert.match(call, /method: "POST"/, action)
+		assert.match(call, /"X-Frappe-CSRF-Token": window\.csrf_token/, action)
+		assert.match(call, /body: new URLSearchParams\(\{ fcm_token: token, project_name: this\.projectName \}\)/, action)
+		assert.doesNotMatch(call, /\?fcm_token=/, action)
+	}
 })

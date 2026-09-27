@@ -1,14 +1,16 @@
-fix(security): the last person's page stayed on a shared phone
+fix(security): any page could sign a phone off notifications
 
-alpha.12 made the installed app open offline by keeping a copy of the
-/hrms page in the "nadi-pages" cache. Frappe renders that page per
-user (it carries their boot data), and nothing ever deleted it. On a
-shared phone, the next person could open the previous one's page
-while offline.
+Push subscribe and unsubscribe change which phones receive a person's
+notifications, but they took GET, as Frappe's own endpoints do. Frappe
+skips its CSRF check on GET, so any page the person visited could sign
+their phone up or off with a plain link, silently cutting them off
+approvals and check-in reminders. The 18-endpoint GET sweep missed
+these two because they override Frappe's names rather than declare
+new ones. The FCM token also travelled in the URL, which lands in
+server logs.
 
-The copy is now deleted at logout and at login; a session that merely
-expired never passes through logout. Proven in Chromium with the
-built app: before logout the cache held /hrms/home for the employee;
-after logout it holds only the page Frappe rendered for Guest.
+Both are POST only now; the PWA sends POST with the CSRF token and the
+token in the body. On the bench: GET 403, POST without the token 400,
+POST with it reaches the handler.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

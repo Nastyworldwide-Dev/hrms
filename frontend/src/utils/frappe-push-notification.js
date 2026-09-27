@@ -287,18 +287,13 @@ class FrappePushNotification {
 	 */
 	async registerTokenHandler(token) {
 		try {
-			let response = await fetch(
-				"/api/method/frappe.push_notification.subscribe?fcm_token=" +
-					token +
-					"&project_name=" +
-					this.projectName,
-				{
-					method: "GET",
-					headers: {
-						"Content-Type": "application/json",
-					},
-				}
-			)
+			// POST + CSRF (alpha.14): a GET here skipped Frappe's CSRF check,
+			// so any page could sign this phone up or off
+			let response = await fetch("/api/method/frappe.push_notification.subscribe", {
+				method: "POST",
+				headers: { "X-Frappe-CSRF-Token": window.csrf_token },
+				body: new URLSearchParams({ fcm_token: token, project_name: this.projectName }),
+			})
 			return await this.subscriptionConfirmed(response, "subscribe")
 		} catch (e) {
 			console.error(e)
@@ -314,18 +309,13 @@ class FrappePushNotification {
 	 */
 	async unregisterTokenHandler(token) {
 		try {
-			let response = await fetch(
-				"/api/method/frappe.push_notification.unsubscribe?fcm_token=" +
-					token +
-					"&project_name=" +
-					this.projectName,
-				{
-					method: "GET",
-					headers: {
-						"Content-Type": "application/json",
-					},
-				}
-			)
+			// POST + CSRF (alpha.14): a GET here skipped Frappe's CSRF check,
+			// so any page could sign this phone up or off
+			let response = await fetch("/api/method/frappe.push_notification.unsubscribe", {
+				method: "POST",
+				headers: { "X-Frappe-CSRF-Token": window.csrf_token },
+				body: new URLSearchParams({ fcm_token: token, project_name: this.projectName }),
+			})
 			return await this.subscriptionConfirmed(response, "unsubscribe")
 		} catch (e) {
 			console.error(e)

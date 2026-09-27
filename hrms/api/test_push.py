@@ -63,6 +63,16 @@ class TestWrappersAndRouting(unittest.TestCase):
 		self.assertEqual(overrides.get("frappe.push_notification.subscribe"), "hrms.api.push.subscribe")
 		self.assertEqual(overrides.get("frappe.push_notification.unsubscribe"), "hrms.api.push.unsubscribe")
 
+	def test_subscribe_and_unsubscribe_are_post_only(self):
+		"""alpha.14 S2: they change which phones get a person's notifications.
+		Over GET, Frappe skips the CSRF check, so any page the person visits
+		could sign their phone up or off with a plain link or <img>."""
+		tree = ast.parse((HRMS / "api/push.py").read_text())
+		for fn in (n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in ("subscribe", "unsubscribe")):
+			deco = next(d for d in fn.decorator_list if isinstance(d, ast.Call) and getattr(d.func, "attr", "") == "whitelist")
+			methods = next(ast.literal_eval(k.value) for k in deco.keywords if k.arg == "methods")
+			self.assertEqual(methods, ["POST"], fn.name)
+
 	def test_push_send_goes_through_relay_call(self):
 		"""The send side fails identically on a cloned site; it must heal too."""
 		src = (HRMS / "hr/doctype/pwa_notification/pwa_notification.py").read_text()

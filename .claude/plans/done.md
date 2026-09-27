@@ -1,3 +1,3 @@
-GOAL: on a shared phone, nobody can open the previous person's /hrms page from the offline copy.
-DONE WHEN: the "nadi-pages" cache is deleted at logout and at login; browser proof: /hrms/home copy gone after logout.
-CHECK: node --test frontend/src/utils/__tests__/cachedPages.test.js; Chromium: before [/hrms/home], after logout only a Guest-rendered page
+GOAL: no page can sign a person's phone up for, or off, their notifications by making the browser visit a link.
+DONE WHEN: subscribe/unsubscribe accept POST only; the PWA sends POST + CSRF with the token in the body.
+CHECK: bench: GET 403, POST without CSRF 400, POST with CSRF reaches the handler; hrms/api/test_push.py + frappe-push-notification.test.js green
