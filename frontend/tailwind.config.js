@@ -12,8 +12,11 @@ export default {
 	content: [
 		"./index.html",
 		"./src/**/*.{vue,js,ts,jsx,tsx}",
-		"./node_modules/frappe-ui/src/components/**/*.{vue,js,ts,jsx,tsx}",
-		"../node_modules/frappe-ui/src/components/**/*.{vue,js,ts,jsx,tsx}",
+		// Only the frappe-ui components this app renders (src/frappeUiLean.js and
+		// the SOP editor). Scanning all of them put ~every Tailwind utility
+		// frappe-ui uses into the one stylesheet that blocks first paint: 182 KB,
+		// 16% used on Home (alpha.14 P1).
+		"./node_modules/frappe-ui/src/components/{ErrorMessage.vue,toast.js,Toast.vue,TextEditor/**/*.{vue,js,ts}}",
 	],
 	theme: {
 		// Remapped onto the Glass radius ladder (spec v1.3 §16.2). Previously all

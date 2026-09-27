@@ -7,6 +7,34 @@ import frappeui from "frappe-ui/vite"
 import path from "path"
 import fs from "fs"
 
+//: @ionic/vue and @ionic/core ship no "sideEffects" flag, so Rollup keeps every
+//: module @ionic/vue's index imports — ion-nav, ion-refresher, ion-back-button
+//: and seventy more — in the first download, whether the app renders them or
+//: not. Their component modules only define a class and register it when
+//: defineCustomElement() is called (by the Vue wrapper, on first render), so
+//: they are side-effect free. alpha.14 P1.
+function ionicPure() {
+	return {
+		name: "nadi-ionic-side-effect-free",
+		enforce: "pre",
+		async resolveId(source, importer, options) {
+			const r = await this.resolve(source, importer, { ...options, skipSelf: true })
+
+			if (r && /node_modules\/@ionic\/(core\/components|vue\/dist)\//.test(r.id)) return { ...r, moduleSideEffects: false }
+			return null
+		},
+		// `IonNav.name = "IonNav";` after each defineComponent is an assignment
+		// Rollup cannot prove harmless, so every wrapper — and the component it
+		// registers — stayed. The names are only read by Vue DevTools; nothing in
+		// Ionic or this app looks a wrapper up by name.
+		transform(code, id) {
+			if (!id.includes("node_modules/@ionic/vue/dist/index.js")) return null
+			const out = code.replace(/^(Ion[A-Za-z]+)\.name = ("Ion[A-Za-z]+");$/gm, "")
+			return { code: out, map: null }
+		},
+	}
+}
+
 const PKG = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"))
 
 export default defineConfig({
@@ -31,6 +59,7 @@ export default defineConfig({
 	plugins: [
 		vue(),
 		frappeui(),
+		ionicPure(),
 		VitePWA({
 			// "prompt", not "autoUpdate": a new build used to activate and reload the
 			// page the moment it downloaded — mid-session, mid-form, losing whatever

@@ -1,9 +1,24 @@
-docs(audit): the 27 Sep endpoint sweep and what it closed
+perf(first-load): drop unused Ionic parts and CSS from the first download
 
-Records how every whitelisted function in hrms was checked, the 16
-GET-reachable writes (15 closed in 3b127a650, one named exception),
-the hand reading of the PWA API endpoints that take a caller-chosen
-record, and the one left unverified (helpdesk.get_ticket: Helpdesk is
-not installed on the test bench).
+alpha.13 carried the target of first paint under 5 s on the slow-phone
+profile (4x CPU, 150 ms, 1.6 Mbps). Measured on that profile with the
+new e2e/first-paint.mjs (median of 5 cold loads), before: 5.68 s.
+
+Two causes, both measured:
+- @ionic/vue ships no sideEffects flag, and after every wrapper it
+  writes `IonX.name = "IonX"`, which Rollup cannot prove harmless. So
+  ion-nav and other components the app never renders stayed in the
+  main file. A small build plugin marks Ionic's modules side-effect
+  free and drops those assignments (nothing reads them: Ionic's own
+  name lookups use the `name:` option, which stays). Main JS 492 ->
+  467 KB.
+- Tailwind scanned every frappe-ui component for class names, and the
+  app renders four. The stylesheet that blocks first paint was 182 KB,
+  16% used on Home. Now 150 KB. A per-element computed-style comparison
+  of all 36 screens, old CSS vs new, differs only in class order on
+  two headers.
+
+After: 5.28 s. The 5 s target is not reached yet: what remains is Vue,
+vue-router and Ionic's core, which the first screen does run.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
