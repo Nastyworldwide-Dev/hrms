@@ -58,19 +58,21 @@
 		     lock-in, measured: four skeleton cells gave way to one real card and
 		     Time off jumped 120 pt on a first visit). -->
 		<GBalanceGrid v-else-if="leaveBalance.loading" loading :cells="1" />
-		<GBalanceGrid v-else empty>
-			<template #empty>
-				<GEmptyState
-					:title="__('No leave allocated yet')"
-					:body="__('People &amp; Culture are setting this up. Check back shortly.')"
-				/>
-			</template>
-		</GBalanceGrid>
+		<!-- None yet is one row, the height of the skeleton card (alpha.14: a
+		     288 pt empty box after a 97 pt skeleton made the page jump 191 pt).
+		     Same words as the Requests tab. -->
+		<div v-else class="g-form-group">
+			<div class="g-form-row g-form-row--readonly">
+				<span class="g-form-row__label">{{ __("None allocated yet") }}</span>
+			</div>
+		</div>
+		<p v-if="!hasBalances && !leaveBalance.loading && !leaveBalance.error" class="g-form-footer">
+			{{ __("HR sets this up. It shows here once they do.") }}
+		</p>
 	</section>
 </template>
 
 <script setup>
-import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GBalanceCard from "@/components/glass/GBalanceCard.vue"
 import GBalanceGrid from "@/components/glass/GBalanceGrid.vue"
 import { leaveBalance } from "@/data/leaves"

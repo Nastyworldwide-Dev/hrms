@@ -1,3 +1,3 @@
-GOAL: the first screen downloads less code: unused Ionic wrappers dropped, Tailwind CSS only for components the app renders.
-DONE WHEN: FCP on the alpha.12 slow-phone profile drops (5.68 -> 5.28 s); main JS 492 -> 467 KB; CSS 182 -> 150 KB; no screen's computed styles change.
-CHECK: node frontend/e2e/first-paint.mjs; per-element computed-style diff old vs new CSS on 36 screens (only class order on 2); device journey 0; page-audit 0; yarn test green
+GOAL: a request's status is a row inside a group (not loose text); Time off does not jump for someone with no allocation.
+DONE WHEN: FormView status is a one-row group "Status  Rejected"; LeaveBalance empty = one "None allocated yet" row + footer.
+CHECK: ios-consistency-audit 0 (was 5 loose), scroll-and-shift-audit 0 (was /dashboard/leaves 191 pt); yarn test 1500/1500

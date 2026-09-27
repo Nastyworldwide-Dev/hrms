@@ -5033,14 +5033,13 @@ ion-modal.g-mustread {
 	cursor: pointer;
 }
 
-/* A sent request's state, the first line of its page (alpha.14 H): coloured
-   text as iOS draws a status, at the page's body size (17/22 semibold) — the
-   badge size is for a status inside a row. */
+/* A sent request's state, the first row of its page (alpha.14 H): a one-row
+   group ("Status  Rejected"), the status as coloured text at body size. */
 .g-form-status {
-	margin: 0;
-	padding: 12px var(--g-screen-gutter) 0;
+	padding: 16px var(--g-screen-gutter) 0;
 }
-.g-form-status > .g-badge {
+.g-form-status .g-badge {
+	margin-left: auto;
 	padding: 0;
 	font-size: 17px;
 	line-height: 22px;

@@ -54,10 +54,22 @@ test("LeaveBalance: skeleton while loading, not 'No leave allocated yet'", () =>
 	const src = template(code(read("../LeaveBalance.vue")))
 	const loading = src.search(/<GBalanceGrid[^>]*\sloading\b/)
 	assert.ok(loading > -1, "loading GBalanceGrid exists")
-	assert.ok(loading < src.indexOf("No leave allocated yet"), "loading is decided before empty")
+	// alpha.14: the empty answer is the "None allocated yet" row
+	assert.ok(loading < src.indexOf("None allocated yet"), "loading is decided before empty")
 })
 
 test("ExpenseClaimSummary: skeleton while loading, not a blank", () => {
 	const src = template(code(read("../ExpenseClaimSummary.vue")))
 	assert.match(src, /<GSkeleton/)
+})
+
+// alpha.14 (iOS gate, 27 Sep 2026): Time off jumped 191 pt for anyone with no
+// allocation — a one-card skeleton (97 pt) gave way to a 288 pt empty box. No
+// allocation is one plain row, the same height as the skeleton card, as the
+// Requests tab says it ("None allocated yet").
+test("LeaveBalance: no allocation is one row, not a tall empty box", () => {
+	const src = template(code(read("../LeaveBalance.vue")))
+	assert.doesNotMatch(src, /<GEmptyState/)
+	assert.match(src, /None allocated yet/)
+	assert.match(src, /<div v-else class="g-form-group">/)
 })

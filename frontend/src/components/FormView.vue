@@ -39,13 +39,20 @@
 				<!-- The one content column (§20.3): 720px, left-aligned against the
 				     side nav at lg:. It was sm:max-w-2xl (672px) centred. -->
 				<div class="w-full max-w-content-column-lg mx-auto">
-					<!-- The request's state, whole, as the page's first line (alpha.14
+					<!-- The request's state, whole, as the page's first row (alpha.14
 					     H): it sat in the bar and truncated ("Approved, not …"). An iOS
 					     bar holds the title and controls; a state is content.
 					     GStatusChip owns the status -> colour map (8.9). -->
-					<p v-if="id && status" class="g-form-status">
-						<GStatusChip :status="status" :label="__(status, null, doctype)" />
-					</p>
+					<!-- A one-row group, as iOS shows a state (Mail's "Sent", Wallet's
+					     "Paid"): inside a group, not loose on the page. -->
+					<section v-if="id && status" class="g-form-section g-form-status">
+						<div class="g-form-group">
+							<div class="g-form-row g-form-row--readonly">
+								<span class="g-form-row__label">{{ __("Status") }}</span>
+								<GStatusChip :status="status" :label="__(status, null, doctype)" />
+							</div>
+						</div>
+					</section>
 					<slot name="beforeFields"></slot>
 					<!-- Tabs -->
 					<template v-if="tabbedView">

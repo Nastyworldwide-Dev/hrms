@@ -18,7 +18,7 @@ test("the bar carries no status", () => {
 
 test("the status is the first line of the content, before the fields", () => {
 	const content = form.slice(form.indexOf("</ShellHeader>"))
-	const chip = content.indexOf('<p v-if="id && status" class="g-form-status">')
-	assert.ok(chip > 0, "a status line in the content")
+	const chip = content.indexOf('<section v-if="id && status" class="g-form-section g-form-status">')
+	assert.ok(chip > 0, "a status row in the content, inside a group")
 	assert.ok(chip < content.indexOf('<slot name="beforeFields">'))
 })

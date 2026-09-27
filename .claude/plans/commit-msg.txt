@@ -1,24 +1,16 @@
-perf(first-load): drop unused Ionic parts and CSS from the first download
+fix(layout): a loose status line, and Time off jumped for no allocation
 
-alpha.13 carried the target of first paint under 5 s on the slow-phone
-profile (4x CPU, 150 ms, 1.6 Mbps). Measured on that profile with the
-new e2e/first-paint.mjs (median of 5 cold loads), before: 5.68 s.
+The iOS gate before release found two things.
 
-Two causes, both measured:
-- @ionic/vue ships no sideEffects flag, and after every wrapper it
-  writes `IonX.name = "IonX"`, which Rollup cannot prove harmless. So
-  ion-nav and other components the app never renders stayed in the
-  main file. A small build plugin marks Ionic's modules side-effect
-  free and drops those assignments (nothing reads them: Ionic's own
-  name lookups use the `name:` option, which stays). Main JS 492 ->
-  467 KB.
-- Tailwind scanned every frappe-ui component for class names, and the
-  app renders four. The stylesheet that blocks first paint was 182 KB,
-  16% used on Home. Now 150 KB. A per-element computed-style comparison
-  of all 36 screens, old CSS vs new, differs only in class order on
-  two headers.
+The request status moved out of the top bar (9635038cc) sat on the page
+as loose text, outside any group, on five request screens; iOS keeps
+content in groups. It is now a one-row group, "Status  Rejected", the
+status as coloured text at body size.
 
-After: 5.28 s. The 5 s target is not reached yet: what remains is Vue,
-vue-router and Ionic's core, which the first screen does run.
+Time off jumped 191 pt for anyone with no leave allocated: a one-card
+skeleton (97 pt) gave way to a 288 pt empty box. It says so in one
+row, "None allocated yet", with a footer that HR sets it up, the same
+words as the Requests tab, so the answer is the height of its
+placeholder. Seen on both cold and warm opens; 0 after.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
