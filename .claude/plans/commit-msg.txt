@@ -1,24 +1,9 @@
-fix(security): fifteen Desk writes could be triggered by a link
+docs(audit): the 27 Sep endpoint sweep and what it closed
 
-Frappe checks the CSRF token only on unsafe methods. A whitelisted
-function with no methods= also answers GET, so a page the signed-in
-person opens can fire it with a link or an <img>. The 15 Sep fix
-closed this for hrms/api; the 27 Sep sweep of every whitelisted
-function in hrms found fifteen more in the Desk doctypes, among them
-exit_interview.send_exit_questionnaire (sends email),
-leave_ledger_entry.expire_allocation, goal.update_status and
-employee_checkin.bulk_fetch_shift.
-
-All are POST-only now. Every caller already POSTs (frappe.call and
-frappe.xcall default to POST; msgprint server_action goes through
-frappe.call). The new test walks every whitelisted writer outside
-hrms/api, so the next one is caught without a list to keep.
-
-One named exception: add_log_based_on_employee_field is the biometric
-device endpoint, token-authenticated, gated by create permission, and
-some device bridges send GET; closing it could stop real punches.
-
-Proven with Frappe's own check (handler.is_valid_http_method): GET
-refused, POST allowed; the device endpoint unchanged.
+Records how every whitelisted function in hrms was checked, the 16
+GET-reachable writes (15 closed in 3b127a650, one named exception),
+the hand reading of the PWA API endpoints that take a caller-chosen
+record, and the one left unverified (helpdesk.get_ticket: Helpdesk is
+not installed on the test bench).
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
