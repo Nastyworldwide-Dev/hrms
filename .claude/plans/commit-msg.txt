@@ -1,12 +1,8 @@
-fix(lists): empty lists said the same thing six different ways
+fix(score): a plain fact wore an alert's colour bar
 
-Titles varied ("No leave taken this year" on a list not limited to a
-year, "Nothing here yet", "No shift requests yet") and bodies pointed
-at a button elsewhere ("Use New above", "tap New") or at nothing.
-Apple's empty view is the thing's symbol, a title that states what is
-true, one short line saying what to do, and the action itself.
-
-Every list now reads "No <things> yet" and a short line, and an empty
-list you can add to shows the New button in place.
+Score's "No review scheduled yet" sat in an info banner: a card with
+a lime bar down its left edge, the treatment for news. Nothing is
+wrong and nothing is new; the bar was colour as decoration. It is now
+one grouped row with the line that names who to ask.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

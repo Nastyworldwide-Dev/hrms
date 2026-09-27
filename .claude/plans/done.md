@@ -1,3 +1,3 @@
-GOAL: every empty list says what is true in one voice ("No <things> yet" + a short line saying what to do) and offers New itself when you can add.
-DONE WHEN: ListView EMPTY_COPY rewritten; GEmptyState action slot carries New when canCreate; RequestList/Leave dashboard fallbacks match.
-CHECK: node --test frontend/src/components/__tests__/empty-lists-one-voice.test.js; yarn test all green
+GOAL: Score's "no review yet" is a plain grouped row, not an info banner with a lime bar.
+DONE WHEN: KpiDashboard mine-branch uses GListPanel + GListRow; no GBanner there.
+CHECK: node --test frontend/src/views/__tests__/score-empty-path.test.js; WebKit Score screenshot

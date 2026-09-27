@@ -190,3 +190,14 @@ test("R3: no review is one line — the name is not repeated in a second card", 
 	assert.match(cycleLess, /return \[\]/)
 	assert.doesNotMatch(cycleLess, /Scored by/)
 })
+
+// alpha.14 L (27 Sep 2026 sweep): "No review scheduled yet" sat in an info
+// banner — a card with a lime bar down its left edge. The bar is colour as
+// decoration: nothing is wrong and nothing is new. It is one grouped row,
+// the title and the line that names who to ask.
+test("the review line is a plain grouped row, not a banner", () => {
+	const view = read("views/kpi/Dashboard.vue")
+	const mine = view.slice(view.indexOf('v-else-if="dashboard.data"'), view.indexOf("<GMetaGrid"))
+	assert.doesNotMatch(mine, /<GBanner/)
+	assert.match(mine, /<GListPanel>\s*<GListRow :label="nextCycleTitle" :sublabel="nextCycleBody" :tappable="false" :chevron="false" \/>/)
+})

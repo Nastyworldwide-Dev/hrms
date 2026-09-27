@@ -72,12 +72,11 @@
 					     cannot fix that themselves and what they need is who to
 					     ask. -->
 					<div v-else-if="dashboard.data" class="flex flex-col gap-4">
-						<GBanner variant="info">
-							<div class="g-empty-line flex flex-col gap-1">
-								<span class="text-panel-title">{{ nextCycleTitle }}</span>
-								<span class="text-caption text-ink-600">{{ nextCycleBody }}</span>
-							</div>
-						</GBanner>
+						<!-- a grouped row, not a banner: nothing is wrong or new here
+						     (alpha.14 L; the lime bar was colour as decoration) -->
+						<GListPanel>
+							<GListRow :label="nextCycleTitle" :sublabel="nextCycleBody" :tappable="false" :chevron="false" />
+						</GListPanel>
 						<GMetaGrid v-if="nextCycleFacts.length" :cells="nextCycleFacts" />
 					</div>
 
@@ -411,7 +410,8 @@ import { createResource } from "frappe-ui"
 import BaseLayout from "@/components/BaseLayout.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
-import GBanner from "@/components/glass/GBanner.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import GMetaGrid from "@/components/glass/GMetaGrid.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
 import GDataTable from "@/components/glass/GDataTable.vue"
