@@ -14,19 +14,6 @@
 				<template v-if="id" #actions>
 					<!-- No id badge (ruling L4: ids never reach users; alpha.5 walk found
 					     "HR-LAP-2026-00043" on every open request). -->
-					<!-- GStatusChip, not frappe-ui Badge (8.9). The same value rendered
-					     as a FILLED amber "Open" pill here and an OUTLINED uppercase
-					     "OPEN" on the list — two chip designs for one status, because
-					     the detail header used a different component from every list.
-					     GStatusChip owns the 16-state -> 6-variant map; there is no
-					     second answer now. -->
-					<GStatusChip
-						v-if="status"
-						:status="status"
-						:label="__(status, null, doctype)"
-						class="whitespace-nowrap"
-					/>
-
 					<!-- The ⋯ menu: the Glass action sheet (alpha.7 §5.6), Delete in red
 					     and last, as iOS lists a destructive choice. -->
 					<GIconButton :label="__('More')" @click="menuOpen = true">
@@ -52,6 +39,13 @@
 				<!-- The one content column (§20.3): 720px, left-aligned against the
 				     side nav at lg:. It was sm:max-w-2xl (672px) centred. -->
 				<div class="w-full max-w-content-column-lg mx-auto">
+					<!-- The request's state, whole, as the page's first line (alpha.14
+					     H): it sat in the bar and truncated ("Approved, not …"). An iOS
+					     bar holds the title and controls; a state is content.
+					     GStatusChip owns the status -> colour map (8.9). -->
+					<p v-if="id && status" class="g-form-status">
+						<GStatusChip :status="status" :label="__(status, null, doctype)" />
+					</p>
 					<slot name="beforeFields"></slot>
 					<!-- Tabs -->
 					<template v-if="tabbedView">
@@ -133,13 +127,13 @@
 									<GSkeleton width="12px" height="12px" radius="var(--g-radius-well)" />
 									<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 								</div>
-									:readOnly="isFormReadOnly"
 
 								<FileUploaderView
 									v-else-if="showAttachmentView && index === 0"
 									v-model="fileAttachments"
 									@handleFileSelect="handleFileSelect"
 									@handleFileDelete="handleFileDelete"
+									:readOnly="isFormReadOnly"
 								/>
 							</div>
 						</template>
@@ -197,13 +191,13 @@
 							<GSkeleton width="12px" height="12px" radius="var(--g-radius-well)" />
 							<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 						</div>
-							:readOnly="isFormReadOnly"
 
 						<FileUploaderView
 							v-else-if="showAttachmentView"
 							v-model="fileAttachments"
 							@handleFileSelect="handleFileSelect"
 							@handleFileDelete="handleFileDelete"
+							:readOnly="isFormReadOnly"
 						/>
 
 						<!-- The request's story: sent, then each decision (alpha.13). -->

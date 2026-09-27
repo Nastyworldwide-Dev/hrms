@@ -1,14 +1,14 @@
-fix(requests): a decided request still offered "Add a file"
+fix(requests): a request's status was squeezed into the top bar
 
-A rejected leave and an approved expense still showed "Add a file"
-and a remove X on their files. Frappe will not change a submitted
-document's attachments from the app, and a new file changes nothing
-about a decided request. When the form is read-only its files are now
-shown, read-only; with no files there is no file area at all (it left
-an empty 32 pt band above History).
+A sent request showed its status in the navigation bar beside the
+title, as small coloured words that truncated ("Approved, not …" on
+an expense). An iOS navigation bar holds the title and its controls;
+the state of what is on screen is content. The status is now the
+first line of the page, whole, at body size; the bar keeps Back, the
+title and the menu.
 
-The tap-target audit now skips disabled controls: a sent request's
-reason is text sized to its words, not a target (WCAG 2.5.8 counts
-only what takes a pointer action).
+Seen on the same screen: a sent reason ("screen journey") sat in a
+64 pt box with two empty lines, the room left for typing. A read-only
+reason is now as tall as its text.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

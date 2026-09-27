@@ -1,5 +1,5 @@
-CLASS: a control that does nothing on a decided request (adding/removing files on a submitted document)
-frontend/src/components/FormView.vue:140 same-root — tabbed form files read-only when the form is
-frontend/src/components/FormView.vue:204 same-root — plain form files read-only when the form is
-frontend/src/components/FileUploaderView.vue:1 same-root — no picker, no remove, no empty band when read-only
-frontend/e2e/screens.mjs:176 not-affected — the target audit skips disabled controls (a read-only reason is text)
+CLASS: page content squeezed into chrome (a status truncating in the nav bar) and a read-only field keeping its typing height
+frontend/src/components/FormView.vue:16 same-root — status chip out of the bar
+frontend/src/components/FormView.vue:42 same-root — status line as the page's first line
+frontend/src/theme/glass-components.css:4062 same-root — read-only stacked text sized to content
+frontend/src/components/RequestActionSheet.vue:1 not-affected — sheet has its own header rows, no bar status

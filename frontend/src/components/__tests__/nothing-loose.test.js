@@ -28,7 +28,7 @@ test("D3 Notifications: the unread count is the section header, not a loose line
 test("D9 You: the version is the last group's footer", () => {
 	const src = read("../../views/Profile.vue")
 	assert.doesNotMatch(src, /<p class="text-caption text-ink-600 text-center">/)
-	assert.match(src, /<p class="g-form-footer g-form-footer--center">\s*\{\{ __\("Version \{0\} · \{1\}"/)
+	assert.match(src, /<p class="g-form-footer g-form-footer--center">\s*\{\{ releaseName \? __\("Nadi \{0\} · \{1\}"/)
 })
 
 test("D7 Overtime: why there is nothing to claim is a row in the day group", () => {

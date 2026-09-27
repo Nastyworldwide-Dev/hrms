@@ -42,7 +42,7 @@ test("notifications are on the page; the theme follows the phone; Settings is go
 })
 
 test("the version is a line, not a button", () => {
-	assert.match(template, /__\("Version \{0\} · \{1\}"/)
+	assert.match(template, /__\("Nadi \{0\} · \{1\}"/)
 	assert.doesNotMatch(view, /About this app/)
 })
 

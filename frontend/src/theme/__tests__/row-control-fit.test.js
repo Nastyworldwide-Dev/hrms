@@ -40,3 +40,13 @@ test("no number field in a form draws spin buttons", () => {
 test("a row label does not grow past its text", () => {
 	assert.equal(decls(".g-form-row > .g-form-row__label")["flex"], "0 1 auto")
 })
+
+// alpha.14 (seen on a decided leave, 27 Sep 2026): its reason "screen journey"
+// sat in a 64 pt box with two empty lines under it, and a blank band followed
+// the group. The 64 pt is room to TYPE; a sent reason is as tall as its text.
+test("a read-only long text is as tall as its text", () => {
+	const d = decls(".g-form-row--stacked.g-form-row--readonly .g-input")
+	assert.equal(d["min-height"], "0")
+	assert.equal(d["height"], "auto") // .g-input--textarea fixes 64px
+	assert.equal(d["field-sizing"], "content")
+})

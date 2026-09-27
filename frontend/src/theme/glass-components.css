@@ -4065,6 +4065,12 @@ ion-router-outlet {
 	min-height: 64px;
 	color: var(--g-ink);
 }
+/* a sent reason: as tall as its text (alpha.14; the 64 pt is room to type) */
+.g-form-row--stacked.g-form-row--readonly .g-input {
+	min-height: 0;
+	height: auto;
+	field-sizing: content;
+}
 .g-form-row__switch {
 	flex: none;
 	margin-left: auto;
@@ -5025,4 +5031,19 @@ ion-modal.g-mustread {
 	background: transparent;
 	color: var(--g-ink3);
 	cursor: pointer;
+}
+
+/* A sent request's state, the first line of its page (alpha.14 H): coloured
+   text as iOS draws a status, at the page's body size (17/22 semibold) — the
+   badge size is for a status inside a row. */
+.g-form-status {
+	margin: 0;
+	padding: 12px var(--g-screen-gutter) 0;
+}
+.g-form-status > .g-badge {
+	padding: 0;
+	font-size: 17px;
+	line-height: 22px;
+	font-weight: 600;
+	letter-spacing: -0.4px;
 }
