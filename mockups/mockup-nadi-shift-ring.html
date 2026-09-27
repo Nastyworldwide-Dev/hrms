@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shift ring</title>
+<style>
+:root {
+	--bg: #F2F2F7; --surface: #FFFFFF; --ink: #0B0C10; --ink2: #545C68; --track: #ECEDEF;
+	--brand: #C8FF00; --brand-ink: #3F5C00; --warn: #FF9500; --radius: 26px;
+	--font: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+}
+:root[data-theme="dark"] {
+	--bg: #000000; --surface: #1C1C1E; --ink: #FFFFFF; --ink2: #A8AEB8; --track: #313133; --brand-ink: #C8FF00;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--bg: #000000; --surface: #1C1C1E; --ink: #FFFFFF; --ink2: #A8AEB8; --track: #313133; --brand-ink: #C8FF00;
+	}
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); }
+.banner { position: sticky; top: 0; z-index: 5; padding: 8px 16px; background: #FF3B30; color: #fff; font: 600 13px/18px var(--font); text-align: center; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font: 700 28px/34px var(--font); margin: 0 0 4px; }
+.lede { color: var(--ink2); font: 400 15px/20px var(--font); margin: 0 0 20px; max-width: 640px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.controls button { min-height: 44px; padding: 0 16px; border-radius: 22px; border: 0; background: var(--surface); color: var(--ink); font: 600 15px/20px var(--font); cursor: pointer; }
+.controls button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.phones { display: flex; flex-wrap: wrap; gap: 24px; }
+.phone { width: 402px; max-width: 100%; background: var(--bg); border-radius: 44px; padding: 16px; box-shadow: 0 0 0 1px var(--track); }
+.phone h2 { font: 400 13px/18px var(--font); color: var(--ink2); margin: 0 16px 8px; }
+.label { font: 600 13px/18px var(--font); color: var(--ink2); margin: 0 0 12px 4px; }
+.title { font: 700 34px/41px var(--font); letter-spacing: .4px; margin: 4px 0 16px; }
+.today { background: var(--surface); border-radius: var(--radius); padding: 16px; }
+.date { font: 400 13px/18px var(--font); color: var(--ink2); margin: 0 0 12px; }
+.row { display: flex; align-items: center; gap: 16px; }
+.ring { flex: none; width: 64px; height: 64px; position: relative; }
+.ring svg { width: 64px; height: 64px; transform: rotate(-90deg); }
+.ring .track { stroke: var(--track); }
+.ring .fill { stroke: var(--brand-ink); transition: stroke-dashoffset 600ms cubic-bezier(.2,.8,.2,1); }
+.ring.over .fill { stroke: var(--warn); }
+.ring .centre { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font: 600 15px/20px var(--font); font-variant-numeric: tabular-nums; }
+
+.state { font: 600 17px/22px var(--font); margin: 0; }
+.detail { font: 400 13px/18px var(--font); color: var(--ink2); margin: 2px 0 0; }
+.btn { margin-top: 16px; width: 100%; min-height: 50px; border: 0; border-radius: 25px; background: var(--brand); color: #0B0C10; font: 600 17px/22px var(--font); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.tick { width: 22px; height: 22px; display: none; }
+.tick path { stroke: #0B0C10; stroke-width: 2.5; fill: none; stroke-dasharray: 24; stroke-dashoffset: 24; }
+.btn.saved .tick { display: block; }
+.btn.saved .tick path { animation: draw 380ms cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+	.ring .fill { transition: none; }
+	.btn.saved .tick path { animation: none; stroke-dashoffset: 0; }
+}
+.notes { margin-top: 32px; max-width: 760px; }
+.notes h3 { font: 600 17px/22px var(--font); margin: 20px 0 8px; }
+.notes li { font: 400 15px/20px var(--font); color: var(--ink2); margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="banner">MOCKUP — not the live app. Tap the states and the button.</div>
+<div class="wrap">
+	<h1>Home: the shift ring</h1>
+	<p class="lede">The Today card shows how far through your shift you are, the way the Fitness rings show a goal. It fills during the shift, turns green-lime when the shift is done, orange once you're past it, and sits empty before you start. When a check-in is saved, a tick draws itself on the button.</p>
+	<div class="controls" role="group" aria-label="State">
+		<button data-s="before" aria-pressed="false">Before shift</button>
+		<button data-s="working" aria-pressed="true">Working · 3h 20m</button>
+		<button data-s="done" aria-pressed="false">Shift done</button>
+		<button data-s="over" aria-pressed="false">Past shift end</button>
+		<button data-s="off" aria-pressed="false">No shift today</button>
+		<button id="theme" aria-pressed="false">Dark</button>
+	</div>
+	<div class="phones">
+		<div class="phone">
+			<h2>Phone · 402 pt</h2>
+			<div class="title">Today</div>
+			<div class="label">Announcements</div>
+			<div class="today" style="margin-bottom:24px"><p class="state" style="font-weight:400">No new announcements</p></div>
+			<div class="today" id="card">
+				<p class="date">Saturday, 26 September</p>
+				<div class="row">
+					<div class="ring" id="ring" role="img" aria-label="">
+						<svg viewBox="0 0 64 64" aria-hidden="true">
+							<circle class="track" cx="32" cy="32" r="28" fill="none" stroke-width="6" />
+							<circle class="fill" id="fill" cx="32" cy="32" r="28" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="175.9" />
+						</svg>
+						<div class="centre" id="centre"></div>
+					</div>
+					<div>
+						<p class="state" id="state"></p>
+						<p class="detail" id="detail">Nadi W0 Day · 09:00–18:00</p>
+					</div>
+				</div>
+				<button class="btn" id="btn" type="button"><svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="btnLabel">Check out</span></button>
+			</div>
+		</div>
+	</div>
+	<div class="notes">
+		<h3>How it behaves</h3>
+		<ul>
+			<li>Filled share = time since the shift started ÷ shift length. It is worked out from the shift's start, never counted up, so it can't drift while the phone sleeps.</li>
+			<li>It updates once a minute, the same tick the "3h 20m" already uses.</li>
+			<li>Colour is never the only signal: the centre and the line beside it say it in words ("37%", "✓ Shift done", "+40m").</li>
+			<li>Reduce Motion on: the ring jumps to its value and the tick appears without drawing (Apple, motion).</li>
+			<li>No shift today: no ring. The card looks as it does today.</li>
+			<li>Screen readers hear one line: "Shift 62% done, 3 hours 20 minutes in".</li>
+		</ul>
+		<h3>Not included, on purpose</h3>
+		<ul>
+			<li>No confetti, sounds or animated backgrounds: they get old by day three and slow older phones.</li>
+		</ul>
+	</div>
+</div>
+<script>
+const C = 2 * Math.PI * 28
+const states = {
+	before: { pct: 0, centre: "0%", state: "Not checked in", btn: "Check in", over: false, aria: "Shift not started" },
+	working: { pct: 0.37, centre: "37%", state: "Working · 3h 20m", btn: "Check out", over: false, aria: "Shift 37% done, 3 hours 20 minutes in" },
+	done: { pct: 1, centre: "✓", state: "Shift done · 9h", btn: "Check out", over: false, aria: "Shift done, 9 hours" },
+	over: { pct: 1, centre: "+40m", state: "Working · 9h 40m", btn: "Check out", over: true, aria: "40 minutes past the end of your shift" },
+	off: null,
+}
+function show(key) {
+	document.querySelectorAll("[data-s]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.s === key)))
+	const s = states[key], ring = document.getElementById("ring")
+	document.getElementById("btn").classList.remove("saved")
+	if (!s) {
+		ring.style.display = "none"
+		document.getElementById("state").textContent = "No shift today"
+		document.getElementById("detail").textContent = "Nothing booked"
+		document.getElementById("btnLabel").textContent = "Check in"
+		return
+	}
+	ring.style.display = ""
+	ring.classList.toggle("over", s.over)
+	ring.setAttribute("aria-label", s.aria)
+	document.getElementById("fill").style.strokeDashoffset = String(C * (1 - s.pct))
+	document.getElementById("centre").innerHTML = s.centre
+	document.getElementById("state").textContent = s.state
+	document.getElementById("detail").textContent = "Nadi W0 Day · 09:00–18:00"
+	document.getElementById("btnLabel").textContent = s.btn
+}
+document.querySelectorAll("[data-s]").forEach((b) => b.addEventListener("click", () => show(b.dataset.s)))
+document.getElementById("btn").addEventListener("click", (e) => {
+	const btn = e.currentTarget
+	btn.classList.remove("saved"); void btn.offsetWidth; btn.classList.add("saved")
+	document.getElementById("btnLabel").textContent = "Saved"
+})
+document.getElementById("theme").addEventListener("click", (e) => {
+	const dark = document.documentElement.dataset.theme !== "dark"
+	document.documentElement.dataset.theme = dark ? "dark" : "light"
+	e.currentTarget.setAttribute("aria-pressed", String(dark))
+	e.currentTarget.textContent = dark ? "Light" : "Dark"
+})
+show("working")
+</script>
+</body>
+</html>
