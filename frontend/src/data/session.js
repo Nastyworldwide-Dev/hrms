@@ -4,12 +4,16 @@ import { userResource } from "./user"
 import { employeeResource } from "./employee"
 import router from "@/router"
 import { announceSessionChange, clearPersonalCaches, sessionUser } from "@/utils/personalCache"
+import { clearCachedPages } from "@/utils/cachedPages"
 
 export { sessionUser }
 
-function handleLogin(response) {
+async function handleLogin(response) {
 	if (response.message === "Logged In") {
 		announceSessionChange()
+		// the last person's offline page copy (a session that only expired
+		// never passed through logout)
+		await clearCachedPages()
 		session.user = sessionUser()
 		console.info("[session] logged in as", session.user, "— full reload")
 		// FULL page load, not router.replace: module-scope auto resources
@@ -24,12 +28,12 @@ function handleLogin(response) {
 export const session = reactive({
 	login: async (email, password) => {
 		const response = await call("login", { usr: email, pwd: password })
-		handleLogin(response)
+		await handleLogin(response)
 		return response
 	},
 	otp: async (tmp_id, otp) => {
 		const response = await call("login", { tmp_id, otp })
-		handleLogin(response)
+		await handleLogin(response)
 		return response
 	},
 	logout: createResource({
@@ -37,6 +41,7 @@ export const session = reactive({
 		async onSuccess() {
 			announceSessionChange()
 			await clearPersonalCaches(session.user)
+			await clearCachedPages()
 			userResource.reset()
 			employeeResource.reset()
 

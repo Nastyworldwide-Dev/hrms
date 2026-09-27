@@ -1,6 +1,5 @@
-CLASS: chrome padding stacked on a 44 pt bar row (the bar taller than Apple's navigation bar)
-frontend/src/theme/glass-components.css:2179 same-root — .g-header padding 12 top/bottom removed, min-height 44
-frontend/src/theme/glass-components.css:4408 same-root — .g-header--large padding-bottom 8 -> 0
-frontend/src/theme/glass-components.css:4722 same-root — .g-header__mini centred on the one row (was +12)
-frontend/src/theme/glass-components.css:4748 same-root — .g-header--collapsed padding-bottom 4 -> 0
-frontend/src/theme/glass-components.css:4832 not-affected — desktop column sets only inline padding
+CLASS: per-user data left in browser storage after the user changes (shared-phone leak; same class as audit P0-5, the idb document cache)
+frontend/src/data/session.js:44 same-root — logout now clears the page copy
+frontend/src/data/session.js:16 same-root — login clears it too (an expired session never passed through logout)
+frontend/public/sw.js:39 not-affected — the writer; NetworkFirst stays for offline opening
+frontend/src/utils/personalCache.js:88 not-affected — clears IndexedDB keys, already covered

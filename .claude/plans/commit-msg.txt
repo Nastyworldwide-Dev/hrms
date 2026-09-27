@@ -1,11 +1,14 @@
-fix(header): a band of empty chrome sat above every page
+fix(security): the last person's page stayed on a shared phone
 
-The owner saw a gap at the top of every page. Measured on the
-installed-iPhone profile: the bar was 65 pt tall, 12 above its 44 pt
-row, 8 below it and a hairline, so the large title started 21 pt lower
-than Apple's navigation bar puts it (44 pt row, the large title
-directly under it). The padding was spacing around the row, not part
-of it. The bar is now its 44 pt row; the small title centres on that
-row.
+alpha.12 made the installed app open offline by keeping a copy of the
+/hrms page in the "nadi-pages" cache. Frappe renders that page per
+user (it carries their boot data), and nothing ever deleted it. On a
+shared phone, the next person could open the previous one's page
+while offline.
+
+The copy is now deleted at logout and at login; a session that merely
+expired never passes through logout. Proven in Chromium with the
+built app: before logout the cache held /hrms/home for the employee;
+after logout it holds only the page Frappe rendered for Guest.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
