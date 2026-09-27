@@ -174,6 +174,10 @@ export async function undersizedTargets(page, min = 44) {
 				cs.pointerEvents === "none"
 			)
 				continue
+			// a disabled control accepts no pointer action, so it is not a
+			// target (WCAG 2.5.8 "target"); a sent request's read-only reason
+			// is text sized to its words (alpha.14)
+			if (el.disabled) continue
 			// only judge what is actually on screen
 			if (
 				r.bottom < 0 ||

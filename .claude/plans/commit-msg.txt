@@ -1,17 +1,14 @@
-feat(version): You shows the release by name, never a build time
+fix(requests): a decided request still offered "Add a file"
 
-Owner, 27 Sep 2026: "version update with version release name
-properly. no date and time displayed in app." You read "Version
-2.0.0-alpha.13 · 2026-09-27 06:39", the time the bundle was built.
+A rejected leave and an approved expense still showed "Add a file"
+and a remove X on their files. Frappe will not change a submitted
+document's attachments from the app, and a new file changes nothing
+about a decided request. When the form is read-only its files are now
+shown, read-only; with no files there is no file area at all (it left
+an empty 32 pt band above History).
 
-It now reads "Nadi <version> · <release name>". The name is plain and
-says what the release delivers (ruling R12: professional, no themes).
-It lives beside the version in package.json, heads the changelog
-entry and titles the GitHub Release; the version gate holds all
-three together from alpha.14 on, and releases already shipped keep
-their number only.
-
-The build time still stamps diagnostics reports, where "which build"
-matters, and a gate keeps it off every screen.
+The tap-target audit now skips disabled controls: a sent request's
+reason is text sized to its words, not a target (WCAG 2.5.8 counts
+only what takes a pointer action).
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

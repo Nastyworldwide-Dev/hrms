@@ -1,8 +1,10 @@
 <template>
-	<div class="flex flex-col gap-3 py-4">
+	<!-- Nothing to add and nothing attached: no empty band (alpha.14). -->
+	<div v-if="!readOnly || modelValue.length" class="flex flex-col gap-3 py-4">
 		<!-- One grouped row, like every other field (alpha.6 B2): "Add a file",
 		     a plain verb, instead of a dashed web drop zone under a lime heading. -->
-		<label class="file-select">
+		<!-- A decided request's files are shown, not changed (alpha.14 G). -->
+		<label v-if="!readOnly" class="file-select">
 			<div class="select-button cursor-pointer g-form-group">
 				<div class="g-form-row">
 					<span class="g-form-row__label">{{ __("Add a file") }}</span>
@@ -24,7 +26,7 @@
 				v-for="file in modelValue"
 				:key="file.file_name || file.name"
 				:file="file"
-				removable
+				:removable="!readOnly"
 				@open="showFilePreview"
 				@remove="confirmDeleteAttachment"
 			/>
@@ -66,6 +68,7 @@ defineProps({
 		type: Object,
 		required: true,
 	},
+	readOnly: { type: Boolean, default: false },
 })
 let showDialog = ref(false)
 let showPreviewModal = ref(false)

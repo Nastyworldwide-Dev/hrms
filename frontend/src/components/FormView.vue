@@ -133,6 +133,7 @@
 									<GSkeleton width="12px" height="12px" radius="var(--g-radius-well)" />
 									<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 								</div>
+									:readOnly="isFormReadOnly"
 
 								<FileUploaderView
 									v-else-if="showAttachmentView && index === 0"
@@ -196,6 +197,7 @@
 							<GSkeleton width="12px" height="12px" radius="var(--g-radius-well)" />
 							<span class="text-inkbase text-sm">{{ __("Uploading...") }} </span>
 						</div>
+							:readOnly="isFormReadOnly"
 
 						<FileUploaderView
 							v-else-if="showAttachmentView"
