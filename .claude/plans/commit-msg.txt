@@ -1,14 +1,10 @@
-feat(more): a leader's things in one "Your team" group
+docs(mockups): leave balance strip and Team calendar for sign-off
 
-What a leader does for others lived in two places: Approvals under
-You, Team under More, and Roster only inside Team. You is the person;
-leading is now one group on More, "Your team": Approvals, Team and
-Roster, each shown only when the server says it applies (is_approver,
-has_team). Nothing changes for staff with no one to approve.
-
-The Approvals number on You counted check-ins only
-(get_pending_count), so four leave requests waiting showed nothing.
-It now counts everything waiting on you, from the same source as
-Home's Needs you.
+Two alpha.14 screens wait on the owner's sign-off before any code:
+the leave balance (three options on the same real numbers; A, two
+tiles, recommended) and the Calendar's Me | Team month for leaders
+(counts only on the grid, names by type in the day sheet, never a
+leave reason). Checked in the browser: every day's numbers add up to
+the team of nine.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

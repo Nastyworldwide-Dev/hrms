@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nadi — Team calendar</title>
+<style>
+:root {
+	--bg: #F2F2F7; --surface: #FFFFFF; --ink: #0B0C10; --ink2: #545C68; --track: #E5E5EA; --hair: #E5E5EA;
+	--brand: #C8FF00; --brand-ink: #3F5C00; --green: #34C759; --red: #FF3B30; --orange: #FF9500; --radius: 26px;
+	--font: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+	--spring: cubic-bezier(.2, .8, .2, 1);
+	--weekend-fill: #EAEAF0;
+}
+:root[data-theme="dark"] { --bg: #000; --surface: #1C1C1E; --ink: #FFF; --ink2: #A8AEB8; --track: #38383A; --hair: #38383A; --brand-ink: #C8FF00; --weekend-fill: #2C2C2E; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #000; --surface: #1C1C1E; --ink: #FFF; --ink2: #A8AEB8; --track: #38383A; --hair: #38383A; --brand-ink: #C8FF00; --weekend-fill: #2C2C2E; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); }
+.banner { position: sticky; top: 0; z-index: 20; padding: 8px 16px; background: #FF3B30; color: #fff; font: 600 13px/18px var(--font); text-align: center; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 24px 16px 48px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.controls { min-height: 44px; padding: 0 14px; border-radius: 22px; border: 0; background: var(--surface); color: var(--ink); font: 600 15px/20px var(--font); cursor: pointer; }
+.themebar { display: flex; gap: 8px; margin-bottom: 16px; width: 100%; }
+.themebar button { min-height: 36px; padding: 0 14px; border-radius: 18px; border: 0; background: var(--surface); color: var(--ink); font: 600 13px/18px var(--font); cursor: pointer; }
+.themebar button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.phone { width: 402px; max-width: 100%; background: var(--bg); border-radius: 44px; padding: 0 0 24px; position: relative; box-shadow: 0 0 0 8px #111, 0 20px 60px rgba(0,0,0,.35); overflow: hidden; }
+.phone.small { padding-bottom: 32px; }
+.statusbar { height: 44px; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 20px 6px; font: 600 15px/20px var(--font); }
+.scroll { max-height: 820px; overflow-y: auto; padding: 0 16px 8px; }
+
+h1.title { font: 700 34px/41px var(--font); margin: 4px 0 14px; }
+.seg { display: flex; background: var(--track); border-radius: 9px; padding: 2px; margin-bottom: 16px; }
+.seg button { flex: 1; min-height: 32px; border: 0; background: transparent; border-radius: 7px; font: 600 13px/18px var(--font); color: var(--ink); cursor: pointer; transition: background 200ms var(--spring); }
+.seg button[aria-pressed="true"] { background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+
+.monthhead { display: flex; align-items: center; justify-content: space-between; margin: 4px 2px 10px; }
+.monthhead .m { font: 600 17px/22px var(--font); }
+.monthhead .nav { display: flex; gap: 4px; }
+.monthhead .navbtn { width: 32px; height: 32px; border-radius: 16px; border: 0; background: var(--track); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+.monthhead .navbtn svg { width: 16px; height: 16px; }
+
+.weekdays { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 4px; }
+.weekdays span { text-align: center; font: 600 11px/16px var(--font); color: var(--ink2); }
+
+.gridmonth { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.day { aspect-ratio: 1; border-radius: 12px; background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: pointer; border: 0; font-family: var(--font); font-variant-numeric: tabular-nums; padding: 2px; min-height: 44px; transition: transform 120ms var(--spring); }
+.day:active { transform: scale(.94); }
+.day.blank { visibility: hidden; cursor: default; }
+.day.weekend, .day.holiday { background: var(--weekend-fill); }
+.day .num { font: 600 15px/18px var(--font); color: var(--ink); }
+.day.today .num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 11px; background: var(--brand); color: #0B0C10; }
+.day .count { font: 400 11px/13px var(--font); color: var(--ink2); margin-top: 1px; }
+.dots { position: absolute; bottom: 4px; display: flex; gap: 3px; }
+.dot { width: 6px; height: 6px; border-radius: 3px; }
+.dot.orange { background: var(--orange); }
+.dot.ring { border: 1.4px solid var(--ink2); background: transparent; }
+
+.legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font: 400 13px/18px var(--font); color: var(--ink2); margin: 14px 2px 4px; }
+.legend .lg { display: inline-flex; align-items: center; gap: 5px; }
+.summary { font: 400 15px/20px var(--font); color: var(--ink); margin: 10px 2px 4px; font-weight: 500; }
+
+.head { font: 400 13px/18px var(--font); color: var(--ink2); margin: 16px 16px 8px; }
+.group { background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 16px; position: relative; }
+.row + .row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--hair); }
+.row .t { font: 400 17px/22px var(--font); flex: 1; min-width: 0; }
+.row .s { font: 400 13px/18px var(--font); color: var(--ink2); display: block; }
+.chev { width: 20px; height: 20px; color: var(--ink2); flex: none; }
+.row.tap { cursor: pointer; }
+.row.tap:active { opacity: .6; }
+
+/* sheet */
+.sheetbg { position: absolute; inset: 0; background: rgba(0,0,0,.4); opacity: 0; pointer-events: none; transition: opacity 260ms var(--spring); z-index: 30; }
+.sheetbg.open { opacity: 1; pointer-events: auto; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--bg); border-radius: 20px 20px 0 0; padding: 8px 16px 24px; transform: translateY(100%); transition: transform 320ms var(--spring); max-height: 82%; overflow-y: auto; z-index: 31; }
+.sheetbg.open .sheet { transform: translateY(0); }
+.grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--track); margin: 6px auto 12px; }
+.sheet h2 { font: 700 22px/28px var(--font); margin: 0 0 4px; }
+.sheet .coverage { font: 500 15px/20px var(--font); color: var(--ink2); margin: 0 0 16px; }
+.sheet .empty2 { text-align: center; padding: 40px 16px; color: var(--ink2); font: 400 15px/20px var(--font); }
+.sheet .empty2 b { display: block; color: var(--ink); font: 600 17px/22px var(--font); margin-bottom: 6px; }
+.closebtn { position: absolute; right: 12px; top: 8px; width: 32px; height: 32px; border-radius: 16px; background: var(--track); border: 0; color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+
+.toast { position: absolute; left: 16px; right: 16px; bottom: 24px; background: var(--ink); color: var(--bg); padding: 12px 16px; border-radius: 14px; font: 500 15px/20px var(--font); text-align: center; transform: translateY(20px); opacity: 0; transition: transform 280ms var(--spring), opacity 280ms var(--spring); z-index: 40; pointer-events: none; }
+.toast.show { transform: translateY(0); opacity: 1; }
+
+.panel-note { font: 400 13px/18px var(--font); color: var(--ink2); max-width: 300px; margin-top: 8px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+:root.reduce * { transition: none !important; animation: none !important; }
+</style>
+</head>
+<body>
+<div class="banner">MOCKUP — not final implementation</div>
+<div class="wrap">
+	<div style="width:402px;max-width:100%;">
+		<div class="themebar">
+			<button id="thL" aria-pressed="false" onclick="setTheme('light')">Light</button>
+			<button id="thD" aria-pressed="false" onclick="setTheme('dark')">Dark</button>
+			<button id="thS" aria-pressed="true" onclick="setTheme('system')">System</button>
+		</div>
+
+		<div class="phone" id="phone">
+			<div class="statusbar"><span>9:41</span><span>●●●●</span></div>
+			<div class="scroll">
+				<h1 class="title">Calendar</h1>
+
+				<div class="seg">
+					<button id="segMe" aria-pressed="true" onclick="setMode('me')">Me</button>
+					<button id="segTeam" aria-pressed="false" onclick="setMode('team')">Team</button>
+				</div>
+
+				<div class="monthhead">
+					<span class="m">September 2026</span>
+					<div class="nav">
+						<button class="navbtn" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+						<button class="navbtn" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+					</div>
+				</div>
+
+				<div class="weekdays"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+
+				<div class="gridmonth" id="gridMe"></div>
+				<div class="gridmonth" id="gridTeam" style="display:none;"></div>
+
+				<div id="teamExtras" style="display:none;">
+					<div class="legend">
+						<span class="lg"><span class="count" style="font:400 13px/18px var(--font);color:var(--ink2)">2 off</span></span>
+						<span class="lg"><span class="dot orange"></span> late or absent</span>
+						<span class="lg"><span class="dot ring"></span> waiting on you</span>
+					</div>
+					<div class="summary" id="monthSummary">1 day with someone not in · 1 request waiting</div>
+				</div>
+			</div>
+
+			<div class="sheetbg" id="sheetbg" onclick="if(event.target===this) closeSheet()">
+				<div class="sheet" id="sheet">
+					<button class="closebtn" onclick="closeSheet()" aria-label="Close">
+						<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+					</button>
+					<div class="grabber"></div>
+					<div id="sheetBody"></div>
+				</div>
+			</div>
+
+			<div class="toast" id="toast">Opens the approval</div>
+		</div>
+
+		<div class="panel-note">Team leaders only see the segmented control. Grid never names staff — tap a day for the sheet, which shows names grouped by type (never a leave reason).</div>
+
+		<div style="margin-top:24px;">
+			<div class="head" style="margin-left:0;">Empty-team state (non-leader)</div>
+			<div class="phone small" style="width:100%;box-shadow:none;background:var(--surface);border-radius:20px;padding:24px 20px;">
+				<div>
+					<div style="text-align:center;padding:20px 8px;">
+						<b style="display:block;font:600 17px/22px var(--font);margin-bottom:6px;">No one reports to you</b>
+						<span style="color:var(--ink2);font:400 15px/20px var(--font);">Team leaders see their team's month here.</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+function setTheme(mode){
+	const root = document.documentElement;
+	['thL','thD','thS'].forEach(id=>document.getElementById(id).setAttribute('aria-pressed','false'));
+	if(mode==='light'){ root.setAttribute('data-theme','light'); document.getElementById('thL').setAttribute('aria-pressed','true'); }
+	else if(mode==='dark'){ root.setAttribute('data-theme','dark'); document.getElementById('thD').setAttribute('aria-pressed','true'); }
+	else { root.removeAttribute('data-theme'); document.getElementById('thS').setAttribute('aria-pressed','true'); }
+}
+
+function setMode(mode){
+	const isTeam = mode==='team';
+	document.getElementById('segMe').setAttribute('aria-pressed', String(!isTeam));
+	document.getElementById('segTeam').setAttribute('aria-pressed', String(isTeam));
+	document.getElementById('gridMe').style.display = isTeam ? 'none' : 'grid';
+	document.getElementById('gridTeam').style.display = isTeam ? 'grid' : 'none';
+	document.getElementById('teamExtras').style.display = isTeam ? 'block' : 'none';
+}
+
+// September 2026: Sep 1 = Tuesday. Week starts Sunday -> 2 leading blanks.
+const DAYS_IN_MONTH = 30;
+const LEAD_BLANKS = 2;
+const TODAY = 27;
+const WEEKEND = new Set([5,6,12,13,19,20,26,27]); // Sat/Sun offsets from day1=Tue -> Sat=5,6,12,13,19,20,26,27
+const HOLIDAYS = new Set([16]);
+
+const teamData = {
+	15: { count: '1 off', dot: 'orange' },
+	16: { count: '', dot: null, holiday: true },
+	22: { count: '1 off', dot: 'ring' }
+};
+
+function buildGrid(id, team){
+	const el = document.getElementById(id);
+	el.innerHTML = '';
+	for(let i=0;i<LEAD_BLANKS;i++){
+		const b = document.createElement('div'); b.className='day blank'; el.appendChild(b);
+	}
+	for(let d=1; d<=DAYS_IN_MONTH; d++){
+		const btn = document.createElement('button');
+		let cls = 'day';
+		if(WEEKEND.has(d) || HOLIDAYS.has(d)) cls += ' weekend';
+		if(d===TODAY) cls += ' today';
+		btn.className = cls;
+		let dotsHtml = '';
+		let countHtml = '';
+		if(team){
+			const info = teamData[d];
+			if(info){
+				if(info.count) countHtml = `<span class="count">${info.count}</span>`;
+				if(info.dot) dotsHtml = `<span class="dots"><span class="dot ${info.dot}"></span></span>`;
+			}
+		}
+		btn.innerHTML = `<span class="num">${d}</span>${countHtml}${dotsHtml}`;
+		btn.setAttribute('aria-label', team ? `September ${d}, tap for team details` : `September ${d}`);
+		btn.onclick = () => team ? openDay(d) : null;
+		el.appendChild(btn);
+	}
+}
+
+buildGrid('gridMe', false);
+buildGrid('gridTeam', true);
+
+const sheets = {
+	15: {
+		title: 'Tuesday 15 September',
+		coverage: '7 of 9 in · 1 off · 1 half day · 1 not in yet',
+		sections: [
+			{ head: 'Off', rows: [
+				{ t: 'Aisyah Rahman', s: 'Annual Leave' },
+				{ t: 'Farid Hassan', s: 'Medical Leave · half day (AM)' }
+			]},
+			{ head: 'Not in yet', rows: [
+				{ t: 'Kumar Selvam', s: 'shift 09:00' }
+			]}
+		]
+	},
+	16: {
+		title: 'Wednesday 16 September',
+		coverage: 'Public holiday · 1 rostered to work',
+		sections: [
+			{ head: 'Holiday', rows: [
+				{ t: 'Malaysia Day', s: 'everyone' }
+			]},
+			{ head: 'Working today', rows: [
+				{ t: 'Hafiz Omar', s: 'rostered · in 09:02' }
+			]}
+		]
+	},
+	22: {
+		title: 'Tuesday 22 September',
+		coverage: '8 of 9 in · 1 off · 1 waiting on you',
+		sections: [
+			{ head: 'Off', rows: [
+				{ t: 'Aisyah Rahman', s: 'Annual Leave' }
+			]},
+			{ head: 'Waiting on you', rows: [
+				{ t: 'Nurul Izzah', s: 'time off request', chevron: true, action: 'approval' }
+			]},
+			{ head: 'Shift changes', rows: [
+				{ t: 'Hafiz Omar', s: 'Night 19:00–04:00 (swap)' }
+			]}
+		]
+	}
+};
+
+const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function dayNameFor(d){
+	// Sep 1 2026 = Tuesday (index 2)
+	const idx = (2 + (d-1)) % 7;
+	return dayNames[idx];
+}
+
+function openDay(d){
+	const data = sheets[d];
+	const body = document.getElementById('sheetBody');
+	if(data){
+		let html = `<h2>${data.title}</h2><p class="coverage">${data.coverage}</p>`;
+		data.sections.forEach(sec => {
+			html += `<div class="head" style="margin-left:0;">${sec.head}</div><div class="group" style="margin-bottom:14px;">`;
+			sec.rows.forEach(r => {
+				const tap = r.chevron ? 'row tap' : 'row';
+				const onclick = r.action ? `onclick="showToast()"` : '';
+				html += `<div class="${tap}" ${onclick}><span class="t">${r.t}<span class="s">${r.s}</span></span>${r.chevron ? `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>` : ''}</div>`;
+			});
+			html += `</div>`;
+		});
+		body.innerHTML = html;
+	} else {
+		body.innerHTML = `<h2>${dayNameFor(d)} ${d} September</h2><p class="coverage">Everyone in · 9 of 9</p>`;
+	}
+	document.getElementById('sheetbg').classList.add('open');
+}
+function closeSheet(){
+	document.getElementById('sheetbg').classList.remove('open');
+}
+function showToast(){
+	const t = document.getElementById('toast');
+	t.classList.add('show');
+	setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+	document.documentElement.classList.add('reduce');
+}
+</script>
+</body>
+</html>
