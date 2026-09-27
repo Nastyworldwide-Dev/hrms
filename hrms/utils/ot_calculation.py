@@ -686,7 +686,9 @@ def _iter_day_ot(
 				default=0,
 			),
 			"unrounded_ot_hours": normal_hours + nonworking_hours,
-			# Weekday work keeps its two-decimal report figure; holiday work is exact.
+			# The WORKED record: weekday work keeps its two-decimal report figure,
+			# holiday work every minute. What is claimed and paid is banded to 30
+			# minutes for both (get_ot_claim_capacity; owner ruling 27 Sep 2026).
 			"ot_hours": round(normal_hours, 2) + nonworking_hours,
 			"normal_hours": normal_hours,
 			"nonworking_hours": nonworking_hours,
@@ -920,10 +922,12 @@ def get_ot_claim_capacity(
 		reason = _explain_no_overtime(employee, day) if explain else ""
 		logger.info("[ot_calculation] no OT for %s on %s: %s", employee, day, reason or "genuinely none")
 		return {"hours": 0.0, "monthly_remaining": None, "uncapped_hours": 0.0, "reason": reason}
-	# HR's holiday entitlement is uncapped and exact; only the weekday part of
-	# a day competes for the monthly allowance. A day worked across a rest-day
-	# shift and a normal-day shift therefore caps its normal hours alone.
-	uncapped = stored_ot_hours(worked["nonworking_hours"])
+	# HR's holiday entitlement is uncapped; only the weekday part of a day
+	# competes for the monthly allowance. A day worked across a rest-day shift
+	# and a normal-day shift therefore caps its normal hours alone.
+	# Banded to 30 minutes like weekday pay (owner ruling, 27 Sep 2026: "round
+	# like weekday"). It was exact to the second: 8h 52m 37s read 8.876944444.
+	uncapped = stored_ot_hours(round_ot_pay_hours(worked["nonworking_hours"]))
 	if worked["normal_hours"] <= 0:
 		return {
 			"hours": float(uncapped),

@@ -1,16 +1,22 @@
-fix(requests): a waiting request could still be changed after sending
+fix(overtime): rest-day overtime is paid in half-hours, like weekdays
 
-The owner opened his waiting overtime request and could change its
-date, hours and note (the date sat in an editable box). Frappe lets
-the owner edit a request until it is decided, because "Waiting" is
-an unsubmitted draft, and the app followed Frappe. Owner ruling
-(27 Sep): once sent, a request is not changed in the app. To change
-one, withdraw it and send a new one.
+The owner's rest-day claim (26 Sep, 8h 52m 37s) showed 8.876944444
+hours. A weekday claim is banded to HR's 30-minute pay rule (0-29 min
+down, 30-49 to the half hour, 50 and up to the hour); a rest-day or
+public-holiday claim skipped it and was kept exact to the second. The
+question was raised on 8 Sep and never ruled. Owner ruling, 27 Sep:
+"round like weekday".
 
-Every request form (time off, overtime, fix a day, shift, expense,
-issue) is now read-only once sent, never offers Save, and the request
-sheet offers Withdraw without Edit. The approver is unaffected: they
-decide through the review sheet, which still shows. A new request is
-still fully editable. HR's Desk is out of scope and unchanged.
+The claim's holiday part now passes through the same rounding as the
+weekday part, in get_ot_claim_capacity, which sizes the form, the
+claimable-days list and the save cap alike, so all three agree. Pay is
+priced from the approved claimed hours, so it follows. The worked
+record keeps every minute; only what is claimed and paid is banded. A
+day worked partly as weekday and partly as rest day bands each part
+on its own.
+
+Rest day 10:08-13:22 now claims 3.0 h (was 3.233); the owner's day
+claims 9.0 h. Four tests that pinned the exact figure are updated to
+the ruling; three new ones pin it. Proven on the bench in a savepoint.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

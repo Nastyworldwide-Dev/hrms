@@ -1,3 +1,3 @@
-GOAL: a request once sent is read-only in the app, even while waiting; the sheet offers Withdraw, not Edit; no Save on a sent request.
-DONE WHEN: FormView.isFormReadOnly = Boolean(props.id); formButton Save only when new; RequestActionSheet has no Edit.
-CHECK: node --test frontend/src/components/__tests__/sent-is-read-only.test.js; WebKit: waiting OT 0 editable fields, no Save; approver still sees Review request; new request still editable
+GOAL: a rest-day or public-holiday overtime claim is banded to 30 minutes like a weekday claim (owner ruling "round like weekday").
+DONE WHEN: get_ot_claim_capacity rounds nonworking_hours with round_ot_pay_hours; tests pin 3h14m -> 3.0 and 8h52m -> 9.0 and every claim on a half hour.
+CHECK: pytest hrms/tests/test_ot_nonworking_hours.py (3 new red -> green, 4 updated to the ruling); bench savepoint: rest day 09:00-17:52:37 claim 9.0, worked 8.8769 kept

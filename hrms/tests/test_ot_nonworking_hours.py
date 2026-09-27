@@ -401,8 +401,11 @@ class TestNonworkingHours(unittest.TestCase):
 		self.assertEqual(self.boundary_hours(skip_auto_attendance=1, skipped_as_noise=1), 10)
 
 	def test_rest_day_all_194_minutes_reach_breakdowns_claim_and_payroll(self):
+		# The day's worked record keeps all 194 minutes; what is claimed and paid
+		# is banded like weekday pay (owner ruling 27 Sep 2026): 3h 14m -> 3.0 h.
 		hours = 194 / 60
-		with self.context(approved=[(DAY, hours)]):
+		claim = 3.0
+		with self.context(approved=[(DAY, claim)]):
 			self.assertAlmostEqual(ot.get_day_ot_breakdown("EMP-SYNTHETIC", DAY)["ot_hours"], hours)
 			self.assertAlmostEqual(
 				ot.get_shift_ot_breakdown(
@@ -415,9 +418,10 @@ class TestNonworkingHours(unittest.TestCase):
 				hours,
 			)
 			self.assertAlmostEqual(
-				ot.get_ot_claim_capacity("EMP-SYNTHETIC", DAY, "Overtime Pay")["hours"], hours
+				ot.get_ot_claim_capacity("EMP-SYNTHETIC", DAY, "Overtime Pay")["hours"], claim
 			)
-			self.assertEqual(ot.get_ot_pay("EMP-SYNTHETIC", DAY, DAY, 2080), 64.67)
+			# 3.0 h at the Rest Day 2x on the 2080 / 26 / 8 = 10.00 hourly rate
+			self.assertEqual(ot.get_ot_pay("EMP-SYNTHETIC", DAY, DAY, 2080), 60)
 			doc = filing.ot_request.OTRequest(
 				dict(
 					name="OT-SYNTHETIC",
@@ -427,7 +431,7 @@ class TestNonworkingHours(unittest.TestCase):
 					_new=True,
 					_previous=None,
 					shift="SHIFT-SYNTHETIC",
-					claimed_hours=hours,
+					claimed_hours=claim,
 					status="Open",
 				)
 			)
@@ -439,7 +443,7 @@ class TestNonworkingHours(unittest.TestCase):
 				),
 			):
 				doc.validate()
-			self.assertAlmostEqual(doc.punch_ot_hours, hours)
+			self.assertAlmostEqual(doc.punch_ot_hours, claim)
 
 	def test_public_holiday_nine_hours_use_existing_eight_at_two_one_at_three_bands(self):
 		rows = [punch(DAY, "09:00", "IN"), punch(DAY, "18:00", "OUT")]
@@ -457,12 +461,12 @@ class TestNonworkingHours(unittest.TestCase):
 			punch(weekday, "09:00", "IN"),
 			punch(weekday, "19:00", "OUT"),
 		]
-		with self.context(rows=rows, approved=[(DAY, 194 / 60), (weekday, 1)]):
+		with self.context(rows=rows, approved=[(DAY, 3.0), (weekday, 1)]):
 			self.assertEqual(ot.get_ot_pay("EMP-SYNTHETIC", weekday, weekday, 2080), 15)
 			self.assertAlmostEqual(
-				ot.get_ot_claim_capacity("EMP-SYNTHETIC", DAY, "Overtime Pay")["hours"], 194 / 60
+				ot.get_ot_claim_capacity("EMP-SYNTHETIC", DAY, "Overtime Pay")["hours"], 3.0
 			)
-		with self.context(rows=rows, approved=[(DAY, 194 / 60)]):
+		with self.context(rows=rows, approved=[(DAY, 3.0)]):
 			self.assertEqual(ot.get_ot_claim_capacity("EMP-SYNTHETIC", weekday, "Overtime Pay")["hours"], 1)
 
 	def test_discovery_adds_holiday_entitlement_without_using_weekday_budget(self):
@@ -475,10 +479,10 @@ class TestNonworkingHours(unittest.TestCase):
 		]
 		with self.context(rows=rows):
 			self.assertAlmostEqual(
-				API["get_ot_claim_summary"]("EMP-SYNTHETIC", str(DAY))["punch_ot_hours"], 194 / 60
+				API["get_ot_claim_summary"]("EMP-SYNTHETIC", str(DAY))["punch_ot_hours"], 3.0
 			)
 			self.assertAlmostEqual(
-				API["get_claimable_ot_summary"]("EMP-SYNTHETIC")["claimable_hours"], 194 / 60 + 1
+				API["get_claimable_ot_summary"]("EMP-SYNTHETIC")["claimable_hours"], 3.0 + 1
 			)
 
 	def test_split_weekday_sessions_do_not_restart_the_shift_lateness_clock(self):
@@ -571,8 +575,11 @@ class TestNonworkingHours(unittest.TestCase):
 		rows = [punch(DAY, "09:00", "IN"), punch(DAY, "09:01", "OUT")]
 		rows[-1].time = start + timedelta(minutes=minutes)
 		with self.context(rows=rows):
+			# every minute counts (no minimum, no weekday caps), then the claim is
+			# banded like weekday pay (owner ruling, 27 Sep 2026)
 			self.assertAlmostEqual(
-				ot.get_ot_claim_capacity("EMP-SYNTHETIC", DAY, "Overtime Pay")["hours"], minutes / 60
+				ot.get_ot_claim_capacity("EMP-SYNTHETIC", DAY, "Overtime Pay")["hours"],
+				ot.round_ot_pay_hours(minutes / 60),
 			)
 
 
@@ -705,3 +712,36 @@ class TestOvertimeBelongsToTheShiftDay(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestRestDayRoundsLikeWeekdays(unittest.TestCase):
+	"""Owner ruling, 27 Sep 2026: "round like weekday". A rest-day or public-
+	holiday claim is rounded to HR's 30-minute pay bands, as a weekday claim is
+	(round_ot_pay_hours: 0-29 min down, 30-49 to :30, 50+ up). It was kept exact
+	to the second, so the owner's 8h 52m 37s read 8.876944444 in the form.
+	All the day's hours still count (no minimum, no weekday caps): only the
+	figure paid and claimed is banded. 10:08-13:22 is 3h 14m -> 3.0 h."""
+
+	def context(self, **kwargs):
+		return TestNonworkingHours().context(**kwargs)
+
+	def test_a_rest_day_claim_is_banded_like_a_weekday(self):
+		with self.context():
+			self.assertEqual(ot.get_ot_claim_capacity("EMP-SYNTHETIC", DAY, "Overtime Pay")["hours"], 3.0)
+			self.assertEqual(API["get_ot_claim_summary"]("EMP-SYNTHETIC", str(DAY))["punch_ot_hours"], 3.0)
+
+	def test_the_owners_day_eight_fifty_two_pays_nine(self):
+		rows = [punch(DAY, "09:00", "IN"), punch(DAY, "17:52", "OUT")]
+		with self.context(rows=rows):
+			self.assertEqual(ot.get_ot_claim_capacity("EMP-SYNTHETIC", DAY, "Overtime Pay")["hours"], 9.0)
+
+	@settings(max_examples=50, deadline=None)
+	@given(minutes=st.integers(1, 500))
+	def test_every_rest_day_claim_is_on_a_half_hour(self, minutes):
+		start = datetime.combine(DAY, time(9))
+		rows = [punch(DAY, "09:00", "IN"), punch(DAY, "09:01", "OUT")]
+		rows[-1].time = start + timedelta(minutes=minutes)
+		with self.context(rows=rows):
+			hours = ot.get_ot_claim_capacity("EMP-SYNTHETIC", DAY, "Overtime Pay")["hours"]
+			self.assertEqual(hours, ot.round_ot_pay_hours(minutes / 60))
+			self.assertEqual(hours * 2, int(hours * 2))
