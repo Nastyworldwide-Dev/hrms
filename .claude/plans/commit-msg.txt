@@ -1,15 +1,18 @@
-fix(rows): a long manager name wrapped into three short lines
+fix(forms): a picker's value was cut and a stray box sat after Hours
 
-On You, the owner's manager name wrapped into three right-aligned
-lines beside "Manager". A label/value row always laid the two side by
-side, so a long value was squeezed into whatever width the label left.
-iOS does it differently: side by side only while both fit on one line,
-otherwise the value goes under its label, leading-aligned.
+Found in the 27 Sep sweep on the installed-iPhone profile.
 
-Rows now measure their text and choose. It is on every read-only
-label/value row: You, every form field, the late check-out and
-remote check-in sheets. Proven with a 36-character manager name on
-the installed-iPhone profile. The dead-code audit now knows global
-directives the way it knows global components.
+Issue form: "What are you reporting?  Requirec". The row label's rule
+let it grow (flex 1 0 auto) to 237 pt for 193 pt of text, leaving the
+picker 89 pt for a 95 pt value. The chevron is drawn inside that box,
+so it covered the last letter. A label is now its text; the picker
+reserves its chevron and ends a too-long value in an ellipsis.
+
+Overtime form: "Hours  Required" plus a small block. WebKit draws a
+number field's spin buttons; they were hidden only on read-only rows.
+iOS has no stepper there, the keypad is the control, so they are gone
+from every form number field.
+
+Page audit at 402 and 1280, sheet and iOS consistency audits: 0.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

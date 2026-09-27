@@ -4007,7 +4007,9 @@ ion-router-outlet {
 	text-align: end;
 }
 .g-form-row > .g-form-row__label {
-	flex: 1 0 auto;
+	/* its text, no more (alpha.14 J: grown to 237 pt for 193 of text, it
+	   squeezed the picker beside it until its value was cut) */
+	flex: 0 1 auto;
 }
 .g-form-row > .g-form-row__label + :not(.g-form-row__switch) {
 	flex: 1 1 55%;
@@ -4033,7 +4035,13 @@ ion-router-outlet {
 	color: var(--g-ink2);
 }
 .g-form-group .g-select__native {
+	/* alpha.14 J: the chevron is drawn inside this box, so its 24 pt is
+	   reserved and a long value ends in "…" before it ("Requirec" was the
+	   last letter under the chevron). At least a few letters always show. */
+	box-sizing: border-box;
 	padding-right: 24px;
+	min-width: calc(24px + 5ch);
+	text-overflow: ellipsis;
 	text-align: right;
 	text-align-last: right;
 }
@@ -4924,6 +4932,18 @@ ion-modal.g-mustread {
 }
 .g-form-row--readonly input[type="number"]::-webkit-inner-spin-button,
 .g-form-row--readonly input[type="number"]::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+/* alpha.14 I: every number field in a form, not only read-only ones — WebKit
+   drew the spin buttons as a stray block after "Required" on Overtime's
+   Hours. iOS has no stepper there; the numeric keypad is the control. */
+.g-form-group input[type="number"] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+.g-form-group input[type="number"]::-webkit-inner-spin-button,
+.g-form-group input[type="number"]::-webkit-outer-spin-button {
 	-webkit-appearance: none;
 	margin: 0;
 }
