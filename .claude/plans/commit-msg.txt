@@ -1,14 +1,19 @@
-feat(roster): HR can see how each person is really rostered
+test(gates): measure Nadi as it is installed on an iPhone
 
-The roster is a new feature and the owner ruled out designing it on
-guesses. Nothing on hand says how many people work one fixed shift, a
-weekly rota, a rotation or day by day: the test sites hold only test
-shifts. This read-only report sorts each active employee by their last
-full weeks of real Shift Assignments, says who set them (by hand, a
-weekly schedule or a location rule), and counts each pattern, so the
-roster design starts from the live numbers.
+Every gate ran a 402x874 window with no safe areas, no standalone
+mode and every page opened cold from its URL. The owner's phone showed
+defects none of them could see: the title doubled after coming back
+to a tab, a band of chrome above every page, the tab bar near the
+home indicator.
 
-HR roles only, fenced to the caller's companies inside the query.
-Linked next to Unclaimable Days by an idempotent patch, as that one was.
+The new audit serves the CSS with the iPhone 16 Pro insets written in
+and walks the app as a person does: each tab, scrolled, half-scrolled,
+a pushed screen and Back. The page starts below the status bar because
+index.html uses the "default" status-bar style; a test pins that
+setting, since a first run that assumed otherwise blamed the app for a
+gap the phone never has.
+
+On HEAD it reported the double title on all five tabs and a 21 pt
+band above every large title. Those fixes follow separately.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

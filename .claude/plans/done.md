@@ -1,3 +1,3 @@
-GOAL: HR sees how each person is really rostered (Fixed / Weekly / Rotating / Day by day) before the roster feature is designed.
-DONE WHEN: "Roster Patterns" Script Report, HR-only, company-fenced, read-only, linked in Shift & Attendance after Unclaimable Days.
-CHECK: PYTHONPATH=.:hrms/tests python3 -m pytest -q -p no:cacheprovider hrms/tests/test_roster_patterns.py; bench fresh.local: 22 rows, staff refused.
+GOAL: the gates measure Nadi as installed on an iPhone (safe areas, standalone) and walk it like a person, tab to tab.
+DONE WHEN: device-journey-audit runs in the ios gate; it went red on HEAD for real defects (double title after Back, 21 pt top band).
+CHECK: node --test frontend/e2e/device.test.mjs; cd frontend && node e2e/device-journey-audit.mjs

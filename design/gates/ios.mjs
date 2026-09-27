@@ -12,6 +12,10 @@
 //                           contrast, 44 pt targets, overflow — phone AND desktop
 //   states-audit            alpha.12: forced slow / 500 / offline on every
 //                           screen: a placeholder, "Try again", the banner
+//   device-journey-audit    alpha.14: the INSTALLED iPhone (safe areas,
+//                           standalone) walked tab by tab, scrolled, pushed
+//                           and back: one title, no top band, clear of the
+//                           home indicator
 // Needs a served site and AUDIT_PW; SKIPs without, like a11y/visual/coherence.
 
 import { spawnSync } from "node:child_process";
@@ -27,6 +31,7 @@ const AUDITS = [
 	["page-audit", { W: "402", H: "874", SCHEME: "light" }, "page-audit-phone"],
 	["page-audit", { W: "1280", H: "800", SCHEME: "light" }, "page-audit-desktop"],
 	["states-audit"],
+	["device-journey-audit"],
 ];
 
 const skip = (why) => {
