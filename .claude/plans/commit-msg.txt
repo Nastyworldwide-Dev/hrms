@@ -1,16 +1,9 @@
-fix(words): say the password rule before it fails; plain Fix a day
+test(api): allowlist Frappe's password strength check
 
-Change password showed three "Required" rows and said nothing about
-what a new password needs until the server refused it. It now asks
-Frappe's own strength check as you type and shows its words under
-the group ("This is a top-10 common password." / "Strong enough.").
-The rule is the site's System Settings policy; with no policy Frappe
-answers nothing and no line is shown, so the app never invents one.
-Proven on the bench with the policy switched on, then back off.
-
-Fix a day's "Include holidays" read as jargon. Frappe skips rest
-days and public holidays in the range unless it is ticked
-(attendance_request.should_mark_attendance), so it now says "Also fix
-rest days and holidays".
+1334108aa made Change password call frappe's test_password_strength,
+but the API contract audit (every url the PWA calls is a whitelisted
+hrms method or an allowlisted core one) was not given it, so the suite
+went red. Its real signature from frappe/core/doctype/user/user.py.
+Should have gone with that commit.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

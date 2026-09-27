@@ -203,6 +203,12 @@ const CORE = {
 		optional: [],
 		varkw: false,
 	},
+	// alpha.14 N: Change password asks the site's own rule as you type
+	"frappe.core.doctype.user.user.test_password_strength": {
+		required: ["new_password"],
+		optional: ["key", "old_password", "user_data"],
+		varkw: false,
+	},
 	"frappe.core.doctype.user.user.update_password": {
 		required: ["new_password"],
 		optional: ["logout_all_sessions", "key", "old_password"],
