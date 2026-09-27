@@ -1,8 +1,16 @@
-fix(score): a plain fact wore an alert's colour bar
+fix(words): say the password rule before it fails; plain Fix a day
 
-Score's "No review scheduled yet" sat in an info banner: a card with
-a lime bar down its left edge, the treatment for news. Nothing is
-wrong and nothing is new; the bar was colour as decoration. It is now
-one grouped row with the line that names who to ask.
+Change password showed three "Required" rows and said nothing about
+what a new password needs until the server refused it. It now asks
+Frappe's own strength check as you type and shows its words under
+the group ("This is a top-10 common password." / "Strong enough.").
+The rule is the site's System Settings policy; with no policy Frappe
+answers nothing and no line is shown, so the app never invents one.
+Proven on the bench with the policy switched on, then back off.
+
+Fix a day's "Include holidays" read as jargon. Frappe skips rest
+days and public holidays in the range unless it is ticked
+(attendance_request.should_mark_attendance), so it now says "Also fix
+rest days and holidays".
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

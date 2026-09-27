@@ -24,6 +24,8 @@ export const PLAIN_LABELS = {
 	"sanctioned amount": "Approved amount",
 	"total leave days": "Days",
 	"leave balance before application": "Days left",
+	// off: rest days and holidays in the range are skipped (alpha.14 N)
+	"include holidays": "Also fix rest days and holidays",
 	"leave approver name": "Goes to",
 	"expense date": "Date",
 	"in time": "In",

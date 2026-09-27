@@ -48,6 +48,11 @@
 								<p v-if="changePasswordError" class="g-form-footer g-field-error" role="alert">
 									{{ changePasswordError }}
 								</p>
+								<!-- The site's own rule, asked of Frappe as you type (alpha.14 N):
+								     said before Update, not after a refusal. No policy, no line. -->
+								<p v-if="hint.text" class="g-form-footer" :class="{ 'g-field-error': !hint.ok }" aria-live="polite">
+									{{ __(hint.text) }}
+								</p>
 							</section>
 						</form>
 					</div>
@@ -79,7 +84,8 @@ import { goBackOrHome } from "@/utils/navigation"
 import { createResource } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
 
-import { inject, ref } from "vue"
+import { computed, inject, ref, watch } from "vue"
+import { passwordHint } from "@/utils/passwordHint"
 
 const __ = inject("$translate")
 const router = useRouter()
@@ -88,6 +94,16 @@ const changePasswordError = ref("")
 const currentPassword = ref("")
 const newPassword = ref("")
 const confirmPassword = ref("")
+
+//: Frappe judges the new password by the site's policy (debounced).
+const strength = createResource({ url: "frappe.core.doctype.user.user.test_password_strength" })
+let strengthTimer = null
+watch(newPassword, (value) => {
+	clearTimeout(strengthTimer)
+	if (!value) return strength.reset()
+	strengthTimer = setTimeout(() => strength.submit({ new_password: value }), 400)
+})
+const hint = computed(() => (newPassword.value ? passwordHint(strength.data) : { text: "", ok: true }))
 
 const updatePasswordResource = createResource({
 	url: "frappe.core.doctype.user.user.update_password",

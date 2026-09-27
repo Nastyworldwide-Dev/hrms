@@ -25,6 +25,9 @@ test("the ERP words on the forms become the person's words", () => {
 		"Sanctioned Amount": "Approved amount",
 		"Total Leave Days": "Days",
 		"Leave Balance Before Application": "Days left",
+		// alpha.14 N: off, Frappe skips rest days and holidays in the range
+		// (attendance_request.py should_mark_attendance) — say that
+		"Include Holidays": "Also fix rest days and holidays",
 		"Expense Date": "Date",
 		"In Time": "In",
 		"Out Time": "Out",
