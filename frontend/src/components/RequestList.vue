@@ -74,8 +74,8 @@
 	     any that has not yet been given one -->
 	<GEmptyState
 		v-else
-		:title="emptyStateTitle || __('Nothing here yet')"
-		:body="emptyStateMessage || __('Requests you send show up here.')"
+		:title="emptyStateTitle || __('Nothing yet')"
+		:body="emptyStateMessage || __('What you send shows here.')"
 	/>
 
 	<GModal :is-open="isRequestModalOpen" @did-dismiss="closeRequestModal">

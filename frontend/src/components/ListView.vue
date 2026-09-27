@@ -144,7 +144,14 @@
 					:icon="EMPTY_ICON[props.doctype]"
 					:title="emptyCopy.title"
 					:body="emptyCopy.body"
-				/>
+				>
+					<!-- the action itself, not a sentence pointing at the + (K) -->
+					<template v-if="canCreate" #action>
+						<router-link :to="{ name: formViewRoute }" v-slot="{ navigate }" custom>
+							<GButton :label="__('New', null, props.doctype)" @click="navigate" />
+						</router-link>
+					</template>
+				</GEmptyState>
 			</div>
 		</div>
 
@@ -194,6 +201,7 @@ import { useRoute, useRouter } from "vue-router"
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import EmployeeCheckinItem from "@/components/EmployeeCheckinItem.vue"
 import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
+import GButton from "@/components/glass/GButton.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import { REQUEST_KIND } from "@/utils/requestKind"
 import GIconButton from "@/components/glass/GIconButton.vue"
@@ -258,48 +266,48 @@ const props = defineProps({
 // screens the mockup drew.
 const EMPTY_COPY = {
 	"Leave Application": {
-		title: __("No leave taken this year"),
-		body: __("Time off you ask for shows up here."),
+		title: __("No time off yet"),
+		body: __("Ask for time off and it shows here."),
 	},
 	"OT Request": {
 		title: __("No overtime claims yet"),
-		body: __("Stay past your shift end, check out, then tap New"),
+		body: __("Work past your shift, check out, then claim it."),
 	},
 	"Employee Issue": {
-		title: __("Nothing reported"),
-		body: __("If something looks wrong, tell us — a screenshot helps"),
+		title: __("No issues yet"),
+		body: __("If something looks wrong, tell HR. A screenshot helps."),
 	},
 	"Attendance Request": {
-		title: __("No attendance requests yet"),
-		body: __("Ask for a day to be corrected and it will appear here"),
+		title: __("No day fixes yet"),
+		body: __("Ask for a day to be corrected and it shows here."),
 	},
 	"Shift Request": {
-		title: __("No shift requests yet"),
-		body: __("Ask to work a different shift and it will appear here"),
+		title: __("No shift changes yet"),
+		body: __("Ask to work a different shift and it shows here."),
 	},
 	"Shift Assignment": {
-		title: __("No shifts assigned yet"),
-		body: __("Your roster appears here once your manager publishes it"),
+		title: __("No shifts yet"),
+		body: __("Your shifts show here once your manager sets them."),
 	},
 	"Employee Checkin": {
-		title: __("No check-ins recorded"),
-		body: __("Check in from Home and your record appears here"),
+		title: __("No check-ins yet"),
+		body: __("Check in from Home and it shows here."),
 	},
 	"Expense Claim": {
 		title: __("No expense claims yet"),
-		body: __("Paid for something for work? Use New above to claim it"),
+		body: __("Paid for something for work? Claim it back."),
 	},
 	"Replacement Leave Claim": {
-		title: __("No replacement leave claimed"),
-		body: __("Worked a rest day? Use New above to claim the time back"),
+		title: __("No replacement leave yet"),
+		body: __("Worked a rest day? Claim the time back."),
 	},
 }
 
 const emptyCopy = computed(
 	() =>
 		EMPTY_COPY[props.doctype] ?? {
-			title: __("Nothing here yet"),
-			body: __("New records will appear here once they are created"),
+			title: __("Nothing yet"),
+			body: __("What you send shows here."),
 		}
 )
 

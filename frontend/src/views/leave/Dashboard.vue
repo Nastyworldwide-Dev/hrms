@@ -47,11 +47,8 @@
 								:items="myLeaves.data"
 								:resource="myLeaves"
 								:what="__('your leave')"
-								:emptyStateMessage="
-									__(
-										'No time off taken this year. Time off you ask for shows up here.'
-									)
-								"
+								:emptyStateTitle="__('No time off yet')"
+								:emptyStateMessage="__('Ask for time off and it shows here.')"
 							/>
 						</div>
 					</section>

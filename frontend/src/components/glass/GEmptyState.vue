@@ -3,8 +3,8 @@
   to do, never "no records found"). Dashed --glass-rim, NOT a glass surface —
   it does not count against §15. Identical at both breakpoints (§20.7).
   Props:
-    title  string, required — e.g. "No leave taken this year"
-    body   string, required — e.g. "Your applications will appear here once submitted"
+    title  string, required — e.g. "No time off yet"
+    body   string, required — e.g. "Ask for time off and it shows here."
   Slot:
     action — optional. §11.1 says always say WHAT TO DO, and three empty states
              shipped copy that pointed at nothing: "Paid for something for work?

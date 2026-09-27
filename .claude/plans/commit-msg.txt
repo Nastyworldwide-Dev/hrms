@@ -1,10 +1,12 @@
-fix(leave): a sent request showed an old balance as if it were live
+fix(lists): empty lists said the same thing six different ways
 
-A sent leave request read "Days left before this  19": the balance as
-it stood when the request was written. On a request already sent it
-reads as a live figure the employee cannot act on, and it goes stale
-the moment anything else is approved. The balance helps while
-choosing dates, so it now shows only on a new request, as "Days
-left"; after that, the Requests balance card is the answer.
+Titles varied ("No leave taken this year" on a list not limited to a
+year, "Nothing here yet", "No shift requests yet") and bodies pointed
+at a button elsewhere ("Use New above", "tap New") or at nothing.
+Apple's empty view is the thing's symbol, a title that states what is
+true, one short line saying what to do, and the action itself.
+
+Every list now reads "No <things> yet" and a short line, and an empty
+list you can add to shows the New button in place.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

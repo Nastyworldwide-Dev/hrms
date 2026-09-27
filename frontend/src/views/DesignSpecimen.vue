@@ -66,7 +66,7 @@
 				<section class="spec__section">
 					<h2 class="spec__label">GEMPTYSTATE (§11.1)</h2>
 					<GEmptyState
-						title="No leave taken this year"
+						title="No time off yet"
 						body="Your applications will appear here once submitted"
 					/>
 				</section>
