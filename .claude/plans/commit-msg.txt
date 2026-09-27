@@ -1,21 +1,10 @@
-fix(startup): a failed read at start-up could leave the app blank
+fix(contacts): HR contacts kept a saved list and never asked again
 
-The states audit (every server call answers 500) found You and
-/settings stuck on the launch placeholder in about one run in three.
-The navigation gate lets a person through when their user or employee
-record could not be read, which is right offline; but two modules
-read `.data.name` off that record while the page was being set up.
-When the read had failed, data was null, a TypeError was thrown, and
-the page never mounted:
-- data/notifications.js filtered by userResource.data.name at import,
-  and the header imports it on every page. It now uses the user from
-  the session cookie; the server fences the list to to_user anyway.
-- You built its details from employee.data.name. Without an employee
-  it now shows "Could not load your details" with Try again.
-employees.js had the same read and is guarded. A test keeps every
-data module from reading resource.data.<field> unguarded.
-
-Forced-500 reloads, 8 each on /settings and /profile: 16 of 16 now
-show Try again, no page errors (before: 5 hangs). States audit 0 twice.
+Who to ask (the Help sheet and /hr-contacts) fetched HR contacts only
+when none were saved. Once saved, a list HR had changed stayed stale
+and a failed read could not say so: the states audit caught "error
+not shown" on /hr-contacts one run in three. The saved list still
+shows at once, and it is always refreshed when opened; 5 of 5 forced
+failures now show Try again.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

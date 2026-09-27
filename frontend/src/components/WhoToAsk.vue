@@ -56,6 +56,8 @@ const manager = createResource({
 onMounted(() => {
 	console.info("[WhoToAsk] opened; HR contacts cached:", Boolean(hrContacts.data))
 	manager.fetch()
-	if (!hrContacts.data) hrContacts.fetch()
+	// the saved list shows at once; always ask again, so a change or a failure
+	// is seen (alpha.14)
+	hrContacts.reload()
 })
 </script>

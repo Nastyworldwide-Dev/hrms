@@ -39,3 +39,14 @@ test("Help opens it as a sheet; /hr-contacts renders the same component", () => 
 	assert.doesNotMatch(hub, /name: 'HRContacts'/, "no longer routes away")
 	assert.match(read("../../views/HRContacts.vue"), /<WhoToAsk\b/)
 })
+
+// alpha.14 (states audit, 27 Sep 2026): opened a second time, /hr-contacts
+// showed the saved list and never asked again (`if (!hrContacts.data)`), so a
+// list HR had changed stayed stale and a failed read could not say so ("error
+// not shown", 1 of 3 runs). The saved list still shows at once; it is always
+// refreshed, and a failed refresh shows Try again above it.
+test("HR contacts are refreshed every time the sheet or page opens", () => {
+	const src = read("../WhoToAsk.vue")
+	assert.doesNotMatch(src, /if \(!hrContacts\.data\) hrContacts\.fetch\(\)/)
+	assert.match(src, /hrContacts\.reload\(\)/)
+})
