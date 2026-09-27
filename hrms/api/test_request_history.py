@@ -143,3 +143,14 @@ class TestTheEndpointIsFenced(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestTheReasonBelongsToThisDocument(unittest.TestCase):
+	"""Same re-used-name class as the history: a rejection reason is a Comment
+	keyed by name, so a new request re-using a deleted one's name would show the
+	old reason. Only a comment made on or after this document counts."""
+
+	def test_the_reason_query_is_bounded_by_the_document_s_creation(self):
+		src = (pathlib.Path(__file__).resolve().parent / "approval.py").read_text()
+		body = src[src.index("def get_rejection_reason") : src.index("def _check_review_revision")]
+		self.assertIn('"creation": (">=", doc.creation)', body)

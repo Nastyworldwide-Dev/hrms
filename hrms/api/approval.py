@@ -399,7 +399,8 @@ def get_rejection_reason(doctype: str, name: str) -> str | None:
 	"""
 	if doctype not in DECIDE_THEN_SUBMIT or not frappe.db.exists(doctype, name):
 		return None
-	if not _request_read_allowed(frappe.get_doc(doctype, name)):
+	doc = frappe.get_doc(doctype, name)
+	if not _request_read_allowed(doc):
 		frappe.throw(_("You cannot read this request."), frappe.PermissionError)
 	rows = frappe.get_all(
 		"Comment",
@@ -408,6 +409,9 @@ def get_rejection_reason(doctype: str, name: str) -> str | None:
 			"reference_name": name,
 			"comment_type": "Comment",
 			"content": ("like", REJECTION_PREFIX + "%"),
+			# a re-used name inherits a deleted request's comments; only a
+			# reason given on or after this document is its own (alpha.13)
+			"creation": (">=", doc.creation),
 		},
 		fields=["content"],
 		order_by="creation desc",
