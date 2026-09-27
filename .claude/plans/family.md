@@ -1,2 +1,4 @@
-CLASS: an audit judged a page by a fixed delay instead of its own answer
-frontend/e2e/states-audit.mjs — same-root (waits for Try again, up to 5 s, before judging)
+CLASS: release bookkeeping (no code)
+frontend/package.json — version 2.0.0-alpha.13
+docs/glass/CHANGELOG.md — alpha.13 entry
+docs/glass/plan/NADI_2.0.0-alpha.13_PLAN.md — evidence per slice

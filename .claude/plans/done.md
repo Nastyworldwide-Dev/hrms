@@ -1,3 +1,3 @@
-GOAL: an employee can withdraw their own draft even when a deleted request's cancelled rows still carry its re-used name
-DONE WHEN: bench: approve -> cancel -> delete -> new draft reuses the name with a cancelled Attendance on it -> withdraw succeeds; a live link still refuses
-CHECK: PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_withdraw_reused_name.py
+GOAL: release 2.0.0-alpha.13 — version, changelog, plan with evidence
+DONE WHEN: package.json 2.0.0-alpha.13; changelog entry; ios gate 7/7 at 0; version test passes
+CHECK: node --test design/gates/version.test.mjs

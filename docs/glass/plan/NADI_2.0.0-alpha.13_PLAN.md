@@ -67,3 +67,21 @@ Plan (this file) → mockup for slice 5 → slices 1–4 red → green, committe
 - **R5** Timeline: show the approver's reject reason in the timeline (the employee already sees it), yes?
 - **R6** Notifications: fold the same person and kind within a day (recommended), or fold by kind only?
 - **R7** Slice 5 feedback: approve the mockup before I build it (it will be ready with the first slices).
+
+
+---
+
+## Shipped (evidence, 27 Sep 2026)
+
+| Slice | Commit | Measured |
+|---|---|---|
+| 1 Request history | f33f82806 | owner + approver read Sent → Not approved · reason; 3 strangers refused; re-used-name history excluded |
+| 2 Month line | 01aea95b8 | W0 September "2 days worked" = 2 Present + 1 On Leave in the data |
+| 3 Folded notifications | ff69c6bc1 | approver: "asked for time off · 11"; opening it 78 → 67 unread; only own rows markable |
+| 4 Lighter first download | 97f34aa77 | main JS 570 → 490 KB; FCP 6.3 → ~5.4 s (target 5 s not reached: Ionic core remains) |
+| 5 Everyday feedback | dee5b50d8 | approve frames: Reject\|Approve → Approved ✓ → closed |
+| Found: withdraw on a re-used name | a04b6f21f | bench: approve → cancel → delete → new draft re-uses the name with a cancelled Attendance → withdraw succeeds |
+| Found: old reason on a re-used name | 25558b455 | reasons bounded by the document's creation; HR-LAP-00045 keeps its own |
+| Gate | e65eb29d8 | states audit waits for the page's answer; ios gate 7 audits all 0 |
+
+Carried: Ionic core size (per-component imports) to reach first paint under 5 s.

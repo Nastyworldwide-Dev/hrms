@@ -10,6 +10,37 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.13] — 2026-09-27
+
+Each request shows its history, the month is summed up, notifications fold,
+the app opens lighter, and everyday actions answer the way iOS does. Plan
+and evidence: `docs/glass/plan/NADI_2.0.0-alpha.13_PLAN.md`.
+
+### Added
+- **Every sent request shows its history** under it: "Sent by W0 employee",
+  then "Approved by …" or "Not approved by … · the reason", with when. Only
+  you, your approver and HR can see it.
+- **The Calendar sums up the month** under the grid: "18 days worked · 2 to
+  fix". Tap "2 to fix" to open the first of them.
+- **Notifications fold**: the same person asking for the same kind of thing
+  on one day is one row with a count ("asked for time off · 11"). Tap it to
+  see them; they are marked read together.
+- **Approve or not approve**: the button draws its tick or cross, then the
+  sheet closes and the list closes the gap.
+- **Numbers roll** to their new value (leave left, overtime to claim), and
+  every button dims a little when pressed.
+
+### Fixed
+- **Opens faster**: the first download is 490 KB (was 570) and the first
+  screen shows in about 5.4 s on a slow phone (was 6.3 s).
+- **Withdrawing your own draft could fail** ("linked with Attendance …")
+  when its number had been used before by a deleted request. It works now;
+  a draft still cannot be withdrawn once something live depends on it.
+- A request could show another, deleted request's history or "not
+  approved" reason when its number was re-used. It shows only its own now.
+- The workflow buttons sent their translated label as the action, so they
+  would fail in any language but English.
+
 ## [2.0.0-alpha.12] — 2026-09-26
 
 Top-tier pass, measured on every screen at phone and desktop size, in light
