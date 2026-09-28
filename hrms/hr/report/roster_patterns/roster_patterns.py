@@ -43,7 +43,7 @@ def execute(filters=None):
 
 
 def window(today: date, weeks: int) -> tuple[date, date]:
-	"""The last `weeks` full Monday–Sunday weeks before today. Pure."""
+	"""The last `weeks` full Monday-Sunday weeks before today. Pure."""
 	weeks = max(1, min(weeks, MAX_WEEKS))
 	end = today - timedelta(days=today.weekday() + 1)
 	return end - timedelta(days=7 * weeks - 1), end
@@ -115,7 +115,7 @@ def _held_in_blocks(runs, start, end) -> bool:
 
 
 def weekday_label(weekdays: set) -> str:
-	"""Mon–Fri, Every day, or Mon, Wed, Fri. Pure."""
+	"""Mon-Fri, Every day, or Mon, Wed, Fri. Pure."""
 	if not weekdays:
 		return ""
 	if len(weekdays) == 7:

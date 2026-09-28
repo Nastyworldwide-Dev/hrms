@@ -63,7 +63,7 @@ class TestPattern(unittest.TestCase):
 		self.assertEqual(self.pattern(weeks_of({0, 1, 2, 3, 4}, DAY)), "Weekly")
 
 	def test_one_week_that_differs_is_not_weekly(self):
-		segments = weeks_of({0, 1, 2, 3, 4}, DAY) + [seg(DAY, date(2026, 8, 15), date(2026, 8, 15))]
+		segments = [*weeks_of({0, 1, 2, 3, 4}, DAY), seg(DAY, date(2026, 8, 15), date(2026, 8, 15))]
 		self.assertEqual(self.pattern(segments), "Day by day")
 
 	def test_two_weeks_day_then_two_weeks_night_is_rotating(self):
