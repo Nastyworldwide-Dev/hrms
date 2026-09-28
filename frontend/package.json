@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.16",
-	"releaseName": "Steady Sheets and More Than One Site",
+	"version": "2.0.0-alpha.17",
+	"releaseName": "When You Can Leave",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

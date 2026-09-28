@@ -10,6 +10,30 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.17] — When You Can Leave — 2026-09-28
+
+Today shows when you came in and when you can go home, the update message
+stops appearing when nothing has changed, and a half day off can be
+approved on a day worked.
+
+### Added
+- **Today says when you came in and when you can leave.** "In 9:45 am ·
+  leave at 6:45 pm". Came in late, you leave that much later; came in
+  early or on time, you leave at the end of your shift. The bar fills to
+  your own leave time and turns orange only after it.
+
+### Fixed
+- **"A new version is ready" kept appearing** on phones even when nothing
+  had been deployed. It now shows only for a real update.
+- **"Forgot to check out?" came too early** for anyone who started late.
+  It now counts from your own leave time.
+- **A half day off could not be approved** once the person had checked in
+  for the other half ("Attendance ... is already marked"). It now approves,
+  the day becomes Half Day, and half a day comes off the balance. A full
+  day of leave on a day the person worked is still refused.
+- **Hours on a sent request showed every decimal** ("10.026111111"). They
+  now read "10.03".
+
 ## [2.0.0-alpha.16] — Steady Sheets and More Than One Site — 2026-09-28
 
 Sheets that stay put when you scroll, the crash when closing a request,
