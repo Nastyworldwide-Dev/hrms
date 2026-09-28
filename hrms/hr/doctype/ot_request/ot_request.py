@@ -213,6 +213,7 @@ class OTRequest(Document, PWANotificationsMixin):
 			_get_shift_ot_config,
 			_ot_bands_for_day,
 			_per_day_contributions,
+			bands_on,
 		)
 		from hrms.utils.ot_rate_label import rate_label
 
@@ -229,7 +230,7 @@ class OTRequest(Document, PWANotificationsMixin):
 			self.day_type = self.ot_rate = None
 			return
 		key = _classify_day(self.employee, day, "normal", shift=shift)
-		bands = _ot_bands_for_day(flt(self.claimed_hours), 0, key, config)
+		bands = _ot_bands_for_day(flt(self.claimed_hours), 0, key, bands_on(config, day))
 		self.day_type = DAY_TYPE_LABELS.get(key, key)
 		self.ot_rate = rate_label(bands)
 		logger.info("[ot_request] %s %s: %s at %s", self.name, self.ot_date, self.day_type, self.ot_rate)

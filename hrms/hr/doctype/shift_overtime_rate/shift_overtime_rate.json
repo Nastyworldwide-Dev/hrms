@@ -10,7 +10,8 @@
   "from_minute",
   "to_hour",
   "to_minute",
-  "rate"
+  "rate",
+  "effective_from"
  ],
  "fields": [
   {
@@ -70,11 +71,19 @@
    "non_negative": 1,
    "precision": "2",
    "reqd": 1
+  },
+  {
+   "columns": 2,
+   "description": "The first day these rates apply. Blank means they have always applied. A day is paid by the newest rates on or before it, so changing rates never reprices older days.",
+   "fieldname": "effective_from",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Effective From"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-06-16 10:00:00.000000",
+ "modified": "2026-09-28 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Overtime Rate",

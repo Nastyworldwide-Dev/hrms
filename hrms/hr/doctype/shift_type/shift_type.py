@@ -530,11 +530,15 @@ class ShiftType(Document):
 						row.idx, frappe.bold(_("To")), frappe.bold(_("From"))
 					)
 				)
-			rows_by_type.setdefault(row.day_type, []).append((from_min, to_min, row.idx))
+			# Rows with a different Effective From are separate rate tables (a
+			# new rate starts on a date without repricing the days before it)
+			rows_by_type.setdefault((row.day_type, row.get("effective_from")), []).append(
+				(from_min, to_min, row.idx)
+			)
 
 		# bands for a day type must be contiguous from 0: no gaps, no overlaps, so
 		# the engine never silently drops paid overtime between two bands
-		for day_type, rows in rows_by_type.items():
+		for (day_type, _since), rows in rows_by_type.items():
 			rows.sort()
 			if rows[0][0] != 0:
 				frappe.throw(

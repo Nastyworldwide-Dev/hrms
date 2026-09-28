@@ -51,13 +51,16 @@ DAY_TYPE_LABELS = {
 	"public_holiday": "Public Holiday",
 }
 
-# Employment Act 1955 default bands, keyed by Day Type label.
+# Default bands for a NEW shift, keyed by Day Type label: HR policy of 28 Sep
+# 2026 (Public Holiday 2x for the first 8 hours then 3x; Off Day flat 2x).
+# Shifts that existed before it keep their rows and get the new ones dated
+# (patches/v16_0/ot_rates_from_policy_date.py).
 # Each band is (from_hour, from_minute, to_hour, to_minute, rate).
 DEFAULT_OT_RATE_BANDS = {
 	"Normal Day": [(0, 0, 23, 59, 1.5)],
 	"Rest Day": [(0, 0, 23, 59, 2.0)],
-	"Off Day": [(0, 0, 4, 0, 1.5), (4, 0, 23, 59, 2.0)],
-	"Public Holiday": [(0, 0, 23, 59, 3.0)],
+	"Off Day": [(0, 0, 23, 59, 2.0)],
+	"Public Holiday": [(0, 0, 8, 0, 2.0), (8, 0, 23, 59, 3.0)],
 }
 
 
@@ -101,6 +104,43 @@ def ot_minutes_qualify(hours, min_minutes) -> bool:
 	return round_ot_pay_hours(hours) * 60.0 >= flt(min_minutes)
 
 
+def day_qualifies(hours, day_type, config, day) -> bool:
+	"""Does this day's overtime count at all? One rule for OT Pay and RL.
+
+	A work day must reach the shift's minimum (always has). A rest, off or
+	public-holiday day counts from the first minute clocked in, and from HR
+	Settings' `nonwork_minimum_from` date (the 28 Sep 2026 policy) it must
+	reach the same minimum first. Before that date — or with no date set —
+	a non-work day counts as it always did, so old days are never repriced.
+	"""
+	if flt(hours) <= 0:
+		return False
+	if day_type == "normal":
+		return ot_minutes_qualify(hours, config["min_minutes"])
+	since = config.get("nonwork_minimum_from")
+	if since and getdate(day) >= getdate(since):
+		return ot_minutes_qualify(hours, config["min_minutes"])
+	return True
+
+
+def bands_on(config, day):
+	"""The config with the rate bands in force on `day`.
+
+	Rate rows carry an Effective From date (blank = since always). For each day
+	type the newest set on or before the day wins; a day type the newer set does
+	not name carries on from the older one. A config with no dated rows is
+	returned as it is.
+	"""
+	dated = config.get("dated_bands")
+	if not dated:
+		return config
+	bands = {}
+	for since in sorted(dated, key=lambda d: (d is not None, d and getdate(d))):
+		if since is None or getdate(since) <= getdate(day):
+			bands.update(dated[since])
+	return {**config, "bands": bands}
+
+
 def replacement_leave_days(hours, hours_per_day=8) -> float:
 	"""Replacement leave earned by ONE working day's OT, in whole half-day blocks:
 	4 h = ½ day, 8 h = 1 day, 12 h = 1.5 day, under 4 h = 0. Computed and stored PER
@@ -137,22 +177,26 @@ def _get_shift_ot_config(shift_name):
 		return default if value is None else value
 
 	label_to_key = {label: key for key, label in DAY_TYPE_LABELS.items()}
-	bands: dict[str, list] = defaultdict(list)
+	# {effective_from or None: {day type: [(from, to, rate)]}} — see bands_on
+	dated: dict = defaultdict(lambda: defaultdict(list))
 	for row in shift.overtime_rates:
 		key = label_to_key.get(row.day_type)
 		if not key:
 			continue
 		from_hours = (row.from_hour or 0) + (row.from_minute or 0) / 60.0
 		to_hours = (row.to_hour or 0) + (row.to_minute or 0) / 60.0
-		bands[key].append((from_hours, to_hours, flt(row.rate)))
-	for key in bands:
-		bands[key].sort()
+		since = getdate(row.get("effective_from")) if row.get("effective_from") else None
+		dated[since][key].append((from_hours, to_hours, flt(row.rate)))
+	dated = {since: {key: sorted(rows) for key, rows in by_type.items()} for since, by_type in dated.items()}
 
 	return {
 		"min_minutes": cint(shift.minimum_overtime_minutes),
+		"nonwork_minimum_from": _nonwork_minimum_from(),
+		"dated_bands": dated,
 		"days_per_month": _or_default(shift.overtime_working_days_per_month, WORKING_DAYS_PER_MONTH),
 		"hours_per_day": _or_default(shift.overtime_normal_hours_per_day, HOURS_PER_DAY),
-		"bands": dict(bands),
+		# the bands as they stand today; pricing a day uses bands_on(config, day)
+		"bands": bands_on({"dated_bands": dated}, getdate())["bands"] if dated else {},
 		"daily_cap": flt(shift.daily_overtime_cap_hours),
 		"monthly_cap": flt(shift.monthly_overtime_cap_hours),
 		# Shift window — OT is measured against the *real* shift end (not the padded
@@ -162,6 +206,23 @@ def _get_shift_ot_config(shift_name):
 		"allow_check_out_after": cint(shift.allow_check_out_after_shift_end_time),
 		"checkin_policy": shift.determine_check_in_and_check_out,
 	}
+
+
+def _nonwork_minimum_from():
+	"""HR Settings' date from which the minimum judges rest/off/PH days too.
+
+	Read as the raw stored value: get_single_value casts an EMPTY Date setting
+	to 0001-01-01 on this Frappe, which would read as "since the year 1" and
+	apply the minimum to every old day — the repricing this date exists to
+	prevent. Empty, or not set up yet, is None: old behaviour.
+	"""
+	rows = frappe.db.sql(
+		"select value from tabSingles where doctype='HR Settings' and field='ot_nonwork_minimum_from'"
+	)
+	value = rows[0][0] if rows else None
+	if not value or not isinstance(value, str | date):
+		return None
+	return getdate(value)
 
 
 def _real_shift_end_dt(start_time, end_time, work_date):
@@ -623,7 +684,7 @@ def _iter_day_ot(
 				continue
 			day_type = _classify_day(employee, day, default_day_type, shift=entry["shift"])
 			nonworking = day_type != "normal"
-			if not nonworking and not ot_minutes_qualify(hours, config["min_minutes"]):
+			if not day_qualifies(hours, day_type, config, day):
 				continue
 			# The minimum qualifies WORKED overtime. A smaller approved claim or
 			# remaining monthly allowance must not be tested against it a second time.
@@ -644,7 +705,7 @@ def _iter_day_ot(
 			if not nonworking:
 				monthly_ot_hours += hours
 			hourly_rate = _hourly_rate(basic, config["days_per_month"], config["hours_per_day"])
-			bands = _ot_bands_for_day(hours, hourly_rate, day_type, config)
+			bands = _ot_bands_for_day(hours, hourly_rate, day_type, bands_on(config, day))
 			priced.append(
 				{
 					"shift": entry["shift"],
@@ -871,7 +932,10 @@ def _explain_no_overtime(employee, day) -> str:
 		"Employee Checkin",
 		filters={
 			"employee": employee,
-			"time": ["between", [f"{day - timedelta(days=1)} 00:00:00", f"{day + timedelta(days=1)} 23:59:59"]],
+			"time": [
+				"between",
+				[f"{day - timedelta(days=1)} 00:00:00", f"{day + timedelta(days=1)} 23:59:59"],
+			],
 		},
 		fields=[
 			"time",
@@ -1121,13 +1185,12 @@ def get_shift_ot_breakdown(employee, shift, attendance_date, out_time, in_time=N
 	bands = []
 	ot_hours = 0.0
 	for day, hours in sorted(buckets.items()):
-		if types[day] == "normal":
-			if not ot_minutes_qualify(hours, config["min_minutes"]):
-				continue
-			if config["daily_cap"] > 0:
-				hours = min(hours, config["daily_cap"])
+		if not day_qualifies(hours, types[day], config, day):
+			continue
+		if types[day] == "normal" and config["daily_cap"] > 0:
+			hours = min(hours, config["daily_cap"])
 		ot_hours += hours
-		bands.extend(_ot_bands_for_day(hours, hourly_rate, types[day], config))
+		bands.extend(_ot_bands_for_day(hours, hourly_rate, types[day], bands_on(config, day)))
 	return {
 		"ot_hours": round(ot_hours, 2) if all(t == "normal" for t in types.values()) else ot_hours,
 		"day_type": day_type,
