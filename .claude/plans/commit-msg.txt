@@ -1,14 +1,3 @@
-chore(release): 2.0.0-alpha.15 — Your Team on the Calendar
-
-Owner, 28 Sep 2026: "dont forget, to update the version". This release
-carries the team on the Calendar (names, and a count that agrees with
-the Team page), pull-to-refresh and "load more" that finally run, the
-update bar that no longer returns with nothing new, TruTrip on More,
-and Approved On + Payment in HR's OT Request report. The changelog
-entry says each in plain words.
-
-Note: 6621d7bd9 carries the previous commit's subject by mistake; its
-diff is only the frontend/vite.config.js comment saying main.js is the
-one worker registration.
+docs(handoff): alpha.15 done
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

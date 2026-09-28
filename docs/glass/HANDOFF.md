@@ -1,13 +1,15 @@
 # HANDOFF
-prompt:   alpha.14 — whole-app pass, roster facts, security, first paint
+prompt:   28 Sep 2026 — calendar team, OT report columns, TruTrip, update bar
 status:   done
-commit:   12e4084f3 on nz-glass (tag v2.0.0-alpha.14, GitHub Release published)
-files:    frontend/e2e/device-journey-audit.mjs (installed-iPhone gate)
-          frontend/src/components/CheckinSheet.vue, glass/GAttachmentRow.vue
-          hrms/hr/report/roster_patterns/ (HR Desk report + link patch)
-          hrms/tests/test_desk_writes_are_post_only.py
-          docs/glass/plan/NADI_2.0.0-alpha.14_PLAN.md (shipped table)
-          mockups/mockup-nadi-a14-{balance-strip,team-calendar}.html
-verify:   deploy; Desk > Shift & Attendance > Roster Patterns; You shows "Nadi 2.0.0-alpha.14 · Clear Screens and Safer Sign-in"
-flags:    roster design waits on live Roster Patterns numbers; balance strip + Team calendar wait on mockup sign-off; FCP 5.28 s (target 5 s not met); helpdesk.get_ticket fence unverified (no Helpdesk on bench)
-next:     owner deploys, signs off the two mockups, shares Roster Patterns numbers
+commit:   7b48b8fa5 on nz-glass (tag v2.0.0-alpha.15)
+files:    hrms/api/calendar.py
+          hrms/api/team.py
+          frontend/src/components/DaySheet.vue
+          hrms/hr/doctype/ot_request/ot_request.json
+          hrms/patches/v16_0/ot_request_approved_on_and_payment.py
+          frontend/src/views/More.vue
+          frontend/src/components/UpdatePrompt.vue
+          frontend/public/sw.js
+verify:   bench --site <site> migrate; then open Calendar as a senior, and OT Request report as HR
+flags:    6621d7bd9 carries b2f020a62's subject by mistake (diff is a vite.config.js comment only)
+next:     deploy on Frappe Cloud; migrate runs the OT patch (fills Approved On, Payment=Pending)
