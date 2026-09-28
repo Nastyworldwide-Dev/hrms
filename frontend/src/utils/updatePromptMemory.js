@@ -12,9 +12,11 @@
 // — it is a specific build, it stops being relevant the moment a newer one
 // lands, and a 30-day silence would hide a genuinely urgent fix.
 //
-// So the memory is the BUILD'S OWN IDENTITY. Put this one away and it stays
-// away; ship another and the bar comes back the first time, because the key no
-// longer matches.
+// So the memory is the BUILD'S OWN IDENTITY, which the waiting build reports
+// itself (public/sw.js GET_BUILD_ID, 28 Sep 2026): its URL is /hrms/sw.js for
+// every build, so the __WB_REVISION__ this used to read from it never existed.
+// Put this one away and it stays away; ship another and the bar comes back
+// the first time, because the key no longer matches.
 //
 // Pure, and split out from the component for the same reason
 // installPromptMemory is: the decision is worth testing without a DOM, and a
@@ -23,32 +25,9 @@
 export const UPDATE_DISMISS_KEY = "hrms:update-prompt-dismissed"
 
 /**
- * The stable identity of a waiting build.
- *
- * Workbox stamps its generated service worker URL with a revision
- * (`/sw.js?__WB_REVISION__=abc123`), which changes on every build and only on
- * a build — exactly the property a per-build key needs. Falling back to the
- * whole URL is safe: on a site without the revision parameter the URL is
- * constant, so the offer is dismissed once and returns when a NEW worker
- * replaces the old one, which is still better than every load.
- *
- * @param {ServiceWorkerRegistration|null|undefined} registration
- * @returns {string|null} a key for this waiting build, or null when nothing waits
- */
-export function waitingBuildId(registration) {
-	const worker = registration?.waiting || registration?.installing
-	const url = worker?.scriptURL
-	if (typeof url !== "string" || !url) return null
-	// The revision alone when there is one — the origin and path are noise, and
-	// an app moved behind a different path is still the same build.
-	const revision = /__WB_REVISION__=([^&]+)/.exec(url)
-	return revision ? revision[1] : url
-}
-
-/**
  * Should the offer be shown for this build?
  *
- * @param {string|null} buildId   from waitingBuildId()
+ * @param {string|null} buildId   what the waiting build named itself (GET_BUILD_ID)
  * @param {string|null} dismissed the stored value
  * @returns {boolean}
  */

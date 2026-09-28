@@ -13,53 +13,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { shouldOfferUpdate, waitingBuildId } from "../updatePromptMemory.js"
-
-//: The shape vite-plugin-pwa hands `onRegisteredSW`. Only the part this code
-//: reads is modelled — a fuller fake would be asserting on the mock.
-const registration = (scriptURL, key = "waiting") => (scriptURL ? { [key]: { scriptURL } } : {})
-
-test("a build is identified by its revision, not its URL", () => {
-	// Workbox stamps the revision on every build and only on a build, which is
-	// exactly what a per-build key needs. The origin and path are noise: an app
-	// moved behind a different path is still the same build.
-	assert.equal(
-		waitingBuildId(registration("https://a.example/sw.js?__WB_REVISION__=abc123")),
-		"abc123"
-	)
-	assert.equal(
-		waitingBuildId(registration("https://b.example/other/sw.js?__WB_REVISION__=abc123")),
-		"abc123",
-		"the same build behind a different path is the same build"
-	)
-})
-
-test("two builds do not share an id", () => {
-	const first = waitingBuildId(registration("/sw.js?__WB_REVISION__=aaa"))
-	const second = waitingBuildId(registration("/sw.js?__WB_REVISION__=bbb"))
-	assert.notEqual(first, second, "or dismissing one would silence the next")
-})
-
-test("an installing worker counts, not only a waiting one", () => {
-	// The offer can fire while the new worker is still installing. Reading only
-	// `waiting` returned null there, and a null id means "offer it" — so the
-	// dismissal could not be recorded and the bar returned on the next load.
-	assert.equal(waitingBuildId(registration("/sw.js?__WB_REVISION__=ccc", "installing")), "ccc")
-})
-
-test("no revision falls back to the whole URL", () => {
-	// A site serving a worker without the parameter still gets a stable key,
-	// so the offer is dismissed once rather than on every load. Worse than a
-	// revision, much better than nothing.
-	assert.equal(waitingBuildId(registration("/sw.js")), "/sw.js")
-})
-
-test("nothing waiting has no id", () => {
-	assert.equal(waitingBuildId(undefined), null)
-	assert.equal(waitingBuildId(null), null)
-	assert.equal(waitingBuildId({}), null)
-	assert.equal(waitingBuildId(registration("")), null)
-})
+import { shouldOfferUpdate } from "../updatePromptMemory.js"
 
 test("a build that was put away is not offered again", () => {
 	// THE BUG. Before this, the answer here was always true.

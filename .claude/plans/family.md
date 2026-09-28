@@ -1,4 +1,6 @@
-CLASS: an OT Request fact HR needs in the Desk report that the doctype never stored (approval time; paid state) — follow-up to 38f6087ba's review
-hrms/hr/doctype/ot_request/ot_request.py:stamp_approved_on same-root — approval time always the submit's own moment; a planted draft value is replaced, a rejection carries none
-hrms/patches/v16_0/ot_request_approved_on_and_payment.py:mirror_level_one_permissions same-root — sites with Custom DocPerm rows get the level-1 rows (else Frappe ignores the JSON and HR cannot set Payment)
-hrms/api/approval.py:decide not-affected — reaches doc.submit(), so on_submit stamps as before
+CLASS: the update offer identified a "new build" by the service worker's URL, which stopped naming builds when the worker moved to one fixed URL (/hrms/sw.js, alpha.12) and was registered twice under two URLs
+frontend/src/components/UpdatePrompt.vue same-root — no second registration; asks the waiting build for its id
+frontend/src/main.js:register same-root — shares its one registration (data/swRegistration.js)
+frontend/public/sw.js same-root — answers GET_BUILD_ID from its own precache
+frontend/src/utils/updatePromptMemory.js:waitingBuildId same-root — removed; it read a __WB_REVISION__ that /hrms/sw.js never carries
+frontend/src/components/InstallPrompt* not-affected — install prompt uses its own cooldown memory, no worker identity

@@ -1,3 +1,3 @@
-GOAL: TruTrip (business travel) is one tap away on More, with its own icon, for every employee.
-DONE WHEN: More shows a "Travel" group with a TruTrip row (plane icon, arrow-out badge) that opens https://app.trutrip.co/v2/login in a new tab with noopener, through an https host allowlist kept apart from the same-origin app list.
-CHECK: node --test frontend/src/data/__tests__/externalLinks.test.js; live on fresh.local as an employee: tap opened app.trutrip.co/v2/login in a new tab, window.opener null, the app stayed on /hrms/more.
+GOAL: "A new version is ready" shows only when a new build is really waiting, once, and stays away after it is dismissed until a newer build lands.
+DONE WHEN: UpdatePrompt watches main.js's one registration (no second registerSW), and the waiting build names itself (sw.js GET_BUILD_ID from its precache) so a dismissal is remembered per build.
+CHECK: yarn --cwd frontend test; live on fresh.local, push off AND on: no bar on 3 loads with nothing deployed; bar after a deploy; dismissed id stored; no bar on 2 reloads after; a newer deploy shows it again; Reload clears it (was: bar on 4/4 loads with nothing deployed, dismissed never stored).

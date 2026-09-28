@@ -46,6 +46,7 @@ import "./theme/glass.variables.css"
 import "./theme/glass-components.css"
 import "./data/theme"
 import { installDiagnostics } from "@/utils/diagnostics"
+import { setRegistration } from "@/data/swRegistration"
 
 // Zoom off (owner ruling, 25 Sep 2026); see utils/blockZoom.js.
 blockZoom()
@@ -157,6 +158,7 @@ const registerServiceWorker = async () => {
 				scope: "/hrms",
 			})
 			.then((registration) => {
+				setRegistration(registration)
 				if (config) {
 					window.frappePushNotification.initialize(registration).then(() => {
 						console.info("[sw] Frappe Push Notification initialized")

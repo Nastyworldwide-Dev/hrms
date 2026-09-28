@@ -135,8 +135,10 @@ test("putting the offer away is remembered", () => {
 	// Reload. A dismissal the app forgets is a delay, not a choice.
 	const prompt = read("components/UpdatePrompt.vue")
 	assert.match(prompt, /remember\(waitingId\)/, "the dismissal names the build it dismissed")
-	assert.match(prompt, /shouldOfferUpdate\(waitingId, remembered\(\)\)/, "and is consulted")
-	assert.match(prompt, /onRegisteredSW/, "the build id comes from the registration")
+	assert.match(prompt, /shouldOfferUpdate\(id, remembered\(\)\)/, "and is consulted")
+	// Since 28 Sep 2026 the build names itself (GET_BUILD_ID): the worker's
+	// URL is /hrms/sw.js for every build, so it cannot (UpdatePrompt.one-worker).
+	assert.match(prompt, /askBuildId\(worker\)/, "the build id comes from the build")
 })
 
 test("the memory is per build, never a cooldown", () => {
@@ -149,7 +151,6 @@ test("the memory is per build, never a cooldown", () => {
 	const memory = read("utils/updatePromptMemory.js")
 		.replace(/\/\*[\s\S]*?\*\//g, (b) => b.replace(/[^\n]/g, " "))
 		.replace(/(^|[^:])\/\/[^\n]*/g, (l, lead) => lead + " ".repeat(l.length - lead.length))
-	assert.match(memory, /__WB_REVISION__/, "keyed on the build's own revision")
 	assert.doesNotMatch(memory, /COOLDOWN|Date\.now\(\)/, "not on a clock")
 	const prompt = read("components/UpdatePrompt.vue")
 	assert.doesNotMatch(

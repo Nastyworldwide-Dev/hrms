@@ -63,6 +63,7 @@ const ENTRY_POINTS = new Set([
 	"src/views/DesignSpecimen.vue", // dev-only route, pushed in router/index.js under import.meta.env.DEV
 	"src/frappeUiLean.js", // every bare "frappe-ui" import resolves here (vite.config.js alias)
 	"src/toastIcons.js", // frappe-ui's Toast icon import resolves here (vite.config.js alias)
+	"src/utils/buildId.js", // imported by public/sw.js (the service worker), outside src/
 ])
 
 test("every component and module file is imported by something", () => {
@@ -178,15 +179,27 @@ test("the lean frappe-ui entry exports exactly what the app imports from frappe-
 	const lean = read(`${SRC}/frappeUiLean.js`)
 	const offered = new Set()
 	for (const m of lean.matchAll(/^export\s*\{([^}]+)\}/gm))
-		for (const part of m[1].split(",")) offered.add(part.trim().split(/\s+as\s+/).pop())
+		for (const part of m[1].split(","))
+			offered.add(
+				part
+					.trim()
+					.split(/\s+as\s+/)
+					.pop()
+			)
 	const wanted = new Set()
 	for (const file of files)
-		for (const m of read(file).matchAll(/import\s*\{([^}]+)\}\s*from\s*"frappe-ui"/g))
+		for (const m of read(file).matchAll(
+			/import\s*\{([^}]+)\}\s*from\s*"frappe-ui"/g
+		))
 			for (const part of m[1].split(","))
 				if (part.trim()) wanted.add(part.trim().split(/\s+as\s+/)[0])
 	const missing = [...wanted].filter((n) => !offered.has(n)).sort()
 	const unused = [...offered].filter((n) => !wanted.has(n)).sort()
-	assert.deepEqual(missing, [], "imported from frappe-ui but not in frappeUiLean.js")
+	assert.deepEqual(
+		missing,
+		[],
+		"imported from frappe-ui but not in frappeUiLean.js"
+	)
 	assert.deepEqual(unused, [], "in frappeUiLean.js but never imported")
 })
 
@@ -201,7 +214,9 @@ const GLOBAL_COMPONENTS = new Set([
 	"router-view",
 	"RouterView",
 ])
-const GLOBAL_DIRECTIVES = new Set([...main.matchAll(/app\.directive\("([\w-]+)"/g)].map((m) => m[1]))
+const GLOBAL_DIRECTIVES = new Set(
+	[...main.matchAll(/app\.directive\("([\w-]+)"/g)].map((m) => m[1])
+)
 // $slots/$emit/$attrs/$props are the component proxy; `__` is the translation
 // global registered by plugins/translationsPlugin.js
 const GLOBAL_PROPERTIES = new Set([

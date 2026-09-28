@@ -63,7 +63,8 @@ test("an /hrms page is served network-first with an offline fallback", () => {
 // the build's real home before precaching.
 test("precache entries are re-based onto /assets/hrms/frontend/", () => {
 	assert.match(src, /const ASSET_BASE = "\/assets\/hrms\/frontend\/"/)
-	assert.match(src, /precacheAndRoute\(rebased\(self\.__WB_MANIFEST\)\)/)
+	assert.match(src, /const PRECACHE = rebased\(self\.__WB_MANIFEST\)/)
+	assert.match(src, /precacheAndRoute\(PRECACHE\)/)
 })
 
 test("the re-base rule, run: relative entries move, absolute ones stay", () => {
@@ -72,7 +73,11 @@ test("the re-base rule, run: relative entries move, absolute ones stay", () => {
 	const ASSET_BASE = "/assets/hrms/frontend/"
 	const rebased = new Function("ASSET_BASE", `${body}; return rebased`)(ASSET_BASE)
 	assert.deepEqual(
-		rebased([{ url: "assets/a.js", revision: null }, "index.html", { url: "/x.png", revision: "1" }]),
+		rebased([
+			{ url: "assets/a.js", revision: null },
+			"index.html",
+			{ url: "/x.png", revision: "1" },
+		]),
 		[
 			{ url: "/assets/hrms/frontend/assets/a.js", revision: null },
 			{ url: "/assets/hrms/frontend/index.html", revision: null },
@@ -90,7 +95,10 @@ test("the pre-alpha.12 worker is retired once the app-root worker registers", ()
 	assert.match(main, /getRegistrations\(\)/)
 	assert.match(main, /\.unregister\(\)/)
 	const then = main.slice(main.indexOf(".then((registration) => {"))
-	assert.ok(then.indexOf("retireOldWorker()") > 0 && then.indexOf("retireOldWorker()") < then.indexOf(".catch("))
+	assert.ok(
+		then.indexOf("retireOldWorker()") > 0 &&
+			then.indexOf("retireOldWorker()") < then.indexOf(".catch(")
+	)
 })
 
 test("push moves to the app-root worker once, only for people who had it on", () => {

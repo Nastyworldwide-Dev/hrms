@@ -11,7 +11,10 @@ const source = readFileSync(fileURLToPath(new URL("../UpdatePrompt.vue", import.
 const reloadFn = source.slice(source.indexOf("function reload()"))
 
 test("Reload tells the waiting build to take over directly", () => {
-	assert.match(reloadFn, /swRegistration\?\.waiting\?\.postMessage\(\{ type: "SKIP_WAITING" \}\)/)
+	assert.match(
+		reloadFn,
+		/swRegistration\.value\?\.waiting\?\.postMessage\(\{ type: "SKIP_WAITING" \}\)/
+	)
 })
 
 test("Reload reloads when the new build takes control", () => {

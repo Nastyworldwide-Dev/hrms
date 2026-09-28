@@ -1,23 +1,32 @@
-fix(ot): Approved On can't be planted, Payment works on custom-perm sites
+fix(pwa): "A new version is ready" kept appearing with nothing new
 
-Two findings from the review of 38f6087ba.
+Owner, 28 Sep 2026: the new-update popup "keeps appearing
+inappropriately". Two causes, both reproduced in a real browser on the
+dev site before the fix.
 
-Approved On trusted a value already on the draft: "read-only" is a
-screen control, so a data import or script could set it before the
-approval and on_submit kept it, showing a false time as if the system
-wrote it. The approving submit now always writes its own moment, and a
-rejection carries none.
+1. It showed with no deploy at all. Since alpha.12 main.js registers
+   /hrms/sw.js — with ?config=… when push notifications are set up —
+   while UpdatePrompt registered it again through vite-plugin-pwa as
+   plain /hrms/sw.js. One scope, two URLs: every load installed the
+   other one as "waiting", and the bar came up on 4 of 4 loads with
+   nothing deployed.
 
-Payment could be dead on some sites: a site that ever edited OT
-Request's Role Permissions keeps Custom DocPerm rows, and Frappe then
-ignores the doctype JSON's permissions entirely — so the new level-1
-rows would not exist there and HR could not set Paid. The patch now
-adds the same four level-1 rows (HR User / HR Manager / System Manager
-write, Employee read) to Custom DocPerm when the site has taken the
-permissions over; it only adds, never edits a row already there.
-fresh.local has no Custom DocPerm rows, so the JSON governs and nothing
-was added — the unit tests cover the other case.
+2. Dismissing it saved nothing. The dismissal was keyed on a
+   __WB_REVISION__ read from the worker's URL, which /hrms/sw.js has
+   never carried, and it was read at registration, before anything
+   was waiting. localStorage held null after a dismissal and the bar
+   came back on every reload.
 
-Red on HEAD: 5 of 17 tests fail on 38f6087ba, all pass after.
+Now there is one registration: main.js shares it
+(data/swRegistration.js) and the prompt watches it, offering only a
+worker waiting behind an active one. The waiting build names itself:
+public/sw.js answers GET_BUILD_ID with a hash of its own precache list
+(utils/buildId.js), so a dismissal is remembered for exactly that
+build. waitingBuildId is removed; workbox-window leaves the bundle.
+
+Checked on fresh.local, push off and push on: no bar on three loads
+with nothing deployed; the bar after a deploy; dismissing stores the
+build id and two reloads stay clear; a newer deploy is offered again;
+Reload takes it and clears the memory.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
