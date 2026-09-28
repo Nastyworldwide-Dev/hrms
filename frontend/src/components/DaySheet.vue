@@ -88,11 +88,21 @@
 						/>
 					</GListPanel>
 				</section>
-				<GListPanel v-if="hiddenCount > 0">
-					<GListRow :label="__('See all {0}', [teamRows.length])" @click="openTeam" />
-				</GListPanel>
+				<!-- One panel, two destinations: a divided pair reads as two
+				     choices; two stacked panels read as one list (design review
+				     of f7886d7c2). -->
 				<GListPanel v-if="teamRows.length">
-					<GListRow :label="__('Open team roster')" @click="openRoster" />
+					<GListRow
+						v-if="hiddenCount > 0"
+						:label="__('See all {0}', [teamRows.length])"
+						:sublabel="__('Team page for this day')"
+						@click="openTeam"
+					/>
+					<GListRow
+						:label="__('Open team roster')"
+						:sublabel="__('Shifts for the week')"
+						@click="openRoster"
+					/>
 				</GListPanel>
 
 				<!-- Exactly one main action, chosen by the day, or one line saying

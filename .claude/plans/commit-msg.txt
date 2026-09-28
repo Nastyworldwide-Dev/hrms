@@ -1,30 +1,9 @@
-feat(calendar): the day sheet shows your team, by name
+fix(calendar): "See all" and "Open team roster" read as one list
 
-Owner, 28 Sep 2026: "team that are in ... must be shown at calendar
-page, alongside the roster." The sheet only carried a count line, so a
-senior had to leave the Calendar for the Team page to see who.
-
-The sheet now lists the rows the server already sends (`team`, the
-Team page's own member_statuses since f56e7cc04), grouped by status in
-the order a manager reads a day: In, Not in yet, Absent, On leave, Off.
-Five names show, then "See all" opens the Team page on that date, and
-"Open team roster" sits beside them (owner Q4: everyone, grouped, five
-then See all).
-
-A person's second line ("IN 09:02 · OUT —", "Shift 09:00–18:00 · no
-punch yet", leave type until when, never the reason) moved from
-TeamDashboard into utils/team.js memberLine, and both screens call it,
-so the Calendar and the Team page can't describe the same person
-differently.
-
-Also adds a probe (team_line_parity_probe.hr_fence) confirming HR
-browsing another manager's team is still company-fenced after the
-f56e7cc04 extraction, which its review could not finish tracing: PASS,
-the out-of-fence report is excluded.
-
-Checked on fresh.local with a synthetic senior and six reports (four
-punched in, one on leave, one not in): "Your team · 4 of 6 in · 1 on
-leave · 1 not in yet", In (4), Not in yet (1), See all 6. Fixture
-dropped after.
+Design review of f7886d7c2 (DSN-08): the two rows sat in two stacked
+panels, which on the phone read as one continuous list, so nothing but
+the label said they go to different places (the Team page for this day,
+the week's roster). They now share one divided panel, each with a
+one-line sublabel naming where it goes.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
