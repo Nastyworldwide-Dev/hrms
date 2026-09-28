@@ -25,7 +25,11 @@
 				class="g-today__issue g-focusable"
 				@click="lateCheckoutOpen = true"
 			>
-				<component :is="isAbandoned ? TriangleAlert : Clock" class="g-today__issue-icon" aria-hidden="true" />
+				<component
+					:is="isAbandoned ? TriangleAlert : Clock"
+					class="g-today__issue-icon"
+					aria-hidden="true"
+				/>
 				<span class="g-today__issue-text">
 					<!-- data-visual-mask: both branches embed formatTimestamp(), whose
 					     wording changes as the check-in ages. -->
@@ -246,6 +250,7 @@ import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
 import StrictRejectionDialog from "@/components/StrictRejectionDialog.vue"
 import LateCheckoutDialog from "@/components/LateCheckoutDialog.vue"
 import { firstMessage } from "@/utils/loudRequest"
+import { nearestSite } from "@/utils/nearestSite"
 
 const DOCTYPE = "Employee Checkin"
 
@@ -301,7 +306,20 @@ const STALE_FIX_MS = 30000
 // tell a reading apart from a fact.
 const accuracyM = ref(null)
 
-const activeShiftLocation = ref(null)
+//: What the server sent: the main site, plus `other_sites` for someone HR lets
+//: check in at more than one (28 Sep 2026).
+const assignedArea = ref(null)
+//: The one site the screen measures against — the one the person is inside, or
+//: the nearest (utils/nearestSite.js, the server's own rule). One site = as before.
+const activeShiftLocation = computed(() =>
+	nearestSite(
+		assignedArea.value,
+		validCoordinates(latitude.value, longitude.value)
+			? { latitude: latitude.value, longitude: longitude.value }
+			: null,
+		(a, b) => metresBetween(a.latitude, a.longitude, b.latitude, b.longitude)
+	)
+)
 const shiftLocationState = ref("loading")
 const shiftLocation = createResource({
 	url: "hrms.api.geofence.get_active_shift_location",
@@ -675,7 +693,7 @@ function stopWatchingLocation() {
 	locationDeadlineTimer = null
 	locationStalled.value = false
 	sawGeolocationCallback.value = false
-	activeShiftLocation.value = null
+	assignedArea.value = null
 	shiftLocationState.value = "loading"
 	clearLocationFix()
 	if (geoWatchId !== null && navigator.geolocation) {
@@ -921,7 +939,7 @@ const handleEmployeeCheckin = async () => {
 	try {
 		const location = await shiftLocation.reload()
 		if (generation !== geoGeneration) return
-		activeShiftLocation.value = location
+		assignedArea.value = location
 		shiftLocationState.value = "ready"
 	} catch (error) {
 		if (generation === geoGeneration) shiftLocationState.value = "error"

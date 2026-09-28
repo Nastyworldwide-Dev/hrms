@@ -1,23 +1,18 @@
-fix(geofence): only HR can set someone's other sites; sync leaves them
+feat(checkin): the check-in screen shows the site you are actually at
 
-Review of df282a764, two findings, both confirmed before fixing.
+Follow-up to df282a764 (HR can let a person check in at more than one
+site). The server now accepts any of a person's sites, but the check-in
+screen still measured against the main one — someone standing at their
+second site would read "5.5 km from Damansara" and a warning, then be
+accepted anyway.
 
-1. Staff could have set their own sites. "Can check in at more than
-   one site" and "Other sites" were on permission level 0, and this
-   site gives Employee Self Service write on Employee at level 0
-   (Custom DocPerm, measured on fresh.local). Anyone with that role
-   could tick the box for themselves and add any site — a way around
-   the fence. Both are now level 1, which only HR User and HR Manager
-   write, like Eligible for Overtime Pay. Checked live: the test
-   employee can write neither field; HR can.
+The screen now picks the same site the server judges by
+(utils/nearestSite.js, mirroring hrms/utils/geofence.evaluate_sites):
+a free site or one they are inside, else the nearest. It uses the
+other_sites the map endpoint already returns. With one site, or before
+a position arrives, it is exactly the main site as before.
 
-2. A sync pull could have switched the box back off. Employee is a
-   mirrored doctype that copies whatever the source sends; HR sets
-   these fields HERE, so a same-version source that never ticked them
-   would reset them. Both are now LOCALLY_OWNED_FIELDS, dropped from
-   every Employee payload like user_id.
-
-The custom-field sync line is bumped so migrate applies the new
-permission level. Red on HEAD: the two new tests fail on df282a764.
+The CheckInPanel location harness binds the component's imports by
+hand; nearestSite is added there.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

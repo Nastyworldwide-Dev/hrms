@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs"
 import { compileScript, parse } from "@vue/compiler-sfc"
 import { computed, nextTick, reactive, ref, shallowRef, watch } from "vue"
 import * as geolocation from "../../utils/geolocation.js"
+import { nearestSite } from "../../utils/nearestSite.js"
 
 const source = readFileSync(new URL("../CheckInPanel.vue", import.meta.url), "utf8")
 const script = compileScript(parse(source).descriptor, { id: "checkin-location" })
@@ -94,6 +95,7 @@ function panel({ employee = "EMP", storage = new Map(), start = 1_800_000_000_00
 						upload.respond = resolve
 				  }),
 		...geolocation,
+		nearestSite,
 		ref,
 		computed,
 		nextTick,

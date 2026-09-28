@@ -1,3 +1,3 @@
-GOAL: HR can let one person check in at more than one site; inside any of them is accepted and named, outside all follows today's rule against the nearest.
-DONE WHEN: Employee has "Can check in at more than one site" + "Other sites"; the insert, the strict preflight and the PWA map all read employee_sites()/evaluate_sites(); Employee Checkin records "Checked in at"; shift rules untouched.
-CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_geofence_multi_site.py (+ the three updated geofence test files); bench --site fresh.local migrate; bench --site fresh.local execute hrms.tests.probes.multi_site_probe.run (HEAD: ticked-at-B Outside/approval; now: Inside, Checked in at = Site B).
+GOAL: the check-in screen measures against the site the server will judge by — for someone HR lets check in at more than one site, the one they are inside, else the nearest.
+DONE WHEN: CheckInPanel reads activeShiftLocation through nearestSite(payload with other_sites, current fix); one site behaves exactly as before.
+CHECK: node --test frontend/src/utils/__tests__/nearestSite.test.js; yarn --cwd frontend test (1545 pass, incl. the CheckInPanel location harness).
