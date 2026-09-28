@@ -6,6 +6,10 @@ does not say stays blank rather than guessed. The owner approved this backfill.
 Payment: every existing request starts Pending; HR marks Paid by hand.
 Both columns are added to each user's saved OT Request report view.
 Nothing else on the request is touched. Idempotent.
+
+A site that ever edited OT Request's Role Permissions carries Custom DocPerm
+rows, and Frappe then ignores the JSON's permissions entirely — so the new
+level-1 rows (HR write Payment, Employee read it) are mirrored there too.
 """
 
 import json
@@ -19,8 +23,46 @@ from hrms.utils.report_columns import add_report_columns
 logger = logging.getLogger(__name__)
 
 
+#: (role, write) on permission level 1 — the JSON's own rows.
+LEVEL_ONE = (("HR User", 1), ("HR Manager", 1), ("System Manager", 1), ("Employee", 0))
+NOT_GRANTED = ("create", "submit", "cancel", "amend", "delete", "import", "share", "print", "email", "select")
+
+
+def mirror_level_one_permissions() -> int:
+	"""Add the level-1 rows to Custom DocPerm when the site has taken the
+	doctype's permissions over. Only adds; never edits a row that is there."""
+	if not frappe.db.exists("Custom DocPerm", {"parent": "OT Request"}):
+		logger.info("[patch] OT Request has no Custom DocPerm rows — the JSON governs")
+		return 0
+	added = 0
+	for role, write in LEVEL_ONE:
+		if frappe.db.exists("Custom DocPerm", {"parent": "OT Request", "role": role, "permlevel": 1}):
+			continue
+		frappe.get_doc(
+			{
+				"doctype": "Custom DocPerm",
+				"parent": "OT Request",
+				"parenttype": "DocType",
+				"parentfield": "permissions",
+				"role": role,
+				"permlevel": 1,
+				"if_owner": 0,
+				"read": 1,
+				"write": write,
+				"report": write,
+				"export": write,
+				**dict.fromkeys(NOT_GRANTED, 0),
+			}
+		).insert(ignore_permissions=True)
+		added += 1
+	frappe.clear_cache(doctype="OT Request")
+	logger.info("[patch] OT Request level-1 Custom DocPerm rows added: %d", added)
+	return added
+
+
 def execute():
 	frappe.reload_doc("hr", "doctype", "ot_request")
+	mirror_level_one_permissions()
 	frappe.db.sql("update `tabOT Request` set payment_status='Pending' where ifnull(payment_status, '')=''")
 
 	rows = frappe.get_all(

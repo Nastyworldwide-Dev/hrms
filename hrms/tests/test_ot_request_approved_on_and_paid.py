@@ -47,11 +47,16 @@ class TestApprovedOn(unittest.TestCase):
 		stamp_approved_on(doc, NOW)
 		self.assertIsNone(doc.approved_on)
 
-	def test_the_stamp_is_never_moved(self):
-		first = datetime.datetime(2026, 9, 20, 9, 0)
-		doc = Doc(status="Approved", approved_on=first)
+	def test_a_value_set_on_the_draft_is_not_trusted(self):
+		# read-only is a screen control; an import could have set one
+		doc = Doc(status="Approved", approved_on=datetime.datetime(2020, 1, 1))
 		stamp_approved_on(doc, NOW)
-		self.assertEqual(doc.approved_on, first)
+		self.assertEqual(doc.approved_on, NOW)
+
+	def test_a_rejection_clears_a_planted_value(self):
+		doc = Doc(status="Rejected", approved_on=datetime.datetime(2020, 1, 1))
+		stamp_approved_on(doc, NOW)
+		self.assertIsNone(doc.approved_on)
 
 	def test_the_field_is_read_only_and_kept_on_amend_off(self):
 		field = FIELDS["approved_on"]
@@ -133,3 +138,56 @@ class TestPaymentStatus(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestCustomDocPermSites(unittest.TestCase):
+	"""A site that edited OT Request's Role Permissions carries Custom DocPerm
+	rows, and Frappe then ignores the JSON permissions entirely — HR could not
+	set Payment. The patch mirrors the level-1 rows there."""
+
+	def _run(self, existing):
+		from unittest.mock import MagicMock, patch
+
+		import frappe
+
+		from hrms.patches.v16_0 import ot_request_approved_on_and_payment as patch_mod
+
+		inserted = []
+		db = MagicMock()
+		db.exists.side_effect = lambda doctype, filters=None: (
+			bool(existing)
+			if filters == {"parent": "OT Request"}
+			else (filters.get("role"), filters.get("permlevel")) in existing
+		)
+		with (
+			patch.object(frappe, "db", db),
+			patch.object(
+				frappe, "get_doc", side_effect=lambda d: MagicMock(insert=lambda **kw: inserted.append(d))
+			),
+			patch.object(frappe, "clear_cache", create=True),
+		):
+			patch_mod.mirror_level_one_permissions()
+		return inserted
+
+	def test_a_site_without_custom_rows_is_left_to_the_json(self):
+		self.assertEqual(self._run(existing=set()), [])
+
+	def test_a_site_with_custom_rows_gets_hr_write_and_employee_read(self):
+		rows = self._run(existing={("HR User", 0)})
+		got = {(r["role"], r["permlevel"], r["read"], r["write"]) for r in rows}
+		self.assertEqual(
+			got,
+			{
+				("HR User", 1, 1, 1),
+				("HR Manager", 1, 1, 1),
+				("System Manager", 1, 1, 1),
+				("Employee", 1, 1, 0),
+			},
+		)
+		for r in rows:
+			self.assertEqual(r["submit"], 0)
+			self.assertEqual(r["delete"], 0)
+
+	def test_a_row_already_there_is_not_added_again(self):
+		rows = self._run(existing={("HR User", 0), ("HR User", 1)})
+		self.assertNotIn("HR User", {r["role"] for r in rows})

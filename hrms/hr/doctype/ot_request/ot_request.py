@@ -52,11 +52,12 @@ def replacement_leave_hours_per_day() -> float:
 
 
 def stamp_approved_on(doc, when) -> None:
-	"""The moment the request was approved, once (HR, 28 Sep 2026: "when did
-	the approver approve?"). A rejection is not an approval; a stamp already
-	there is never moved."""
-	if doc.status == "Approved" and not doc.approved_on:
-		doc.approved_on = when
+	"""The moment the request was approved (HR, 28 Sep 2026: "when did the
+	approver approve?"). Called once, at the submit that decides it; a value
+	already on the draft is replaced — read-only is a screen control, and an
+	import or script could have set one (review of 38f6087ba). A rejection
+	is not an approval and carries none."""
+	doc.approved_on = when if doc.status == "Approved" else None
 
 
 def approval_time_from_versions(versions, since=None) -> str | None:
@@ -301,10 +302,9 @@ class OTRequest(Document, PWANotificationsMixin):
 			frappe.throw(
 				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
 			)
-		if self.status == "Approved" and not self.approved_on:
-			stamp_approved_on(self, now_datetime())
-			self.db_set("approved_on", self.approved_on, update_modified=False)
-			logger.info("[ot_request] %s approved on %s", self.name, self.approved_on)
+		stamp_approved_on(self, now_datetime())
+		self.db_set("approved_on", self.approved_on, update_modified=False)
+		logger.info("[ot_request] %s %s, approved_on=%s", self.name, self.status, self.approved_on)
 		# The employee hears the decision here, like Leave Application and Shift
 		# Request do — before this, a request was approved or refused in silence.
 		self.notify_approval_status()
