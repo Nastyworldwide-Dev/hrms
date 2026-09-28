@@ -10,7 +10,9 @@ import { fileURLToPath } from "node:url"
 const src = readFileSync(fileURLToPath(new URL("../GPullRefresh.vue", import.meta.url)), "utf8")
 
 test("every new pull starts as 'Pull to refresh'", () => {
-	assert.match(src, /@ionStart="onStart"/)
+	// bound by hand now (28 Sep 2026), not as a template directive — see
+	// pull-refresh-events-real.test.js for why
+	assert.match(src, /addEventListener\("ionStart", onStart\)/)
 	assert.match(src, /function onStart\(\) \{[^}]*refreshing\.value = false/)
 })
 

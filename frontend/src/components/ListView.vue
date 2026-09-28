@@ -32,12 +32,7 @@
 		</template>
 	</ShellHeader>
 
-	<ion-content
-		ref="content"
-		class="g-page__content"
-		:scroll-events="true"
-		@ionScroll="handleScroll"
-	>
+	<ion-content ref="content" class="g-page__content" :scroll-events="true">
 		<GPullRefresh @refresh="handleRefresh" />
 
 		<!-- tabindex="0" so a keyboard can reach the scroll. axe's
@@ -117,11 +112,7 @@
 					</div>
 				</GListPanel>
 
-				<ResourceError
-					v-else-if="documents.error"
-					:resource="documents"
-					:what="listNoun"
-				/>
+				<ResourceError v-else-if="documents.error" :resource="documents" :what="listNoun" />
 
 				<!-- §11.1: an empty screen is an invitation to act. The copy is per
 				     list, never "no records found" and never a generic doctype
@@ -192,7 +183,17 @@ import {
 import { IonContent, modalController } from "@ionic/vue"
 import ShellHeader from "@/components/ShellHeader.vue"
 import { createResource, debounce } from "frappe-ui"
-import { computed, defineAsyncComponent, inject, markRaw, onMounted, reactive, ref, watch } from "vue"
+import {
+	computed,
+	defineAsyncComponent,
+	inject,
+	markRaw,
+	onBeforeUnmount,
+	onMounted,
+	reactive,
+	ref,
+	watch,
+} from "vue"
 import { initialListTab } from "@/utils/listTab"
 import { filterCondition } from "@/utils/listFilters"
 import { dayHeading, groupByDay, workDayOf } from "@/utils/dayGroups"
@@ -577,12 +578,26 @@ watch(
 	}
 )
 
+// ionScroll wired by hand, NOT `@ionScroll=` (28 Sep 2026, owner report:
+// pagination and pull-to-refresh both felt stuck). Ionic's ion-content emits
+// this with the exact camelCase name "ionScroll" (createEvent, @ionic/core);
+// Vue's runtime-dom hyphenates a template `@ionScroll` binding down to a
+// listener for "ion-scroll" before it ever reaches the DOM, so the two never
+// meet and "load more" never fired on scroll. Same class and same fix as
+// GPullRefresh's ionRefresh/ionStart.
 onMounted(async () => {
 	// BEFORE the await: Vue unsets the component instance at an async hook's
 	// first await, so a useListUpdate call after it would find
 	// getCurrentInstance() null and its onBeforeUnmount teardown would never
 	// register — this exact line leaked one permanent handler per mount.
 	useListUpdate(socket, props.doctype, () => fetchDocumentList())
+
+	const scrollEl = content.value?.$el
+	if (scrollEl) {
+		scrollEl.addEventListener("ionScroll", handleScroll)
+	} else {
+		console.warn("[ListView] ion-content element not found; infinite scroll is inert")
+	}
 
 	// The workflow only names an extra column. A failed lookup must not stop
 	// the list request, or the screen falls through to "No … yet" as if the
@@ -595,6 +610,10 @@ onMounted(async () => {
 		console.warn("[ListView] workflow lookup failed; listing without it:", props.doctype, error)
 	}
 	fetchDocumentList()
+})
+
+onBeforeUnmount(() => {
+	content.value?.$el?.removeEventListener("ionScroll", handleScroll)
 })
 </script>
 

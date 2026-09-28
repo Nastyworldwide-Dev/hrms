@@ -14,7 +14,11 @@ const tpl = src.slice(src.indexOf("<template>"), src.indexOf("<script"))
 test("the list has one scroller: ion-content's", () => {
 	assert.doesNotMatch(tpl, /overflow-y-auto/)
 	assert.doesNotMatch(tpl, /\bmb-7\b[^"]*h-full|h-full[^"]*\bmb-7\b/)
-	assert.match(tpl, /<ion-content[^>]*:scroll-events="true"[^>]*@ionScroll="handleScroll"/)
+	assert.match(tpl, /<ion-content ref="content" class="g-page__content" :scroll-events="true">/)
+	// ionScroll bound by hand, not as a template directive (28 Sep 2026): see
+	// pull-refresh-events-real.test.js for why the `@ionScroll=` form never
+	// actually ran handleScroll on a real page.
+	assert.match(src, /addEventListener\("ionScroll", handleScroll\)/)
 })
 
 test("load-more reads ion-content's own scroll element", () => {
