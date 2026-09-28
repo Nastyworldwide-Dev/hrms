@@ -1,3 +1,3 @@
-GOAL: HR's OT Request report in Desk shows when each request was approved and whether it has been paid.
-DONE WHEN: approved_on (Datetime, read-only, no_copy) is stamped once on an approving submit; payment_status (Pending/Paid, default Pending, allow_on_submit, permlevel 1: HR write, Employee read) exists; the patch fills approved_on for existing approved requests from their own Version history and adds both columns to saved report views.
-CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_ot_request_approved_on_and_paid.py; bench --site fresh.local migrate (patch ran; HR-OTR-26-09-00003 approved_on = its last submit 17:58:21, not the re-used name's 08:57); Desk report as HR shows Approved On + Payment columns; employee read=True write=False on payment_status.
+GOAL: TruTrip (business travel) is one tap away on More, with its own icon, for every employee.
+DONE WHEN: More shows a "Travel" group with a TruTrip row (plane icon, arrow-out badge) that opens https://app.trutrip.co/v2/login in a new tab with noopener, through an https host allowlist kept apart from the same-origin app list.
+CHECK: node --test frontend/src/data/__tests__/externalLinks.test.js; live on fresh.local as an employee: tap opened app.trutrip.co/v2/login in a new tab, window.opener null, the app stayed on /hrms/more.

@@ -87,6 +87,28 @@
 						</GListRow>
 					</GListPanel>
 				</template>
+
+				<!-- Services outside this site (28 Sep 2026: TruTrip, for business
+				     travel). Opens in a new tab; carries no session of ours. -->
+				<span class="g-eyebrow mt-1">{{ __("Travel") }}</span>
+				<GListPanel>
+					<GListRow
+						v-for="item in externalItems"
+						:key="item.key"
+						:label="item.title"
+						:sublabel="item.sublabel"
+						:tint="TILE.shift"
+						:chevron="false"
+						@click="openExternal(item)"
+					>
+						<template #icon>
+							<Plane class="h-icon-md w-icon-md" />
+						</template>
+						<template #badge>
+							<ExternalLink class="flex-none text-ink-3" aria-hidden="true" />
+						</template>
+					</GListRow>
+				</GListPanel>
 			</div>
 		</template>
 	</BaseLayout>
@@ -95,7 +117,14 @@
 <script setup>
 import { TILE } from "@/utils/iconTile"
 import { HUB_PATH } from "@/utils/helpdeskHub"
-import { CalendarDays, CalendarRange, ExternalLink, SquareCheck, Users } from "lucide-vue-next"
+import {
+	CalendarDays,
+	CalendarRange,
+	ExternalLink,
+	Plane,
+	SquareCheck,
+	Users,
+} from "lucide-vue-next"
 import { useRouter } from "vue-router"
 import { computed, inject, markRaw, onMounted, ref } from "vue"
 
@@ -106,6 +135,7 @@ import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import { MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { isSameOriginPath } from "@/data/appLinks"
+import { EXTERNAL_LINKS, openExternal } from "@/data/externalLinks"
 import { hasTeam, isApprover } from "@/data/team"
 import { needsYouResource } from "@/data/needsYou"
 import GBadge from "@/components/glass/GBadge.vue"
@@ -137,19 +167,34 @@ const moreItems = computed(() => {
 //: isApprover (anyone something is routed to), hasTeam (direct reports, or HR).
 //: The Approvals number is everything waiting on you, as Home's Needs you.
 const waitingOnYou = computed(
-	() => (Number(needsYouResource.data?.total) || 0) + (Number(needsYouResource.data?.checkins) || 0)
+	() =>
+		(Number(needsYouResource.data?.total) || 0) + (Number(needsYouResource.data?.checkins) || 0)
 )
 onMounted(() => {
 	if (isApprover.data) needsYouResource.reload()
 })
 const teamItems = computed(() => [
 	...(isApprover.data
-		? [{ key: "approvals", icon: markRaw(SquareCheck), title: __("Approvals"), to: { name: "Approvals" }, badge: waitingOnYou.value ? String(waitingOnYou.value) : "" }]
+		? [
+				{
+					key: "approvals",
+					icon: markRaw(SquareCheck),
+					title: __("Approvals"),
+					to: { name: "Approvals" },
+					badge: waitingOnYou.value ? String(waitingOnYou.value) : "",
+				},
+		  ]
 		: []),
 	...(hasTeam.data
 		? [
 				{ key: "team", icon: markRaw(Users), title: __("Team"), route: "/team", to: "/team" },
-				{ key: "roster", icon: markRaw(CalendarRange), title: __("Roster"), route: "/team/roster", to: "/team/roster" },
+				{
+					key: "roster",
+					icon: markRaw(CalendarRange),
+					title: __("Roster"),
+					route: "/team/roster",
+					to: "/team/roster",
+				},
 		  ]
 		: []),
 ])
@@ -164,6 +209,12 @@ const appItems = computed(() =>
 		sublabel: __(item.sublabel),
 	}))
 )
+
+const externalItems = EXTERNAL_LINKS.map((item) => ({
+	...item,
+	title: __(item.title),
+	sublabel: __(item.sublabel),
+}))
 
 // Full navigation on purpose: the target SPA is outside vue-router's /hrms
 // base. Same origin, so the session cookie carries over. From an installed

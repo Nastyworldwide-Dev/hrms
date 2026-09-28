@@ -1,34 +1,22 @@
-feat(ot): OT Request report shows when it was approved and if it's paid
+feat(more): TruTrip shortcut for business travel
 
-HR, 28 Sep 2026: in the Desk OT Request report, add when the approver
-approved, and a paid/pending mark.
+Owner's boss, 28 Sep 2026: TruTrip (app.trutrip.co) needs its own icon
+and button on More as a shortcut.
 
-Approved On: the doctype never stored the approval time. It is now
-stamped once, in on_submit, when the request is approved — the one
-place both Desk Submit and the PWA's approval.decide pass through.
-Read-only and no_copy, so an amendment is a new decision with its own
-time.
+It can't go into the existing Apps list: those are same-origin apps
+that share the Frappe session, and isSameOriginPath refuses any other
+host on purpose, so a later edit can't turn a nav row into an open
+redirect. TruTrip gets its own small list (data/externalLinks.js):
+https only, exact-host allowlist, opened in a new tab with
+noopener,noreferrer so the travel site gets no handle back to the app
+and no session of ours. The same-origin guard is unchanged and a test
+pins that it still refuses TruTrip's URL.
 
-Payment (Pending/Paid): payroll prices overtime from punches and never
-links back to the request, so there is no fact to derive "paid" from.
-The owner chose a manual dropdown. It sits on permission level 1: HR
-User, HR Manager and System Manager write it after approval
-(allow_on_submit); the employee can read it but not mark their own
-claim paid (owner Q2). Default Pending.
+On More it is a "Travel" group, plane icon, arrow-out badge like the
+other rows that leave the app. Offered to everyone.
 
-The patch fills Approved On for existing approved requests from each
-one's own Version history (owner Q1: yes) — the earliest submit AFTER
-the request's creation, because a deleted request's name is re-used
-by the next one and its history stays under that name (the alpha.13
-re-used-name class). On the dev site this gave 17:58:21 for
-HR-OTR-26-09-00003, not the 08:57 submit of an earlier request that
-held the same name. A request whose history says nothing stays blank.
-Both columns are added to each user's saved report view.
-
-The PWA's new-claim form hides both fields: nothing to fill in there.
-
-Checked on fresh.local: migrate ran the patch; an approving submit
-stamped the time and left Payment Pending; the employee reads Payment
-but cannot write it, HR can; the Desk report shows both columns.
+Checked on fresh.local as an employee: the tap opened
+app.trutrip.co/v2/login in a new tab, window.opener was null, and the
+app stayed on More.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
