@@ -130,9 +130,13 @@ test("a manager never sees why somebody is off", () => {
 	// the rule in a comment — in a file this test strips comments from — which
 	// is a check that can only ever fail or pass for the wrong reason. What
 	// matters is that the field is never selected and never rendered.
-	const who = api.slice(api.indexOf("def _who_is_off"), api.indexOf("def _coverage"))
+	// The sheet's team rows come from the Team page's own reader since 28 Sep
+	// 2026 (hrms.api.team.member_statuses), so that is where leave is selected.
+	const teamApi = readFileSync(join(SRC, "../../hrms/api/team.py"), "utf8")
+	const who = teamApi.slice(teamApi.indexOf("def member_statuses"), teamApi.indexOf("def get_team_roster"))
+	assert.match(who, /"Leave Application"/, "leave is read here")
 	assert.doesNotMatch(who, /"description"/, "the reason is never selected")
-	assert.match(who, /"leave_type": row\.leave_type/, "the type is")
+	assert.match(who, /"leave_type": leave and leave\.leave_type/, "the type is")
 	assert.doesNotMatch(sheet, /description/, "and the screen has nothing to render")
 })
 

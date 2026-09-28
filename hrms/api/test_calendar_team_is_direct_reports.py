@@ -26,11 +26,19 @@ class TestTeamIsDirectReports(unittest.TestCase):
 	def _day(self, direct, routed):
 		with (
 			patch("hrms.api.get_current_employee", return_value="ME", create=True),
-			patch("hrms.hr.utils.get_direct_report_employees", return_value=direct, create=True),
+			patch(
+				"hrms.api.team.own_team_members",
+				return_value=[frappe._dict(name=name) for name in direct],
+			),
+			patch(
+				"hrms.api.team.member_statuses",
+				side_effect=lambda members, day: (
+					[{"employee": m.name, "status": "Present"} for m in members],
+					{},
+				),
+			),
 			patch("hrms.hr.utils.get_employees_routed_to", return_value=routed, create=True),
 			patch.object(calendar, "_my_day", return_value={}),
-			patch.object(calendar, "_who_is_off", side_effect=lambda emps, day: list(emps)),
-			patch.object(calendar, "_coverage", side_effect=lambda emps, day: {"headcount": len(emps)}),
 			patch.object(frappe, "session", frappe._dict(user="lead@example.com")),
 		):
 			return calendar.get_day("2026-09-22")
@@ -38,12 +46,12 @@ class TestTeamIsDirectReports(unittest.TestCase):
 	def test_the_line_counts_direct_reports_only(self):
 		sections = self._day(direct=["A", "B"], routed=["A", "B", "C", "D", "E"])
 		self.assertEqual(sections["coverage"]["headcount"], 2)
-		self.assertEqual(sorted(sections["team_off"]), ["A", "B"])
+		self.assertEqual(sorted(row["employee"] for row in sections["team"]), ["A", "B"])
 
 	def test_an_approver_with_no_direct_team_gets_no_line(self):
 		sections = self._day(direct=[], routed=["C", "D"])
 		self.assertNotIn("coverage", sections)
-		self.assertNotIn("team_off", sections)
+		self.assertNotIn("team", sections)
 
 	def test_the_caller_is_never_in_their_own_team_line(self):
 		sections = self._day(direct=["ME", "A"], routed=[])

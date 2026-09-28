@@ -448,7 +448,10 @@ def _my_punches(employee: str, day) -> list[dict]:
 		"Employee Checkin",
 		filters={
 			"employee": employee,
-			"time": ("between", [f"{day - timedelta(days=1)} 00:00:00", f"{day + timedelta(days=1)} 23:59:59"]),
+			"time": (
+				"between",
+				[f"{day - timedelta(days=1)} 00:00:00", f"{day + timedelta(days=1)} 23:59:59"],
+			),
 		},
 		fields=["name", "time", "log_type", "skip_auto_attendance", "shift_start"],
 		order_by="time asc",
@@ -583,70 +586,23 @@ def _day_claim(employee: str, day) -> dict | None:
 	return {"status": claim.status, "approver_name": name}
 
 
-def _who_is_off(employees: list[str], day) -> list[dict]:
-	"""Names and leave TYPE for a given set of people on a given day.
-
-	The caller has already been established as entitled to these specific
-	employees; this function takes the list rather than deriving it, so there
-	is exactly one place that decides who may be looked at.
-	"""
-	if not employees:
-		return []
-	rows = frappe.get_all(
-		"Leave Application",
-		filters={
-			"employee": ("in", employees),
-			"docstatus": 1,
-			"status": "Approved",
-			"from_date": ("<=", day),
-			"to_date": (">=", day),
-		},
-		fields=["employee", "employee_name", "leave_type", "half_day"],
-		ignore_permissions=True,
-	)
-	return [
-		{
-			"employee": row.employee,
-			"name": row.employee_name,
-			"leave_type": row.leave_type,
-			"half_day": bool(row.half_day),
-			# `description` is deliberately NOT read. Owner's ruling: a manager
-			# sees who is off and what kind of leave; why is not theirs.
-		}
-		for row in rows
-	]
-
-
-def _coverage(employees: list[str], day) -> dict:
-	"""The number a manager opens a calendar for: how many of my people are in.
-
-	Counted from the same list `_who_is_off` uses, so the line and the names
-	beneath it can never disagree about the same day.
-	"""
-	if not employees:
+def _coverage(members: list[dict]) -> dict:
+	"""The line a manager opens the calendar for, counted from the SAME member
+	statuses the Team page lists (hrms.api.team.member_statuses). It used to
+	count Attendance rows only, which auto-attendance writes after the shift,
+	so a senior read "6 not in yet" at 10:25 while all six had punched in
+	(owner, 28 Sep 2026). The sheet and the Team page can no longer disagree."""
+	if not members:
 		return {}
-	marked = frappe.get_all(
-		"Attendance",
-		filters={
-			"employee": ("in", employees),
-			"attendance_date": day,
-			"docstatus": ("<", 2),
-		},
-		fields=["employee", "status"],
-		ignore_permissions=True,
-	)
-	by_status = {}
-	for row in marked:
-		by_status[row.status] = by_status.get(row.status, 0) + 1
-	seen = {row.employee for row in marked}
+	counts = {}
+	for member in members:
+		counts[member["status"]] = counts.get(member["status"], 0) + 1
 	return {
-		"headcount": len(employees),
-		"present": by_status.get("Present", 0) + by_status.get("Half Day", 0),
-		"on_leave": by_status.get("On Leave", 0),
-		"absent": by_status.get("Absent", 0),
-		# Nobody has said anything about these people for this day. On a past
-		# day that is the number that costs money.
-		"unmarked": len(employees) - len(seen),
+		"headcount": len(members),
+		"present": counts.get("Present", 0),
+		"on_leave": counts.get("On Leave", 0),
+		"absent": counts.get("Absent", 0),
+		"unmarked": counts.get("Not In Yet", 0),
 	}
 
 
@@ -658,7 +614,6 @@ def get_day(date: str) -> dict:
 	nothing on that side to get wrong and nothing to keep in step with this.
 	"""
 	from hrms.api import get_current_employee
-	from hrms.hr.utils import get_direct_report_employees
 
 	if not isinstance(date, str) or not date.strip():
 		frappe.throw(frappe._("A day must be named."), frappe.PermissionError)
@@ -667,19 +622,25 @@ def get_day(date: str) -> dict:
 	employee = get_current_employee()
 	sections = {"me": _my_day(employee, day)}
 
-	# The caller's DIRECT team (owner ruling 1, 23 Sep 2026): the same people
-	# the Team page lists, not everyone routed to them for approval. Derived
-	# from identity, never from anything sent. An empty list means NO
-	# ADMISSION rather than no filter.
-	try:
-		team = [name for name in get_direct_report_employees(frappe.session.user) if name != employee]
-	except Exception:
-		logger.exception("[calendar] could not resolve the caller's team")
-		team = []
+	# The caller's DIRECT team: the SAME people and the SAME statuses the Team
+	# page lists (owner, 28 Sep 2026: "all five on both"), so the sheet's line,
+	# its names and the Team page behind it can never disagree. Derived from
+	# identity, never from anything sent.
+	team = []
+	if employee:
+		try:
+			from hrms.api.team import member_statuses, own_team_members
+
+			members = [m for m in own_team_members(employee) if m.name != employee]
+			if members:
+				team, _summary = member_statuses(members, day)
+		except Exception:
+			logger.exception("[calendar] could not resolve the caller's team")
+			team = []
 
 	if team:
-		sections["team_off"] = _who_is_off(team, day)
-		sections["coverage"] = _coverage(team, day)
+		sections["team"] = team
+		sections["coverage"] = _coverage(team)
 
 	logger.info(
 		"[calendar] day employee=%s date=%s sections=%s team=%d",

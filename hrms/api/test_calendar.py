@@ -165,7 +165,7 @@ class TestDaySheet(FrappeTestCase):
 
 	def test_an_approver_additionally_gets_their_line(self):
 		sections = self._as(self.boss_user)
-		self.assertIn("team_off", sections)
+		self.assertIn("team", sections)
 		self.assertIn("coverage", sections)
 		self.assertEqual(sections["coverage"]["headcount"], 1)
 
@@ -173,7 +173,7 @@ class TestDaySheet(FrappeTestCase):
 		"""Absent, not empty. An empty list would tell somebody they have a
 		team and it is all present, which is a different false statement."""
 		sections = self._as(self.bystander_user)
-		self.assertNotIn("team_off", sections)
+		self.assertNotIn("team", sections)
 		self.assertNotIn("coverage", sections)
 
 	def test_a_manager_never_sees_why_somebody_is_off(self):
@@ -194,7 +194,7 @@ class TestDaySheet(FrappeTestCase):
 		).insert(ignore_permissions=True)
 		frappe.db.set_value("Leave Application", application.name, "docstatus", 1)
 
-		for row in self._as(self.boss_user)["team_off"]:
+		for row in self._as(self.boss_user)["team"]:
 			self.assertNotIn("description", row)
 			self.assertNotIn("reason", row)
 			self.assertIn("leave_type", row, "the TYPE is allowed")
@@ -209,8 +209,9 @@ class TestDaySheet(FrappeTestCase):
 
 		self.assertEqual(list(inspect.signature(calendar.get_day).parameters), ["date"])
 		source = inspect.getsource(calendar.get_day)
-		# Direct reports since owner ruling 1 (23 Sep 2026).
-		self.assertIn("get_direct_report_employees(frappe.session.user)", source)
+		# Direct reports (owner ruling 1, 23 Sep 2026), the Team page's own list
+		# since 28 Sep 2026: the caller's own employee, never an argument.
+		self.assertIn("own_team_members(employee)", source)
 
 	def test_a_skipped_punch_is_shown_rather_than_hidden(self):
 		""" "My tap is missing" and "my tap was set aside" are different

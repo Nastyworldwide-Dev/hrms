@@ -172,16 +172,7 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 	# A manager browsing their OWN team is never fenced: their reports are
 	# their reports whichever company employs them.
 	fence = allowed_companies() if team_of != employee else []
-	member_filters = {"reports_to": team_of, "status": "Active"}
-	if fence:
-		member_filters["company"] = ("in", fence)
-	members = frappe.get_all(
-		"Employee",
-		filters=member_filters,
-		fields=["name", "employee_name", "designation", "department", "default_shift", "holiday_list"],
-		order_by="employee_name asc",
-		ignore_permissions=True,
-	)
+	members = own_team_members(team_of, fence)
 	if not members:
 		# NO MEMBERS IS NOT THE SAME QUESTION as "is this person a manager".
 		#
@@ -195,10 +186,44 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 		# `is_approver` already answers for the RequestPanel's team tabs. One
 		# definition of "does this person manage anybody", not two.
 		entitled = is_approver()
-		logger.info(
-			"[team] %s has no members on %s (entitled=%s)", frappe.session.user, day, entitled
-		)
+		logger.info("[team] %s has no members on %s (entitled=%s)", frappe.session.user, day, entitled)
 		return {**empty, "entitled": entitled}
+	out, summary = member_statuses(members, day)
+	logger.info("[team] %s viewed team of %s on %s: %d members", frappe.session.user, team_of, day, len(out))
+	return {
+		"date": str(day),
+		"manager": team_of,
+		"members": out,
+		"summary": summary,
+		"entitled": True,
+	}
+
+
+def own_team_members(team_of: str, fence: list | None = None) -> list:
+	"""Active direct reports (reports_to) of `team_of` — the Team page's and the
+	Calendar day sheet's ONE list of "my team". `fence` narrows to companies
+	(HR browsing another manager's team); a manager's own team is unfenced."""
+	filters = {"reports_to": team_of, "status": "Active"}
+	if fence:
+		filters["company"] = ("in", fence)
+	members = frappe.get_all(
+		"Employee",
+		filters=filters,
+		fields=["name", "employee_name", "designation", "department", "default_shift", "holiday_list"],
+		order_by="employee_name asc",
+		ignore_permissions=True,
+	)
+	logger.debug("[team] %s has %d active direct report(s)", team_of, len(members))
+	return members
+
+
+def member_statuses(members, day) -> tuple[list[dict], dict]:
+	"""Each member's day status and the summary counts — the ONE rule for
+	"who is in", shared by the Team page and the Calendar day sheet so the two
+	can never disagree (owner, 28 Sep 2026: the sheet said "6 not in yet" while
+	the Team page listed all six Present). Punches count before auto-attendance
+	has written its row. `members` are Employee rows; reads ignore permissions,
+	so the caller owns the fence."""
 	ids = [m.name for m in members]
 
 	attendance = {
@@ -237,7 +262,10 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 		"Employee Checkin",
 		filters={
 			"employee": ("in", ids),
-			"time": ("between", [f"{day - timedelta(days=1)} 00:00:00", f"{day + timedelta(days=1)} 23:59:59"]),
+			"time": (
+				"between",
+				[f"{day - timedelta(days=1)} 00:00:00", f"{day + timedelta(days=1)} 23:59:59"],
+			),
 		},
 		fields=["employee", "log_type", "time", "shift_start"],
 		order_by="time asc",
@@ -321,14 +349,8 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 				"half_day": bool(leave and leave.half_day),
 			}
 		)
-	logger.info("[team] %s viewed team of %s on %s: %d members", frappe.session.user, team_of, day, len(out))
-	return {
-		"date": str(day),
-		"manager": team_of,
-		"members": out,
-		"summary": summary,
-		"entitled": True,
-	}
+	logger.debug("[team] member_statuses day=%s members=%d summary=%s", day, len(out), summary)
+	return out, summary
 
 
 @frappe.whitelist(methods=["GET", "POST"])
