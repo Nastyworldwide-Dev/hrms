@@ -229,6 +229,8 @@ class TestOTWithoutTheRequiredAttachment(unittest.TestCase):
 		with (
 			patch.object(ot_request, "validate_mandatory_attachment", missing),
 			patch.object(ot_request.OTRequest, "notify_approval_status", MagicMock()),
+			# on_submit stamps Approved On (38f6087ba); a bare instance has no row to write it to
+			patch.object(ot_request.OTRequest, "db_set", MagicMock(), create=True),
 		):
 			doc.on_submit()
 
