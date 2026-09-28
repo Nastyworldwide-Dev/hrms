@@ -73,7 +73,9 @@
 			     sheet gesture yields only to a drag that starts inside an
 			     ion-content; a plain div let every drag move the sheet. The head
 			     above stays outside it, so the grabber and title still drag. -->
-			<ion-content class="g-sheet__content" :scroll-y="true">
+			<!-- tabindex 0: a keyboard user can scroll a long read-only sheet
+			     (design review of 6a7e9341f, WCAG 2.1.1) -->
+			<ion-content class="g-sheet__content" :scroll-y="true" tabindex="0">
 				<div class="g-sheet__body">
 					<slot name="actionSheet" />
 					<slot />

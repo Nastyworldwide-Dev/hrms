@@ -74,7 +74,11 @@ test("the head is a pinned bar: grabber, Close X (leading), centred title, confi
 	)
 	assert.match(modal, /g-sheet__close[\s\S]*g-sheet__title[\s\S]*g-sheet__trail/)
 	const css = read(join(SRC, "theme/glass-components.css"))
-	assert.match(css, /\.g-sheet__head \{[^}]*position: sticky[^}]*top: 0/)
+	// Pinned by LAYOUT since 28 Sep 2026: the head sits above the ion-content
+	// that owns the scroll (sheet-scroll-is-content.test.js), so it never
+	// scrolls away and needs no sticky.
+	assert.match(css, /\.g-sheet__head \{[^}]*flex: none/)
+	assert.match(modal, /class="g-sheet__head"[\s\S]*<ion-content[^>]*class="g-sheet__content"/)
 	assert.match(css, /\.g-sheet__bar \{[^}]*grid-template-columns: 44px 1fr 44px/)
 	assert.match(css, /\.g-sheet__title \{[^}]*text-align: center/)
 })

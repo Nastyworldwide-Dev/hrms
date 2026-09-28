@@ -2419,11 +2419,6 @@ html[data-transparency="reduce"] .g-modal::part(content) {
 	padding-right: 0;
 	padding-bottom: 0;
 }
-.g-sheet__head {
-	flex: none;
-	margin-left: 0;
-	margin-right: 0;
-}
 /* Sized by its content up to the sheet's ceiling, and scrolling past it.
    ion-content normally fills a fixed-height page with an absolutely placed
    scroller, which here would collapse a short sheet to its head or let a long
@@ -2453,17 +2448,20 @@ html[data-transparency="reduce"] .g-modal::part(content) {
 	overscroll-behavior-y: contain;
 }
 .g-sheet__body {
-	padding: 0 var(--g-pad-panel-x, 13px);
+	padding: 0 var(--g-pad-panel);
 	padding-bottom: calc(var(--g-sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
 }
+/* 28 Sep 2026: the head sits ABOVE the scroller now (the content scrolls in
+   the ion-content below it), so it no longer needs sticky, and the sheet has
+   no side padding for it to bleed through — no negative margins. One rule
+   owns the head (design review of 6a7e9341f). */
 .g-sheet__head {
-	position: sticky;
-	top: 0;
+	flex: none;
 	z-index: 1;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	margin: 0 calc(-1 * var(--g-pad-panel)) var(--g-stack-sm);
+	margin: 0 0 var(--g-stack-sm);
 	padding: 8px 8px 0;
 	background: var(--g-sheet-bg);
 }

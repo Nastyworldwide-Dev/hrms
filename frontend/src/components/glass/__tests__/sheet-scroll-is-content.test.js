@@ -33,3 +33,30 @@ test("the sheet's content scrolls inside an ion-content, the head stays out of i
 	assert.match(template, /<ion-content[^>]*class="g-sheet__content"/)
 	assert.match(modal, /IonContent/, "imported from @ionic/vue")
 })
+
+test("the sheet body keeps the panel's own inset — a real token, not a fallback", () => {
+	// review of 6a7e9341f: `var(--g-pad-panel-x, 13px)` named a token that does
+	// not exist, so every sheet's content sat 3 px tighter than its 16 px head.
+	const css = readFileSync(new URL("../../../theme/glass-components.css", import.meta.url), "utf8")
+	const tokens = readFileSync(new URL("../../../theme/glass.css", import.meta.url), "utf8")
+	const body = css.slice(css.indexOf(".g-sheet__body {"), css.indexOf("}", css.indexOf(".g-sheet__body {")))
+	for (const [, name] of body.matchAll(/var\((--[\w-]+)/g)) {
+		assert.match(tokens, new RegExp(`${name}:`), `${name} is defined`)
+	}
+	assert.match(body, /padding: 0 var\(--g-pad-panel\);/)
+})
+
+test("one rule owns the head, and it no longer bleeds past a padless sheet", () => {
+	// design review of 6a7e9341f: a second .g-sheet__head block was overridden by
+	// the old one, whose -16 px side margins now made the head 32 px wider than
+	// the sheet.
+	const css = readFileSync(new URL("../../../theme/glass-components.css", import.meta.url), "utf8")
+	const heads = css.match(/^\.g-sheet__head \{[^}]*\}/gm) || []
+	assert.equal(heads.length, 1)
+	assert.doesNotMatch(heads[0], /calc\(-1 \* var\(--g-pad-panel\)\)/)
+	assert.doesNotMatch(heads[0], /position: sticky/)
+})
+
+test("a keyboard user can reach and scroll the sheet's content", () => {
+	assert.match(modal, /<ion-content[^>]*tabindex="0"/)
+})

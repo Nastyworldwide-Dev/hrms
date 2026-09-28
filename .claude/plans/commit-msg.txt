@@ -1,26 +1,23 @@
-fix(pwa): closing a request sheet threw inside the file preview
+fix(sheets): sheet content sat 3 px in, head rules fought, no keyboard scroll
 
-Owner, 28 Sep 2026: "find the nadi pwa crashes. it was started as
-sheet." A crash hunt opened every sheet four times as staff and as an
-approver and read the app's own crash reports. One real crash, on
-every close of the request sheet (Requests, Time off):
+Three findings from the reviews of 6a7e9341f, all confirmed before
+fixing.
 
-  [diagnostics] vue.render TypeError: Failed to execute
-  'createObjectURL' on 'URL': Overload resolution failed.
-  at FilePreviewModal ... (onBeforeUnmount)
+- Inset: .g-sheet__body used var(--g-pad-panel-x, 13px). That token
+  does not exist, so every sheet's content sat 13 px from the edge
+  instead of the panel's 16 px (--g-pad-panel). Now the real token;
+  a test checks every token the body names is defined.
+- Head: a second .g-sheet__head rule reset the margins, but the older
+  rule later in the file won the cascade, so its -16 px side margins
+  made the head 32 px wider than a sheet that no longer has side
+  padding, and its sticky no longer did anything. One rule now owns
+  the head: no sticky (it sits above the scroller), no negative
+  margins.
+- Keyboard: focus lands on .g-sheet, which no longer scrolls, and the
+  ion-content was not focusable, so a keyboard user could not scroll a
+  long read-only sheet (WCAG 2.1.1). The ion-content is tabindex 0.
 
-RequestActionSheet and FileUploaderView keep `selectedFile = {}` until
-a file is tapped. FilePreviewModal's `src` was a computed that called
-URL.createObjectURL(props.file) whenever there was no file_url — and
-its unmount cleanup read `src`, so closing the sheet called it on `{}`.
-
-The source now comes from utils/previewSource.js: a saved attachment
-uses its own URL, a real Blob (a picked file) gets one blob URL,
-released once when the file changes or the preview goes away, and
-anything else has no source. Nothing is made for the placeholder.
-
-After: the same sheets opened and closed 3x each — no errors; a picked
-PNG still previews (blob URL, image loaded); the full crash hunt
-reports no real errors on any sheet.
+sheet-one-kind.test.js pinned the old sticky head; it now pins the
+head sitting above the ion-content, which is what keeps it in place.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
