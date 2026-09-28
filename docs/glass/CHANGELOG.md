@@ -10,6 +10,29 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.16] — Steady Sheets and More Than One Site — 2026-09-28
+
+Sheets that stay put when you scroll, the crash when closing a request,
+and check-in at more than one workplace.
+
+### Added
+- **For HR, in Desk: check in at more than one site.** On an employee,
+  tick "Can check in at more than one site" and pick the other sites.
+  Inside any of them is accepted, and the check-in says which site
+  ("Checked in at"). Outside all of them works as before: it goes to the
+  approver, or is refused on a strict shift. Only HR can set it.
+- **The check-in screen shows the site you are actually at** for someone
+  with more than one site: the one you are inside, or the nearest.
+
+### Fixed
+- **Scrolling inside a sheet moved the sheet**, or closed it. A drag in a
+  sheet's list now scrolls the list; the bar at the top still moves the
+  sheet.
+- **Closing a request sheet crashed inside the file preview.** It closes
+  cleanly, and a photo you picked still previews.
+- **Sheet content sat a little too close to the edge**, and a long sheet
+  could not be scrolled from the keyboard.
+
 ## [2.0.0-alpha.15] — Your Team on the Calendar — 2026-09-28
 
 The team on the Calendar, the refresh that never ran, the update bar that

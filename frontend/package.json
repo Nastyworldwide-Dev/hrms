@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.15",
-	"releaseName": "Your Team on the Calendar",
+	"version": "2.0.0-alpha.16",
+	"releaseName": "Steady Sheets and More Than One Site",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

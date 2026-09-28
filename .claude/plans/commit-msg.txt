@@ -1,23 +1,14 @@
-fix(sheets): sheet content sat 3 px in, head rules fought, no keyboard scroll
+chore(release): 2.0.0-alpha.16 — Steady Sheets and More Than One Site
 
-Three findings from the reviews of 6a7e9341f, all confirmed before
-fixing.
+Owner, 28 Sep 2026. This release carries HR's multi-site check-in (Desk
+tickbox + other sites, HR-only, sync-safe; the check-in screen names the
+site you are at), sheets that scroll without moving or closing, and the
+crash on closing a request sheet (file preview). Changelog entry in
+plain words.
 
-- Inset: .g-sheet__body used var(--g-pad-panel-x, 13px). That token
-  does not exist, so every sheet's content sat 13 px from the edge
-  instead of the panel's 16 px (--g-pad-panel). Now the real token;
-  a test checks every token the body names is defined.
-- Head: a second .g-sheet__head rule reset the margins, but the older
-  rule later in the file won the cascade, so its -16 px side margins
-  made the head 32 px wider than a sheet that no longer has side
-  padding, and its sticky no longer did anything. One rule now owns
-  the head: no sticky (it sits above the scroller), no negative
-  margins.
-- Keyboard: focus lands on .g-sheet, which no longer scrolls, and the
-  ion-content was not focusable, so a keyboard user could not scroll a
-  long read-only sheet (WCAG 2.1.1). The ion-content is tabindex 0.
-
-sheet-one-kind.test.js pinned the old sticky head; it now pins the
-head sitting above the ion-content, which is what keeps it in place.
+iOS gate on the final build: 8 of 9 audits clean on the first run; the
+one flag (scroll-and-shift, a single warm-pass shift on one page) did
+not repeat — 3 runs on the code before the sheet change and 3 after
+were all 0 shifts on 36 screens, so it was timing, not this change.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
