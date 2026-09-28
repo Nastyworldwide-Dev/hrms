@@ -10,6 +10,25 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.18] — New Overtime Rates — 2026-09-28
+
+HR's new overtime policy starts on the day this is deployed. Days worked
+before that keep the pay they already had.
+
+### Changed
+- **Public holiday overtime:** 2x for the first 8 hours, then 3x.
+  Before, every hour was 3x.
+- **Off day overtime:** 2x for every hour. Before, the first 4 hours were
+  1.5x.
+- **Rest, off and public-holiday days now need the minimum.** Overtime still
+  counts from the moment you clock in, but the day has to reach the shift's
+  minimum first (OT Pay: 1 hour, and 50 minutes or more rounds up to the
+  hour). Replacement leave stays 4 hours = half a day, 8 = one day,
+  12 = one and a half.
+- **In Desk, each shift's overtime rates now have an "Effective From"
+  date.** Old and new rates sit side by side; a day is paid by the rates in
+  force on that day, so changing rates never changes days already worked.
+
 ## [2.0.0-alpha.17] — When You Can Leave — 2026-09-28
 
 Today shows when you came in and when you can go home, the update message

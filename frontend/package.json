@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.17",
-	"releaseName": "When You Can Leave",
+	"version": "2.0.0-alpha.18",
+	"releaseName": "New Overtime Rates",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
