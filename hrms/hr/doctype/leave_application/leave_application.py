@@ -700,6 +700,14 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			fields=["name", "attendance_date"],
 			order_by="attendance_date",
 		)
+		# A half day off on a day worked for the other half is the normal case,
+		# not a clash (HR, 28 Sep 2026, reported three times): the punches mark
+		# the day Present, and approving turns that row into Half Day
+		# (create_or_update_attendance). Only a FULL leave day that was worked
+		# is refused — HR policy: came to work, the leave does not override.
+		if self.half_day_date:
+			half_day = str(getdate(self.half_day_date))
+			attendance_dates = [a for a in attendance_dates if str(getdate(a.attendance_date)) != half_day]
 		if attendance_dates:
 			frappe.throw(
 				_("Attendance for employee {0} is already marked for the following dates: {1}").format(

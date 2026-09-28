@@ -72,13 +72,14 @@ def _lift(path, cls_name, fn_name, **extra):
 		"formatdate": str,
 		"get_link_to_form": lambda dt, name, label=None: label or name,
 		"AttendanceAlreadyMarkedError": _Refused,
+		"getdate": str,
 		**extra,
 	}
 	exec(compile(ast.Module(body=[fn], type_ignores=[]), str(path), "exec"), ns)
 	return ns[fn_name], frappe
 
 
-def _leave(status):
+def _leave(status, half_day_date=None):
 	return SimpleNamespace(
 		name="HR-LAP-SYNTHETIC",
 		employee="EMP-SYNTHETIC",
@@ -86,6 +87,7 @@ def _leave(status):
 		from_date="2026-09-02",
 		to_date="2026-09-03",
 		status=status,
+		half_day_date=half_day_date,
 	)
 
 
@@ -109,6 +111,32 @@ class TestLeaveWithPresentDays(unittest.TestCase):
 
 	def test_reject_goes_through(self):
 		self._run("Rejected")
+
+
+class TestHalfDayLeaveOnAWorkedDay(unittest.TestCase):
+	"""A half day off on a day the person came in for the other half (HR,
+	28 Sep 2026, third report: "Attendance for employee HR-EMP-00072 is
+	already marked for the following dates: 14-09-2026"). The punches marked
+	the day Present; the half-day leave must still be approvable, and the
+	approval turns the row into Half Day (update_attendance). A worked day
+	under a FULL day of leave is still refused (HR policy 1)."""
+
+	def _run(self, status, half_day_date, present):
+		fn, frappe = _lift(LEAVE, "LeaveApplication", "validate_attendance")
+		frappe.get_all.return_value = [SimpleNamespace(**d) for d in present]
+		fn(_leave(status, half_day_date=half_day_date))
+
+	def test_approving_a_half_day_on_the_worked_day_goes_through(self):
+		self._run("Approved", "2026-09-02", PRESENT_DAYS[:1])
+
+	def test_filing_a_half_day_on_the_worked_day_goes_through(self):
+		self._run("Open", "2026-09-02", PRESENT_DAYS[:1])
+
+	def test_a_worked_full_leave_day_beside_the_half_day_is_still_refused(self):
+		with self.assertRaises(_Refused) as ctx:
+			self._run("Approved", "2026-09-02", PRESENT_DAYS)
+		self.assertIn("2026-09-03", str(ctx.exception))
+		self.assertNotIn("2026-09-02", str(ctx.exception))
 
 
 class TestLeaveWithSalaryProcessed(unittest.TestCase):
