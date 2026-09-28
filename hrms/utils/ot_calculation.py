@@ -128,12 +128,12 @@ def bands_on(config, day):
 
 	Rate rows carry an Effective From date (blank = since always). For each day
 	type the newest set on or before the day wins; a day type the newer set does
-	not name carries on from the older one. A config with no dated rows is
-	returned as it is.
+	not name carries on from the older one. A config built by hand with plain
+	`bands` (no `dated_bands`) is returned as it is.
 	"""
-	dated = config.get("dated_bands")
-	if not dated:
+	if "dated_bands" not in config:
 		return config
+	dated = config["dated_bands"]
 	bands = {}
 	for since in sorted(dated, key=lambda d: (d is not None, d and getdate(d))):
 		if since is None or getdate(since) <= getdate(day):
@@ -195,8 +195,6 @@ def _get_shift_ot_config(shift_name):
 		"dated_bands": dated,
 		"days_per_month": _or_default(shift.overtime_working_days_per_month, WORKING_DAYS_PER_MONTH),
 		"hours_per_day": _or_default(shift.overtime_normal_hours_per_day, HOURS_PER_DAY),
-		# the bands as they stand today; pricing a day uses bands_on(config, day)
-		"bands": bands_on({"dated_bands": dated}, getdate())["bands"] if dated else {},
 		"daily_cap": flt(shift.daily_overtime_cap_hours),
 		"monthly_cap": flt(shift.monthly_overtime_cap_hours),
 		# Shift window — OT is measured against the *real* shift end (not the padded
@@ -425,6 +423,10 @@ def _ot_bands_for_day(ot_hours, hourly_rate, day_type, config):
 	rate breakdown is always available — only the amount depends on basic.
 	Bands are (from_hours, to_hours, rate); the last is open-ended."""
 	logger.info("[ot_calculation] band-split day_type=%s ot_hours=%.2f", day_type, ot_hours)
+	if "dated_bands" in config and "bands" not in config:
+		# A shift's rates change on dates: price through bands_on(config, day),
+		# or an old day is paid at today's rates.
+		raise ValueError("choose the day's rates with bands_on(config, day) before pricing")
 	if ot_hours <= 0:
 		return []
 

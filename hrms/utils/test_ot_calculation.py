@@ -19,6 +19,7 @@ from hrms.utils.ot_calculation import (
 	_real_shift_end_dt,
 	_real_shift_end_for_session,
 	_real_shift_start_dt,
+	bands_on,
 	get_ot_pay,
 	get_shift_ot_breakdown,
 	replacement_leave_days,
@@ -184,14 +185,16 @@ class TestOTCalculation(FrappeTestCase):
 		self.assertIsNone(_get_shift_ot_config(None))
 
 	def test_shift_config_auto_seeds_defaults(self):
-		# enabling overtime with no rows seeds the Employment Act default bands
+		# enabling overtime with no rows seeds the default bands: HR policy of
+		# 28 Sep 2026 (Off Day flat 2x, Public Holiday 2x first 8h then 3x)
 		shift = create_shift_type("_Test OT Shift Defaults", enable_overtime=1)
-		config = _get_shift_ot_config(shift)
+		config = bands_on(_get_shift_ot_config(shift), date.today())
 		self.assertEqual(config["days_per_month"], 26)
 		self.assertIn("normal", config["bands"])
 		self.assertIn("rest", config["bands"])
 		self.assertEqual(_ot_amount_for_day(3, 10.0, "normal", config), 45.0)
-		self.assertEqual(_ot_amount_for_day(6, 10.0, "off", config), 100.0)
+		self.assertEqual(_ot_amount_for_day(6, 10.0, "off", config), 120.0)
+		self.assertEqual(_ot_amount_for_day(10, 10.0, "public_holiday", config), 220.0)
 
 	def test_shift_config_reads_custom_bands(self):
 		shift = create_shift_type(
@@ -206,7 +209,7 @@ class TestOTCalculation(FrappeTestCase):
 				rate_row("Rest Day", 8, 0, 23, 59, 2.0),
 			],
 		)
-		config = _get_shift_ot_config(shift)
+		config = bands_on(_get_shift_ot_config(shift), date.today())
 		self.assertEqual(config["days_per_month"], 22)
 		self.assertEqual(config["min_minutes"], 30)
 		self.assertEqual(config["daily_cap"], 4.0)
@@ -220,7 +223,7 @@ class TestOTCalculation(FrappeTestCase):
 			enable_overtime=1,
 			overtime_rates=[rate_row("Normal Day", 0, 0, 23, 59, 0)],
 		)
-		config = _get_shift_ot_config(shift)
+		config = bands_on(_get_shift_ot_config(shift), date.today())
 		self.assertEqual(_ot_amount_for_day(3, 10.0, "normal", config), 0.0)
 
 	def test_overlapping_bands_rejected(self):
@@ -321,7 +324,7 @@ class TestOTCalculation(FrappeTestCase):
 		# real end reconstructed from a checkin's padded shift_actual_end by removing
 		# the 120-min allow_check_out_after buffer: 20:00 -> 18:00.
 		shift = ot_shift("_Test OT Window")
-		config = _get_shift_ot_config(shift)
+		config = bands_on(_get_shift_ot_config(shift), date.today())
 		self.assertEqual(config["allow_check_out_after"], 120)
 		# `_real_end_from_actual` became the FALLBACK branch of
 		# `_real_shift_end_for_session`, taken when a session carries no

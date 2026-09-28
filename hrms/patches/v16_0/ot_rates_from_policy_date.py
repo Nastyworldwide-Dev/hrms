@@ -65,7 +65,15 @@ def execute():
 def _date_new_rows(name, since) -> int:
 	shift = frappe.get_doc("Shift Type", name)
 	if any(row.get("effective_from") for row in shift.overtime_rates):
-		logger.info("[patch] %s already has dated OT rates — left alone", name)
+		# HR dated this shift's rates by hand; this patch will not guess how to
+		# merge. Said in the Error Log so HR can see it and add the rows.
+		logger.warning("[patch] %s already has dated OT rates — left alone", name)
+		frappe.log_error(
+			title=f"OT policy of {since} not applied to {name}",
+			message=f"Shift Type {name} already had dated overtime rates, so the new Public Holiday "
+			f"(2x first 8h, then 3x) and Off Day (flat 2x) rows were not added. Add them by hand, "
+			f"with Effective From {since}.",
+		)
 		return 0
 	for day_type, from_hour, to_hour, to_minute, rate in NEW_ROWS:
 		shift.append(

@@ -145,6 +145,19 @@ class TestEmptySettingIsNotAnAncientDate(unittest.TestCase):
 		self.assertEqual(self._read("2026-09-29"), POLICY_DAY)
 
 
+class TestADayMustBeChosen(unittest.TestCase):
+	"""Review, 28 Sep 2026: a shift's config carried today's rates as well, so a
+	caller that skipped bands_on would price an OLD day at today's rates — the
+	exact repricing this change prevents. Pricing now refuses such a config."""
+
+	def test_pricing_a_shift_config_without_a_day_is_refused(self):
+		with self.assertRaises(ValueError):
+			ot._ot_bands_for_day(10, 10.0, "public_holiday", config())
+
+	def test_pricing_the_day_chosen_config_works(self):
+		self.assertEqual(pay(10, "public_holiday", AFTER), 220.0)
+
+
 class TestOldStyleConfig(unittest.TestCase):
 	"""A config with no dated rows (every caller before this change) is untouched."""
 
