@@ -323,6 +323,10 @@ const formFields = createResource({
 						"compensation",
 						"punch_ot_hours",
 						"shift",
+						// set after the decision (approval time) and by HR (paid);
+						// nothing to fill in on a new claim (28 Sep 2026)
+						"approved_on",
+						"payment_status",
 					].includes(field.fieldname)
 			)
 			.map((field) => {
@@ -478,9 +482,7 @@ const inlineError = computed(() =>
 		// (dayFooter), not a second time in red under Hours (alpha.7 0.3/0.5).
 		loading:
 			Boolean(summaryKey.value) &&
-			(Boolean(otSummary.value.error) ||
-				otSummary.value.loading ||
-				!otSummary.value.data),
+			(Boolean(otSummary.value.error) || otSummary.value.loading || !otSummary.value.data),
 		touched: dateTouched.value,
 		saveAttempted: saveAttempted.value,
 	})

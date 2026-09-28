@@ -6,7 +6,7 @@ import logging
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, flt, getdate
+from frappe.utils import cint, flt, getdate, now_datetime
 
 from hrms.hr.utils import (
 	grant_replacement_leave,
@@ -49,6 +49,33 @@ def replacement_leave_hours_per_day() -> float:
 		logger.warning("[ot_request] replacement_leave_hours_per_day field missing — defaulting to 8")
 		value = None
 	return flt(value) or 8.0
+
+
+def stamp_approved_on(doc, when) -> None:
+	"""The moment the request was approved, once (HR, 28 Sep 2026: "when did
+	the approver approve?"). A rejection is not an approval; a stamp already
+	there is never moved."""
+	if doc.status == "Approved" and not doc.approved_on:
+		doc.approved_on = when
+
+
+def approval_time_from_versions(versions, since=None) -> str | None:
+	"""When an old request was approved, read from its change history:
+	the earliest Version that submitted it (docstatus 0 -> 1). Submitting IS
+	approving for this doctype, including requests from before the decision
+	field existed. `versions` are (creation, data) pairs. None when the
+	history does not say.
+
+	`since` is this request's own creation: a deleted request's name is
+	re-used by the next one and its history stays under that name, so only
+	Versions written after this request was created are its own."""
+	submits = [
+		str(created)
+		for created, data in versions
+		if (since is None or str(created) >= str(since))
+		and any(change[:3] == ["docstatus", 0, 1] for change in (data or {}).get("changed", []))
+	]
+	return min(submits) if submits else None
 
 
 class OTRequest(Document, PWANotificationsMixin):
@@ -274,6 +301,10 @@ class OTRequest(Document, PWANotificationsMixin):
 			frappe.throw(
 				_("{0} must be Approved or Rejected before it can be submitted.").format(_(self.doctype))
 			)
+		if self.status == "Approved" and not self.approved_on:
+			stamp_approved_on(self, now_datetime())
+			self.db_set("approved_on", self.approved_on, update_modified=False)
+			logger.info("[ot_request] %s approved on %s", self.name, self.approved_on)
 		# The employee hears the decision here, like Leave Application and Shift
 		# Request do — before this, a request was approved or refused in silence.
 		self.notify_approval_status()

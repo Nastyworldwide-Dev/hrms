@@ -21,6 +21,8 @@
   "compensation",
   "day_type",
   "ot_rate",
+  "approved_on",
+  "payment_status",
   "reason_section",
   "explanation",
   "leave_allocation",
@@ -146,6 +148,27 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "approved_on",
+   "fieldtype": "Datetime",
+   "label": "Approved On",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_list_view": 1,
+   "description": "Set by the system when the request is approved."
+  },
+  {
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "label": "Payment",
+   "options": "Pending\nPaid",
+   "default": "Pending",
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "permlevel": 1,
+   "in_standard_filter": 1,
+   "description": "HR marks it Paid once payroll has paid this overtime."
+  },
+  {
    "fieldname": "reason_section",
    "fieldtype": "Section Break",
    "label": "Reason"
@@ -188,7 +211,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-15 11:00:00.000000",
+ "modified": "2026-09-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "OT Request",
@@ -250,6 +273,35 @@
    "role": "Employee",
    "share": 1,
    "write": 1
+  },
+  {
+   "role": "System Manager",
+   "permlevel": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HR Manager",
+   "permlevel": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HR User",
+   "permlevel": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Employee",
+   "permlevel": 1,
+   "read": 1
   }
  ],
  "sort_field": "modified",

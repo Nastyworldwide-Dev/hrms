@@ -1,9 +1,34 @@
-fix(calendar): "See all" and "Open team roster" read as one list
+feat(ot): OT Request report shows when it was approved and if it's paid
 
-Design review of f7886d7c2 (DSN-08): the two rows sat in two stacked
-panels, which on the phone read as one continuous list, so nothing but
-the label said they go to different places (the Team page for this day,
-the week's roster). They now share one divided panel, each with a
-one-line sublabel naming where it goes.
+HR, 28 Sep 2026: in the Desk OT Request report, add when the approver
+approved, and a paid/pending mark.
+
+Approved On: the doctype never stored the approval time. It is now
+stamped once, in on_submit, when the request is approved — the one
+place both Desk Submit and the PWA's approval.decide pass through.
+Read-only and no_copy, so an amendment is a new decision with its own
+time.
+
+Payment (Pending/Paid): payroll prices overtime from punches and never
+links back to the request, so there is no fact to derive "paid" from.
+The owner chose a manual dropdown. It sits on permission level 1: HR
+User, HR Manager and System Manager write it after approval
+(allow_on_submit); the employee can read it but not mark their own
+claim paid (owner Q2). Default Pending.
+
+The patch fills Approved On for existing approved requests from each
+one's own Version history (owner Q1: yes) — the earliest submit AFTER
+the request's creation, because a deleted request's name is re-used
+by the next one and its history stays under that name (the alpha.13
+re-used-name class). On the dev site this gave 17:58:21 for
+HR-OTR-26-09-00003, not the 08:57 submit of an earlier request that
+held the same name. A request whose history says nothing stays blank.
+Both columns are added to each user's saved report view.
+
+The PWA's new-claim form hides both fields: nothing to fill in there.
+
+Checked on fresh.local: migrate ran the patch; an approving submit
+stamped the time and left Payment Pending; the employee reads Payment
+but cannot write it, HR can; the Desk report shows both columns.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
