@@ -1,13 +1,14 @@
 # HANDOFF
-prompt:   28 Sep 2026 — multi-site check-in, sheet scroll, sheet crash
+prompt:   28 Sep 2026 — alpha.17: leave time, update bar, half-day leave, hours
 status:   done
-commit:   d5b513081 on nz-glass (tag v2.0.0-alpha.16)
-files:    hrms/utils/geofence.py
-          hrms/overrides/employee_checkin_override.py
-          hrms/setup.py
-          frontend/src/components/glass/GModal.vue
-          frontend/src/components/FilePreviewModal.vue
-          frontend/src/components/CheckInPanel.vue
-verify:   bench --site <site> migrate; in Desk tick "Can check in at more than one site" on an employee
-flags:    staff lockdown deferred by owner; FC pre-build fail suspected Node < 22.12 for next-helpdesk
-next:     owner deploys alpha.16; roster tutorial for HR in progress
+commit:   46391957a on nz-glass (tag v2.0.0-alpha.17)
+files:    hrms/utils/leave_by.py
+          hrms/api/now.py
+          frontend/src/utils/workerURL.js
+          frontend/src/utils/readValue.js
+          frontend/src/components/FormField.vue
+          hrms/hr/doctype/leave_application/leave_application.py
+          docs/glass/CHANGELOG.md
+verify:   deploy, then approve a half-day leave on a day the person checked in (becomes Half Day, -0.5)
+flags:    cancelling a half-day leave cancels the whole day incl. the worked half (pre-existing, ticketed); Amy's Company rows removed by hand — HR to retest 29 Sep; half-day OT window + OT rate rulings still open
+next:     owner deploys alpha.17; then OT rates / roster Day Type after the rulings
