@@ -535,7 +535,9 @@ def _mirror_children(rows: list) -> list:
 #: which it must be, because rows arrive in `modified` order and a child routinely
 #: lands before its parent.
 LOCALLY_OWNED_FIELDS = {
-	"Employee": ("user_id",),
+	# multi_site_checkin: HR sets it HERE (28 Sep 2026); a pull from a source that
+	# never had it ticked must not switch it back off.
+	"Employee": ("user_id", "multi_site_checkin", "other_checkin_sites"),
 	"Department": ("lft", "rgt", "old_parent"),
 	"Cost Center": ("lft", "rgt", "old_parent"),
 }

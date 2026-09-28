@@ -1,40 +1,23 @@
-feat(geofence): HR can let a person check in at more than one site
+fix(geofence): only HR can set someone's other sites; sync leaves them
 
-HR, 28 Sep 2026: a tickbox for people who work at more than one site.
-Until now every fence reader was hard-wired to one site per person —
-the Employee's Shift Location or the assignment's — so someone who
-works at Damansara and Shah Alam was sent to an approver every day at
-the second one.
+Review of df282a764, two findings, both confirmed before fixing.
 
-Owner's rulings: several sites per person, set on the Employee record;
-inside any of them is accepted and the site is recorded; outside all
-of them follows today's rule measured from the NEAREST site (normal ->
-approver, strict -> refused). The tickbox only adds places to be; it
-never loosens the rule.
+1. Staff could have set their own sites. "Can check in at more than
+   one site" and "Other sites" were on permission level 0, and this
+   site gives Employee Self Service write on Employee at level 0
+   (Custom DocPerm, measured on fresh.local). Anyone with that role
+   could tick the box for themselves and add any site — a way around
+   the fence. Both are now level 1, which only HR User and HR Manager
+   write, like Eligible for Overtime Pay. Checked live: the test
+   employee can write neither field; HR can.
 
-Employee gets "Can check in at more than one site" and "Other sites"
-(new child doctype Employee Other Site), brought to existing sites by
-bumping sync_custom_fields_with_code. The rule lives in one place:
-employee_sites() lists the main site then the others, and
-evaluate_sites() runs the existing evaluate_geofence per site. The
-enforcing insert, the strict preflight and the PWA map all call it, so
-what warns and what enforces cannot disagree. Employee Checkin records
-"Checked in at".
+2. A sync pull could have switched the box back off. Employee is a
+   mirrored doctype that copies whatever the source sends; HR sets
+   these fields HERE, so a same-version source that never ticked them
+   would reset them. Both are now LOCALLY_OWNED_FIELDS, dropped from
+   every Employee payload like user_id.
 
-Kept apart on purpose: the automatic shift rules still read the Shift
-Location alone (a test locks it); not ticked = exactly today (tests);
-a free-location site still means anywhere. The hub sync cannot clobber
-the fields: after cutover it leaves existing Employees alone.
-
-Proved on fresh.local with two synthetic sites 5.5 km apart, rolled
-back: HEAD sends a ticked person at the second site to approval
-(Outside, 5551 m); now it is Inside, "Checked in at: ProbeSite B".
-Not ticked still goes to approval; far from both still goes to
-approval, measured from the nearer site.
-
-Also: hrms/api/test_remote_checkin.py was red on HEAD (12 of 73) — its
-fake check-in had no .get(), which punch() has read since bcfc8a425.
-The commit gate runs it as a dependent of this change, so the fake now
-reads like a Document; the same 12 fail on HEAD without this change.
+The custom-field sync line is bumped so migrate applies the new
+permission level. Red on HEAD: the two new tests fail on df282a764.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

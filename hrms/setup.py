@@ -423,6 +423,10 @@ def get_custom_fields():
 			{
 				"fieldname": "multi_site_checkin",
 				"fieldtype": "Check",
+				# HR only (review of df282a764): Employee Self Service may write an
+				# employee's own record at level 0, and ticking this for yourself
+				# would let you add any site as your own.
+				"permlevel": 1,
 				"label": _("Can check in at more than one site"),
 				"insert_after": "shift_location",
 				"description": _(
@@ -434,6 +438,7 @@ def get_custom_fields():
 			{
 				"fieldname": "other_checkin_sites",
 				"fieldtype": "Table MultiSelect",
+				"permlevel": 1,
 				"label": _("Other sites"),
 				"options": "Employee Other Site",
 				"insert_after": "multi_site_checkin",

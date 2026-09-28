@@ -146,3 +146,27 @@ class TestShiftRulesNeverReadOtherSites(unittest.TestCase):
 		source = (pathlib.Path(__file__).resolve().parents[1] / "hr/shift_rules.py").read_text()
 		for name in ("multi_site_checkin", "other_checkin_sites", "Employee Other Site", "employee_sites"):
 			self.assertNotIn(name, source, name)
+
+
+class TestOnlyHrSetsSites(unittest.TestCase):
+	"""Review of df282a764: Employee Self Service may write an employee's own
+	record at permission level 0. Were these fields there, staff could tick the
+	box for themselves and add any site. Level 1 is HR's (HR User / HR Manager)."""
+
+	def test_both_fields_are_on_hr_s_permission_level(self):
+		from hrms.setup import get_custom_fields
+
+		fields = {f["fieldname"]: f for f in get_custom_fields()["Employee"]}
+		for name in ("multi_site_checkin", "other_checkin_sites"):
+			self.assertEqual(fields[name].get("permlevel"), 1, name)
+
+
+class TestSyncNeverOverwritesThem(unittest.TestCase):
+	"""HR sets these on this site. A pull from a source that never had them
+	ticked must not switch them back off (review of df282a764)."""
+
+	def test_the_pull_drops_them_from_every_employee_payload(self):
+		from hrms.sync.runner import LOCALLY_OWNED_FIELDS
+
+		for name in ("multi_site_checkin", "other_checkin_sites"):
+			self.assertIn(name, LOCALLY_OWNED_FIELDS["Employee"], name)
