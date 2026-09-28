@@ -1,4 +1,5 @@
-CLASS: a scrollable area inside an Ionic sheet modal that is not an ion-content, so Ionic's sheet gesture takes every drag in it as "move the sheet"
-frontend/src/components/glass/GModal.vue same-root — content now inside ion-content.g-sheet__content; every sheet in the app renders through it
-frontend/src/theme/glass-components.css:.g-sheet same-root — column layout; the scroll moves from .g-sheet to the ion-content
-frontend/src/components/glass/GActionSheet.vue not-affected — renders inside GModal
+CLASS: URL.createObjectURL called on something that is not a Blob (a caller's `{}` placeholder)
+frontend/src/components/FilePreviewModal.vue same-root — source now from previewSource(); the only caller of createObjectURL on a prop that may be {}
+frontend/src/components/glass/GAttachmentRow.vue:51 not-affected — already guards `props.file instanceof Blob`
+frontend/src/components/RequestActionSheet.vue:282 not-affected — passes the `{}` placeholder; the modal now handles it
+frontend/src/components/FileUploaderView.vue:75 not-affected — same placeholder, same handling

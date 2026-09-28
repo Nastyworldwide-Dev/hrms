@@ -1,26 +1,26 @@
-fix(sheets): scrolling inside a sheet moved or closed the sheet
+fix(pwa): closing a request sheet threw inside the file preview
 
-Senior report, 28 Sep 2026: "scrolling inside sheet move the sheet as
-well, jumpy jumpy and inconsistent."
+Owner, 28 Sep 2026: "find the nadi pwa crashes. it was started as
+sheet." A crash hunt opened every sheet four times as staff and as an
+approver and read the app's own crash reports. One real crash, on
+every close of the request sheet (Requests, Time off):
 
-Measured in a phone browser before the fix. Day sheet: scrolled down,
-then a drag back up moved the whole sheet 100 px while the list
-scrolled under it. Holidays: a gentle drag in the list closed the
-sheet.
+  [diagnostics] vue.render TypeError: Failed to execute
+  'createObjectURL' on 'URL': Overload resolution failed.
+  at FilePreviewModal ... (onBeforeUnmount)
 
-Ionic 7's sheet gesture (ion-modal createSheetGesture.canStart) lets
-the content scroll only when the drag starts inside an `ion-content`
-— it checks `target.closest('ion-content')` and nothing else. GModal's
-scroller was a plain div, so every drag on every sheet was taken as
-"move the sheet". GModal now renders its content inside an ion-content;
-the pinned head (grabber, title, Close) stays outside it and still
-drags the sheet, as an iOS sheet does. The sheet is a column whose
-height still follows its content up to the same ceiling, so short
-sheets stay short.
+RequestActionSheet and FileUploaderView keep `selectedFile = {}` until
+a file is tapped. FilePreviewModal's `src` was a computed that called
+URL.createObjectURL(props.file) whenever there was no file_url — and
+its unmount cleanup read `src`, so closing the sheet called it on `{}`.
 
-Every sheet in the app renders through GModal, so this is one fix for
-all of them. After: the day sheet scrolls (250 -> 18) and stays put;
-Holidays stays open. iOS gate: 9 of 9 audits, 0 findings, including
-sheet-consistency (dark and light) and sheet-shift.
+The source now comes from utils/previewSource.js: a saved attachment
+uses its own URL, a real Blob (a picked file) gets one blob URL,
+released once when the file changes or the preview goes away, and
+anything else has no source. Nothing is made for the placeholder.
+
+After: the same sheets opened and closed 3x each — no errors; a picked
+PNG still previews (blob URL, image loaded); the full crash hunt
+reports no real errors on any sheet.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

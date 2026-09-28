@@ -2,7 +2,7 @@
      bar carries the Close X; the old ion-toolbar had a text "Close"). -->
 <template>
 	<GModal :is-open="isOpen" :title="filename" @did-dismiss="$emit('did-dismiss')">
-		<div v-if="isOpen && file" class="file-preview w-full overflow-auto touch-pinch-zoom">
+		<div v-if="isOpen && src" class="file-preview w-full overflow-auto touch-pinch-zoom">
 			<img v-if="isImageFile" :src="src" :alt="filename" class="h-auto w-full image-preview" />
 			<iframe v-else :src="src" :title="filename" class="w-full h-full"></iframe>
 		</div>
@@ -10,8 +10,10 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount } from "vue"
+import { computed, onBeforeUnmount, shallowRef, watch } from "vue"
 import GModal from "@/components/glass/GModal.vue"
+
+import { previewSource } from "@/utils/previewSource"
 
 const props = defineProps({
 	isOpen: {
@@ -29,17 +31,26 @@ const filename = computed(() => {
 	return props.file?.file_name || props.file?.name || ""
 })
 
-const src = computed(() => {
-	return props.file.file_url ? props.file.file_url : URL.createObjectURL(props.file)
-})
+//: One source per file, made when the file changes and released when it
+//: changes again or the preview goes away (utils/previewSource.js). Callers
+//: start with `file = {}`, and a computed that called URL.createObjectURL on
+//: it threw on every close of the request sheet (crash hunt, 28 Sep 2026).
+const preview = shallowRef(previewSource(null))
+watch(
+	() => props.file,
+	(file) => {
+		preview.value.release()
+		preview.value = previewSource(file)
+	},
+	{ immediate: true }
+)
+const src = computed(() => preview.value.src)
 
 const isImageFile = computed(() => {
 	return /\.(gif|jpg|jpeg|tiff|png|svg)$/i.test(filename.value)
 })
 
-onBeforeUnmount(() => {
-	if (props.file && !props.file.file_url) URL.revokeObjectURL(src.value)
-})
+onBeforeUnmount(() => preview.value.release())
 </script>
 
 <style scoped>
