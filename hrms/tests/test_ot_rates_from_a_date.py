@@ -154,6 +154,11 @@ class TestADayMustBeChosen(unittest.TestCase):
 		with self.assertRaises(ValueError):
 			ot._ot_bands_for_day(10, 10.0, "public_holiday", config())
 
+	def test_a_shift_with_no_rate_rows_prices_nothing_without_failing(self):
+		# overtime on, rates table cleared: a day is unpriced, attendance still marks
+		empty = {**config(), "dated_bands": {}}
+		self.assertEqual(ot._ot_bands_for_day(3, 10.0, "normal", ot.bands_on(empty, AFTER)), [])
+
 	def test_pricing_the_day_chosen_config_works(self):
 		self.assertEqual(pay(10, "public_holiday", AFTER), 220.0)
 
