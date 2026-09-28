@@ -2405,6 +2405,57 @@ html[data-transparency="reduce"] .g-modal::part(content) {
 	   iOS sheet does; it never carries on into the page behind. */
 	overscroll-behavior-y: contain;
 }
+/* 28 Sep 2026 (senior report: "scrolling inside sheet move the sheet as
+   well, jumpy"): the sheet is a column — the pinned head, then an ion-content
+   that owns the scroll. Ionic's sheet gesture yields only to a drag inside an
+   ion-content, so the list scrolls and the head alone moves the sheet. The
+   sheet box no longer scrolls itself; its height still follows its content up
+   to the same ceiling, so short sheets stay short. */
+.g-sheet {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	padding-left: 0;
+	padding-right: 0;
+	padding-bottom: 0;
+}
+.g-sheet__head {
+	flex: none;
+	margin-left: 0;
+	margin-right: 0;
+}
+/* Sized by its content up to the sheet's ceiling, and scrolling past it.
+   ion-content normally fills a fixed-height page with an absolutely placed
+   scroller, which here would collapse a short sheet to its head or let a long
+   one overflow unscrollable (both measured). So the host is a flex column that
+   shrinks within .g-sheet's max-height, and the scroller is an in-flow flex
+   child that shrinks with it and scrolls. */
+.g-sheet__content {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	height: auto;
+	contain: none;
+	--background: transparent;
+	--padding-start: 0;
+	--padding-end: 0;
+	--padding-top: 0;
+	--padding-bottom: 0;
+}
+.g-sheet__content::part(scroll) {
+	position: relative;
+	inset: auto;
+	flex: 1 1 auto;
+	min-height: 0;
+	height: auto;
+	overscroll-behavior-y: contain;
+}
+.g-sheet__body {
+	padding: 0 var(--g-pad-panel-x, 13px);
+	padding-bottom: calc(var(--g-sheet-pad-bottom) + env(safe-area-inset-bottom, 0px));
+}
 .g-sheet__head {
 	position: sticky;
 	top: 0;

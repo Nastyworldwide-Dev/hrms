@@ -1,16 +1,26 @@
-fix(checkin): a site with no pin could be shown as the nearest
+fix(sheets): scrolling inside a sheet moved or closed the sheet
 
-Review of c00dd370e (FIX_CRITICAL), reproduced before fixing: when a
-site's latitude/longitude arrived missing rather than null, the check-in
-screen measured it as NaN, and the nearest-site pick (a reduce with no
-starting value) could never move off it — the screen then named the
-wrong site and a bogus distance while the server judged by the right
-one. The server scores such a site as infinitely far
-(hrms/utils/geofence.py evaluate_sites); the screen now does the same,
-with validCoordinates guarding every candidate. A new test covers a
-missing pin and a null pin; it failed before this change.
+Senior report, 28 Sep 2026: "scrolling inside sheet move the sheet as
+well, jumpy jumpy and inconsistent."
 
-The review's warning too: the pick logged at info on every location
-tick. It is debug now.
+Measured in a phone browser before the fix. Day sheet: scrolled down,
+then a drag back up moved the whole sheet 100 px while the list
+scrolled under it. Holidays: a gentle drag in the list closed the
+sheet.
+
+Ionic 7's sheet gesture (ion-modal createSheetGesture.canStart) lets
+the content scroll only when the drag starts inside an `ion-content`
+— it checks `target.closest('ion-content')` and nothing else. GModal's
+scroller was a plain div, so every drag on every sheet was taken as
+"move the sheet". GModal now renders its content inside an ion-content;
+the pinned head (grabber, title, Close) stays outside it and still
+drags the sheet, as an iOS sheet does. The sheet is a column whose
+height still follows its content up to the same ceiling, so short
+sheets stay short.
+
+Every sheet in the app renders through GModal, so this is one fix for
+all of them. After: the day sheet scrolls (250 -> 18) and stays put;
+Holidays stays open. iOS gate: 9 of 9 audits, 0 findings, including
+sheet-consistency (dark and light) and sheet-shift.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

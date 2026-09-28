@@ -68,8 +68,17 @@
 					</span>
 				</div>
 			</div>
-			<slot name="actionSheet" />
-			<slot />
+			<!-- The content scrolls inside ion-content (senior report, 28 Sep
+			     2026: "scrolling inside sheet move the sheet as well"). Ionic's
+			     sheet gesture yields only to a drag that starts inside an
+			     ion-content; a plain div let every drag move the sheet. The head
+			     above stays outside it, so the grabber and title still drag. -->
+			<ion-content class="g-sheet__content" :scroll-y="true">
+				<div class="g-sheet__body">
+					<slot name="actionSheet" />
+					<slot />
+				</div>
+			</ion-content>
 		</div>
 	</ion-modal>
 </template>
@@ -77,7 +86,7 @@
 <script setup>
 import { onBeforeUnmount, ref, watch } from "vue"
 import { useRoute } from "vue-router"
-import { IonModal } from "@ionic/vue"
+import { IonContent, IonModal } from "@ionic/vue"
 import { X } from "lucide-vue-next"
 
 import GIconButton from "@/components/glass/GIconButton.vue"

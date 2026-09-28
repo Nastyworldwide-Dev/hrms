@@ -54,3 +54,9 @@ Employee (tick + Other sites) -> employee_sites() -> evaluate_sites() -> {check-
 
 ## Ship
 One slice per commit (rule + tests, fields + patch, reports/PWA), review each, one version bump (alpha.16), release with scripts/release.sh. You deploy.
+
+## F. Sheets: scrolling inside a sheet moved the sheet (senior report, 28 Sep 2026)
+Root cause: Ionic's sheet gesture yields only to a drag inside `ion-content`; GModal's scroller was a plain div, so every drag moved the sheet. Fix: GModal wraps its content in ion-content (head stays outside, still drags). One file + CSS; all 33 sheet screens.
+FLOW: GModal -> ion-modal(sheet) -> .g-sheet (column) -> head | ion-content.g-sheet__content -> body slot.
+MOCKUP: NOT NEEDED (no visual change intended; iOS gate's sheet-consistency and sheet-shift audits verify look and motion).
+EXPECTED OUTPUT: in a sheet, dragging the list scrolls it and never moves or closes the sheet; the grabber/title bar still drags; short sheets stay short.
