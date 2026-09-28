@@ -51,3 +51,24 @@ test("a free site among several wins", () => {
 	const here = { latitude: 3.9, longitude: 101.6 }
 	assert.equal(nearestSite({ ...main, other_sites: [free] }, here, metres).shift_location, "B")
 })
+
+// Review of c00dd370e: a site with no coordinates must never be picked as the
+// nearest, whether they arrive as null or are missing altogether. The server
+// scores such a site as infinitely far (hrms/utils/geofence.py evaluate_sites).
+test("a site with no coordinates is never the nearest", () => {
+	const real = (a, b) =>
+		Math.hypot((a.latitude - b.latitude) * 111000, (a.longitude - b.longitude) * 111000)
+	const here = { latitude: 3.06, longitude: 101.6 }
+	for (const pin of [{}, { latitude: null, longitude: null }]) {
+		const bare = { shift_location: "A", checkin_radius: 100, ...pin }
+		const shown = nearestSite({ ...bare, other_sites: [other] }, here, real)
+		assert.equal(shown.shift_location, "B", JSON.stringify(pin))
+	}
+})
+
+test("no site has coordinates: the main site, as before", () => {
+	const real = (a, b) =>
+		Math.hypot((a.latitude - b.latitude) * 111000, (a.longitude - b.longitude) * 111000)
+	const loc = { shift_location: "A", checkin_radius: 100, other_sites: [{ shift_location: "B" }] }
+	assert.equal(nearestSite(loc, { latitude: 3, longitude: 101 }, real).shift_location, "A")
+})

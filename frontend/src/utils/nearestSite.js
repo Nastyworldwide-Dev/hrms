@@ -8,24 +8,36 @@
 // `here` is {latitude, longitude} or null; `metres(a, b)` measures two points.
 // Returns the main payload with the chosen site's place fields laid over it.
 
+import { validCoordinates } from "./geolocation.js"
+
+//: A site with no usable pin is infinitely far, as the server scores it
+//: (evaluate_sites: distance None -> inf). Without this a missing pin measured
+//: as NaN and the nearest-site pick locked onto it (review of c00dd370e).
+function distance(site, here, metres) {
+	const d = validCoordinates(site.latitude, site.longitude) ? metres(site, here) : Infinity
+	return Number.isFinite(d) ? d : Infinity
+}
+
 export function nearestSite(loc, here, metres) {
 	const others = loc?.other_sites || []
 	if (!others.length || !here) return loc
 	const candidates = [loc, ...others]
 	const inside = candidates.find(
 		(site) =>
-			site.free_location || (site.checkin_radius > 0 && metres(site, here) <= site.checkin_radius)
+			site.free_location ||
+			(site.checkin_radius > 0 && distance(site, here, metres) <= site.checkin_radius)
 	)
-	const chosen =
-		inside ||
-		candidates.reduce((best, site) => (metres(site, here) < metres(best, here) ? site : best))
-	console.info(
-		"[nearestSite]",
-		chosen.shift_location,
-		inside ? "inside" : "nearest",
-		"of",
-		candidates.length
-	)
+	let chosen = inside
+	if (!chosen) {
+		let best = Infinity
+		for (const site of candidates) {
+			const d = distance(site, here, metres)
+			if (d < best) [best, chosen] = [d, site]
+		}
+		chosen = chosen || loc
+	}
+	// debug, not info: this runs on every location tick (review of c00dd370e)
+	console.debug("[nearestSite]", chosen.shift_location, inside ? "inside" : "nearest")
 	if (chosen === loc) return loc
 	return {
 		...loc,

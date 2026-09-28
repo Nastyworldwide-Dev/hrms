@@ -1,18 +1,16 @@
-feat(checkin): the check-in screen shows the site you are actually at
+fix(checkin): a site with no pin could be shown as the nearest
 
-Follow-up to df282a764 (HR can let a person check in at more than one
-site). The server now accepts any of a person's sites, but the check-in
-screen still measured against the main one — someone standing at their
-second site would read "5.5 km from Damansara" and a warning, then be
-accepted anyway.
+Review of c00dd370e (FIX_CRITICAL), reproduced before fixing: when a
+site's latitude/longitude arrived missing rather than null, the check-in
+screen measured it as NaN, and the nearest-site pick (a reduce with no
+starting value) could never move off it — the screen then named the
+wrong site and a bogus distance while the server judged by the right
+one. The server scores such a site as infinitely far
+(hrms/utils/geofence.py evaluate_sites); the screen now does the same,
+with validCoordinates guarding every candidate. A new test covers a
+missing pin and a null pin; it failed before this change.
 
-The screen now picks the same site the server judges by
-(utils/nearestSite.js, mirroring hrms/utils/geofence.evaluate_sites):
-a free site or one they are inside, else the nearest. It uses the
-other_sites the map endpoint already returns. With one site, or before
-a position arrives, it is exactly the main site as before.
-
-The CheckInPanel location harness binds the component's imports by
-hand; nearestSite is added there.
+The review's warning too: the pick logged at info on every location
+tick. It is debug now.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
