@@ -96,8 +96,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.show_block_day_warning()
 		self.validate_block_days()
 		self.validate_salary_processed_days()
-		self.validate_attendance()
+		# before validate_attendance: it leaves the half day out, and a save that
+		# ticks half_day without sending the date (API, script) only gets it here
 		self.set_half_day_date()
+		self.validate_attendance()
 		self.validate_half_day_session()
 		if frappe.db.get_value("Leave Type", self.leave_type, "is_optional_leave"):
 			self.validate_optional_leave()

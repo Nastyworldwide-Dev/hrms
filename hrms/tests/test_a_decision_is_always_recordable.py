@@ -138,6 +138,20 @@ class TestHalfDayLeaveOnAWorkedDay(unittest.TestCase):
 		self.assertIn("2026-09-03", str(ctx.exception))
 		self.assertNotIn("2026-09-02", str(ctx.exception))
 
+	def test_the_half_day_is_known_before_the_check_runs(self):
+		# A save that ticks half_day without sending half_day_date (API, script)
+		# gets the date from set_half_day_date. Run after the check, the half day
+		# was still empty there and the Present day was refused (review, 28 Sep).
+		tree = ast.parse(LEAVE.read_text())
+		cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "LeaveApplication")
+		validate = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "validate")
+		calls = [
+			n.func.attr
+			for n in ast.walk(validate)
+			if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+		]
+		self.assertLess(calls.index("set_half_day_date"), calls.index("validate_attendance"))
+
 
 class TestLeaveWithSalaryProcessed(unittest.TestCase):
 	"""(c) an LWP whose days a submitted Salary Slip already covers."""
