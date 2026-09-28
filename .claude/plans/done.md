@@ -1,3 +1,3 @@
-GOAL: Today's card measures a late person to their own leave time (shift end + lateness), and shows when they came in.
-DONE WHEN: now.get_now session carries first_in and leave_by (hrms/utils/leave_by.py, equal to ot_calculation._ot_window_begin); NowBar says "In X · leave at Y", the gauge fills to Y, past/forgot count from Y.
-CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_leave_by.py; node --test frontend/src/utils/__tests__/shiftGauge.test.js; bench --site fresh.local execute hrms.tests.probes.leave_by_probe.run (in 09:45 -> leave_by 18:45); phone render at 18:07 "38m left", 18:50 "5m past the end", 21:50 forgot.
+GOAL: the update bar never appears on a real phone with nothing deployed.
+DONE WHEN: main.js registers the worker at an address that is the same every launch for the same push settings (utils/workerURL.js: sorted keys; a failed relay fetch reuses the last good settings).
+CHECK: node --test frontend/src/utils/__tests__/workerURL.test.js; live on fresh.local with push_relay_server_url set and a relay stub that reorders keys and fails every 3rd launch: HEAD bar on 5/6 launches, fix 0/6.

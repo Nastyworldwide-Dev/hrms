@@ -47,6 +47,7 @@ import "./theme/glass-components.css"
 import "./data/theme"
 import { installDiagnostics } from "@/utils/diagnostics"
 import { setRegistration } from "@/data/swRegistration"
+import { workerURL } from "@/utils/workerURL"
 
 // Zoom off (owner ruling, 25 Sep 2026); see utils/blockZoom.js.
 blockZoom()
@@ -117,6 +118,10 @@ async function retireOldWorker() {
 //: on the app-root worker, once, only if they had push on.
 const PUSH_MOVED_KEY = "hrms:push-moved-to-app-worker"
 
+//: The push settings that last worked, so a slow or failed relay fetch does not
+//: register a different worker address (utils/workerURL.js).
+const PUSH_CONFIG_KEY = "hrms:push-config"
+
 async function movePushToAppWorker() {
 	const push = window.frappePushNotification
 	try {
@@ -138,19 +143,30 @@ const registerServiceWorker = async () => {
 		// At the app root, not /assets/hrms/frontend/: a worker controls only pages
 		// under its own folder, so from there it never controlled /hrms and the
 		// app had no offline launch (alpha.12 C1). hrms/www/service_worker.py.
-		let serviceWorkerURL = "/hrms/sw.js"
+		// The SAME address every launch for the same settings (utils/workerURL.js):
+		// a different address is a new worker to the browser, and the update bar
+		// offered it on every launch (owner, 28 Sep 2026).
 		let config = ""
+		let stored = null
+		try {
+			stored = JSON.parse(localStorage.getItem(PUSH_CONFIG_KEY) || "null")
+		} catch {
+			stored = null
+		}
 
 		if (window.frappe?.boot?.push_relay_server_url) {
 			try {
 				config = await window.frappePushNotification.fetchWebConfig()
-				serviceWorkerURL = `${serviceWorkerURL}?config=${encodeURIComponent(
-					JSON.stringify(config)
-				)}`
+				try {
+					localStorage.setItem(PUSH_CONFIG_KEY, JSON.stringify(config))
+				} catch {
+					// storage unavailable: the next launch fetches again, as before
+				}
 			} catch (err) {
-				console.error("Failed to fetch FCM config", err)
+				console.error("Failed to fetch FCM config; using the last good one", err)
 			}
 		}
+		const serviceWorkerURL = workerURL("/hrms/sw.js", config || null, stored)
 
 		navigator.serviceWorker
 			.register(serviceWorkerURL, {
@@ -159,7 +175,9 @@ const registerServiceWorker = async () => {
 			})
 			.then((registration) => {
 				setRegistration(registration)
-				if (config) {
+				if (config || stored) {
+					// fetchWebConfig returns this cached copy instead of the relay
+					if (!config) window.frappePushNotification.webConfig = stored
 					window.frappePushNotification.initialize(registration).then(() => {
 						console.info("[sw] Frappe Push Notification initialized")
 						return movePushToAppWorker()

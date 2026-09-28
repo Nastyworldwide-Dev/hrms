@@ -1,31 +1,26 @@
-feat(home): Today shows when you came in and when you can leave
+fix(pwa): the update bar still came back on phones with a push relay
 
-Owner, 28 Sep 2026, with a screenshot: "the actual clock in hour is
-missing ... shift 9-6, late 9.30am in i must clock out 6.30pm. early
-in, can out as usual ... in time in, same as shift." The card said
-"Working · 8h 22m" with no check-in time, and its bar ran 09:00-18:00
-for everyone: in at 9:45, at 18:07 it read "7m past the end" in
-orange while 38 minutes were still owed.
+Owner, 28 Sep 2026, after alpha.16: "the reload popup still a bug."
+b2f020a62 removed the second worker registration, but on sites with
+push set up the ONE address main.js registers still changed between
+launches: /hrms/sw.js?config=<the push settings, fetched from the
+relay each launch>. The browser treats a different worker URL as a new
+worker, so the same build was installed again and offered as "A new
+version is ready". The dev site has no push relay, which is why every
+check there passed.
 
-One rule, hrms/utils/leave_by.py: the shift end, later by however late
-the person came in; early is not credited. It is the rule overtime
-already pays by (ot_calculation._ot_window_begin) — a test locks the
-two equal for early, on-time and late arrivals — so the card and the
-pay cannot disagree about when the day is done. Half-day leave moves
-the boundary to the middle of the shift, as late/early marking does.
+Reproduced on fresh.local with push_relay_server_url set and a relay
+stub that returns the same settings with keys in a different order and
+fails every third launch: on HEAD the bar showed on 5 of 6 launches
+with nothing deployed.
 
-now.get_now's session now carries first_in (the shift's FIRST check-in,
-so a lunch check-out and back in does not move it) and leave_by, from
-the punch's own stamped shift window. The card reads "In 9:45 am ·
-leave at 6:45 pm", the gauge fills to 18:45, and "past the end" and
-"Forgot to check out?" count from there.
+utils/workerURL.js builds the address with the settings' keys sorted,
+so the same settings always give the same address, and when the relay
+fetch fails main.js reuses the settings that last worked (kept in
+localStorage) instead of registering the plain address. Push still
+initialises in that case, from the saved copy.
 
-Display only. When a session may still check out (06:00 next morning
-or the shift's window), attendance hours, overtime and the nightly
-abandoned-check-in sweep are all unchanged (owner, 28 Sep: keep them).
-
-Checked live on fresh.local (rolled back): in 09:45 on 09:00-18:00 ->
-leave_by 18:45. On the phone: 18:07 "38m left", 18:50 "5m past the
-end", 21:50 "You were due to leave at 6:45 pm. Forgot to check out?".
+After, same stub: 0 of 6 launches showed the bar, including the two
+where the relay failed. The stub setting was removed afterwards.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
