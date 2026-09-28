@@ -79,7 +79,7 @@ function onRefresh(event) {
 //: DOM node — the real <ion-refresher>, the one thing that actually fires
 //: these events), the same pattern ListView.vue already uses for ion-content.
 function nativeEl() {
-	return refresherEl.value?.$el ?? refresherEl.value
+	return refresherEl.value?.$el
 }
 
 onMounted(() => {

@@ -1,35 +1,15 @@
-fix(pwa): pull-to-refresh and infinite scroll never actually ran
+fix(pwa): drop nativeEl()'s wrapper fallback in GPullRefresh
 
-Owner report, 28 Sep 2026: check-in location took minutes to resolve
-and Home felt stuck until force-closed and reopened — "did we remove
-pull to refresh?" We didn't; it never worked. `@ionRefresh=`/`@ionStart=`
-on GPullRefresh's `<ion-refresher>`, and `@ionScroll=` on ListView's
-`<ion-content>`, are Vue's own event-binding syntax, which hyphenates a
-camelCase name (`onIonRefresh` -> `ion-refresh`) before it ever
-registers a listener. Ionic's real components dispatch these with the
-exact camelCase name they were authored with (`createEvent(this,
-"ionRefresh", …)` in @ionic/core). The two names never meet.
+frappe-reviewer, reviewing 8009391fe: nativeEl() fell back to
+refresherEl.value itself when .$el was absent, which would silently
+attach the listener to the Vue component wrapper instead of a DOM
+node if Ionic's Vue binding ever returned a non-wrapped ref. Dropped
+the `?? refresherEl.value` fallback to match ListView.vue's plain
+`content.value?.$el` and let the existing `if (!el)` guard do its
+job instead of masking a bad ref.
 
-Confirmed live, not guessed: intercepting every addEventListener call
-on a running page showed "ion-refresh" registered while the element
-only ever dispatches "ionRefresh" — so a real pull showed the pull
-animation (native to the web component) but never called Home's
-refresh(), and a real scroll never called ListView's handleScroll(),
-so "load more" pagination was silently inert everywhere ListView is
-used (every request list). Neither directive has ever worked since
-the day each was written — not a recent regression, but real and
-critical: it's why every screen needed a force-close to see anything
-new.
-
-Both are now bound by hand from a template ref, with the exact
-literal event name, cleaned up on unmount. Re-verified on the rebuilt
-bundle: the real "ionRefresh" event now fires Home's refresh handler
-end to end, and the real "ionScroll" event now fires ListView's
-handleScroll end to end.
-
-(Location itself was not touched — traced the same evening: no
-geofence/GPS code has changed in this branch's history, and check-in
-completes correctly once given a location; multi-minute location
-waits are the phone's own GPS cold-start, not a code fault.)
+Rebuilt and reran the full suite (1513 tests) after the change: all
+green, including the ionStart/ionRefresh addEventListener assertions
+in pull-refresh-events-real.test.js and pull-refresh-label-resets.test.js.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
