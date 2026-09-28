@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.14",
-	"releaseName": "Clear Screens and Safer Sign-in",
+	"version": "2.0.0-alpha.15",
+	"releaseName": "Your Team on the Calendar",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

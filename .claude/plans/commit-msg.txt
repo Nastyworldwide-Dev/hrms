@@ -1,32 +1,14 @@
-fix(pwa): "A new version is ready" kept appearing with nothing new
+chore(release): 2.0.0-alpha.15 — Your Team on the Calendar
 
-Owner, 28 Sep 2026: the new-update popup "keeps appearing
-inappropriately". Two causes, both reproduced in a real browser on the
-dev site before the fix.
+Owner, 28 Sep 2026: "dont forget, to update the version". This release
+carries the team on the Calendar (names, and a count that agrees with
+the Team page), pull-to-refresh and "load more" that finally run, the
+update bar that no longer returns with nothing new, TruTrip on More,
+and Approved On + Payment in HR's OT Request report. The changelog
+entry says each in plain words.
 
-1. It showed with no deploy at all. Since alpha.12 main.js registers
-   /hrms/sw.js — with ?config=… when push notifications are set up —
-   while UpdatePrompt registered it again through vite-plugin-pwa as
-   plain /hrms/sw.js. One scope, two URLs: every load installed the
-   other one as "waiting", and the bar came up on 4 of 4 loads with
-   nothing deployed.
-
-2. Dismissing it saved nothing. The dismissal was keyed on a
-   __WB_REVISION__ read from the worker's URL, which /hrms/sw.js has
-   never carried, and it was read at registration, before anything
-   was waiting. localStorage held null after a dismissal and the bar
-   came back on every reload.
-
-Now there is one registration: main.js shares it
-(data/swRegistration.js) and the prompt watches it, offering only a
-worker waiting behind an active one. The waiting build names itself:
-public/sw.js answers GET_BUILD_ID with a hash of its own precache list
-(utils/buildId.js), so a dismissal is remembered for exactly that
-build. waitingBuildId is removed; workbox-window leaves the bundle.
-
-Checked on fresh.local, push off and push on: no bar on three loads
-with nothing deployed; the bar after a deploy; dismissing stores the
-build id and two reloads stay clear; a newer deploy is offered again;
-Reload takes it and clears the memory.
+Note: 6621d7bd9 carries the previous commit's subject by mistake; its
+diff is only the frontend/vite.config.js comment saying main.js is the
+one worker registration.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

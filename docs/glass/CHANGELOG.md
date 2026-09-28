@@ -10,6 +10,37 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.15] — Your Team on the Calendar — 2026-09-28
+
+The team on the Calendar, the refresh that never ran, the update bar that
+would not go away, and two columns HR asked for in the OT report.
+
+### Added
+- **Your team, on the Calendar**: tap a day to see who is in, not in yet,
+  or on leave, by name, with their in and out times. Five names, then See
+  all; Open team roster sits beside it.
+- **TruTrip on More**: a Travel shortcut that opens TruTrip's sign-in in a
+  new tab.
+- **For HR, in Desk: the OT Request report shows Approved On and Payment.**
+  Approved On is filled in by the system at the approval (older requests
+  from their own history). Payment is Pending or Paid, set by HR; the
+  employee can see it but not change it.
+
+### Fixed
+- **Pull down to refresh did nothing**, on Home, Requests, Approvals and
+  Announcements. It showed the pull but never reloaded; only closing the app
+  showed anything new. It reloads now.
+- **Long lists stopped at the first page**: scrolling to the bottom never
+  loaded more. It does now.
+- **The Calendar said "6 not in yet" when all six were in.** It counted only
+  the attendance written after the shift, not the check-ins. It now reads
+  the same way as the Team page, so the two always agree.
+- **"A new version is ready" kept coming back**, even with nothing new and
+  after you closed it. It shows once for each real update, and stays closed.
+- **Rest-day overtime is paid in half-hours**, like weekdays.
+- **A request waiting for approval could still be changed** after sending.
+- **The request sheet drew its own dark box with tiny rows.**
+
 ## [2.0.0-alpha.14] — Clear Screens and Safer Sign-in — 2026-09-27
 
 A whole-app pass: the screens you reported, the same kinds of fault
