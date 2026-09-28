@@ -1,15 +1,13 @@
 # HANDOFF
-prompt:   28 Sep 2026 — calendar team, OT report columns, TruTrip, update bar
+prompt:   28 Sep 2026 — multi-site check-in, sheet scroll, sheet crash
 status:   done
-commit:   7b48b8fa5 on nz-glass (tag v2.0.0-alpha.15)
-files:    hrms/api/calendar.py
-          hrms/api/team.py
-          frontend/src/components/DaySheet.vue
-          hrms/hr/doctype/ot_request/ot_request.json
-          hrms/patches/v16_0/ot_request_approved_on_and_payment.py
-          frontend/src/views/More.vue
-          frontend/src/components/UpdatePrompt.vue
-          frontend/public/sw.js
-verify:   bench --site <site> migrate; then open Calendar as a senior, and OT Request report as HR
-flags:    6621d7bd9 carries b2f020a62's subject by mistake (diff is a vite.config.js comment only)
-next:     deploy on Frappe Cloud; migrate runs the OT patch (fills Approved On, Payment=Pending)
+commit:   d5b513081 on nz-glass (tag v2.0.0-alpha.16)
+files:    hrms/utils/geofence.py
+          hrms/overrides/employee_checkin_override.py
+          hrms/setup.py
+          frontend/src/components/glass/GModal.vue
+          frontend/src/components/FilePreviewModal.vue
+          frontend/src/components/CheckInPanel.vue
+verify:   bench --site <site> migrate; in Desk tick "Can check in at more than one site" on an employee
+flags:    staff lockdown deferred by owner; FC pre-build fail suspected Node < 22.12 for next-helpdesk
+next:     owner deploys alpha.16; roster tutorial for HR in progress
