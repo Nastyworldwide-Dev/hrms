@@ -1,9 +1,56 @@
-# Rest-day overtime rounds like weekday (owner ruling 27 Sep 2026)
+# Plan — 28 Sep 2026: check in at more than one site (HR request)
 
-FLOW: get_ot_claim_capacity sizes every claim (form summary, discovery list, OTRequest.set_punch_verified_cap). Its holiday part (nonworking_hours) was stored exact; now round_ot_pay_hours like the weekday part. Payroll prices the APPROVED claimed_hours, so pay follows the banded claim. The worked record (Attendance.ot_hours, breakdowns) keeps every minute.
+## Owner answers (28 Sep 2026)
+- Meaning: several sites per person (e.g. Damansara AND Shah Alam; inside either = accepted).
+- Where: on the Employee record, set once.
+- Outside ALL sites: same rule as today (normal -> approver; strict -> refused). The tickbox only ADDS sites.
+- Each check-in records WHICH site it matched, shown in reports.
 
-MOCKUP: none (a pay-rule change; the Overtime form shows 9 instead of 8.876944444 in the Hours box).
+## What exists today (read, not guessed)
+- One site per person: Employee.shift_location (or the Shift Assignment's own).
+- ONE resolver, `effective_shift_location()` in hrms/utils/geofence.py, feeds three readers:
+  1. the enforcing insert — hrms/overrides/employee_checkin_override.py validate_distance_from_shift_location
+  2. the strict preflight — hrms/api/geofence.py check_geofence
+  3. the PWA map pin — hrms/api/geofence.py get_active_shift_location
+- Decision rule: `evaluate_geofence()` (pure), per site.
+- Approval request names `nearest_shift_location` (employee_checkin_after_insert.py) -> Out of Radius report.
+- Employee.shift_location ALSO drives automatic Shift Assignment rules (hrms/hr/shift_rules.py).
 
-EXPECTED OUTPUT: rest day 10:08-13:22 claims 3.0 h (was 3.233); 09:00-17:52:37 claims 9.0 h (was 8.876944); every rest-day claim is a multiple of 0.5; mixed days band each part separately; weekday unchanged.
+## The change
+Desk, Employee record (Attendance section, under Shift Location):
+- [ ] **Can check in at more than one site** (tickbox)
+- **Other sites** — pick one or more Shift Locations (shows only when ticked)
 
-Owner ruling recorded: "round like weekday" (27 Sep 2026, reply to question 2).
+Rule, in ONE place (hrms/utils/geofence.py):
+- `employee_sites(employee, assignment)` = the effective site (unchanged) + the other sites when ticked.
+- `evaluate_sites(...)` runs the existing `evaluate_geofence` against each site:
+  - any site accepts -> accepted, and that site is recorded;
+  - none accept -> today's decision, measured against the NEAREST site (normal -> approver, strict -> refused).
+- All three readers call it, so the screen that warns and the code that enforces cannot disagree.
+
+Record: new read-only **Checked in at** (Shift Location) on Employee Checkin; shown in the check-in list and the Out of Radius report. The approval request names the nearest site.
+
+## Kept apart on purpose (blast area)
+- Automatic shift rules keep reading ONLY the main Shift Location. The other sites never change anyone's shift.
+- Tickbox off, or no other sites = exactly today's behaviour (proved by test).
+- A "free location" site still means "anywhere" — unchanged.
+- Hub sync: Employee is a mirrored doctype. I check whether the new fields would be overwritten or dropped by a sync before shipping; if they would, I say so and stop.
+
+## FLOW
+Employee (tick + Other sites) -> employee_sites() -> evaluate_sites() -> {check-in insert, strict preflight, PWA map} -> Employee Checkin.checked_in_at -> Out of Radius report / check-in list.
+
+## MOCKUP: NOT NEEDED (Desk form fields in the standard Frappe layout; the owner confirms on the real form after deploy)
+
+## EXPECTED OUTPUT
+- HR ticks the box on Ali, picks Shah Alam. Ali checks in at Shah Alam -> accepted, "Checked in at: Shah Alam".
+- Ali checks in 5 km from both -> normal: goes to his approver, naming the nearest site; strict: refused.
+- Anyone without the tickbox: nothing changes.
+- The PWA map shows the nearest of his sites.
+
+## Tests (red first)
+- Pure: accepted by the second site; outside both -> nearest-site decision; tickbox off = today.
+- Live on the dev site: two sites, one employee, three check-ins (site 1, site 2, far) — then synthetic rows deleted.
+- Invariant: shift rules never read the other sites.
+
+## Ship
+One slice per commit (rule + tests, fields + patch, reports/PWA), review each, one version bump (alpha.16), release with scripts/release.sh. You deploy.
