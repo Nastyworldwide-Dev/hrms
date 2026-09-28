@@ -23,9 +23,10 @@
 		</span>
 
 		<!-- A sent request reads as label / value (alpha.7 B1): a yes/no is a
-		     word, a date is written out, not a disabled switch or picker. -->
+		     word, a date is written out, a number is plain (hours rounded),
+		     not a disabled switch, picker or number box. -->
 		<span
-			v-if="isReadOnly && ['Check', 'Date'].includes(props.fieldtype)"
+			v-if="isReadOnly && ['Check', 'Date', 'Float', 'Int'].includes(props.fieldtype)"
 			class="g-form-row__value"
 		>
 			{{ readValue }}
@@ -233,6 +234,7 @@
 <script setup>
 import GTextarea from "@/components/glass/GTextarea.vue"
 import GInput from "@/components/glass/GInput.vue"
+import { readValue as plainValue } from "@/utils/readValue"
 import GDatePicker from "@/components/glass/GDatePicker.vue"
 import GDateTimePicker from "@/components/glass/GDateTimePicker.vue"
 import GSelect from "@/components/glass/GSelect.vue"
@@ -314,10 +316,10 @@ const isReadOnly = computed(() => {
 	return Boolean(props.readOnly)
 })
 
-//: The plain words for a read-only yes/no or date (alpha.7 B1).
+//: The plain words for a read-only yes/no, date or number (alpha.7 B1).
 const readValue = computed(() => {
-	if (props.fieldtype === "Check") return props.modelValue ? __("Yes") : __("No")
-	return props.modelValue ? dayjs(props.modelValue).format("D MMM YYYY") : ""
+	const words = plainValue(props.fieldtype, props.modelValue, (v) => dayjs(v).format("D MMM YYYY"))
+	return props.fieldtype === "Check" ? __(words) : words
 })
 
 //: An empty entry row says what it wants, as iOS forms do (alpha.6 B2):
