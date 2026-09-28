@@ -56,21 +56,32 @@ class TestEveryReaderForwardsTheFlag(unittest.TestCase):
 		self.assertIn("is_free_location", consts)
 
 	def test_callers_pass_free_location_to_the_decision(self):
+		# Since 28 Sep 2026 every caller decides through evaluate_sites (one or
+		# more sites); it is the one place that hands each site's flag on.
 		for name, rel in CALLERS.items():
 			with self.subTest(caller=name):
 				func = _func(rel, name)
 				calls = [
 					n
 					for n in ast.walk(func)
-					if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "evaluate_geofence"
+					if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "evaluate_sites"
 				]
-				self.assertTrue(calls, f"{rel}:{name} must call evaluate_geofence")
-				for call in calls:
-					self.assertIn(
-						"free_location",
-						{k.arg for k in call.keywords},
-						f"{rel}:{name} calls evaluate_geofence without free_location",
-					)
+				self.assertTrue(calls, f"{rel}:{name} must decide through evaluate_sites")
+		sites = _func("utils/geofence.py", "evaluate_sites")
+		inner = [
+			n
+			for n in ast.walk(sites)
+			if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "evaluate_geofence"
+		]
+		self.assertTrue(
+			any("free_location" in {k.arg for k in call.keywords} for call in inner),
+			"evaluate_sites must forward each site's free_location",
+		)
+
+	def test_the_site_loader_reads_the_flag(self):
+		func = _func("utils/geofence.py", "employee_sites")
+		consts = {n.value for n in ast.walk(func) if isinstance(n, ast.Constant) and isinstance(n.value, str)}
+		self.assertIn("is_free_location", consts)
 
 	def test_readiness_does_not_flag_a_free_location_as_misconfigured(self):
 		src = (HRMS / "utils/readiness.py").read_text()

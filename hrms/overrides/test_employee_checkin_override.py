@@ -56,14 +56,24 @@ class _FakeCheckin(SimpleNamespace):
 def _patched(distance_m=120.0, radius=100, strict=False):
 	"""Every collaborator of validate_distance_from_shift_location, stubbed."""
 	assignment = SimpleNamespace(shift_location="KL Office", enable_strict_geofence=int(strict))
-	location = SimpleNamespace(checkin_radius=radius, latitude=3.0, longitude=101.5)
+	# One site, as every employee without the multi-site tickbox has (28 Sep 2026).
+	location = _Site(
+		name="KL Office", checkin_radius=radius, latitude=3.0, longitude=101.5, is_free_location=0
+	)
 	return [
 		patch(f"{MODULE}.is_setting_enabled_for_employee", return_value=True),
 		patch(f"{MODULE}.resolve_assignment", return_value=assignment),
-		patch(f"{MODULE}.resolve_location", return_value=location),
-		patch(f"{MODULE}.get_distance_between_coordinates", return_value=distance_m),
+		patch(f"{MODULE}.employee_sites", return_value=[location]),
+		patch("hrms.utils.geofence.distance_to", return_value=distance_m),
+		patch(f"{MODULE}.distance_to", return_value=distance_m),
 		patch(f"{MODULE}._record_geofence_reject"),
 	]
+
+
+class _Site(dict):
+	"""A Shift Location row: frappe._dict reads both ways."""
+
+	__getattr__ = dict.get
 
 
 class TestOverrideImportBoundary(unittest.TestCase):
@@ -76,7 +86,7 @@ class TestOverrideImportBoundary(unittest.TestCase):
 class TestAccuracyReachesTheDecision(unittest.TestCase):
 	def _run(self, doc, **kw):
 		"""Validate `doc` with collaborators stubbed; return the spy on the decision."""
-		with patch(f"{MODULE}.evaluate_geofence", return_value=None) as spy:
+		with patch("hrms.utils.geofence.evaluate_geofence", return_value=None) as spy:
 			patches = _patched(**kw)
 			for p in patches:
 				p.start()
@@ -196,14 +206,19 @@ class TestFreeLocationOnInsert(unittest.TestCase):
 
 	def _run(self, doc, **kw):
 		assignment = SimpleNamespace(shift_location="Field Sales", enable_strict_geofence=1)
-		location = SimpleNamespace(
-			is_free_location=1, checkin_radius=kw.get("radius", 0), latitude=None, longitude=None
+		location = _Site(
+			name="Field Sales",
+			is_free_location=1,
+			checkin_radius=kw.get("radius", 0),
+			latitude=None,
+			longitude=None,
 		)
 		patches = [
 			patch(f"{MODULE}.is_setting_enabled_for_employee", return_value=True),
 			patch(f"{MODULE}.resolve_assignment", return_value=assignment),
-			patch(f"{MODULE}.resolve_location", return_value=location),
-			patch(f"{MODULE}.get_distance_between_coordinates", return_value=250_000.0),
+			patch(f"{MODULE}.employee_sites", return_value=[location]),
+			patch("hrms.utils.geofence.distance_to", return_value=250_000.0),
+			patch(f"{MODULE}.distance_to", return_value=250_000.0),
 			patch(f"{MODULE}._record_geofence_reject"),
 		]
 		for p in patches:
@@ -222,7 +237,7 @@ class TestFreeLocationOnInsert(unittest.TestCase):
 
 	def test_the_flag_reaches_the_decision(self):
 		doc = _FakeCheckin()
-		with patch(f"{MODULE}.evaluate_geofence", return_value=None) as spy:
+		with patch("hrms.utils.geofence.evaluate_geofence", return_value=None) as spy:
 			self._run(doc)
 		self.assertTrue(spy.call_args.kwargs.get("free_location"))
 
@@ -238,14 +253,15 @@ class TestLocationEvidenceIsStored(unittest.TestCase):
 
 	def _run(self, doc, distance_m=120.0, radius=100, strict=False, free=0):
 		assignment = SimpleNamespace(shift_location="KL Office", enable_strict_geofence=int(strict))
-		location = SimpleNamespace(
-			checkin_radius=radius, latitude=3.0, longitude=101.5, is_free_location=free
+		location = _Site(
+			name="KL Office", checkin_radius=radius, latitude=3.0, longitude=101.5, is_free_location=free
 		)
 		patches = [
 			patch(f"{MODULE}.is_setting_enabled_for_employee", return_value=True),
 			patch(f"{MODULE}.resolve_assignment", return_value=assignment),
-			patch(f"{MODULE}.resolve_location", return_value=location),
-			patch(f"{MODULE}.get_distance_between_coordinates", return_value=distance_m),
+			patch(f"{MODULE}.employee_sites", return_value=[location]),
+			patch("hrms.utils.geofence.distance_to", return_value=distance_m),
+			patch(f"{MODULE}.distance_to", return_value=distance_m),
 			patch(f"{MODULE}._record_geofence_reject"),
 		]
 		for p in patches:

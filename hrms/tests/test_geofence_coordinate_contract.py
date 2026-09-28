@@ -47,14 +47,14 @@ class TestCoordinateContract(unittest.TestCase):
 					patch.object(api, "is_setting_enabled_for_employee", return_value=True),
 					patch.object(api, "resolve_assignment", return_value=None),
 					patch.object(api, "employee_now", return_value=datetime(2026, 9, 3)),
-					patch.object(api, "get_distance_between_coordinates") as distance,
+					patch("hrms.utils.geofence.distance_to") as distance,
 				):
 					with self.assertRaises(frappe.ValidationError):
 						api.check_geofence("EMP", "IN", latitude, longitude)
 					distance.assert_not_called()
 				with (
 					patch.object(override, "is_setting_enabled_for_employee", return_value=True),
-					patch.object(override, "get_distance_between_coordinates") as distance,
+					patch.object(override, "distance_to") as distance,
 				):
 					with self.assertRaises(frappe.ValidationError):
 						override.CustomEmployeeCheckin.validate_distance_from_shift_location(

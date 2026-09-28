@@ -1,3 +1,3 @@
-GOAL: "A new version is ready" shows only when a new build is really waiting, once, and stays away after it is dismissed until a newer build lands.
-DONE WHEN: UpdatePrompt watches main.js's one registration (no second registerSW), and the waiting build names itself (sw.js GET_BUILD_ID from its precache) so a dismissal is remembered per build.
-CHECK: yarn --cwd frontend test; live on fresh.local, push off AND on: no bar on 3 loads with nothing deployed; bar after a deploy; dismissed id stored; no bar on 2 reloads after; a newer deploy shows it again; Reload clears it (was: bar on 4/4 loads with nothing deployed, dismissed never stored).
+GOAL: HR can let one person check in at more than one site; inside any of them is accepted and named, outside all follows today's rule against the nearest.
+DONE WHEN: Employee has "Can check in at more than one site" + "Other sites"; the insert, the strict preflight and the PWA map all read employee_sites()/evaluate_sites(); Employee Checkin records "Checked in at"; shift rules untouched.
+CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_geofence_multi_site.py (+ the three updated geofence test files); bench --site fresh.local migrate; bench --site fresh.local execute hrms.tests.probes.multi_site_probe.run (HEAD: ticked-at-B Outside/approval; now: Inside, Checked in at = Site B).

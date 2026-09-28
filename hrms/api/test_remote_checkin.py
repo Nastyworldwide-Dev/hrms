@@ -119,6 +119,10 @@ class _FakeDoc(SimpleNamespace):
 			inserted=False,
 		)
 
+	def get(self, key, default=None):
+		# A real Document reads fields with .get; punch() has since bcfc8a425.
+		return getattr(self, key, default)
+
 	def update(self, values):
 		for key, value in values.items():
 			setattr(self, key, value)

@@ -26,7 +26,6 @@ from hrms.hr.doctype.employee_checkin.employee_checkin import (
 from hrms.hr.doctype.shift_assignment.shift_assignment import (
 	get_actual_start_end_datetime_of_shift,
 )
-from hrms.hr.utils import get_distance_between_coordinates
 from hrms.utils.company_settings import is_setting_enabled_for_employee
 from hrms.utils.day_remark import remark_day_after_commit
 from hrms.utils.geofence import (
@@ -34,11 +33,12 @@ from hrms.utils.geofence import (
 	REASON_NO_RADIUS,
 	REASON_NO_SHIFT_LOCATION,
 	REASON_OUTSIDE_RADIUS,
+	distance_to,
 	effective_shift_location,
-	evaluate_geofence,
+	employee_sites,
+	evaluate_sites,
 	parse_coordinates,
 	resolve_assignment,
-	resolve_location,
 )
 
 logger = logging.getLogger(__name__)
@@ -593,38 +593,37 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		# Assignment's shift_location, or the Employee's own when the assignment
 		# carries none (manual/schedule) — the same fallback the preflight uses,
 		# so the screen that warns and the code that enforces stay in step.
-		shift_loc_name = effective_shift_location(self.employee, assignment)
 		# Strict flag lives on Shift Assignment (was on Shift Type up to v15.77.3).
 		# No active assignment at all still means lenient, so untagged check-ins
 		# keep falling through to the silent-allow / remote-approval paths.
 		strict = bool(assignment.enable_strict_geofence) if assignment else False
-
-		row = resolve_location(shift_loc_name)
-
-		radius_m = int(row.checkin_radius) if row and row.checkin_radius else 0
-		distance = None
-		if row and row.latitude is not None and row.longitude is not None:
-			distance = get_distance_between_coordinates(
-				row.latitude, row.longitude, self.latitude, self.longitude
-			)
 
 		# How sure the device was about the coordinates it sent. Carried as a
 		# flag rather than a column: it is an input to this decision, not a
 		# property of the punch, and a Desk or biometric row has no browser
 		# behind it to supply one. Absent means unknown, which buys nothing.
 		accuracy_m = getattr(self.flags, "location_accuracy_m", None)
+
+		# Every site this person may use (HR, 28 Sep 2026: "Can check in at more
+		# than one site"): the main one, plus the others when ticked. `row` is the
+		# site that decided — the one that accepted, or the nearest when none did
+		# — so everything below reads exactly as it did with one site.
+		sites = employee_sites(self.employee, assignment)
+		matched, decision, row = evaluate_sites(
+			strict=strict,
+			sites=sites,
+			latitude=self.latitude,
+			longitude=self.longitude,
+			accuracy_m=accuracy_m,
+		)
+		shift_loc_name = row.name if row else effective_shift_location(self.employee, assignment)
+		self.checked_in_at = matched
+
+		radius_m = int(row.checkin_radius) if row and row.checkin_radius else 0
+		distance = distance_to(row, self.latitude, self.longitude) if row else None
 		self.geofence_distance_m = round(distance, 1) if distance is not None else None
 		self.geofence_radius_m = radius_m or None
-
 		free_location = bool(row and getattr(row, "is_free_location", 0))
-		decision = evaluate_geofence(
-			strict=strict,
-			has_shift_location=bool(shift_loc_name and row),
-			radius_m=radius_m,
-			distance_m=distance,
-			accuracy_m=accuracy_m,
-			free_location=free_location,
-		)
 		if decision is None:
 			# Lenient silent-allow paths land here. Spell out which one fired
 			# so the FC logs can pin down "why didn't the remote dialog appear?".

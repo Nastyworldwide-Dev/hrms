@@ -421,10 +421,29 @@ def get_custom_fields():
 				),
 			},
 			{
+				"fieldname": "multi_site_checkin",
+				"fieldtype": "Check",
+				"label": _("Can check in at more than one site"),
+				"insert_after": "shift_location",
+				"description": _(
+					"Tick to let this person check in at the sites below as well as their Shift "
+					"Location. Only check-ins use these sites; automatic shifts still follow the "
+					"Shift Location alone."
+				),
+			},
+			{
+				"fieldname": "other_checkin_sites",
+				"fieldtype": "Table MultiSelect",
+				"label": _("Other sites"),
+				"options": "Employee Other Site",
+				"insert_after": "multi_site_checkin",
+				"depends_on": "eval:doc.multi_site_checkin",
+			},
+			{
 				"fieldname": "roster_managed",
 				"fieldtype": "Check",
 				"label": _("Roster Managed (Variable Shift)"),
-				"insert_after": "shift_location",
+				"insert_after": "other_checkin_sites",
 				"description": _(
 					"Shifts are set by the roster, not the automatic Shift Location rules. "
 					"Enable for variable-shift staff (e.g. Handa) so the rule layer never "

@@ -32,6 +32,7 @@
   "geofence_distance_m",
   "geofence_radius_m",
   "geofence_outcome",
+  "checked_in_at",
   "selfie_section",
   "capture_selfie",
   "column_break_selfie",
@@ -216,6 +217,16 @@
    "read_only": 1
   },
   {
+   "fieldname": "checked_in_at",
+   "fieldtype": "Link",
+   "label": "Checked in at",
+   "options": "Shift Location",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_standard_filter": 1,
+   "description": "The site this check-in was inside. For someone who can check in at more than one site, the one that accepted it."
+  },
+  {
    "fieldname": "shift_timings_section",
    "fieldtype": "Section Break",
    "label": "Shift Timings"
@@ -289,7 +300,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-21 12:00:00.000000",
+ "modified": "2026-09-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Employee Checkin",

@@ -331,3 +331,101 @@ def effective_shift_location(employee: str, assignment) -> str | None:
 	import frappe
 
 	return frappe.db.get_value("Employee", employee, "shift_location")
+
+
+def site_names(main_site: str | None, multi_site: bool, other_sites) -> list[str]:
+	"""Every site this employee may check in at, main first, no repeats. Pure.
+
+	HR, 28 Sep 2026: "Can check in at more than one site" on the Employee, with
+	the sites picked beside it. Not ticked is exactly today — the main site alone.
+	"""
+	names = [main_site] if main_site else []
+	if multi_site:
+		names += [name for name in (other_sites or []) if name and name not in names]
+	return list(dict.fromkeys(names))
+
+
+def distance_to(site, latitude, longitude) -> float | None:
+	"""Metres from a site's pin to a point, or None when the site has no pin."""
+	if site is None or site.get("latitude") is None or site.get("longitude") is None:
+		return None
+	from hrms.hr.utils import get_distance_between_coordinates
+
+	return get_distance_between_coordinates(site["latitude"], site["longitude"], latitude, longitude)
+
+
+def evaluate_sites(strict: bool, sites, latitude, longitude, accuracy_m=None):
+	"""The fence decision across every site an employee may use. Pure.
+
+	Returns (matched_site_name | None, decision, nearest_site | None), where
+	`decision` is exactly what `evaluate_geofence` returns. Each site is judged
+	by the existing single-site rule: the first that accepts wins and is named.
+	None accepting means today's decision, measured against the NEAREST site —
+	the tickbox only ever adds places to be, it never loosens the rule (owner,
+	28 Sep 2026). One site is identical to today; no site is "no location".
+	"""
+	if not sites:
+		return None, evaluate_geofence(strict, False, 0, None, accuracy_m), None
+
+	judged = []
+	for site in sites:
+		radius_m = int(site.get("checkin_radius") or 0)
+		distance_m = distance_to(site, latitude, longitude)
+		decision = evaluate_geofence(
+			strict=strict,
+			has_shift_location=True,
+			radius_m=radius_m,
+			distance_m=distance_m,
+			accuracy_m=accuracy_m,
+			free_location=bool(site.get("is_free_location")),
+		)
+		if decision is None:
+			logger.info("[geofence] site %s accepts (distance=%r)", site.get("name"), distance_m)
+			return site.get("name"), None, site
+		judged.append((distance_m if distance_m is not None else float("inf"), site, decision))
+
+	distance_m, nearest, decision = min(judged, key=lambda row: row[0])
+	logger.info(
+		"[geofence] outside all %d site(s); nearest %s at %r m -> %s",
+		len(sites),
+		nearest.get("name"),
+		distance_m,
+		decision[0],
+	)
+	return None, decision, nearest
+
+
+def employee_sites(employee: str, assignment) -> list:
+	"""The Shift Location rows this employee may check in at, main site first.
+
+	The main site is `effective_shift_location` — unchanged. When HR ticked
+	"Can check in at more than one site" on the Employee, the other sites
+	picked there are added. Only check-ins read this; the automatic shift rules
+	read Employee.shift_location alone and never see the other sites.
+	"""
+	import frappe
+
+	main = effective_shift_location(employee, assignment)
+	multi = bool(frappe.db.get_value("Employee", employee, "multi_site_checkin"))
+	others = (
+		frappe.get_all(
+			"Employee Other Site",
+			filters={"parent": employee, "parenttype": "Employee", "parentfield": "other_checkin_sites"},
+			pluck="shift_location",
+			order_by="idx asc",
+		)
+		if multi
+		else []
+	)
+	rows = []
+	for name in site_names(main, multi, others):
+		row = frappe.db.get_value(
+			"Shift Location",
+			name,
+			["name", "location_name", "checkin_radius", "latitude", "longitude", "is_free_location"],
+			as_dict=True,
+		)
+		if row:
+			rows.append(row)
+	logger.info("[geofence] %s may check in at %d site(s): %s", employee, len(rows), [r.name for r in rows])
+	return rows

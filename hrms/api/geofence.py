@@ -39,10 +39,10 @@ from hrms.hr.utils import get_distance_between_coordinates
 from hrms.utils.company_settings import is_setting_enabled_for_employee
 from hrms.utils.geofence import (
 	effective_shift_location,
-	evaluate_geofence,
+	employee_sites,
+	evaluate_sites,
 	parse_coordinates,
 	resolve_assignment,
-	resolve_location,
 )
 from hrms.utils.timezone import employee_now
 
@@ -138,25 +138,17 @@ def check_geofence(employee, log_type, latitude=None, longitude=None, time=None,
 		# RemoteCheckinDialog flow — no preflight needed.
 		return _ok()
 
-	# Fall back to Employee.shift_location when the assignment carries none — a
-	# manual/schedule assignment does, and the fence must still resolve.
-	shift_loc_name = effective_shift_location(employee, row)
-
-	loc = resolve_location(shift_loc_name)
-
-	radius_m = int(loc.checkin_radius) if loc and loc.checkin_radius else 0
-	distance_m = None
-	if loc and loc.latitude is not None and loc.longitude is not None:
-		distance_m = get_distance_between_coordinates(loc.latitude, loc.longitude, lat, lng)
-
-	decision = evaluate_geofence(
+	# Every site this person may use — the same list, and the same rule, the
+	# enforcing insert applies (HR, 28 Sep 2026: more than one site). The main
+	# site falls back to Employee.shift_location when the assignment carries none.
+	_matched, decision, loc = evaluate_sites(
 		strict=True,
-		has_shift_location=bool(shift_loc_name and loc),
-		radius_m=radius_m,
-		distance_m=distance_m,
+		sites=employee_sites(employee, row),
+		latitude=lat,
+		longitude=lng,
 		accuracy_m=accuracy,
-		free_location=bool(loc and getattr(loc, "is_free_location", 0)),
 	)
+	shift_loc_name = loc.name if loc else effective_shift_location(employee, row)
 	if decision is None:
 		return _ok()
 
@@ -238,4 +230,21 @@ def get_active_shift_location(employee: str, time: str | None = None) -> dict | 
 		# shift to name and no strict flag to honour, so lenient defaults apply.
 		"shift_type": r.shift_type if r else None,
 		"strict": bool(r.enable_strict_geofence) if r else False,
+		# Every other site this person may check in at (HR, 28 Sep 2026), so the
+		# check-in screen can measure against the nearest one — the same list the
+		# enforcing insert accepts. Empty for anyone without the tickbox.
+		"other_sites": [_site_payload(site) for site in employee_sites(employee, r) if site.name != loc.name],
+	}
+
+
+def _site_payload(site) -> dict:
+	coordinates = parse_coordinates(site.latitude, site.longitude)
+	logger.debug("[geofence.api] other site %s for the check-in map", site.name)
+	return {
+		"shift_location": site.name,
+		"label": site.location_name or site.name,
+		"latitude": coordinates[0] if coordinates else None,
+		"longitude": coordinates[1] if coordinates else None,
+		"checkin_radius": int(site.checkin_radius or 0),
+		"free_location": bool(site.is_free_location),
 	}
