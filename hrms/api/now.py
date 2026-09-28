@@ -37,7 +37,7 @@ def _open_session(employee, now):
 	last = frappe.get_all(
 		"Employee Checkin",
 		filters={"employee": employee},
-		fields=["name", "time", "log_type", "shift_actual_end"],
+		fields=["name", "time", "log_type", "shift", "shift_start", "shift_end", "shift_actual_end"],
 		order_by="time desc",
 		limit=1,
 		ignore_permissions=True,
@@ -50,7 +50,51 @@ def _open_session(employee, now):
 		logger.info("[now] employee=%s open IN %s ended at %s — not a session", employee, started, until)
 		return None
 	hours = (now - started).total_seconds() / 3600
-	return {"since": str(started), "hours": flt(hours, 2), "open_until": str(until)}
+	first_in, leave = _leave_by(employee, last[0], started)
+	return {
+		"since": str(started),
+		"hours": flt(hours, 2),
+		"open_until": str(until),
+		# The day's FIRST check-in and when the person may leave (owner, 28 Sep
+		# 2026: late in, late out; early in, out as usual). Display only.
+		"first_in": str(first_in) if first_in else None,
+		"leave_by": str(leave) if leave else None,
+	}
+
+
+def _leave_by(employee, open_in, started):
+	"""(the shift's first check-in, the time they may leave) for an open session.
+
+	From the punch's OWN stamped shift window (shift_start / shift_end), the
+	snapshot overtime prices the day by, and the FIRST IN of that shift: a
+	check-out for lunch and back in must not move the leave time, just as it
+	does not move where overtime begins (_pair_sessions: shift_first_in).
+	(None, None) when the punch carries no window."""
+	from hrms.utils.half_day_session import approved_session
+	from hrms.utils.leave_by import leave_by
+
+	if not (open_in.get("shift_start") and open_in.get("shift_end")):
+		return None, None
+	shift_start = get_datetime(open_in.shift_start)
+	shift_end = get_datetime(open_in.shift_end)
+	firsts = frappe.get_all(
+		"Employee Checkin",
+		filters={
+			"employee": employee,
+			"log_type": "IN",
+			"shift": open_in.get("shift"),
+			"shift_start": open_in.shift_start,
+		},
+		pluck="time",
+		order_by="time asc",
+		limit=1,
+		ignore_permissions=True,
+	)
+	first_in = get_datetime(firsts[0]) if firsts else started
+	session = approved_session(employee, shift_start.date())
+	leave = leave_by(first_in, shift_start, shift_end, session=session)
+	logger.info("[now] employee=%s first in %s -> leave by %s (%s)", employee, first_in, leave, session)
+	return first_in, leave
 
 
 def _shift_window(employee, on_date):

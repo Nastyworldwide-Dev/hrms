@@ -27,7 +27,10 @@
 		class="g-now"
 		:class="[
 			`g-now--${stateKey}`,
-			{ 'g-now--past': gauge && gauge.level !== 'working', 'g-now--forgot': gauge?.level === 'forgot' },
+			{
+				'g-now--past': gauge && gauge.level !== 'working',
+				'g-now--forgot': gauge?.level === 'forgot',
+			},
 		]"
 	>
 		<!-- The date is content, so it sits with today's content, once — not in
@@ -69,14 +72,16 @@
 			<div class="g-now__gauge-ends" aria-hidden="true">
 				<span>{{ clockTime(shift.start) }}</span>
 				<b>{{ gaugeMiddle }}</b>
-				<span>{{ clockTime(shift.end) }}</span>
+				<span>{{ leaveHHMM || clockTime(shift.end) }}</span>
 			</div>
 		</div>
 		<!-- Long past the shift end: probably a forgotten check-out. Said once,
 		     with one wiggle so it is not missed (Apple: Wiggle, "a call to action
 		     a person might overlook"); the fix is the card's own button below. -->
 		<p v-if="gauge?.level === 'forgot'" class="g-now__forgot" role="status">
-			{{ __("Your shift ended at {0}. Forgot to check out?", [clockTime(shift.end)]) }}
+			{{
+				__("You were due to leave at {0}. Forgot to check out?", [leaveAt || clockTime(shift.end)])
+			}}
 		</p>
 		<!-- The shift line's place while pending (alpha.8 r3: it arrived after
 		     the state and pushed the Check in button down 24 pt). -->
@@ -158,10 +163,32 @@ const stateLine = computed(() => {
 		: __(label)
 })
 
+//: The day's first check-in and the leave time, from the server (now.py
+//: _leave_by: the shift end, later by however late they came in). On the site
+//: clock, as `since` is.
+const firstIn = computed(() => {
+	const v = session.value?.first_in
+	const t = v ? siteTime(v) : null
+	return t?.isValid() ? t : null
+})
+const leaveTime = computed(() => {
+	const v = session.value?.leave_by
+	const t = v ? siteTime(v) : null
+	return t?.isValid() ? t : null
+})
+const inAt = computed(() => (firstIn.value ? firstIn.value.format("h:mm a") : ""))
+const leaveAt = computed(() => (leaveTime.value ? leaveTime.value.format("h:mm a") : ""))
+const leaveHHMM = computed(() => (leaveTime.value ? leaveTime.value.format("HH:mm") : null))
+
 const detail = computed(() => {
 	if (!data.value.state && nowResource.error) return ""
 	// The shift window, when there is one — that is the thing a person checks
 	// the bar for after the state itself.
+	// While working: when they came in and when they may leave (owner, 28 Sep
+	// 2026: his screenshot had no check-in time, and late in means late out).
+	if (stateKey.value === "working" && inAt.value && leaveAt.value) {
+		return __("In {0} · leave at {1}", [inAt.value, leaveAt.value])
+	}
 	if (shift.value) {
 		return __("{0} · {1}–{2}", [
 			shift.value.shift,
@@ -189,7 +216,9 @@ watch(
 )
 const nowMin = computed(() => {
 	void tick.value
-	const [h, m] = String(data.value.time || "").split(":").map(Number)
+	const [h, m] = String(data.value.time || "")
+		.split(":")
+		.map(Number)
 	if (!Number.isFinite(h) || !Number.isFinite(m)) return null
 	return (h * 60 + m + Math.floor((Date.now() - answeredAt.value) / 60000)) % (24 * 60)
 })
@@ -198,7 +227,12 @@ const nowMin = computed(() => {
 //: means something. Worked out from the window, never counted.
 const gauge = computed(() =>
 	stateKey.value === "working" && shift.value && nowMin.value !== null
-		? shiftGauge({ start: shift.value.start, end: shift.value.end, nowMin: nowMin.value })
+		? shiftGauge({
+				start: shift.value.start,
+				end: shift.value.end,
+				leaveBy: leaveHHMM.value,
+				nowMin: nowMin.value,
+		  })
 		: null
 )
 
@@ -209,7 +243,6 @@ const gaugeMiddle = computed(() => {
 		? __("{0} past the end", [span(gauge.value.pastMin)])
 		: __("{0} left", [span(gauge.value.leftMin)])
 })
-
 
 //: The state line in two parts, so the running time can roll on its own.
 const stateClock = computed(() =>

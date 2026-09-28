@@ -1,3 +1,3 @@
-GOAL: closing any sheet that holds a file preview no longer throws.
-DONE WHEN: FilePreviewModal makes a blob URL only for a real Blob, once, and releases it once (utils/previewSource.js).
-CHECK: node --test frontend/src/components/__tests__/file-preview-no-crash.test.js; live: opening/closing Your request and Time off requests 3x each — before, TypeError "createObjectURL ... Overload resolution failed" per close; after, none; a picked PNG still previews (blob:, naturalWidth 1).
+GOAL: Today's card measures a late person to their own leave time (shift end + lateness), and shows when they came in.
+DONE WHEN: now.get_now session carries first_in and leave_by (hrms/utils/leave_by.py, equal to ot_calculation._ot_window_begin); NowBar says "In X · leave at Y", the gauge fills to Y, past/forgot count from Y.
+CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_leave_by.py; node --test frontend/src/utils/__tests__/shiftGauge.test.js; bench --site fresh.local execute hrms.tests.probes.leave_by_probe.run (in 09:45 -> leave_by 18:45); phone render at 18:07 "38m left", 18:50 "5m past the end", 21:50 forgot.

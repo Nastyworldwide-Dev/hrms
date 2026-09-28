@@ -60,3 +60,9 @@ Root cause: Ionic's sheet gesture yields only to a drag inside `ion-content`; GM
 FLOW: GModal -> ion-modal(sheet) -> .g-sheet (column) -> head | ion-content.g-sheet__content -> body slot.
 MOCKUP: NOT NEEDED (no visual change intended; iOS gate's sheet-consistency and sheet-shift audits verify look and motion).
 EXPECTED OUTPUT: in a sheet, dragging the list scrolls it and never moves or closes the sheet; the grabber/title bar still drags; short sheets stay short.
+
+## G. Today card: late in, late out (owner, 28 Sep 2026: "happy, proceed")
+Owner rule: "shift 9-6 ... late 9.30 in, out 6.30; early in, out as usual; on time, as usual." The card measured only against the shift. Fix: one pure rule hrms/utils/leave_by.py (= ot_calculation._ot_window_begin, proven equal by test), the day's FIRST IN from the punch's own stamped shift window, half-day aware; now.py sends first_in + leave_by; NowBar shows "In 9:45 am · leave at 6:45 pm", the gauge fills to it, "past" and "Forgot to check out?" count from it. Backend attendance/OT/session rules untouched (display only).
+FLOW: now.get_now -> _open_session -> _leave_by(first IN of the shift, stamped shift_start/end, approved half-day) -> leave_by() -> NowBar -> shiftGauge(leaveBy).
+MOCKUP: NOT NEEDED (same card; one detail line changes and the gauge's right label; screenshots /tmp/card-*.png).
+EXPECTED OUTPUT: in 9:45 on 9-6: at 18:07 "38m left", at 18:50 "5m past the end", at 21:50 "Forgot to check out?"; early/on-time = unchanged.

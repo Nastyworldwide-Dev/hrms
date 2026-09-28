@@ -1,3 +1,31 @@
-docs(handoff): alpha.16 done
+feat(home): Today shows when you came in and when you can leave
+
+Owner, 28 Sep 2026, with a screenshot: "the actual clock in hour is
+missing ... shift 9-6, late 9.30am in i must clock out 6.30pm. early
+in, can out as usual ... in time in, same as shift." The card said
+"Working · 8h 22m" with no check-in time, and its bar ran 09:00-18:00
+for everyone: in at 9:45, at 18:07 it read "7m past the end" in
+orange while 38 minutes were still owed.
+
+One rule, hrms/utils/leave_by.py: the shift end, later by however late
+the person came in; early is not credited. It is the rule overtime
+already pays by (ot_calculation._ot_window_begin) — a test locks the
+two equal for early, on-time and late arrivals — so the card and the
+pay cannot disagree about when the day is done. Half-day leave moves
+the boundary to the middle of the shift, as late/early marking does.
+
+now.get_now's session now carries first_in (the shift's FIRST check-in,
+so a lunch check-out and back in does not move it) and leave_by, from
+the punch's own stamped shift window. The card reads "In 9:45 am ·
+leave at 6:45 pm", the gauge fills to 18:45, and "past the end" and
+"Forgot to check out?" count from there.
+
+Display only. When a session may still check out (06:00 next morning
+or the shift's window), attendance hours, overtime and the nightly
+abandoned-check-in sweep are all unchanged (owner, 28 Sep: keep them).
+
+Checked live on fresh.local (rolled back): in 09:45 on 09:00-18:00 ->
+leave_by 18:45. On the phone: 18:07 "38m left", 18:50 "5m past the
+end", 21:50 "You were due to leave at 6:45 pm. Forgot to check out?".
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
