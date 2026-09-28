@@ -1,25 +1,30 @@
-fix(calendar): team line said "not in yet" for people already in
+feat(calendar): the day sheet shows your team, by name
 
-Owner report, 28 Sep 2026, with screenshots: at 10:25 a senior opened
-today on the Calendar and read "Your team · 6 not in yet", while the
-Team page behind it listed all six Present with their IN times.
+Owner, 28 Sep 2026: "team that are in ... must be shown at calendar
+page, alongside the roster." The sheet only carried a count line, so a
+senior had to leave the Calendar for the Team page to see who.
 
-The two screens answered "who is in" with two different rules. The
-Team page reads punches, approved leave and the member's clock
-(derive_member_status). The Calendar's _coverage counted Attendance
-rows only — and auto-attendance writes those after the shift, so
-every punched-in person was "unmarked" until the job ran. Not a
-regression: it counted that way from the day it was written
-(bc896836f). Its "on leave" count had the same gap (Attendance status
-instead of the approved leave), and its idea of "my team" was a second
-list that could drift from the Team page's.
+The sheet now lists the rows the server already sends (`team`, the
+Team page's own member_statuses since f56e7cc04), grouped by status in
+the order a manager reads a day: In, Not in yet, Absent, On leave, Off.
+Five names show, then "See all" opens the Team page on that date, and
+"Open team roster" sits beside them (owner Q4: everyone, grouped, five
+then See all).
 
-Now one rule: get_team_status's body is member_statuses() and
-own_team_members(); the day sheet calls both and counts the same rows,
-and carries them as `team` for the names on the sheet. Owner Q3: the
-manager's whole reporting line on both screens.
+A person's second line ("IN 09:02 · OUT —", "Shift 09:00–18:00 · no
+punch yet", leave type until when, never the reason) moved from
+TeamDashboard into utils/team.js memberLine, and both screens call it,
+so the Calendar and the Team page can't describe the same person
+differently.
 
-Proved on the site, synthetic rows rolled back: HEAD gives sheet
-present 0 / unmarked 3 against the page's Present 2; after, both 2/1.
+Also adds a probe (team_line_parity_probe.hr_fence) confirming HR
+browsing another manager's team is still company-fenced after the
+f56e7cc04 extraction, which its review could not finish tracing: PASS,
+the out-of-fence report is excluded.
+
+Checked on fresh.local with a synthetic senior and six reports (four
+punched in, one on leave, one not in): "Your team · 4 of 6 in · 1 on
+leave · 1 not in yet", In (4), Not in yet (1), See all 6. Fixture
+dropped after.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

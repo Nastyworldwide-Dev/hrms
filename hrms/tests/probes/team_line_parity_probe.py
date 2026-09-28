@@ -108,3 +108,53 @@ def scenario():
 		return ok
 	finally:
 		frappe.db.rollback(save_point="team_line_parity")
+
+
+def hr_fence():
+	"""HR browsing another manager's team stays company-fenced after the
+	member_statuses / own_team_members extraction: a report in a company
+	outside the fence must not appear. Synthetic, rolled back."""
+	from unittest.mock import patch
+
+	from hrms.api import team
+
+	frappe.db.savepoint("team_hr_fence")
+	try:
+		companies = frappe.get_all("Company", pluck="name", limit=2)
+		if len(companies) < 2:
+			print("SKIP need two companies")
+			return None
+		inside, outside = companies
+		gender = frappe.db.get_value("Gender", {}, "name")
+
+		def employee(tag, company, reports_to=None):
+			doc = frappe.new_doc("Employee")
+			doc.update(
+				{
+					"first_name": f"FenceProbe {tag}",
+					"company": company,
+					"gender": gender,
+					"date_of_birth": "1990-01-01",
+					"date_of_joining": "2020-01-01",
+					"status": "Active",
+					"reports_to": reports_to,
+				}
+			)
+			doc.flags.ignore_permissions = doc.flags.ignore_mandatory = True
+			doc.insert()
+			return doc.name
+
+		boss = employee("Boss", inside)
+		kept = employee("Inside", inside, boss)
+		fenced = employee("Outside", outside, boss)
+		with (
+			patch.object(team, "_is_hr", return_value=True),
+			patch.object(team, "_my_employee", return_value=None),
+			patch.object(team, "allowed_companies", return_value=[inside]),
+		):
+			names = {m["employee"] for m in team.get_team_status(nowdate(), manager=boss)["members"]}
+		ok = kept in names and fenced not in names
+		print(("PASS" if ok else "FAIL"), "members", sorted(names), "kept", kept, "fenced", fenced)
+		return ok
+	finally:
+		frappe.db.rollback(save_point="team_hr_fence")

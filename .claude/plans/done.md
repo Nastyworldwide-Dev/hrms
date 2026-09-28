@@ -1,3 +1,3 @@
-GOAL: the Calendar day sheet's team line and the Team page never disagree about who is in — both read one member-status rule (punches count before auto-attendance writes its row).
-DONE WHEN: calendar.get_day's coverage is counted from hrms.api.team.member_statuses over own_team_members, and carries the same rows as `team`.
-CHECK: PYTHONPATH=. python3 -m pytest -q hrms/api/test_calendar_team_matches_team_page.py; bench --site spoke.localhost execute hrms.tests.probes.team_line_parity_probe.scenario (FAIL on HEAD: sheet present 0 / unmarked 3, page Present 2; PASS after).
+GOAL: the Calendar day sheet shows the manager's team by name, grouped by status (In / Not in yet / Absent / On leave / Off), five names then See all, with Open team roster beside it — same rows and same words as the Team page.
+DONE WHEN: DaySheet renders daySheet.data.team through dayTeamGroups + memberLine (shared with TeamDashboard), See all opens the Team page on that date, Open team roster opens the roster.
+CHECK: yarn --cwd frontend test (1525 pass); live on fresh.local with a synthetic senior + 6 reports: sheet reads "Your team · 4 of 6 in · 1 on leave · 1 not in yet", In (4) with IN times, Not in yet (1), See all 6, Open team roster (fixture dropped after).

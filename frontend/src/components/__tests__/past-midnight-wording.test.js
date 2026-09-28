@@ -17,7 +17,9 @@ test("the day sheet names the next-day tap and where a stray one counted", () =>
 })
 
 test("the team line says (next day) and where it counted", () => {
-	const team = read("../../views/team/TeamDashboard.vue")
+	// The words live in utils/team.js memberLine since 28 Sep 2026, shared by
+	// the Team page and the Calendar day sheet.
+	const team = read("../../utils/team.js")
 	assert.match(team, /member\.out_next_day \? __\("\{0\} \(next day\)", \[out\]\)/)
 	assert.match(team, /__\("Worked past midnight · counted on \{0\}"/)
 })

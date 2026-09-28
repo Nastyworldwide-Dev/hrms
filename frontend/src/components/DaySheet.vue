@@ -7,8 +7,8 @@
 
   EVERY SECTION IS THE SERVER'S ANSWER. This component renders what arrives
   and holds no role logic at all: an employee gets their own day, an approver
-  additionally gets who in their line is off, a manager gets the coverage
-  line. There is nothing here to keep in step with the backend's rules, and
+  additionally gets their direct team (the Team page's rows, 28 Sep 2026)
+  with the coverage line. There is nothing here to keep in step with the backend's rules, and
   nothing here that could disagree with them.
 
   A section that did not arrive renders NOTHING — not an empty state saying
@@ -70,11 +70,40 @@
 					<GListRow :label="teamSummary" @click="openTeam" />
 				</GListPanel>
 
+				<!-- The names, grouped by status (owner, 28 Sep 2026: the team on
+				     the Calendar, alongside the roster). Same rows and words as
+				     the Team page; five names, then See all. -->
+				<section v-for="group in shownGroups" :key="group.status" class="g-form-section">
+					<h2 class="g-form-section__title">
+						{{ __(groupTitle(group.status)) }} ({{ group.total }})
+					</h2>
+					<GListPanel>
+						<GListRow
+							v-for="member in group.members"
+							:key="member.employee"
+							:label="member.employee_name"
+							:sublabel="memberLine(member, __, lineFormat)"
+							:chevron="false"
+							:tappable="false"
+						/>
+					</GListPanel>
+				</section>
+				<GListPanel v-if="hiddenCount > 0">
+					<GListRow :label="__('See all {0}', [teamRows.length])" @click="openTeam" />
+				</GListPanel>
+				<GListPanel v-if="teamRows.length">
+					<GListRow :label="__('Open team roster')" @click="openRoster" />
+				</GListPanel>
+
 				<!-- Exactly one main action, chosen by the day, or one line saying
 				     there is nothing to do (D10: it offered "fix" on every day). -->
 				<GButton v-if="action.kind === 'claim'" :label="__(action.label)" @click="claimOt" />
 				<GButton v-else-if="action.kind === 'fix'" :label="__(action.label)" @click="fixDay" />
-				<GButton v-else-if="action.kind === 'leave'" :label="__(action.label)" @click="askDayOff" />
+				<GButton
+					v-else-if="action.kind === 'leave'"
+					:label="__(action.label)"
+					@click="askDayOff"
+				/>
 				<p v-else-if="action.note" class="g-form-footer">
 					{{ __(action.note, action.noteArgs) }}
 				</p>
@@ -88,6 +117,8 @@ import { computed, inject, watch } from "vue"
 import { useRouter } from "vue-router"
 
 import { teamLine } from "@/utils/teamLine"
+import { dayTeamGroups, DAY_TEAM_PREVIEW } from "@/utils/dayTeamGroups"
+import { memberLine } from "@/utils/team"
 
 import GButton from "@/components/glass/GButton.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
@@ -118,6 +149,36 @@ const coverage = computed(() => daySheet.data?.coverage)
 const teamSummary = computed(() =>
 	teamLine(coverage.value, props.date, $dayjs().format("YYYY-MM-DD"), __)
 )
+
+//: The day's team, grouped (utils/dayTeamGroups.js). Only the first five
+//: names show across the groups; See all opens the Team page on this date.
+const teamRows = computed(() => daySheet.data?.team || [])
+const shownGroups = computed(() => {
+	let left = DAY_TEAM_PREVIEW
+	return dayTeamGroups(teamRows.value)
+		.map((group) => {
+			const members = group.members.slice(0, Math.max(left, 0))
+			left -= members.length
+			return { status: group.status, total: group.members.length, members }
+		})
+		.filter((group) => group.members.length)
+})
+const hiddenCount = computed(
+	() => teamRows.value.length - shownGroups.value.reduce((n, g) => n + g.members.length, 0)
+)
+
+//: Group headings in the person's words, not the stored status.
+const GROUP_TITLES = { Present: "In", "Not In Yet": "Not in yet", "On Leave": "On leave" }
+function groupTitle(status) {
+	return GROUP_TITLES[status] || status
+}
+
+const lineFormat = {
+	punch: (value) => (value ? $dayjs(value).format("HH:mm") : "—"),
+	time: (value) => clockTime(value) || "—",
+	day: (value) => $dayjs(value).format("ddd D MMM"),
+	shortDay: (value) => $dayjs(value).format("D MMM"),
+}
 
 //: "Wed 16 Sep · Worked": the date plus one status word (§4 rule 1). Short
 //: date parts keep it on one line; no word until the day has loaded.
@@ -168,6 +229,11 @@ function fixDay() {
 function openTeam() {
 	console.info("[DaySheet] opening team for", props.date)
 	router.push({ name: "TeamView", query: { date: props.date } })
+}
+
+function openRoster() {
+	console.info("[DaySheet] opening team roster from", props.date)
+	router.push({ name: "TeamRosterView" })
 }
 
 //: A future work day: the leave form, already on that date (§4 row 13).

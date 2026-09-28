@@ -112,7 +112,11 @@
 											{{ [member.designation, summaryLine(member)].filter(Boolean).join(" · ") }}
 										</span>
 									</span>
-									<GStatusChip class="flex-none" :status="member.status" :label="__(member.status)" />
+									<GStatusChip
+										class="flex-none"
+										:status="member.status"
+										:label="__(member.status)"
+									/>
 								</div>
 
 								<!-- expanded detail -->
@@ -123,7 +127,8 @@
 										}}
 									</span>
 									<span>
-										{{ __("First in") }}: {{ formatPunch(member.first_in) }} · {{ __("Last out") }}:
+										{{ __("First in") }}: {{ formatPunch(member.first_in) }} ·
+										{{ __("Last out") }}:
 										{{ formatPunch(member.last_out) }}
 									</span>
 									<span v-if="member.leave_type">
@@ -187,7 +192,12 @@ import { clockTime } from "@/utils/daySheet"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import { teamManagers, teamStatus } from "@/data/team"
-import { buildManagerOptions, buildTeamCalendarDays, groupByDepartment } from "@/utils/team"
+import {
+	buildManagerOptions,
+	buildTeamCalendarDays,
+	groupByDepartment,
+	memberLine,
+} from "@/utils/team"
 import { departmentLabel } from "@/utils/departmentLabel"
 
 const __ = inject("$translate")
@@ -284,32 +294,16 @@ function formatTime(value) {
 	return clockTime(value) || "—"
 }
 
+//: The shared words for a member's day (utils/team.js memberLine), so the
+//: Calendar day sheet and this page describe a person the same way.
+const lineFormat = {
+	punch: formatPunch,
+	time: formatTime,
+	day: (value) => dayjs(value).format("ddd D MMM"),
+	shortDay: (value) => dayjs(value).format("D MMM"),
+}
+
 function summaryLine(member) {
-	if (member.status === "On Leave") {
-		const type = __(member.leave_type, null, "Leave Type")
-		return `${type} · ${__("until")} ${dayjs(member.leave_until).format("D MMM")}`
-	}
-	if (member.first_in || member.last_out) {
-		// A check-out after midnight says so (owner, 26 Sep 2026): it belongs
-		// to this work day, and "OUT 01:41" alone read as a missed check-out.
-		const out = formatPunch(member.last_out)
-		return `${__("IN")} ${formatPunch(member.first_in)} · ${__("OUT")} ${
-			member.out_next_day ? __("{0} (next day)", [out]) : out
-		}`
-	}
-	if (member.counted_on) {
-		// Worked past midnight into this date: nothing to show here, and where
-		// it counted instead of a bare, confusing tap.
-		return __("Worked past midnight · counted on {0}", [dayjs(member.counted_on).format("ddd D MMM")])
-	}
-	if (member.status === "Not In Yet" && member.shift_start) {
-		return `${__("Shift")} ${formatTime(member.shift_start)}–${formatTime(
-			member.shift_end
-		)} · ${__("no punch yet")}`
-	}
-	if (member.status === "Absent") {
-		return __("No punch · no leave filed")
-	}
-	return __(member.status)
+	return memberLine(member, __, lineFormat)
 }
 </script>

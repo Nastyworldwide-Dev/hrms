@@ -115,12 +115,21 @@ test("the day sheet holds no role logic", () => {
 	assert.match(sheet, /v-if="teamSummary"/, "and nothing when a section did not")
 })
 
-test("the team is ONE line that opens the Team page on that date (ruling 1)", () => {
-	// The line is the door, the Team page is the room: no names, no tile
-	// strip here (AUDIT-PLAN "Team line", no repeat).
+test("the team line opens the Team page on that date (ruling 1)", () => {
 	assert.match(sheet, /teamLine\(coverage\.value, props\.date/)
 	assert.match(sheet, /name: "TeamView", query: \{ date: props\.date \}/)
 	assert.doesNotMatch(sheet, /GMetaGrid|Who is off/)
+})
+
+test("the team's names show on the sheet, grouped, five then See all (owner, 28 Sep 2026)", () => {
+	// Supersedes "no names here" (ruling 1, 23 Sep): the owner asked for the
+	// team on the Calendar, alongside the roster. Rows are the server's
+	// `team` section (the Team page's own rule); words are the Team page's.
+	assert.match(sheet, /daySheet\.data\?\.team/, "renders the server's rows")
+	assert.match(sheet, /dayTeamGroups\(teamRows\.value\)/, "grouped by status")
+	assert.match(sheet, /DAY_TEAM_PREVIEW/, "five, then See all")
+	assert.match(sheet, /memberLine\(member, __, lineFormat\)/, "the Team page's words")
+	assert.match(sheet, /name: "TeamRosterView"/, "alongside the roster")
 })
 
 test("a manager never sees why somebody is off", () => {
@@ -133,7 +142,10 @@ test("a manager never sees why somebody is off", () => {
 	// The sheet's team rows come from the Team page's own reader since 28 Sep
 	// 2026 (hrms.api.team.member_statuses), so that is where leave is selected.
 	const teamApi = readFileSync(join(SRC, "../../hrms/api/team.py"), "utf8")
-	const who = teamApi.slice(teamApi.indexOf("def member_statuses"), teamApi.indexOf("def get_team_roster"))
+	const who = teamApi.slice(
+		teamApi.indexOf("def member_statuses"),
+		teamApi.indexOf("def get_team_roster")
+	)
 	assert.match(who, /"Leave Application"/, "leave is read here")
 	assert.doesNotMatch(who, /"description"/, "the reason is never selected")
 	assert.match(who, /"leave_type": leave and leave\.leave_type/, "the type is")

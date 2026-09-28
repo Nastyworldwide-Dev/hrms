@@ -64,3 +64,32 @@ export const buildTeamCalendarDays = (firstOfMonth, selectedDate, today) => {
 	console.info("[team] calendar days:", month, length, "selected", selectedDate)
 	return days
 }
+
+// One member's second line — the Team page's and the Calendar day sheet's
+// shared words for a person's day (28 Sep 2026), so the two screens can never
+// describe the same person differently. Pure: `__` translates, `fmt` formats
+// (punch: a datetime to HH:mm, time: a shift time, day / shortDay: dates).
+export function memberLine(member, __, fmt) {
+	if (member.status === "On Leave") {
+		const type = __(member.leave_type, null, "Leave Type")
+		return `${type} · ${__("until")} ${fmt.shortDay(member.leave_until)}`
+	}
+	if (member.first_in || member.last_out) {
+		// A check-out after midnight says so (owner, 26 Sep 2026): it belongs
+		// to this work day, and "OUT 01:41" alone read as a missed check-out.
+		const out = fmt.punch(member.last_out)
+		return `${__("IN")} ${fmt.punch(member.first_in)} · ${__("OUT")} ${
+			member.out_next_day ? __("{0} (next day)", [out]) : out
+		}`
+	}
+	if (member.counted_on) {
+		return __("Worked past midnight · counted on {0}", [fmt.day(member.counted_on)])
+	}
+	if (member.status === "Not In Yet" && member.shift_start) {
+		return `${__("Shift")} ${fmt.time(member.shift_start)}–${fmt.time(member.shift_end)} · ${__(
+			"no punch yet"
+		)}`
+	}
+	if (member.status === "Absent") return __("No punch · no leave filed")
+	return __(member.status)
+}
