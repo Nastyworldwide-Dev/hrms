@@ -74,6 +74,10 @@ class DecisionDocument(filing.ot_request.OTRequest):
 	def set(self, field, value):
 		setattr(self, field, value)
 
+	# on_submit stamps Approved On (38f6087ba) straight to the row
+	def db_set(self, field, value, **kwargs):
+		setattr(self, field, value)
+
 	def check_permission(self, permission):
 		assert permission == "read"
 
