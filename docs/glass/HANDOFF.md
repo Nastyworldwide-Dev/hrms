@@ -1,14 +1,15 @@
 # HANDOFF
-prompt:   29 Sep 2026 — alpha.19: team in the calendar, approvers guided
+prompt:   29 Sep 2026 — alpha.20: approval line, reminders, calmer Requests + Home
 status:   done
-commit:   32a5e86e1 on nz-glass (tag v2.0.0-alpha.19)
-files:    frontend/src/components/DaySheet.vue
-          frontend/src/components/glass/GCalendar.vue
-          hrms/api/calendar.py
+commit:   ecfb1b60f on nz-glass (tag v2.0.0-alpha.20)
+files:    hrms/hr/utils.py
           hrms/api/approval.py
-          frontend/src/components/RequestActionSheet.vue
-          frontend/src/composables/decisionCapability.js
+          hrms/overrides/approval_row_scope.py
+          hrms/utils/approval_reminders.py
+          frontend/src/components/RequestBalances.vue
+          frontend/src/components/BottomTabs.vue
+          frontend/src/components/NeedsYou.vue
           docs/glass/CHANGELOG.md
-verify:   after deploy: a team lead's Calendar shows "N off"; open a day -> one team heading, counts match names; approve a leave over a worked day -> note + Reject only
-flags:    filer-side guidance not built (next release, reuses _approve_would_refuse); CheckinDecisionSheet has no note yet
-next:     owner deploys alpha.17 + 18 + 19 together
+verify:   after deploy: a reports-to manager approves a report's leave/expense; HR Settings shows Backup approval levels (2) and the two reminder days; Requests shows "+" top right
+flags:    approvals_list Yours/Other split still uses reports_to for placement (display only); test_ot_notification_properties red since before alpha.20
+next:     owner deploys alpha.17–20; alpha.21 = undo on withdraw, guide the filer, bigger text
