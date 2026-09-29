@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url"
 
 const src = readFileSync(fileURLToPath(new URL("../RequestBalances.vue", import.meta.url)), "utf8")
 
-test("the balances have a header and are one tappable row", () => {
+test("the balances have a header and a row that opens every balance", () => {
 	assert.match(src, /__\("Leave left"\)/)
-	assert.match(src, /class="g-form-row g-form-row--action g-balances-row"[\s\S]{0,80}@click="openAll"/)
+	assert.match(src, /:label="__\('All balances'\)"[\s\S]{0,40}@click="openAll"/)
 })

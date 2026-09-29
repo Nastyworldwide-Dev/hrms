@@ -8,6 +8,9 @@
 			<template v-if="$slots.actions" #actions>
 				<slot name="actions" />
 			</template>
+			<template v-if="$slots.primary" #primary>
+				<slot name="primary" />
+			</template>
 		</ShellHeader>
 
 		<ion-content ref="content" class="ion-no-padding g-page__content">

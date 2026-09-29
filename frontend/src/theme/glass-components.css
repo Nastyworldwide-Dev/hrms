@@ -2202,6 +2202,14 @@ html[data-theme="dark"] .g-cal__day--present {
 .g-header__spacer {
 	flex: 1;
 }
+/* a tab root's one primary action (Requests' "+"), pushed to the trailing
+   side beside the bell: the hidden title leaves nothing else to push it */
+.g-header__primary {
+	display: flex;
+	flex: none;
+	margin-left: auto;
+}
+
 /* a pushed screen's own controls, in place of bell + avatar */
 .g-header__actions {
 	display: flex;
@@ -4489,6 +4497,11 @@ html {
 .g-header--large .g-header__action + .g-header__avatar-link {
 	margin-left: 0;
 }
+/* With a primary action ("+"), it takes the push and the bell sits beside it
+   (owner, 29 Sep 2026: "+" top right on Requests). */
+.g-header--large .g-header__primary + .g-header__action {
+	margin-left: 0;
+}
 .g-header--inline {
 	display: grid;
 	/* Equal side tracks keep the title centred; every track can shrink, so a
@@ -4699,6 +4712,9 @@ html {
 }
 .g-form-row.g-req-row > .g-badge {
 	flex: 0 0 auto;
+	/* one line, always (owner, 29 Sep 2026: "Approved · unpaid" wrapped); the
+	   label on the left gives way with an ellipsis instead */
+	white-space: nowrap;
 }
 .g-seeall {
 	color: var(--g-ink2);
@@ -4862,6 +4878,39 @@ ion-modal.g-mustread {
 	width: 16px;
 	height: 16px;
 	color: var(--g-ink3);
+}
+
+/* Leave left as two numbers (owner, 29 Sep 2026, option A): the number in
+   the display face, its word under it, two across. */
+.g-balance-tiles {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+}
+.g-balance-tile {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	padding: var(--g-pad-panel);
+	border-radius: var(--g-radius-panel);
+	background: var(--g-glass-fill-fallback);
+}
+.g-balance-tile__number {
+	font-family: var(--g-font-display);
+	font-size: 34px;
+	line-height: 41px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink);
+}
+.g-balance-tile__label {
+	font-size: 15px;
+	line-height: 20px;
+	color: var(--g-ink2);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 /* The balance card says what its number counts (25 Sep 2026). */

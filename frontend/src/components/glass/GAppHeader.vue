@@ -72,6 +72,9 @@
 		     keeps a spacer so its title stays centred. -->
 		<span v-else-if="showBack" class="g-header__trail" aria-hidden="true" />
 		<template v-else-if="!showBack">
+		<!-- A tab root's one primary action (Requests' "+"), leading the bell
+		     and avatar (Apple toolbars: "Only specify one primary action"). -->
+		<span v-if="$slots.primary" class="g-header__primary"><slot name="primary" /></span>
 		<button
 			type="button"
 			class="g-header__action g-focusable"

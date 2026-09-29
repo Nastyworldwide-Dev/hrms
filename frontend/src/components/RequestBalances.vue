@@ -11,8 +11,8 @@
   already filtered — a number you cannot act on is a number that makes the
   reader do the work of finding what it refers to.
 
-  Leave is ONE line of what is left (owner ruling, 23 Sep 2026: the Requests
-  page fits one phone screen). The pro-rated denominator — a mid-year joiner
+  Leave is TWO numbers, what is left of the two most-used types (owner, 29 Sep
+  2026, option A; it was one cramped line since 23 Sep). The pro-rated denominator — a mid-year joiner
   with 7 of 14 has used none of it — and any expiry are in the All balances
   sheet, one tap away.
 
@@ -63,18 +63,26 @@
 					<span class="g-form-row__label">{{ __("None allocated yet") }}</span>
 				</div>
 			</div>
-			<div v-else class="g-form-group">
-				<button
-					type="button"
-					class="g-form-row g-form-row--action g-balances-row"
-					:aria-label="`${line}. ${__('All balances')}`"
-					@click="openAll"
-				>
-					<span class="g-form-row__label" data-testid="balances-line">{{ line }}</span>
-					<span class="g-balances-row__all">{{ __("All") }}</span>
-					<ChevronRight class="g-balances-row__chevron" aria-hidden="true" />
-				</button>
-			</div>
+			<template v-else>
+				<!-- Two numbers, read at a glance (owner, 29 Sep 2026, option A):
+				     the one line read as a cramped sentence. Every other type is
+				     one tap away, in All balances. -->
+				<div class="g-balance-tiles">
+					<div
+						v-for="row in shownLeave"
+						:key="row.leave_type"
+						class="g-balance-tile"
+						role="group"
+						:aria-label="__('{0}: {1} days left', [shortLeaveName(row.leave_type), trim(row.balance)])"
+					>
+						<span class="g-balance-tile__number" aria-hidden="true">{{ trim(row.balance) }}</span>
+						<span class="g-balance-tile__label" aria-hidden="true">{{ shortLeaveName(row.leave_type) }}</span>
+					</div>
+				</div>
+				<GListPanel>
+					<GListRow :label="__('All balances')" @click="openAll" />
+				</GListPanel>
+			</template>
 		</section>
 		<GModal :is-open="allOpen" :title="__('All balances')" @did-dismiss="allOpen = false">
 			<GListPanel>
@@ -125,7 +133,7 @@ import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
 
 import { requestsSummary } from "@/data/requestsSummary"
-import { balancesLine, trimNumber as trim } from "@/utils/requestsPage"
+import { shortLeaveName, trimNumber as trim } from "@/utils/requestsPage"
 import { unmarkedLabel, unmarkedRoute } from "@/utils/unmarkedLabel"
 
 const __ = inject("$translate")
@@ -164,8 +172,6 @@ const rankedLeave = computed(() =>
 )
 
 const shownLeave = computed(() => rankedLeave.value.slice(0, LEAVE_SHOWN))
-//: "Annual 6 · Medical 13" — the pinned pair, remaining balance, trimmed.
-const line = computed(() => balancesLine(shownLeave.value))
 
 function openAll() {
 	console.info("[RequestBalances] opening all balances", leave.value.length)

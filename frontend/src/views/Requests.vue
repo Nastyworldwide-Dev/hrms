@@ -19,15 +19,19 @@
 -->
 <template>
 	<BaseLayout :pageTitle="__('Requests')">
+		<!-- New request is the title bar's "+" (owner, 29 Sep 2026, alpha.20
+		     plan C; Apple: one primary action, top trailing). The big lime
+		     button that led the page is gone, so the balances come first. -->
+		<template #primary>
+			<GIconButton :label="__('New request')" @click="typeSheetOpen = true">
+				<Plus class="g-icon" aria-hidden="true" />
+			</GIconButton>
+		</template>
 		<template #body>
 			<GPullRefresh @refresh="refreshRequests" />
 			<div
 				class="flex flex-col gap-5 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:py-7"
 			>
-				<!-- Owner-approved one-screen layout (23 Sep 2026): the action
-				     first, then the numbers as one line, then what needs you, then
-				     your last five. ONE button, one type sheet (audit P1-B). -->
-				<GButton :label="__('New request')" @click="typeSheetOpen = true" />
 				<!-- §5: the numbers sit where the decision is made. The strip
 				     renders nothing when there is nothing to say. -->
 				<RequestBalances />
@@ -47,14 +51,14 @@
 <script setup>
 import { TILE } from "@/utils/iconTile"
 import { defineAsyncComponent, inject, ref } from "vue"
-import { CalendarCheck, CalendarClock, Clock, Palmtree, Receipt } from "lucide-vue-next"
+import { CalendarCheck, CalendarClock, Clock, Palmtree, Plus, Receipt } from "lucide-vue-next"
 import { useRouter } from "vue-router"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import RequestBalances from "@/components/RequestBalances.vue"
 import RequestPanel from "@/components/RequestPanel.vue"
 import GActionSheet from "@/components/glass/GActionSheet.vue"
-import GButton from "@/components/glass/GButton.vue"
+import GIconButton from "@/components/glass/GIconButton.vue"
 //: Loaded on first use, not in the first download (alpha.13: Ionic's
 //: refresher is 41 KB, and nobody pulls before the page has drawn).
 const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))

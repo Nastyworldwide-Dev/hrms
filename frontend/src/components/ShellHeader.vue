@@ -34,6 +34,9 @@
 				<template v-if="$slots.actions" #actions>
 					<slot name="actions" />
 				</template>
+				<template v-if="$slots.primary" #primary>
+					<slot name="primary" />
+				</template>
 			</GAppHeader>
 		</div>
 	</component>

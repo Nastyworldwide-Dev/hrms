@@ -69,20 +69,24 @@ test("?tab=answered opens See all straight onto the answered list", () => {
 
 // ---------------------------------------------------------------- the page
 
-test("order on the page: New request, balances, then your requests", () => {
+test("New request is the title bar's +, then balances, then your requests", () => {
+	// alpha.20 (owner, 29 Sep 2026): the big lime button is gone; "+" sits in
+	// the title bar (Apple: one primary action, top trailing).
 	const view = noComments(template(read("../../views/Requests.vue")))
-	const button = view.indexOf("__('New request')")
+	const primary = view.indexOf("<template #primary>")
+	const plus = view.indexOf("__('New request')")
+	const body = view.indexOf("<template #body>")
 	const balances = view.indexOf("<RequestBalances")
 	const panel = view.indexOf("<RequestPanel")
-	assert.ok(button > -1 && balances > -1 && panel > -1)
-	assert.ok(button < balances, "New request is first")
-	assert.ok(balances < panel, "balances before the list")
+	assert.ok(primary > -1 && plus > primary && plus < body, "New request lives in the title bar")
+	assert.doesNotMatch(view, /<GButton/, "no big button on the page")
+	assert.ok(balances > body && balances < panel, "balances first, then the list")
 })
 
-test("balances are one line, not cards", () => {
+test("balances are two numbers and All balances, not cards", () => {
 	const src = read("../../components/RequestBalances.vue")
-	assert.doesNotMatch(src, /GBalanceCard/, "the two cards are gone")
-	assert.match(src, /balancesLine\(shownLeave\.value\)/, "the line is built from the pinned pair")
+	assert.doesNotMatch(src, /GBalanceCard/, "the old cards are gone")
+	assert.match(src, /v-for="row in shownLeave"/, "the pinned pair, as numbers")
 	assert.match(src, /__\(["']All balances["']\)/, "with the door to every balance")
 	assert.match(src, /const PINNED = \[\/annual\|privilege\|earned\/i, \/medical\|sick\/i\]/)
 })

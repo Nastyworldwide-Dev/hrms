@@ -22,6 +22,7 @@ const STATUS_VARIANTS = {
 	"approved & unpaid": "progress",
 	"approved & submitted": "progress",
 	"approved, not paid yet": "progress",
+	"approved · unpaid": "progress",
 	approved: "success",
 	paid: "success",
 	rejected: "danger",
@@ -79,8 +80,9 @@ const REQUEST_TYPES = {
 		submitted(doc) {
 			if (doc.approval_status === "Rejected") return "Rejected"
 			// The person's words (alpha.6 W1): approved, money not yet paid out.
+			// One line on a phone (owner, 29 Sep 2026: it wrapped in the list).
 			if (doc.approval_status === "Approved" && ["Unpaid", "Submitted"].includes(doc.status)) {
-				return "Approved, not paid yet"
+				return "Approved · unpaid"
 			}
 			return doc.status || "Approved"
 		},
