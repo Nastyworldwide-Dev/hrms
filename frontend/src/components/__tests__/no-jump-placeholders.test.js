@@ -69,3 +69,10 @@ test("the quiet board is the skeleton's shape: one form row", () => {
 test("a sheet's scroll never carries on into the page behind it", () => {
 	assert.match(css, /\.g-sheet \{\s*padding-top: 0;[^}]*overscroll-behavior-y: contain;/)
 })
+
+test("the expense summary's placeholder is the height of the summary", () => {
+	// 29 Sep 2026 (iOS gate, alpha.21): 96 + 64 against a 90 pt poster and a
+	// 140 pt group of three amount rows moved "Recent expenses" 69 pt.
+	const src = read("../ExpenseClaimSummary.vue")
+	assert.match(src, /<GSkeleton height="90px"[^>]*\/>\s*<GSkeleton height="140px"/)
+})

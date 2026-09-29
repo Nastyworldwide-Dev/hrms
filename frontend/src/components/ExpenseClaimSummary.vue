@@ -28,9 +28,12 @@
 	</div>
 	<!-- Four states (D6): the poster and the stat row as skeletons while the
 	     first read is in flight, so the screen does not open on a blank. -->
+	<!-- The same height as what replaces it: the 90 pt poster and the 140 pt
+	     group of three amount rows (measured 29 Sep 2026). The old 96 + 64
+	     made "Recent expenses" jump 69 pt when the answer landed. -->
 	<div v-else-if="summary.loading" class="flex flex-col gap-stack-md w-full" aria-hidden="true">
-		<GSkeleton height="96px" radius="var(--g-radius-card)" />
-		<GSkeleton height="64px" radius="var(--g-radius-panel)" />
+		<GSkeleton height="90px" radius="var(--g-radius-card)" />
+		<GSkeleton height="140px" radius="var(--g-radius-group)" />
 	</div>
 </template>
 
