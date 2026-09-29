@@ -80,12 +80,9 @@
 		>
 			<!-- Sent is not edited (owner ruling, 27 Sep 2026): to change a request,
 			     withdraw it and send a new one. -->
-			<GButton
-				@click="askWithdraw"
-				:pending="withdraw.loading"
-				:label="__('Withdraw')"
-				danger
-			/>
+			<!-- At once, with Undo (owner, 29 Sep 2026, alpha.21): no "Are you
+			     sure? This cannot be undone" dialog. -->
+			<GButton @click="withdrawWithUndo" :label="__('Withdraw')" danger />
 		</div>
 
 		<WorkflowActionSheet
@@ -218,20 +215,7 @@
 			</template>
 		</GConfirm>
 
-		<!-- Withdraw own draft. -->
-		<GConfirm
-			:is-open="showWithdrawDialog"
-			:title="__('Withdraw this request?')"
-			:confirm-label="__('Withdraw')"
-			:cancel-label="__('Keep')"
-			destructive
-			@confirm="withdrawDraft"
-			@cancel="showWithdrawDialog = false"
-		>
-			{{
-				__("This removes your draft — your approver will no longer see it. This cannot be undone.")
-			}}
-		</GConfirm>
+
 	</div>
 </template>
 
@@ -254,6 +238,10 @@ import GConfirm from "@/components/glass/GConfirm.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
 import useWorkflow from "@/composables/workflow"
 import useDecisionCapability from "@/composables/decisionCapability"
+import { hideRequest, unhideRequest } from "@/data/hiddenRequests"
+import { reloadRequestLists } from "@/data/requestLists"
+import { showUndo } from "@/data/undoBar"
+import { undoable } from "@/utils/undoable"
 import useApprovedCancel from "@/composables/approvedCancel"
 import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
@@ -423,33 +411,34 @@ const isOwnDraft = computed(
 )
 
 const withdraw = createResource({ url: "hrms.api.withdraw_request" })
-const showWithdrawDialog = ref(false)
-function askWithdraw() {
-	showWithdrawDialog.value = true
-}
-function withdrawDraft() {
-	withdraw.submit(
-		{ doctype: props.modelValue.doctype, name: props.modelValue.name },
-		{
-			onSuccess() {
-				showWithdrawDialog.value = false
-				modalController.dismiss()
-				gToast({
-					title: __("Withdrawn"),
-					text: __("Request withdrawn."),
-					variant: "success",
-				})
-			},
-			onError(err) {
-				showWithdrawDialog.value = false
-				gToast({
-					title: __("Error"),
-					text: firstMessage(err, __("Could not withdraw the request.")),
-					variant: "error",
-				})
-			},
-		}
+//: Withdraw now, Undo for a few seconds, then ask the server (utils/undoable):
+//: the row leaves the list at once; Undo only cancels a timer.
+function withdrawWithUndo() {
+	const { doctype, name } = props.modelValue
+	console.info("[RequestActionSheet] withdraw with undo", name)
+	hideRequest(name)
+	modalController.dismiss()
+	const pending = undoable(() =>
+		withdraw.submit(
+			{ doctype, name },
+			{
+				onSuccess() {
+					reloadRequestLists("withdrawn")
+					unhideRequest(name)
+				},
+				onError(err) {
+					// It could not be withdrawn: it comes back, and says why.
+					unhideRequest(name)
+					gToast({
+						title: __("Not withdrawn"),
+						text: firstMessage(err, __("Could not withdraw the request.")),
+						variant: "error",
+					})
+				},
+			}
+		)
 	)
+	showUndo(__("Withdrawn"), pending, () => unhideRequest(name))
 }
 
 function hasPermission(action) {

@@ -2575,6 +2575,63 @@ html[data-transparency="reduce"] .g-modal::part(content) {
 
 /* ---------- GToast (§10.3 #27) — skins frappe-ui's toast root ---------- */
 
+/* The Undo bar (alpha.21): a capsule above the tab bar, like the iOS undo
+   banner — what happened on the left, Undo on the right (44 pt target). */
+.g-undo {
+	position: fixed;
+	left: 50%;
+	bottom: calc(var(--g-fab-bottom) + 12px + env(safe-area-inset-bottom, 0px));
+	transform: translateX(-50%);
+	z-index: 60;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	width: calc(100vw - 2 * var(--g-screen-gutter));
+	max-width: 480px;
+	min-height: 52px;
+	padding: 4px 8px 4px 20px;
+	border-radius: var(--g-radius-group);
+	background: var(--g-ink);
+	color: var(--g-bg);
+	box-shadow: var(--g-lift);
+}
+.g-undo__text {
+	flex: 1;
+	font-size: 15px;
+	line-height: 20px;
+}
+.g-undo__action {
+	min-height: 44px;
+	min-width: 44px;
+	padding: 0 12px;
+	border: 0;
+	border-radius: var(--g-radius-well);
+	background: transparent;
+	color: var(--g-bg);
+	font-size: 15px;
+	font-weight: 600;
+}
+.g-undo-enter-active,
+.g-undo-leave-active {
+	transition: opacity 200ms ease, transform 200ms ease;
+}
+.g-undo-enter-from,
+.g-undo-leave-to {
+	opacity: 0;
+	transform: translate(-50%, 8px);
+}
+@media (prefers-reduced-motion: reduce) {
+	.g-undo-enter-active,
+	.g-undo-leave-active {
+		transition: none;
+	}
+}
+@media (min-width: 1024px) {
+	.g-undo {
+		bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+	}
+}
+
 /* frappe-ui renders toasts as plain DOM into #frappeui-toast-root (no shadow
    DOM), so the Glass skin can reach them. Coupled to frappe-ui's markup —
    re-verify on the 0.1.278 upgrade (DECISION 6). */

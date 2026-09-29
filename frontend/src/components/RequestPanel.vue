@@ -138,6 +138,7 @@ import {
 	reloadLists,
 	reloadRequestLists,
 } from "@/data/requestLists"
+import { isHidden } from "@/data/hiddenRequests"
 import { siteTime } from "@/utils/siteTime"
 
 const HISTORY_LISTS = [historyLeaves, historyClaims, historyShiftRequests]
@@ -236,6 +237,7 @@ const refreshing = computed(() =>
 	)
 )
 
+//: Your requests, minus any withdrawn a moment ago and still in its Undo window.
 const myRequests = computed(() =>
 	updateRequestDetails(
 		myLeaves,
@@ -244,7 +246,7 @@ const myRequests = computed(() =>
 		myAttendanceRequests,
 		myOTRequests,
 		myReplacementLeaveClaims
-	)
+	).filter((request) => !isHidden(request.name))
 )
 
 //: The page's list: your own five newest, whatever tab See all was left on.

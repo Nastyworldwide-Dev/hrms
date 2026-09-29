@@ -129,7 +129,8 @@ const tick = async () => {
 function liveSheet(doctype = "OT Request", nativeDocument = false) {
 	const requests = [],
 		successes = [],
-		alerts = []
+		alerts = [],
+		reloads = []
 	const scope = effectScope()
 	const context = vm.createContext({
 		computed,
@@ -140,7 +141,7 @@ function liveSheet(doctype = "OT Request", nativeDocument = false) {
 		Event,
 		gToast: (value) => alerts.push(value),
 		__: (text) => text,
-		console: { debug() {}, warn() {} },
+		console: { debug() {}, warn() {}, info() {} },
 		getConfig: () => undefined,
 		saveLocal: (key) =>
 			assert.equal(key, null, "approval capability must not be persisted"),
@@ -159,7 +160,9 @@ function liveSheet(doctype = "OT Request", nativeDocument = false) {
 				approval_status: "Draft",
 				employee: "STAFF",
 			},
-			reload() {},
+			reload() {
+				reloads.push(true)
+			},
 		}),
 		workflow: ref(null),
 		// alpha.13: the decision's mark holds the sheet open briefly and counts
@@ -236,6 +239,7 @@ function liveSheet(doctype = "OT Request", nativeDocument = false) {
 		requests,
 		successes,
 		alerts,
+		reloads,
 		stop: () => scope.stop(),
 		run: (code) => vm.runInContext(code, context),
 	}
@@ -406,7 +410,10 @@ test("capability cannot approve a newer revision the PWA has not displayed", asy
 	await tick()
 	assert.equal(state.run("hasPermission('approval')"), false)
 	assert.equal(state.context.document.doc.modified, "2026-09-08 12:00:00")
-	assert.equal(state.alerts.length, 1)
+	// alpha.19: a changed request reloads to the latest instead of a red
+	// "Request changed" toast (owner, 29 Sep 2026: guide, never error).
+	assert.equal(state.alerts.length, 0)
+	assert.equal(state.reloads.length, 1)
 	state.run("updateDocumentStatus({status: 'Approved'})")
 	assert.equal(state.requests.length, 1)
 	state.stop()

@@ -18,6 +18,7 @@
 		<OfflineBanner />
 		<ion-router-outlet id="main-content" />
 		<Toasts />
+		<UndoBar />
 
 		<UpdatePrompt />
 		<InstallPrompt />
@@ -37,6 +38,7 @@ import { Toasts } from "frappe-ui"
 import InstallPrompt from "@/components/InstallPrompt.vue"
 import MustReadNotice from "@/components/MustReadNotice.vue"
 import OfflineBanner from "@/components/OfflineBanner.vue"
+import UndoBar from "@/components/UndoBar.vue"
 import UpdatePrompt from "@/components/UpdatePrompt.vue"
 import { showNotification } from "@/utils/pushNotifications"
 
