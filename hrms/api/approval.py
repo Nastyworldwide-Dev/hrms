@@ -455,7 +455,97 @@ def get_decision_actions(doctype: str, name: str) -> dict:
 	answer = {"actions": actions, "modified": doc.get("modified") if actions else None}
 	if doctype == "Leave Application" and actions:
 		answer["leave_balance_now"] = _leave_balance_now(doc)
+	if "Approved" in actions:
+		blocked = _approve_would_refuse(doc, field)
+		if blocked:
+			# Guide, never error (owner, 29 Sep 2026): Approve is not offered
+			# when it would be refused. A refusal is always recordable.
+			answer["actions"] = [a for a in actions if a != "Approved"]
+			answer["blocked"] = blocked
 	return answer
+
+
+#: Refusals an approver meets, in words that say what happened and what to do.
+#: Keyed by the controller's own exception class, so a message rewording in the
+#: controller never breaks the match. {0} is the employee's name.
+_GUIDANCE = (
+	(
+		"AttendanceAlreadyMarkedError",
+		"worked_day",
+		"{0} came to work on a day this leave covers, so it can't be approved as leave. "
+		"Reject it with a note, and ask {0} to send the leave again for the other days.",
+	),
+	(
+		"InsufficientLeaveBalanceError",
+		"balance",
+		"{0} doesn't have enough leave left for this. Reject it with a note, or ask HR to check the balance.",
+	),
+	(
+		"OverlapError",
+		"overlap",
+		"{0} already has leave on some of these days. Reject this one with a note.",
+	),
+	(
+		"OverlappingAttendanceRequestError",
+		"overlap",
+		"{0} already has a request for some of these days. Reject this one with a note.",
+	),
+	(
+		"OverlappingShiftRequestError",
+		"overlap",
+		"{0} already has a shift request for some of these days. Reject this one with a note.",
+	),
+	(
+		"LeaveAcrossAllocationsError",
+		"allocation",
+		"This leave runs across two leave years. Reject it with a note, and ask {0} to split it at the year end.",
+	),
+	(
+		"LeaveDayBlockedError",
+		"blocked_day",
+		"Leave isn't allowed on one of these days. Reject it with a note.",
+	),
+)
+
+
+def _approve_would_refuse(doc, field: str) -> dict | None:
+	"""Would pressing Approve be refused? Runs the controller's own validation
+	as an Approve inside a savepoint and rolls it back, so nothing is written
+	and nothing is sent (notifications, mail and realtime all wait for a
+	commit, and the rollback discards them). Returns {code, message} for a
+	refusal, else None.
+
+	Only a validation refusal counts. Anything else — a bug in the check — is
+	logged and treated as "fine", so a broken pre-check can never take the
+	Approve button away; the press then speaks for itself.
+	"""
+	import re
+
+	savepoint = "approve_dry_run"
+	frappe.db.savepoint(savepoint)
+	before = doc.get(field)
+	try:
+		doc.set(field, "Approved")
+		doc.run_method("validate")
+		return None
+	except frappe.ValidationError as refusal:
+		kind = type(refusal).__name__
+		name = doc.get("employee_name") or doc.get("employee") or _("This person")
+		for cls, code, words in _GUIDANCE:
+			if kind == cls:
+				logger.info("[approval] %s %s: Approve would be refused (%s)", doc.doctype, doc.name, code)
+				return {"code": code, "message": _(words).format(name)}
+		# the controller's own message, tags removed: shown as text, never markup
+		reason = re.sub(r"<[^>]+>", "", str(refusal)).strip()
+		logger.info("[approval] %s %s: Approve would be refused (%s)", doc.doctype, doc.name, kind)
+		return {"code": "other", "message": _("This can't be approved yet: {0}").format(reason)}
+	except Exception:
+		logger.warning("[approval] Approve pre-check failed for %s %s", doc.doctype, doc.name, exc_info=True)
+		return None
+	finally:
+		frappe.db.rollback(save_point=savepoint)
+		doc.set(field, before)
+		frappe.clear_messages()
 
 
 def _leave_balance_now(doc) -> float | None:

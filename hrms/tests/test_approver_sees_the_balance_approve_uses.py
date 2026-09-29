@@ -108,9 +108,20 @@ class TestOneHelperProducesTheNumber(unittest.TestCase):
 		access.assert_called_once_with("EMP-1")
 
 
+class _Request(frappe._dict):
+	"""A leave request as get_decision_actions handles it: since 29 Sep 2026 it
+	also runs the Approve as a dry run (set + validate), which this one passes."""
+
+	def set(self, field, value):
+		self[field] = value
+
+	def run_method(self, method):
+		pass
+
+
 class TestTheDeciderIsShownTheLiveBalance(unittest.TestCase):
 	def _doc(self, status="Open"):
-		doc = frappe._dict(
+		doc = _Request(
 			doctype="Leave Application",
 			name="HR-LAP-BDAY",
 			docstatus=0,
