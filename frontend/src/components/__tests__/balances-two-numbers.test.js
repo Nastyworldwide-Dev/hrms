@@ -50,3 +50,8 @@ test("New request is on the trailing side of the title bar", () => {
 	const css = read("../../theme/glass-components.css")
 	assert.match(css.match(/\.g-header__primary\s*\{[^}]*\}/)?.[0] || "", /margin-left: auto/)
 })
+
+test("a single balance spans the row instead of leaving half of it empty", () => {
+	const css = read("../../theme/glass-components.css")
+	assert.match(css, /\.g-balance-tile:only-child\s*\{\s*grid-column: 1 \/ -1;/)
+})

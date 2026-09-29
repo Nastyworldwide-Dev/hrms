@@ -4907,6 +4907,10 @@ ion-modal.g-mustread {
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: 12px;
 }
+/* one balance takes the full width, not half a row of empty space */
+.g-balance-tile:only-child {
+	grid-column: 1 / -1;
+}
 .g-balance-tile {
 	display: flex;
 	flex-direction: column;
