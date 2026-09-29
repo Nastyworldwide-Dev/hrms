@@ -55,7 +55,7 @@ import logging
 import frappe
 from frappe.share import get_shared
 
-from hrms.hr.utils import get_employees_routed_to, sees_all_employee_data
+from hrms.hr.utils import get_direct_report_employees, get_employees_routed_to, sees_all_employee_data
 from hrms.overrides.company_scope import allowed_companies, company_visible
 from hrms.utils.identity import own_employees
 
@@ -139,6 +139,24 @@ _COMPANY_VIA_EMPLOYEE = {
 #: admits them through `get_employees_routed_to`, the inverse of the one list
 #: the approver selector and the save-time fence already share. Still READ only.
 TEAM_REVIEWED_DOCTYPES = {"Attendance Request"}
+
+#: Doctypes a Shift Supervisor ROSTERS for the people who report to them.
+#: REPORTED 29 Sep 2026 (Fahmie): the roster opened empty and "Add shift" was
+#: refused, because this fence let a supervisor reach only their own shifts.
+#: Owner ruling the same day: a supervisor rosters their direct reports ("A";
+#: branch-wide is not granted). Read AND write, unlike the review scope above,
+#: because rostering is the job; the role, not reporting alone, grants it, and
+#: hrms.api.roster._ensure_can_roster applies the same rule to every write.
+ROSTER_DOCTYPES = {"Shift Assignment", "Shift Schedule Assignment"}
+ROSTER_ROLE = "Shift Supervisor"
+
+
+def _rostered_by(user: str, doctype: str) -> list[str]:
+	"""The employees whose shifts this user rosters, or [] (no admission)."""
+	if doctype not in ROSTER_DOCTYPES or ROSTER_ROLE not in frappe.get_roles(user):
+		return []
+	return get_direct_report_employees(user)
+
 
 #: DocShare rows carry read/write/share/submit flags; anything destructive is
 #: checked against `write`, matching hrms.overrides.approval_row_scope.
@@ -231,6 +249,7 @@ def get_permission_query_conditions(doctype: str, user: str | None = None) -> st
 	if doctype in TEAM_REVIEWED_DOCTYPES:
 		# get_employees_routed_to already includes the reporting line
 		visible = visible + get_employees_routed_to(user)
+	visible = visible + _rostered_by(user, doctype)
 	if visible:
 		values = ", ".join(frappe.db.escape(e) for e in visible)
 		conditions.extend(f"`tab{doctype}`.`{field}` in ({values})" for field in owner_fields)
@@ -275,6 +294,10 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 
 	own = set(_own_employees(user))
 	if own and any(doc.get(field) in own for field in owner_fields):
+		return True
+
+	rostered = set(_rostered_by(user, doctype))
+	if rostered and any(doc.get(field) in rostered for field in owner_fields):
 		return True
 
 	if ptype == "read" and doctype in TEAM_REVIEWED_DOCTYPES:
