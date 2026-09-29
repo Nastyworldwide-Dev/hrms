@@ -10,6 +10,28 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.19] — Team in the Calendar and Guided Approvals — 2026-09-29
+
+Team leads see their team inside the calendar, once, and approvers are told
+why before they press Approve instead of meeting an error after.
+
+### Added
+- **"2 off" on a team lead's calendar.** Each day shows how many of your
+  team were on leave or absent. Tap the day for the names.
+- **Approvers are guided, never errored.** When a request can't be approved
+  (for example, the person came to work on a day the leave covers), the
+  Approve button is not shown. Instead you read what happened and what to
+  do, and Reject is there.
+
+### Fixed
+- **The day sheet said 6 and listed 5.** It showed five names at most while
+  each heading counted everyone. Every name now shows, and each heading's
+  number is the names under it (reported by Hafiz).
+- **The team was shown three times** on the day sheet (a summary line, the
+  names, then "See all"). It is now one heading and the names.
+- **"Request changed" error.** A request that changed while you had it open
+  now simply reloads to the latest.
+
 ## [2.0.0-alpha.18] — New Overtime Rates — 2026-09-28
 
 HR's new overtime policy starts on the day this is deployed. Days worked

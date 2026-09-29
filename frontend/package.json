@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.18",
-	"releaseName": "New Overtime Rates",
+	"version": "2.0.0-alpha.19",
+	"releaseName": "Team in the Calendar and Guided Approvals",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
