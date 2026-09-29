@@ -42,6 +42,9 @@ import frappe
 from hrms.hr.utils import sees_all_employee_data
 from hrms.utils.identity import get_employee
 
+#: A branch leader who rosters their team also reports its attendance.
+SUPERVISOR_ROLE = "Shift Supervisor"
+
 logger = logging.getLogger(__name__)
 
 
@@ -67,6 +70,27 @@ def scoped_companies(user: str | None = None) -> list[str]:
 	if companies:
 		logger.info("[report_scope] HR caller fenced to %d company(ies)", len(companies))
 	return companies
+
+
+def report_employees(user: str | None = None) -> list[str] | None:
+	"""The people an attendance report may show this caller. **None means HR**
+	(not narrowed here; the company fence still applies).
+
+	Owner, 29 Sep 2026: a Shift Supervisor reports attendance for themselves and
+	the people who report to them (ruling "A": not the whole branch), with the
+	same "my team" as the roster, get_direct_report_employees. Anyone else gets
+	an empty list, which a report must read as "no rows", never "no limit".
+	"""
+	from hrms.hr.utils import get_direct_report_employees
+
+	user = user or frappe.session.user
+	if is_hr(user):
+		return None
+	own = get_employee(user)
+	if not own or SUPERVISOR_ROLE not in frappe.get_roles(user):
+		logger.info("[report_scope] %s is not a supervisor with an Employee — no team rows", user)
+		return []
+	return [own, *get_direct_report_employees(user)]
 
 
 def fenced_companies(requested: str | None = None, user: str | None = None) -> list[str]:

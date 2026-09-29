@@ -24,7 +24,7 @@ from hrms.utils.holiday_list import (
 	fill_employee_holiday_list_date_gaps_with_company_holiday_list,
 	get_assigned_holiday_lists_to_employee_and_company,
 )
-from hrms.utils.report_scope import fenced_companies, scoped_companies
+from hrms.utils.report_scope import fenced_companies, report_employees, scoped_companies
 
 logger = logging.getLogger(__name__)
 
@@ -427,6 +427,14 @@ def get_employee_related_details(filters: Filters) -> tuple[dict, list]:
 		# Permissions), which a Script Report otherwise never applies
 		.where(Criterion.all(build_qb_match_conditions("Employee")))
 	)
+
+	# A Shift Supervisor sees only themselves and their direct reports; the
+	# rows, the summary and the chart are all built from this one population.
+	team = report_employees()
+	if team is not None:
+		if not team:
+			return {}, []
+		query = query.where(Employee.name.isin(team))
 
 	if filters.employee:
 		query = query.where(Employee.name == filters.employee)

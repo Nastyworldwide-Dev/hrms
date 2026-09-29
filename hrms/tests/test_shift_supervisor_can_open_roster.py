@@ -92,6 +92,23 @@ class TestShiftSupervisorCanOpenRoster(unittest.TestCase):
 		self.assertEqual(roles.count("Shift Supervisor"), 1)
 		self.assertEqual(workspace.saves, 1)
 
+	def test_role_can_run_the_attendance_sheet(self):
+		inserted = []
+
+		def get_doc(values):
+			row = FakeDocument(**values)
+			row._on_db_insert = lambda doc: inserted.append((doc.parent, doc.role))
+			row.db_insert = lambda: row.run_method("db_insert")
+			return row
+
+		with (
+			patch.object(frappe, "get_doc", side_effect=get_doc),
+			patch.object(frappe.db, "exists", side_effect=lambda doctype, *a: doctype == "Report"),
+			patch.object(frappe, "clear_document_cache", create=True),
+		):
+			role_patch._open_report()
+		self.assertEqual(inserted, [("Monthly Attendance Sheet", "Shift Supervisor")])
+
 	def test_patch_is_registered(self):
 		# An unregistered patch never runs on deploy.
 		patches = (HRMS_ROOT / "patches.txt").read_text().splitlines()
