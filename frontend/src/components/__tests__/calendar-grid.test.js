@@ -93,5 +93,7 @@ test("a lead's tile says how many of the team were off, and says it aloud", () =
 	assert.match(grid, /return d\.teamOff \? __\("\{0\} off", \[d\.teamOff\]\) : ""/, "in words: 2 off")
 	assert.match(grid, /team off/, "spoken in the tile's label")
 	const css = read("../../theme/glass-components.css")
-	assert.match(css, /\.g-cal__teamoff\s*\{/)
+	const rule = css.match(/\.g-cal__teamoff\s*\{[^}]*\}/)[0]
+	assert.match(rule, /max-width: 100%/, "a long count never widens the column (320px)")
+	assert.match(rule, /overflow: hidden/)
 })
