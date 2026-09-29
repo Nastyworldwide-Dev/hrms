@@ -544,6 +544,9 @@ def _approve_would_refuse(doc, field: str) -> dict | None:
 		return None
 	finally:
 		frappe.db.rollback(save_point=savepoint)
+		# Only the decision field is put back. validate() may have set other
+		# fields on this in-memory copy; the caller builds its answer from
+		# values read before the dry run and never saves or reuses `doc`.
 		doc.set(field, before)
 		frappe.clear_messages()
 
