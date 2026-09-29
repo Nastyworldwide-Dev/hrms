@@ -31,3 +31,16 @@ export function teamLine(coverage, date, today, __) {
 	}
 	return parts.length > 1 ? parts.join(" · ") : ""
 }
+
+// The day sheet's team HEADING (owner, 29 Sep 2026: the team shown once). The
+// groups under it already say who is on leave, absent or not in yet, so this
+// says only the one number a lead reads first:
+//   today "Your team · 4 of 6 in" · past "Your team · 5 of 6 worked" · future "Your team · 6"
+export function teamHeadingWords(coverage, date, today, __) {
+	const total = Number(coverage?.headcount) || 0
+	if (!total) return ""
+	const present = Number(coverage.present) || 0
+	if (date === today) return `${__("Your team")} · ${__("{0} of {1} in", [present, total])}`
+	if (date < today) return `${__("Your team")} · ${__("{0} of {1} worked", [present, total])}`
+	return `${__("Your team")} · ${total}`
+}

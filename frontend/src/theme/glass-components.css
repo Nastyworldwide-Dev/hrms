@@ -3973,6 +3973,15 @@ ion-router-outlet {
 	line-height: 18px;
 	color: var(--g-ink2);
 }
+/* A heading over several sections (the day sheet's "Your team · 4 of 6 in"):
+   the same place as a section header, one step stronger, so the groups under
+   it read as its parts rather than as its siblings. */
+.g-form-section__title--lead {
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 20px;
+	color: var(--g-ink);
+}
 .g-form-group {
 	display: flex;
 	flex-direction: column;

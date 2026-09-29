@@ -108,28 +108,23 @@ test("the key names every new kind in words", () => {
 })
 
 test("the day sheet holds no role logic", () => {
-	// Persona is the SERVER's answer (revamp P5/KR2): the team line shows only
-	// when the server sent a coverage section.
+	// Persona is the SERVER's answer (revamp P5/KR2): the team shows only
+	// when the server sent a team section.
 	assert.doesNotMatch(sheet, /HR Manager|HR User|isApprover|hasHRRole|roles/, "no role check")
-	assert.match(sheet, /daySheet\.data\?\.coverage/, "it renders what arrived")
-	assert.match(sheet, /v-if="teamSummary"/, "and nothing when a section did not")
+	assert.match(sheet, /daySheet\.data\?\.team/, "it renders what arrived")
+	assert.match(sheet, /v-if="teamRows\.length"/, "and nothing when a section did not")
 })
 
-test("the team line opens the Team page on that date (ruling 1)", () => {
-	assert.match(sheet, /teamLine\(coverage\.value, props\.date/)
-	assert.match(sheet, /name: "TeamView", query: \{ date: props\.date \}/)
-	assert.doesNotMatch(sheet, /GMetaGrid|Who is off/)
-})
-
-test("the team's names show on the sheet, grouped, five then See all (owner, 28 Sep 2026)", () => {
-	// Supersedes "no names here" (ruling 1, 23 Sep): the owner asked for the
-	// team on the Calendar, alongside the roster. Rows are the server's
-	// `team` section (the Team page's own rule); words are the Team page's.
-	assert.match(sheet, /daySheet\.data\?\.team/, "renders the server's rows")
+test("the team shows ONCE, every name, counts that match (owner, 29 Sep 2026)", () => {
+	// Hafiz: the sheet said 6 and listed 5 (five names across groups, each
+	// heading counting the whole group), and the team came three times over:
+	// a summary line, the names, then See all. Now: one heading, the names.
 	assert.match(sheet, /dayTeamGroups\(teamRows\.value\)/, "grouped by status")
-	assert.match(sheet, /DAY_TEAM_PREVIEW/, "five, then See all")
 	assert.match(sheet, /memberLine\(member, __, lineFormat\)/, "the Team page's words")
-	assert.match(sheet, /name: "TeamRosterView"/, "alongside the roster")
+	assert.doesNotMatch(sheet, /teamLine\(|teamSummary/, "no separate summary line")
+	assert.doesNotMatch(sheet, /DAY_TEAM_PREVIEW|hiddenCount|See all/, "no cut-off, no See all")
+	assert.match(sheet, /\[__\(groupTitle\(group\.status\)\), group\.members\.length\]/, "heading counts the names shown")
+	assert.match(sheet, /name: "TeamRosterView"/, "the roster, a different job, stays one row")
 })
 
 test("a manager never sees why somebody is off", () => {

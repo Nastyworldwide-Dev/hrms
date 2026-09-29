@@ -3,7 +3,7 @@
 // the day; the line is the door to the Team page for that date.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { teamLine } from "../teamLine.js"
+import { teamHeadingWords, teamLine } from "../teamLine.js"
 
 const __ = (text, args = []) => text.replace(/\{(\d)\}/g, (_, i) => String(args[i]))
 const TODAY = "2026-09-23"
@@ -78,4 +78,26 @@ test("the Team page starts with the names, not a four-tile strip (no repeat)", a
 	const { readFileSync } = await import("node:fs")
 	const page = readFileSync(new URL("../../views/team/TeamDashboard.vue", import.meta.url), "utf8")
 	assert.doesNotMatch(page, /<GStatPanel|summaryTiles/)
+})
+
+// The day sheet's team HEADING (owner, 29 Sep 2026: the team once). The
+// groups under it name who is on leave, absent or not in yet, so the heading
+// says only the one number a lead reads first — never a second list.
+test("heading, today: 'Your team · 4 of 6 in'", () => {
+	const c = { headcount: 6, present: 4, on_leave: 1, absent: 0, unmarked: 1 }
+	assert.equal(teamHeadingWords(c, TODAY, TODAY, __), "Your team · 4 of 6 in")
+})
+
+test("heading, past day: 'Your team · 5 of 6 worked'", () => {
+	const c = { headcount: 6, present: 5, on_leave: 1, absent: 0, unmarked: 0 }
+	assert.equal(teamHeadingWords(c, "2026-09-22", TODAY, __), "Your team · 5 of 6 worked")
+})
+
+test("heading, future day: 'Your team · 6'", () => {
+	const c = { headcount: 6, present: 0, on_leave: 2, absent: 0, unmarked: 4 }
+	assert.equal(teamHeadingWords(c, "2026-09-30", TODAY, __), "Your team · 6")
+})
+
+test("heading, no team: nothing", () => {
+	assert.equal(teamHeadingWords(null, TODAY, TODAY, __), "")
 })

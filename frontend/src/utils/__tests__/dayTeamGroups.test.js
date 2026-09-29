@@ -1,10 +1,11 @@
 // The Calendar day sheet's team, grouped by status (owner, 28 Sep 2026: "team
-// ... must be shown at calendar page, alongside the roster"; Q4: everyone,
-// grouped, five then See all).
+// ... must be shown at calendar page, alongside the roster"). Everyone, once
+// (owner, 29 Sep 2026, after Hafiz's report: the sheet said 6 and listed 5,
+// and showed the team three times over).
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { dayTeamGroups, DAY_TEAM_PREVIEW } from "../dayTeamGroups.js"
+import { dayTeamGroups } from "../dayTeamGroups.js"
 
 const row = (employee, status) => ({ employee, employee_name: employee, status })
 
@@ -41,8 +42,18 @@ test("no member is ever added, dropped or duplicated", () => {
 	assert.deepEqual(out.sort(), rows.map((r) => r.employee).sort())
 })
 
-test("five names show before See all", () => {
-	assert.equal(DAY_TEAM_PREVIEW, 5)
+test("Hafiz's team of six: every heading number is the names under it", () => {
+	const team = ["A", "B", "C", "D"].map((e) => row(e, "Present"))
+	team.push(row("E", "Not In Yet"), row("F", "Not In Yet"))
+	const groups = dayTeamGroups(team)
+	assert.deepEqual(
+		groups.map((g) => [g.status, g.members.length]),
+		[
+			["Present", 4],
+			["Not In Yet", 2],
+		],
+		"Not in yet (2) lists both names"
+	)
 })
 
 test("nothing in, nothing out", () => {

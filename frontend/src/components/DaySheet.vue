@@ -62,48 +62,37 @@
 					<p v-if="hoursLine" class="g-form-footer">{{ hoursLine }}</p>
 				</section>
 
-				<!-- ONE team line for managers and team leads, their direct team
-				     only (owner ruling 1, 23 Sep; AUDIT-PLAN "Team line"). The line
-				     is the door; the Team page, for this date, has the names and the
-				     leave TYPE, never the reason. -->
-				<GListPanel v-if="teamSummary">
-					<GListRow :label="teamSummary" @click="openTeam" />
-				</GListPanel>
-
-				<!-- The names, grouped by status (owner, 28 Sep 2026: the team on
-				     the Calendar, alongside the roster). Same rows and words as
-				     the Team page; five names, then See all. -->
-				<section v-for="group in shownGroups" :key="group.status" class="g-form-section">
-					<h2 class="g-form-section__title">
-						{{ __(groupTitle(group.status)) }} ({{ group.total }})
-					</h2>
+				<!-- The team, ONCE (owner, 29 Sep 2026, after Hafiz's report: the
+				     sheet said 6 and listed 5, and showed the team three times).
+				     One heading with the day's count, then every name, grouped;
+				     each group's number is the names under it. Managers and team
+				     leads only: the server sends a team section to them alone. -->
+				<template v-if="teamRows.length">
+					<h2 class="g-form-section__title g-form-section__title--lead">{{ teamHeading }}</h2>
+					<section v-for="group in teamGroups" :key="group.status" class="g-form-section">
+						<h3 class="g-form-section__title">
+							{{ __("{0} ({1})", [__(groupTitle(group.status)), group.members.length]) }}
+						</h3>
+						<GListPanel>
+							<GListRow
+								v-for="member in group.members"
+								:key="member.employee"
+								:label="member.employee_name"
+								:sublabel="memberLine(member, __, lineFormat)"
+								:chevron="false"
+								:tappable="false"
+							/>
+						</GListPanel>
+					</section>
+					<!-- Planning shifts is a different job, so it is a door, not a list. -->
 					<GListPanel>
 						<GListRow
-							v-for="member in group.members"
-							:key="member.employee"
-							:label="member.employee_name"
-							:sublabel="memberLine(member, __, lineFormat)"
-							:chevron="false"
-							:tappable="false"
+							:label="__('Open team roster')"
+							:sublabel="__('Shifts for the week')"
+							@click="openRoster"
 						/>
 					</GListPanel>
-				</section>
-				<!-- One panel, two destinations: a divided pair reads as two
-				     choices; two stacked panels read as one list (design review
-				     of f7886d7c2). -->
-				<GListPanel v-if="teamRows.length">
-					<GListRow
-						v-if="hiddenCount > 0"
-						:label="__('See all {0}', [teamRows.length])"
-						:sublabel="__('Team page for this day')"
-						@click="openTeam"
-					/>
-					<GListRow
-						:label="__('Open team roster')"
-						:sublabel="__('Shifts for the week')"
-						@click="openRoster"
-					/>
-				</GListPanel>
+				</template>
 
 				<!-- Exactly one main action, chosen by the day, or one line saying
 				     there is nothing to do (D10: it offered "fix" on every day). -->
@@ -126,8 +115,8 @@
 import { computed, inject, watch } from "vue"
 import { useRouter } from "vue-router"
 
-import { teamLine } from "@/utils/teamLine"
-import { dayTeamGroups, DAY_TEAM_PREVIEW } from "@/utils/dayTeamGroups"
+import { teamHeadingWords } from "@/utils/teamLine"
+import { dayTeamGroups } from "@/utils/dayTeamGroups"
 import { memberLine } from "@/utils/team"
 
 import GButton from "@/components/glass/GButton.vue"
@@ -155,26 +144,12 @@ const $dayjs = inject("$dayjs")
 const router = useRouter()
 
 const me = computed(() => daySheet.data?.me)
-const coverage = computed(() => daySheet.data?.coverage)
-const teamSummary = computed(() =>
-	teamLine(coverage.value, props.date, $dayjs().format("YYYY-MM-DD"), __)
-)
-
-//: The day's team, grouped (utils/dayTeamGroups.js). Only the first five
-//: names show across the groups; See all opens the Team page on this date.
+//: The day's team, grouped (utils/dayTeamGroups.js): every member, once.
 const teamRows = computed(() => daySheet.data?.team || [])
-const shownGroups = computed(() => {
-	let left = DAY_TEAM_PREVIEW
-	return dayTeamGroups(teamRows.value)
-		.map((group) => {
-			const members = group.members.slice(0, Math.max(left, 0))
-			left -= members.length
-			return { status: group.status, total: group.members.length, members }
-		})
-		.filter((group) => group.members.length)
-})
-const hiddenCount = computed(
-	() => teamRows.value.length - shownGroups.value.reduce((n, g) => n + g.members.length, 0)
+const teamGroups = computed(() => dayTeamGroups(teamRows.value))
+//: "Your team · 4 of 6 in": the heading over the names, never a second list.
+const teamHeading = computed(() =>
+	teamHeadingWords(daySheet.data?.coverage, props.date, $dayjs().format("YYYY-MM-DD"), __)
 )
 
 //: Group headings in the person's words, not the stored status.
@@ -234,11 +209,6 @@ function fixDay() {
 	// Pre-filled with the date, because the whole reason to open a day sheet
 	// and then a form is that the form already knows which day.
 	router.push({ name: "AttendanceRequestFormView", query: { date: props.date } })
-}
-
-function openTeam() {
-	console.info("[DaySheet] opening team for", props.date)
-	router.push({ name: "TeamView", query: { date: props.date } })
 }
 
 function openRoster() {

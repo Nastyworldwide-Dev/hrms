@@ -1,12 +1,10 @@
-// The Calendar day sheet's team, grouped by status (owner, 28 Sep 2026: all of
-// the team, grouped, five names then See all). The rows are the server's
+// The Calendar day sheet's team, grouped by status (owner, 28 Sep 2026; every
+// name, once — 29 Sep 2026, after the sheet said 6 and listed 5). The rows are the server's
 // (hrms.api.team.member_statuses, the Team page's own rule); this only orders
 // them, and never adds, drops or re-labels a member.
 
 //: The order a manager reads a day in: who is here, who is not yet, then the rest.
 const ORDER = ["Present", "Not In Yet", "Absent", "On Leave", "Off"]
-
-export const DAY_TEAM_PREVIEW = 5
 
 export function dayTeamGroups(members) {
 	const groups = new Map()
