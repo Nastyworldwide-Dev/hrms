@@ -22,6 +22,15 @@
 					>
 						{{ sessionGuidance(halfDayHints.data, leaveApplication.half_day_session, __) }}
 					</p>
+					<!-- Would it be refused? Said under the dates, before Send
+					     (owner, 29 Sep 2026: guide everyone; alpha.21). -->
+					<p
+						v-if="filingWarning && groupHasDates(group)"
+						class="g-form-footer g-filing-warning"
+						role="status"
+					>
+						{{ filingWarning }}
+					</p>
 				</template>
 			</FormView>
 			<ResourceError :resource="formFields" back what="the leave application form" />
@@ -35,10 +44,11 @@ import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
-import { ref, watch, inject, nextTick } from "vue"
+import { computed, ref, watch, inject, nextTick } from "vue"
 import { useRoute } from "vue-router"
 
 import { dateFromRoute } from "@/utils/dateFromRoute"
+import { filingKey, readyToCheck } from "@/utils/filingCheck"
 import { sessionGuidance, sessionOptions } from "@/utils/halfDaySession"
 
 import FormView from "@/components/FormView.vue"
@@ -345,6 +355,40 @@ function setLeaveBalance() {
 }
 
 //: The group that holds the AM | PM row carries the guidance line.
+//: The server's dry run of Send, for a NEW leave: what would be refused, in
+//: the person's words (hrms.api.filing_check). Asked when the kind or dates
+//: settle; an answer for dates since changed is dropped (filingKey).
+const filingCheck = createResource({ url: "hrms.api.filing_check.check_before_send" })
+const filingAnswer = ref({ key: "", message: "" })
+const filingWarning = computed(() =>
+	filingAnswer.value.key === filingKey(leaveApplication.value) ? filingAnswer.value.message : ""
+)
+let filingTimer = null
+watch(
+	() => filingKey(leaveApplication.value),
+	(key) => {
+		clearTimeout(filingTimer)
+		if (props.id || !readyToCheck(leaveApplication.value) || !currEmployee.value) return
+		filingTimer = setTimeout(() => {
+			console.info("[leave form] checking before send")
+			filingCheck
+				.submit({
+					doctype: "Leave Application",
+					values: { ...leaveApplication.value, employee: currEmployee.value },
+				})
+				.then((answer) => {
+					filingAnswer.value = { key, message: answer?.message || "" }
+				})
+				.catch(() => {
+					// the check itself failing never stops a send
+					filingAnswer.value = { key, message: "" }
+				})
+		}, 400)
+	}
+)
+const groupHasDates = (group) =>
+	group.segments.some((seg) => seg.fields?.some((f) => f.fieldname === "to_date"))
+
 const groupHasSession = (group) =>
 	group.segments.some((seg) => seg.fields?.some((f) => f.fieldname === "half_day_session"))
 
