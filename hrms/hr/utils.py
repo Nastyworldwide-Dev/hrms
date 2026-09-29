@@ -1205,6 +1205,7 @@ def get_direct_report_employees(user: str) -> list[str]:
 	return reports
 
 
+@request_cache
 def get_designated_approvers(
 	employee: str, employee_approver_field: str, department_parentfield: str
 ) -> list[str]:
@@ -1418,8 +1419,14 @@ def get_employees_routed_to(
 	# either, and a manager with no User account still has people under them.
 	by_login = [login]
 	by_manager = list(mine)
+	# Walk down no further than a chain can reach up, plus the rungs a departed
+	# or disabled person lets the chain pass through (each counted once more).
+	# ceiling: approval_levels() + 3 levels below, upgrade: if a line holds more
+	# than 3 departed people in a row, raise the margin
+	depth, max_depth = 0, approval_levels() + 3
 
-	while by_login or by_manager:
+	while (by_login or by_manager) and depth < max_depth:
+		depth += 1
 		below = []
 		if by_login:
 			below += frappe.get_all(
@@ -1447,8 +1454,8 @@ def get_employees_routed_to(
 	# Everyone below is a CANDIDATE. Who actually routes to this user is the
 	# upward chain's answer, asked of each — levels, people who left, disabled
 	# logins — so who SEES a request and who may APPROVE it can never disagree.
-	# ceiling: one upward walk per person below, upgrade: cache per employee if
-	# a senior with hundreds below opens a slow queue
+	# get_designated_approvers is request_cached, so each person's walk runs
+	# once per request however many rows ask.
 	routed = [
 		name
 		for name in routed
@@ -1505,8 +1512,18 @@ def validate_staff_approver(doc, approver_field, employee_approver_field, depart
 		# decide gate read, so a person shown Approve is never refused here.
 		# From the employee's record, never the payload, so nobody can name
 		# themselves into it.
-		if not doc.is_new() and user in get_designated_approvers(
-			doc.employee, employee_approver_field, department_parentfield
+		from hrms.utils.identity import normalize_login
+
+		if (
+			not doc.is_new()
+			and normalize_login(user) != normalize_login(info.user_id)
+			and normalize_login(user)
+			in {
+				normalize_login(a)
+				for a in get_designated_approvers(
+					doc.employee, employee_approver_field, department_parentfield
+				)
+			}
 		):
 			logger.info(
 				"[staff_lockdown] %s acting on behalf in %s's line on %s %s",

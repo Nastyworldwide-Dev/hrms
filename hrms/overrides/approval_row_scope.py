@@ -55,22 +55,16 @@ def _own_employees(user: str) -> list[str]:
 	return own_employees(user)
 
 
-#: doctype -> (the approver field on the EMPLOYEE record, its routing pair),
-#: the same pairs hrms.api.approval.DESIGNATED_APPROVER_DOCTYPES decides with.
-_LINE_FIELDS = {
-	"Leave Application": ("leave_approver", "leave_approvers"),
-	"Expense Claim": ("expense_approver", "expense_approvers"),
-	"Shift Request": ("shift_request_approver", "shift_request_approver"),
-}
-
-
 def _report_employees(user: str, doctype: str) -> list[str]:
 	"""Employees whose approval line reaches this user for this request type
 	(hrms.hr.utils.get_employees_routed_to — levels, and people who left are
 	skipped). Before 29 Sep 2026 this was direct reports only, read-only, so a
 	backup shown Approve on the Approvals screen was refused on the document.
 	"""
-	return get_employees_routed_to(user, *_LINE_FIELDS[doctype])
+	# the same pairs decide() routes with, so seeing and deciding cannot drift
+	from hrms.api.approval import DESIGNATED_APPROVER_DOCTYPES
+
+	return get_employees_routed_to(user, *DESIGNATED_APPROVER_DOCTYPES[doctype])
 
 
 def get_permission_query_conditions(doctype: str, user: str | None = None) -> str:
@@ -123,10 +117,12 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 		or doc.employee in _own_employees(user)
 		or bool(doc.get("name") and doc.name in get_shared(doc.doctype, user, rights=rights))
 	)
-	if not allowed and ptype in ("read", "write", "submit"):
-		# Someone on the employee's approval line may open the request and
-		# decide it (status + submit). Cancel, delete, share and amend stay
-		# with the named approver and HR.
+	if not allowed and ptype == "read":
+		# Someone on the employee's approval line may OPEN the request. They
+		# DECIDE it through hrms.api.approval.decide, which runs the decision
+		# elevated once routing admits them; they never get write here, or a
+		# backup could change an expense's amounts or a leave's dates before
+		# approving it (review of the 29 Sep 2026 chain change).
 		allowed = doc.employee in _report_employees(user, doc.doctype)
 
 	if not allowed:
