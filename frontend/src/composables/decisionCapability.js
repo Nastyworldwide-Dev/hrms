@@ -81,5 +81,8 @@ export default function useDecisionCapability(getResource, getIdentity, onStale)
 	// Leave Application only: the balance approve is judged by (leave_balance_now),
 	// from this same response — the stored leave_balance is a filing-time snapshot.
 	const leaveBalanceNow = computed(() => fresh.value?.leave_balance_now ?? null)
-	return { actions, leaveBalanceNow }
+	// Why Approve is not offered, from the server's dry run of it: {code, message}
+	// in plain words, or null (owner, 29 Sep 2026: guide, never error).
+	const blocked = computed(() => fresh.value?.blocked || null)
+	return { actions, leaveBalanceNow, blocked }
 }

@@ -104,6 +104,12 @@
 			<p v-if="leaveShortNotice" class="text-sm text-danger-ink" role="status">
 				{{ leaveShortNotice }}
 			</p>
+			<!-- Approve would be refused (the server ran it as a dry run), so it
+			     is not offered; this says why and what to do, before any press
+			     (owner, 29 Sep 2026: guide, never error). Reject stays. -->
+			<p v-if="approveBlocked" class="g-request-sheet__guide" role="status">
+				{{ approveBlocked.message }}
+			</p>
 			<div class="flex w-full flex-row items-center justify-between gap-3">
 				<!-- While the decision's mark draws, the button that was pressed
 				     stays: the reloaded document already says "decided", which
@@ -334,13 +340,15 @@ const docPermissions = createResource({
 const decisionCapability = useDecisionCapability(
 	() => document,
 	() => ({ doctype: props.modelValue.doctype, name: props.modelValue.name }),
-	() =>
-		gToast({
-			title: __("Request changed"),
-			text: __("This request changed. Close and reopen it before deciding."),
-			variant: "error",
-		})
+	() => {
+		// Changed since it was opened (the employee edited it, or someone else
+		// decided it): show the latest by itself, never an error to act on.
+		console.info("[RequestActionSheet] request changed; reloading", props.modelValue.name)
+		document.reload?.()
+	}
 )
+//: Why Approve is not offered, in the server's plain words, or null.
+const approveBlocked = computed(() => decisionCapability.blocked.value)
 
 const decision = createResource({ url: "hrms.api.approval.decide" })
 // Submit and cancel for requests with no decision field. NOT document.setValue:

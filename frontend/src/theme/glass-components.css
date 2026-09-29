@@ -5155,6 +5155,16 @@ ion-modal.g-mustread {
 .g-request-sheet__bar.flex-col {
 	flex-direction: column;
 }
+/* Why Approve is not offered (owner, 29 Sep 2026: guide, never error). A
+   note, not an alarm: body text in the primary ink, full width above the
+   buttons, so it is read before Reject. */
+.g-request-sheet__guide {
+	width: 100%;
+	margin: 0;
+	font-size: 15px;
+	line-height: 20px;
+	color: var(--g-ink);
+}
 /* In a row, a value is a value (body 17, secondary ink), whether it is a
    plain word, a status or a person: the badge and avatar-label sizes are for
    lists, not for a row's trailing value. The person keeps their initial
