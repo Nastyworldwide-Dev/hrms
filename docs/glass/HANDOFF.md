@@ -1,14 +1,14 @@
 # HANDOFF
-prompt:   28 Sep 2026 — alpha.18: HR's new OT rates from the deploy day
+prompt:   29 Sep 2026 — alpha.19: team in the calendar, approvers guided
 status:   done
-commit:   3873cdcf6 on nz-glass (tag v2.0.0-alpha.18)
-files:    hrms/utils/ot_calculation.py
-          hrms/hr/doctype/shift_overtime_rate/shift_overtime_rate.json
-          hrms/hr/doctype/shift_type/shift_type.py
-          hrms/hr/doctype/ot_request/ot_request.py
-          hrms/patches/v16_0/ot_rates_from_policy_date.py
-          hrms/tests/test_ot_rates_from_a_date.py
+commit:   32a5e86e1 on nz-glass (tag v2.0.0-alpha.19)
+files:    frontend/src/components/DaySheet.vue
+          frontend/src/components/glass/GCalendar.vue
+          hrms/api/calendar.py
+          hrms/api/approval.py
+          frontend/src/components/RequestActionSheet.vue
+          frontend/src/composables/decisionCapability.js
           docs/glass/CHANGELOG.md
-verify:   after deploy: Desk > Shift Type > Overtime Rates shows new PH/Off rows dated deploy day; HR Settings has the same date
-flags:    the date is set once by the deploy patch — never edit it; a shift HR had already dated is skipped and named in the Error Log
-next:     owner deploys alpha.17 + alpha.18; Amy retests 29 Sep; roster Day Type needs the Desk screen name
+verify:   after deploy: a team lead's Calendar shows "N off"; open a day -> one team heading, counts match names; approve a leave over a worked day -> note + Reject only
+flags:    filer-side guidance not built (next release, reuses _approve_would_refuse); CheckinDecisionSheet has no note yet
+next:     owner deploys alpha.17 + 18 + 19 together
