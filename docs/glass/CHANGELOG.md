@@ -10,6 +10,38 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.20] — Approval Line and a Calmer Home — 2026-09-29
+
+Everyone in your line can act on your requests, approvers are reminded
+before anyone else is asked, and Requests and Home show less clutter.
+
+### Changed
+- **Your approval line can act for you.** Your approver and their approver
+  can both decide your requests. Nobody higher, and nobody outside your
+  line. HR can always act, and HR sets how many levels in Desk.
+- **Someone who has left is skipped.** The next person up can decide.
+- **New request is the "+" at the top right** of Requests. The big button
+  is gone.
+- **Leave left shows two big numbers.** Tap "All balances" for every type.
+- **Home is quieter.** "Needs you" shows only when something is waiting.
+  Approvers see the count on the Requests tab instead.
+
+### Added
+- **Morning reminders for approvers.** One summary each working morning.
+  From the second day it says who can step in; on the third day that person
+  is asked, and the approver is told. Leave starting within two days goes
+  to them on the first day. HR sets the days in Desk.
+
+### Fixed
+- **A manager was shown Approve, then refused** ("You can only submit
+  requests for yourself") on a report's leave or expense when someone else
+  was the named approver.
+- **"Approved, not paid yet" wrapped onto two lines.** It says "Approved ·
+  unpaid" now.
+- **A backup approver could edit a request** (amounts, dates) before
+  approving it. The approval line can open and decide a request, never change
+  it.
+
 ## [2.0.0-alpha.19] — Team in the Calendar and Guided Approvals — 2026-09-29
 
 Team leads see their team inside the calendar, once, and approvers are told

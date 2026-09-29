@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.19",
-	"releaseName": "Team in the Calendar and Guided Approvals",
+	"version": "2.0.0-alpha.20",
+	"releaseName": "Approval Line and a Calmer Home",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
