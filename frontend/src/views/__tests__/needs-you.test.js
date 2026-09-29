@@ -106,7 +106,7 @@ test("an empty queue shows nothing on Home, for everyone", () => {
 	// SUPERSEDED 29 Sep 2026 (owner: quiet when nothing is happening); the
 	// 23 Sep rule showed approvers "Nothing waiting on you." every day. The
 	// waiting count is on the Requests tab; a failed read still shows.
-	assert.match(component, /v-if="rows\.length \|\| needsYouResource\.error"/)
+	assert.match(component, /v-if="rows\.length \|\| needsYouResource\.error \|\| \(isApprover\.data && firstRead\)"/)
 })
 
 test("a realtime event refreshes both counts", () => {

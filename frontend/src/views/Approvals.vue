@@ -14,7 +14,17 @@
 			>
 				<ResourceError :resource="waiting" what="your approvals" />
 
-				<GListPanel v-if="waiting.loading && !waiting.data" loading :rows="1" />
+				<!-- As tall as the page it becomes when requests wait (the summary
+				     line, a group heading and its first row), so the queue arriving
+				     does not push "already answered" down (scroll-and-shift audit,
+				     29 Sep 2026: the approval line now routes more to approvers). -->
+				<template v-if="waiting.loading && !waiting.data">
+					<p class="g-form-footer" aria-hidden="true">&nbsp;</p>
+					<!-- the "Yours" section it becomes: 144 pt, measured 29 Sep 2026 -->
+					<div class="g-approvals__placeholder">
+						<GListPanel loading :rows="2" />
+					</div>
+				</template>
 
 				<template v-else-if="!waiting.error">
 					<p v-if="rows.length" class="g-form-footer">

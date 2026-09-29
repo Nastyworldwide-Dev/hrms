@@ -37,7 +37,7 @@ test("NeedsYou: a failed read says so, never an empty 'done'", () => {
 	// Since 29 Sep 2026 an empty queue shows nothing on Home (owner: quiet when
 	// nothing is happening); a FAILED read still shows, with its own words.
 	const src = template(code(read("../NeedsYou.vue")))
-	assert.match(src, /v-if="rows\.length \|\| needsYouResource\.error"/, "the block shows for a failure")
+	assert.match(src, /v-if="rows\.length \|\| needsYouResource\.error \|\| \(isApprover\.data && firstRead\)"/, "the block shows for a failure")
 	assert.match(src, /We couldn't load what needs you/, "and says it could not load")
 	assert.match(src, /<GListPanel[^>]*\bloading\b/, "loading draws skeleton rows")
 })

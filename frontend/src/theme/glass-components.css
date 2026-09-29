@@ -4902,6 +4902,12 @@ ion-modal.g-mustread {
 
 /* Leave left as two numbers (owner, 29 Sep 2026, option A): the number in
    the display face, its word under it, two across. */
+/* Approvals, first load: the height of the "Yours" section that replaces it
+   (heading + department + kind captions + one row), so it does not move
+   "already answered" (scroll-and-shift audit). */
+.g-approvals__placeholder {
+	min-height: 144px;
+}
 .g-balance-tiles {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));

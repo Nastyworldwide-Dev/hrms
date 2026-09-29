@@ -14,7 +14,7 @@ const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "ut
 test("Needs you shows only when something waits", () => {
 	const src = read("../NeedsYou.vue")
 	// a failed read still shows, so an approver is never wrongly told "done"
-	assert.match(src, /<div v-if="rows\.length \|\| needsYouResource\.error" class="w-full">/)
+	assert.match(src, /<div v-if="rows\.length \|\| needsYouResource\.error \|\| \(isApprover\.data && firstRead\)" class="w-full">/)
 	assert.doesNotMatch(src, /v-if="rows\.length \|\| isApprover\.data"/)
 	const template = src.slice(0, src.indexOf("<script")).replace(/<!--[\s\S]*?-->/g, "")
 	assert.doesNotMatch(template, /Nothing waiting on you/, "no box that says nothing")

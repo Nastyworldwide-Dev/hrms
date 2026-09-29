@@ -13,7 +13,7 @@ test("Needs you shows when something waits, or when it could not be read", () =>
 	// SUPERSEDED 29 Sep 2026 (owner: quiet when nothing is happening). The
 	// approver's count moved to the Requests tab.
 	const src = read("../NeedsYou.vue")
-	assert.match(src, /v-if="rows\.length \|\| needsYouResource\.error"/)
+	assert.match(src, /v-if="rows\.length \|\| needsYouResource\.error \|\| \(isApprover\.data && firstRead\)"/)
 })
 
 test("Announcements always shows, saying there is no news", () => {

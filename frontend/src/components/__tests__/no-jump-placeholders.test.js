@@ -25,7 +25,8 @@ test("an empty queue is the same row as its skeleton, not a loose line", () => {
 		assert.match(src, new RegExp(`<GListRow :label='__\\("${words.replace(".", "\\.")}"\\)'`), file)
 		assert.doesNotMatch(src, /class="g-empty-line/, `${file}: no loose empty line`)
 	}
-	assert.match(read("../../views/Approvals.vue"), /loading :rows="1"/)
+	// a summary line and two rows: the size of a one-request queue, 29 Sep 2026
+	assert.match(read("../../views/Approvals.vue"), /<GListPanel loading :rows="2" \/>/)
 })
 
 test("a skeleton row is the icon row's height: the skeleton sits in the real well", () => {

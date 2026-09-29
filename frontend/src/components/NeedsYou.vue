@@ -35,7 +35,10 @@
 	     nothing is happening; it replaces the 23 Sep "always show it to an
 	     approver" rule). The waiting count is on the Requests tab instead.
 	     A failed read still says so, so an approver is never told "done". -->
-	<div v-if="rows.length || needsYouResource.error" class="w-full">
+	<!-- While an approver's first read is in flight the block holds its place
+	     (skeleton row), so the rows arriving never push Home down (alpha.8 r3,
+	     scroll-and-shift audit). An empty answer then removes it. -->
+	<div v-if="rows.length || needsYouResource.error || (isApprover.data && firstRead)" class="w-full">
 		<div class="g-eyebrow mb-4">{{ __("Needs you") }}</div>
 		<p v-if="!rows.length && needsYouResource.error" class="text-caption text-ink-600" role="alert">
 			{{ __("We couldn't load what needs you. Pull down to try again.") }}
