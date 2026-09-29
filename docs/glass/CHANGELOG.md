@@ -10,6 +10,26 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.21] — Undo and a Warning Before Send — 2026-09-29
+
+Withdrawing a request is instant with Undo, and a leave that would be
+refused tells you why before you send it.
+
+### Changed
+- **Withdraw is instant, with Undo.** No more "Are you sure? This cannot be
+  undone." The request leaves your list at once and "Withdrawn · Undo" shows
+  for five seconds. Tap Undo and nothing happened.
+
+### Added
+- **A warning before you send a leave that would be refused.** Pick the
+  kind of leave and the dates, and if it can't go through, it says so under
+  the dates in plain words, for example "You came to work on a day this
+  leave covers". You no longer find out only after pressing Send.
+
+### Fixed
+- **Expense claims jumped when it loaded.** "Recent expenses" moved down
+  as the totals arrived; the page now holds still.
+
 ## [2.0.0-alpha.20] — Approval Line and a Calmer Home — 2026-09-29
 
 Everyone in your line can act on your requests, approvers are reminded

@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.20",
-	"releaseName": "Approval Line and a Calmer Home",
+	"version": "2.0.0-alpha.21",
+	"releaseName": "Undo and a Warning Before Send",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
