@@ -24,18 +24,23 @@ _frappe_stub.install()
 _erpnext_stub.install()
 for module in ("pypika", "pypika.terms", "pypika.functions"):
 	sys.modules.setdefault(module, MagicMock())
+from _fake_document import FakeDocument
+
 import frappe
 
 from hrms.api import approval
 from hrms.hr.doctype.leave_application import leave_application as la
 
 
-class _Doc(frappe._dict):
-	"""A request whose Approve refuses with `error`, or goes through when None."""
+class _Doc(FakeDocument):
+	"""A request whose Approve refuses with `error`, or goes through when None.
+
+	A FakeDocument, not a dict: the first version was a dict, so `doc[field] = x`
+	in the dry run passed here and crashed on a real Document (29 Sep 2026)."""
 
 	def __init__(self, error=None, **kw):
 		super().__init__(
-			doctype=kw.pop("doctype", "Leave Application"),
+			kw.pop("doctype", "Leave Application"),
 			name="REQ-1",
 			docstatus=0,
 			status="Open",
@@ -44,17 +49,14 @@ class _Doc(frappe._dict):
 			modified="2026-09-29 10:00:00",
 			**kw,
 		)
-		self._error = error
-		self.validated_as = None
+		self.set("_error", error)
+		self.set("validated_as", None)
 
-	def set(self, field, value):
-		self[field] = value
-
-	def run_method(self, method):
+	def run_method(self, method, *args, **kwargs):
 		assert method == "validate", method
-		self.validated_as = self.get("status")
-		if self._error:
-			raise self._error
+		self.set("validated_as", self.get("status"))
+		if self.get("_error"):
+			raise self.get("_error")
 
 
 def ask(doc):
