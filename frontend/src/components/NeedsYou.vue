@@ -31,27 +31,18 @@
   "N more" — because a list that needs you is exactly the list that can spike.
 -->
 <template>
-	<!-- An approver always sees this block, "Nothing waiting on you." when it
-	     is clear, so an empty queue reads as done, not broken (owner, 23 Sep;
-	     NN/g empty states). Everyone else sees it only when something waits. -->
-	<div v-if="rows.length || isApprover.data" class="w-full">
+	<!-- Shown only when something waits (owner, 29 Sep 2026: quiet when
+	     nothing is happening; it replaces the 23 Sep "always show it to an
+	     approver" rule). The waiting count is on the Requests tab instead.
+	     A failed read still says so, so an approver is never told "done". -->
+	<div v-if="rows.length || needsYouResource.error" class="w-full">
 		<div class="g-eyebrow mb-4">{{ __("Needs you") }}</div>
-		<!-- Four states (D6). A failed read is not an empty queue: saying
-		     "Nothing waiting on you." then would tell an approver they are done
-		     when we simply could not ask. -->
 		<p v-if="!rows.length && needsYouResource.error" class="text-caption text-ink-600" role="alert">
 			{{ __("We couldn't load what needs you. Pull down to try again.") }}
 		</p>
 		<!-- A row in a group, the same 51 pt as the skeleton row it replaces
 		     (alpha.8 r3: a 17 pt grey line under a 51 pt skeleton moved every
 		     block below it 34 pt on each visit; alpha.9 D1: nothing loose). -->
-		<GListPanel v-else-if="!rows.length && !firstRead">
-			<GListRow :label='__("Nothing waiting on you.")' :tint="TILE.neutral" :tappable="false">
-				<template #icon>
-					<CircleCheckBig class="g-row-icon" />
-				</template>
-			</GListRow>
-		</GListPanel>
 		<!-- ONE panel for loading and content (§15.1 surface budget): skeleton
 		     rows while the first read is in flight, real rows after. -->
 		<GListPanel v-else :loading="!rows.length && firstRead" :rows="1">

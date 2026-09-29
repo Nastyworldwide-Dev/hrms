@@ -22,6 +22,15 @@
 			     well/capsule — the bar is one continuous glass material. -->
 			<span class="g-tabbar__well" :class="{ 'g-tabbar__well--active': isActive(item) }">
 				<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
+				<!-- What waits on an approver, on Requests (owner, 29 Sep 2026):
+				     the queue no longer lives only under More. -->
+				<span
+					v-if="countFor(item)"
+					class="g-tabbar__badge"
+					role="status"
+					:aria-label="countFor(item) ? __('{0} waiting on you', [countFor(item)]) : ''"
+					>{{ countFor(item) > 99 ? "99+" : countFor(item) }}</span
+				>
 			</span>
 			<span class="g-tabbar__label" :class="{ 'g-tabbar__label--active': isActive(item) }">{{
 				item.shortTitle
@@ -35,9 +44,11 @@ import { useRoute } from "vue-router"
 
 import { IonTabBar, IonTabButton } from "@ionic/vue"
 
-import { computed, inject } from "vue"
+import { computed, inject, watch } from "vue"
 
 import { TAB_ITEMS } from "@/data/navItems"
+import { needsYouResource } from "@/data/needsYou"
+import { isApprover } from "@/data/team"
 
 const __ = inject("$translate")
 
@@ -47,6 +58,20 @@ const tabItems = TAB_ITEMS.map((item) => ({
 	...item,
 	shortTitle: __(item.shortTitle),
 }))
+
+//: How many requests wait on this approver, on the Requests tab only. The same
+//: number Home's Needs you and More's Approvals row read (needsYou.js).
+function countFor(item) {
+	if (item.route !== "/requests" || !isApprover.data) return 0
+	return (Number(needsYouResource.data?.total) || 0) + (Number(needsYouResource.data?.checkins) || 0)
+}
+watch(
+	() => isApprover.data,
+	(approver) => {
+		if (approver && !needsYouResource.data && !needsYouResource.loading) needsYouResource.reload()
+	},
+	{ immediate: true }
+)
 
 // More claims its child routes (`routes`) so the indicator stays lit on them
 const isActive = (item) =>

@@ -18,10 +18,9 @@ test("an overlay Ionic has not hydrated yet takes no place in the page", () => {
 })
 
 test("an empty queue is the same row as its skeleton, not a loose line", () => {
-	for (const [file, words] of [
-		["../NeedsYou.vue", "Nothing waiting on you."],
-		["../../views/Approvals.vue", "Nothing is waiting on you."],
-	]) {
+	// NeedsYou no longer draws an empty row (29 Sep 2026: an empty queue hides
+	// the block); the Approvals page still says so, as one row.
+	for (const [file, words] of [["../../views/Approvals.vue", "Nothing is waiting on you."]]) {
 		const src = read(file)
 		assert.match(src, new RegExp(`<GListRow :label='__\\("${words.replace(".", "\\.")}"\\)'`), file)
 		assert.doesNotMatch(src, /class="g-empty-line/, `${file}: no loose empty line`)

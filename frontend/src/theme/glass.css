@@ -3,6 +3,8 @@
 
 :root {
 	/* color-constant */
+	--g-badge: #D70015;
+	--g-badge-rgb: 215 0 21;
 	--g-brand: #C8FF00;
 	--g-brand-rgb: 200 255 0;
 	--g-brand-2: #A8DC00;
@@ -15,6 +17,8 @@
 	--g-media-frame-rgb: 17 19 24;
 	--g-neutral-dot: #8A929E;
 	--g-neutral-dot-rgb: 138 146 158;
+	--g-on-badge: #FFFFFF;
+	--g-on-badge-rgb: 255 255 255;
 	--g-on-brand: #0A0C05;
 	--g-on-brand-rgb: 10 12 5;
 	--g-on-media-frame: #F5F6F8;

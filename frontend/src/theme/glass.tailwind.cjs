@@ -28,6 +28,7 @@ module.exports = {
 	colors: {
 		"accent-glow": "var(--g-accent-glow)",
 		"accent-ink": "rgb(var(--g-accent-ink-rgb) / <alpha-value>)",
+		badge: "rgb(var(--g-badge-rgb) / <alpha-value>)",
 		bg: "rgb(var(--g-bg-rgb) / <alpha-value>)",
 		brand: "rgb(var(--g-brand-rgb) / <alpha-value>)",
 		"brand-2": "rgb(var(--g-brand-2-rgb) / <alpha-value>)",
@@ -45,6 +46,7 @@ module.exports = {
 		"leave-ink": "rgb(var(--g-leave-ink-rgb) / <alpha-value>)",
 		"media-frame": "rgb(var(--g-media-frame-rgb) / <alpha-value>)",
 		"neutral-dot": "rgb(var(--g-neutral-dot-rgb) / <alpha-value>)",
+		"on-badge": "rgb(var(--g-on-badge-rgb) / <alpha-value>)",
 		"on-brand": "rgb(var(--g-on-brand-rgb) / <alpha-value>)",
 		"on-media-frame": "rgb(var(--g-on-media-frame-rgb) / <alpha-value>)",
 		rest: "rgb(var(--g-rest-rgb) / <alpha-value>)",

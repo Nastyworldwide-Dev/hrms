@@ -225,7 +225,27 @@ ion-tab-button.g-tabbar__btn:active {
 	}
 }
 
+/* An approver's waiting count on the Requests tab (owner, 29 Sep 2026).
+   Apple's badge: a small capsule on the icon's top-trailing corner. */
+.g-tabbar__badge {
+	position: absolute;
+	top: -6px;
+	left: 12px;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 9px;
+	background: var(--g-badge);
+	color: var(--g-on-badge);
+	font-size: 11px;
+	line-height: 18px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+	pointer-events: none;
+}
 .g-tabbar__well {
+	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: center;

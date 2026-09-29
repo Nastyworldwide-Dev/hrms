@@ -9,10 +9,11 @@ import { fileURLToPath } from "node:url"
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8")
 
-test("Needs you stays for approvers, saying nothing is waiting", () => {
+test("Needs you shows when something waits, or when it could not be read", () => {
+	// SUPERSEDED 29 Sep 2026 (owner: quiet when nothing is happening). The
+	// approver's count moved to the Requests tab.
 	const src = read("../NeedsYou.vue")
-	assert.match(src, /v-if="rows\.length \|\| isApprover\.data"/)
-	assert.match(src, /__\("Nothing waiting on you\."\)/)
+	assert.match(src, /v-if="rows\.length \|\| needsYouResource\.error"/)
 })
 
 test("Announcements always shows, saying there is no news", () => {

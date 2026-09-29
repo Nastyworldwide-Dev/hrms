@@ -33,11 +33,12 @@ test("NowBar: a failed read says so, not 'No shift today'", () => {
 	assert.match(template(src), /<GSkeleton/, "loading draws a skeleton")
 })
 
-test("NeedsYou: a failed read is not 'Nothing waiting on you.'", () => {
+test("NeedsYou: a failed read says so, never an empty 'done'", () => {
+	// Since 29 Sep 2026 an empty queue shows nothing on Home (owner: quiet when
+	// nothing is happening); a FAILED read still shows, with its own words.
 	const src = template(code(read("../NeedsYou.vue")))
-	const error = src.indexOf("needsYouResource.error")
-	const empty = src.indexOf('"Nothing waiting on you."')
-	assert.ok(error > -1 && error < empty, "the error branch precedes the empty line")
+	assert.match(src, /v-if="rows\.length \|\| needsYouResource\.error"/, "the block shows for a failure")
+	assert.match(src, /We couldn't load what needs you/, "and says it could not load")
 	assert.match(src, /<GListPanel[^>]*\bloading\b/, "loading draws skeleton rows")
 })
 
