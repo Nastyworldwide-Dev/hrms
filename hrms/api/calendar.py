@@ -325,6 +325,36 @@ def _needs_you_days(employee: str, start, end, worked: dict, marked: set) -> set
 	return days
 
 
+#: The Team page's statuses a lead counts as "off" on the grid. Off (a holiday
+#: for everyone) and Not In Yet (still coming) are not people missing.
+TEAM_OFF_STATUSES = ("On Leave", "Absent")
+
+
+def _team_off_days(employee: str, start, end) -> dict:
+	"""{iso date: how many of the caller's direct team were off}, days with none
+	left out (owner, 29 Sep 2026: the team inside the calendar). The SAME rule
+	and people as the day sheet (hrms.api.team), so a tile's "2 off" is the two
+	names the sheet lists under On leave and Absent. Empty for anyone with no
+	team; the team comes from identity, never from anything sent."""
+	from hrms.api.team import member_statuses, own_team_members
+
+	members = [m for m in own_team_members(employee) if m.name != employee] if employee else []
+	if not members:
+		return {}
+	counts = {}
+	day = start
+	# ceiling: one member_statuses per day (~31 x a few queries per member),
+	# upgrade: batch the month in one read if the grid is slow for teams over ~15
+	while day <= end:
+		rows, _summary = member_statuses(members, day)
+		off = sum(1 for row in rows if row["status"] in TEAM_OFF_STATUSES)
+		if off:
+			counts[str(day)] = off
+		day += timedelta(days=1)
+	logger.info("[calendar] team off employee=%s %s..%s days=%d", employee, start, end, len(counts))
+	return counts
+
+
 @frappe.whitelist(methods=["GET", "POST"])
 def get_month_flags(from_date: str, to_date: str) -> dict:
 	"""Per date, the flags a tile can draw. No words, by design.
@@ -405,12 +435,16 @@ def get_month_flags(from_date: str, to_date: str) -> dict:
 		len(paired),
 		today in open_days,
 	)
-	return {
+	answer = {
 		"flags": flags,
 		"legend": list(FLAG_ORDER),
 		"paired": sorted(str(day) for day in paired if start <= day <= end),
 		"open_today": str(today) if today in open_days and start <= today <= end else None,
 	}
+	team_off = _team_off_days(employee, start, end)
+	if team_off:
+		answer["team_off"] = team_off
+	return answer
 
 
 # ---------------------------------------------------------------------------

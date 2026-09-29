@@ -3407,6 +3407,22 @@ ion-router-outlet {
 	gap: 4px;
 	pointer-events: none;
 }
+/* A lead's "2 off" (owner, 29 Sep 2026): a second line under the date. The
+   tile's own ink (it inherits what the day state set, as the date does), so
+   it reads on every fill in both themes; 11px is Apple's floor. */
+.g-cal__day--team {
+	flex-direction: column;
+	gap: 0;
+}
+.g-cal__teamoff {
+	min-height: 13px;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 13px;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	pointer-events: none;
+}
 .g-cal__dot {
 	width: 4px;
 	height: 4px;

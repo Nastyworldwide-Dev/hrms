@@ -35,9 +35,10 @@ const css = code(read("theme/glass-components.css"))
 test("a tile draws marks, never words", () => {
 	const tile = calendar.slice(calendar.indexOf('v-for="d in days"'), calendar.indexOf("</button>"))
 	assert.match(tile, /g-cal__dot/, "the flags are dots")
-	// The only text in a tile is the date itself.
-	const interpolations = [...tile.matchAll(/\{\{([^}]+)\}\}/g)].map((m) => m[1].trim())
-	assert.deepEqual(interpolations, ["d.day"], "nothing but the date is written on a tile")
+	// The only text in a tile is the date and, for a lead, how many of the
+	// team were off (owner, 29 Sep 2026: "2 off"). Nothing else is written.
+	const interpolations = [...tile.matchAll(/\{\{([^}]+)\}\}/g)].map((m) => m[1].replace(/\s+/g, " ").trim())
+	assert.deepEqual(interpolations, ["d.day", "teamOffWords(d)"], "the date, and a lead's count")
 })
 
 test("the dot cap is enforced server-side, so the wire and the tile agree", () => {

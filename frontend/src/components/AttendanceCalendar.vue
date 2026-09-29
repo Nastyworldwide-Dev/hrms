@@ -139,6 +139,9 @@ const days = computed(() =>
 			// first, then an IN followed by an OUT, then today's open IN.
 			state: dayState(STATE[getEventOnDate(day)] ?? "none", iso, monthFlags.data),
 			flags: monthFlags.data?.flags?.[iso] || [],
+			// A lead's team off that day. Server-decided: staff get no team_off,
+			// so their tiles stay one line (undefined, not 0).
+			teamOff: monthFlags.data?.team_off ? monthFlags.data.team_off[iso] || 0 : undefined,
 			// Where am I? (approved Calendar plan, D6; Nielsen 1)
 			today: iso === dayjs().format("YYYY-MM-DD"),
 		}

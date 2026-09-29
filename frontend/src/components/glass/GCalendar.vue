@@ -61,12 +61,22 @@
 				:key="d.day"
 				type="button"
 				class="g-cal__day g-focusable"
-				:class="[`g-cal__day--${d.state}`, { 'g-cal__day--today': d.today }]"
+				:class="[
+					`g-cal__day--${d.state}`,
+					{ 'g-cal__day--today': d.today, 'g-cal__day--team': d.teamOff !== undefined },
+				]"
 				:aria-current="d.today ? 'date' : undefined"
 				:aria-label="dayLabel(d)"
 				@click="$emit('select', d.day)"
 			>
-				{{ d.day }}
+				<span>{{ d.day }}</span>
+				<!-- A lead's team, on the grid (owner, 29 Sep 2026): "2 off" under
+				     the date; the names are on the day sheet. Every tile of a lead's
+				     month keeps the line (empty when nobody was off) so the dates
+				     stay on one level. Spoken in the label, so aria-hidden here. -->
+				<span v-if="d.teamOff !== undefined" class="g-cal__teamoff" aria-hidden="true">{{
+					teamOffWords(d)
+				}}</span>
 				<!-- DOTS, never words (revamp §4). A tile is ~44px: it holds a
 				     date and up to three 4px dots, and trying to fit a sentence
 				     into it is what makes a calendar unreadable. The words are
@@ -161,9 +171,15 @@ const FLAG_LABELS = {
 	needs_you: "needs you",
 }
 
+//: "2 off" under a lead's date; empty when nobody was, so the line stays.
+function teamOffWords(d) {
+	return d.teamOff ? __("{0} off", [d.teamOff]) : ""
+}
+
 function dayLabel(d) {
-	const base = `${d.day} ${props.title}, ${stateLabel(d.state)}`
-	if (!d.flags?.length) return base
-	return `${base}, ${d.flags.map((flag) => FLAG_LABELS[flag] || flag).join(", ")}`
+	let label = `${d.day} ${props.title}, ${stateLabel(d.state)}`
+	if (d.flags?.length) label += `, ${d.flags.map((flag) => FLAG_LABELS[flag] || flag).join(", ")}`
+	if (d.teamOff) label += `, ${d.teamOff} ${__("team off")}`
+	return label
 }
 </script>

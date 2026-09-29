@@ -81,3 +81,17 @@ test("today stays visible on every filled day (3:1 non-text)", () => {
 		assert.match(css, rule, `${state} + today uses full ink`)
 	}
 })
+
+// The team inside the calendar (owner, 29 Sep 2026: "team to be inside
+// calendar view properly, not redundant"). A lead's tile carries how many of
+// their team were off; the sheet lists who. Server-decided: staff get nothing.
+test("a lead's tile says how many of the team were off, and says it aloud", () => {
+	const cal = read("../AttendanceCalendar.vue")
+	assert.match(cal, /teamOff: monthFlags\.data\?\.team_off \? monthFlags\.data\.team_off\[iso\] \|\| 0 : undefined/, "the server's count; staff get none")
+	const grid = read("../glass/GCalendar.vue")
+	assert.match(grid, /v-if="d\.teamOff !== undefined" class="g-cal__teamoff"/, "a lead's tiles only")
+	assert.match(grid, /return d\.teamOff \? __\("\{0\} off", \[d\.teamOff\]\) : ""/, "in words: 2 off")
+	assert.match(grid, /team off/, "spoken in the tile's label")
+	const css = read("../../theme/glass-components.css")
+	assert.match(css, /\.g-cal__teamoff\s*\{/)
+})
