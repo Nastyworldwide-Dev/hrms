@@ -95,7 +95,12 @@ def test_capability_is_exactly_the_shared_decision_access(
 	# hrms/tests/test_self_approval_fences_are_canonical.py and
 	# hrms/tests/test_nobody_approves_their_own_request_under_an_approver.py.
 	namespace["is_own_employee"] = lambda employee: self_employee
-	namespace["_has_approver_above"] = lambda employee, doctype: has_approver_above
+	namespace["has_approver_above"] = lambda employee, doctype: has_approver_above
+	# Decision capability also reads two helpers of get_decision_actions: the
+	# live leave balance and the Approve dry run (29 Sep 2026). Neither decides
+	# WHO may act, which is all this file asserts, so both answer "nothing".
+	namespace["_leave_balance_now"] = lambda doc: None
+	namespace["_approve_would_refuse"] = lambda doc, field: None
 	namespace["get_permitted_fields"] = lambda *args, **kwargs: [decision_field] if field else []
 
 	def get_value(doctype, name, fieldname, **kwargs):
@@ -156,4 +161,6 @@ def test_capability_is_exactly_the_shared_decision_access(
 		elif state in {"Approved", "Rejected"} and self_allowed(state):
 			expected = ["Submit"]
 	assert actual == ("Approved" in expected)
+	# who may act is the property; the Leave-only balance line is extra data
+	capability.pop("leave_balance_now", None)
 	assert capability == {"actions": expected, "modified": doc.modified if expected else None}

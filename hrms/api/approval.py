@@ -70,6 +70,14 @@ DESIGNATED_APPROVER_DOCTYPES = {
 	"OT Request": ("leave_approver", "leave_approvers"),
 	"Replacement Leave Claim": ("leave_approver", "leave_approvers"),
 	"Remote Checkin Request": ("shift_request_approver", "shift_request_approver"),
+	# Joined 29 Sep 2026 (owner: "they can act on behalf ... as long as they
+	# dont reach to even higher"). These three also carry an approver field;
+	# the chain is who else in the employee's line may act, and it is the same
+	# list validate_staff_approver accepts, so Approve is never refused.
+	"Leave Application": ("leave_approver", "leave_approvers"),
+	"Expense Claim": ("expense_approver", "expense_approvers"),
+	"Shift Request": ("shift_request_approver", "shift_request_approver"),
+	"Compensatory Leave Request": ("leave_approver", "leave_approvers"),
 }
 
 #: doctype -> the HR Settings tickbox that used to be the WHOLE self-approval
@@ -146,9 +154,16 @@ def _is_routed_approver(doc, user: str | None = None) -> bool:
 			)
 			return True
 
-	# Canonical identity, not a raw user_id read: a reports_to manager whose
-	# mirror user_id drifted in case would otherwise be refused approval of their
-	# own report's request; ambiguous logins fail closed here too.
+	if designated:
+		# The chain already holds the reporting manager, with the level limit
+		# and people who left skipped; a bare reports_to match would bypass both.
+		logger.debug("[approval] %s is not on %s %s's approval line", user, doc.doctype, doc.name)
+		return False
+
+	# Types with no chain (Travel Request, Employee Advance): the reporting
+	# manager. Canonical identity, not a raw user_id read: a manager whose
+	# mirror user_id drifted in case would otherwise be refused; ambiguous
+	# logins fail closed.
 	mine = own_employees(user)
 	if not mine:
 		return False

@@ -449,6 +449,14 @@ class TestCanCancelApproved(unittest.TestCase):
 				)
 			if dt == "Salary Slip":
 				return paid_slip
+			if dt == "Employee" and reports_to and name == reports_to:
+				# the manager's own record says who they are (the chain climbs by
+				# login; since 29 Sep 2026 every request type reads it)
+				login = self.CALLER if own_employee == reports_to else "someone.else@example.com"
+				mgr = {"user_id": login, "company": "Company A", "reports_to": None, "status": "Active"}
+				if isinstance(fieldname, list | tuple):
+					return frappe._dict({f: mgr.get(f) for f in fieldname})
+				return mgr.get(fieldname)
 			if dt == "Employee":
 				fields = {
 					"user_id": employee_user,

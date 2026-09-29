@@ -12,8 +12,10 @@ Doctype-level perms grant the Employee/ESS roles broad level-0 read/write, so
 these hooks are the ONLY row fence for staff. Access is granted to:
   - the employee the document belongs to (their user_id),
   - the named approver on the document,
-  - the employee's direct manager (Employee.reports_to), READ ONLY and inside
-    the manager's own company fence,
+  - everyone on the employee's approval line (their approver and manager, and
+    those people's approvers, as many levels as HR allows — default 2), inside
+    the approver's own company fence (owner, 29 Sep 2026: "they can act on
+    behalf"); the same list the Approvals screen and decide() read,
   - users the document is shared with (DocShare — share_doc_with_approver
     keeps historical approvers working),
   - HR User / HR Manager and Administrator.
@@ -30,7 +32,7 @@ import logging
 import frappe
 from frappe.share import get_shared
 
-from hrms.hr.utils import get_direct_report_employees, sees_all_employee_data
+from hrms.hr.utils import get_employees_routed_to, sees_all_employee_data
 from hrms.utils.identity import own_employees
 from hrms.utils.user_permission_scope import APPROVER_ROUTED_DOCTYPES
 
@@ -53,13 +55,22 @@ def _own_employees(user: str) -> list[str]:
 	return own_employees(user)
 
 
-def _report_employees(user: str) -> list[str]:
-	"""Direct reports, from the shared definition in hrms.hr.utils.
+#: doctype -> (the approver field on the EMPLOYEE record, its routing pair),
+#: the same pairs hrms.api.approval.DESIGNATED_APPROVER_DOCTYPES decides with.
+_LINE_FIELDS = {
+	"Leave Application": ("leave_approver", "leave_approvers"),
+	"Expense Claim": ("expense_approver", "expense_approvers"),
+	"Shift Request": ("shift_request_approver", "shift_request_approver"),
+}
 
-	Read only: write, submit, cancel, delete, share and amend stay with the
-	named approver — see has_permission.
+
+def _report_employees(user: str, doctype: str) -> list[str]:
+	"""Employees whose approval line reaches this user for this request type
+	(hrms.hr.utils.get_employees_routed_to — levels, and people who left are
+	skipped). Before 29 Sep 2026 this was direct reports only, read-only, so a
+	backup shown Approve on the Approvals screen was refused on the document.
 	"""
-	return get_direct_report_employees(user)
+	return get_employees_routed_to(user, *_LINE_FIELDS[doctype])
 
 
 def get_permission_query_conditions(doctype: str, user: str | None = None) -> str:
@@ -74,7 +85,7 @@ def get_permission_query_conditions(doctype: str, user: str | None = None) -> st
 	# own records + direct reports' records. List visibility only: the write
 	# side stays with the approver, enforced in has_permission below.
 	own = _own_employees(user)
-	visible = own + _report_employees(user)
+	visible = own + _report_employees(user, doctype)
 	if visible:
 		values = ", ".join(frappe.db.escape(e) for e in visible)
 		conditions.append(f"`tab{doctype}`.`employee` in ({values})")
@@ -112,10 +123,11 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 		or doc.employee in _own_employees(user)
 		or bool(doc.get("name") and doc.name in get_shared(doc.doctype, user, rights=rights))
 	)
-	if not allowed and ptype == "read":
-		# a direct manager may READ their report's request and nothing more —
-		# write/submit/cancel/delete/share/amend stay with the named approver
-		allowed = doc.employee in _report_employees(user)
+	if not allowed and ptype in ("read", "write", "submit"):
+		# Someone on the employee's approval line may open the request and
+		# decide it (status + submit). Cancel, delete, share and amend stay
+		# with the named approver and HR.
+		allowed = doc.employee in _report_employees(user, doc.doctype)
 
 	if not allowed:
 		logger.warning(

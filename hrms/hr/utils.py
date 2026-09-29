@@ -1251,19 +1251,32 @@ def get_designated_approvers(
 	ordered: list[str] = []
 	seen: set[str] = set()
 	visited = {employee}
-	frontier = [info]
+	# LEVELS (owner, 29 Sep 2026: "they can act on behalf ... as long as they
+	# dont reach to even higher"). Level 1 is the employee's own approver and
+	# manager; each level after is theirs. HR sets how many (approval_levels,
+	# default 2). A rung who can't act — left, disabled, or no login — is
+	# passed through on the SAME level, so the next person moves up.
+	limit = approval_levels()
+	level_rows = [info]
+	level = 0
 
-	while frontier:
-		for login, senior in _one_rung_up(frontier.pop(0), employee_approver_field):
-			if login and login != own_user and login not in seen:
-				seen.add(login)
-				ordered.append(login)
-			# Keep climbing even when that rung has no login of its own: a
-			# manager with no User account still has a manager above them.
-			if senior and senior not in visited:
-				visited.add(senior)
-				if senior_row := _routing_row(senior, employee_approver_field):
-					frontier.append(senior_row)
+	while level_rows and level < limit:
+		level += 1
+		next_rows = []
+		queue = list(level_rows)
+		while queue:
+			for login, senior in _one_rung_up(queue.pop(0), employee_approver_field):
+				senior_row = None
+				if senior and senior not in visited:
+					visited.add(senior)
+					senior_row = _routing_row(senior, employee_approver_field)
+				gone = _cannot_act(login, senior_row)
+				if not gone and login != own_user and login not in seen:
+					seen.add(login)
+					ordered.append(login)
+				if senior_row:
+					(queue if gone else next_rows).append(senior_row)
+		level_rows = next_rows
 
 	logger.info(
 		"[staff_lockdown] %s designated approver(s) for %s via %s, %d rung(s) of chain",
@@ -1275,12 +1288,44 @@ def get_designated_approvers(
 	return ordered
 
 
+#: How many levels of an employee's line may approve for them, when HR has not
+#: set it: their approver, and one backup above (owner, 29 Sep 2026).
+DEFAULT_APPROVAL_LEVELS = 2
+
+
+def approval_levels() -> int:
+	"""HR Settings' "Backup approval levels" (levels of the line that may
+	approve), read raw: get_single_value turns an unset Int into 0."""
+	rows = frappe.db.sql(
+		"select value from tabSingles where doctype='HR Settings' and field='approval_levels'"
+	)
+	raw = rows[0][0] if rows and isinstance(rows[0], list | tuple) else None
+	try:
+		levels = int(raw) if raw not in (None, "") else 0
+	except (TypeError, ValueError):
+		levels = 0
+	return levels if levels >= 1 else DEFAULT_APPROVAL_LEVELS
+
+
+def _cannot_act(login, senior_row) -> bool:
+	"""A rung nobody can reach: no login, a disabled login, or an Employee record
+	that is no longer Active. Passed through, never counted as a level."""
+	if not login:
+		return True
+	if senior_row is not None and senior_row.get("status") not in (None, "Active"):
+		return True
+	# Only an explicit 0 is a disabled login. No User row at all (an approver
+	# named by a login that was never created) is left to the later checks,
+	# exactly as before this skip existed.
+	return frappe.db.get_value("User", login, "enabled") in (0, "0")
+
+
 def _routing_row(employee: str, employee_approver_field: str) -> frappe._dict | None:
 	"""The fields that decide where one employee's requests go."""
 	row = frappe.db.get_value(
 		"Employee",
 		employee,
-		["user_id", employee_approver_field, "reports_to"],
+		["user_id", employee_approver_field, "reports_to", "status"],
 		as_dict=True,
 	)
 	logger.debug("[staff_lockdown] routing row for %s: %s", employee, "found" if row else "missing")
@@ -1357,7 +1402,10 @@ def get_employees_routed_to(
 	if not login:
 		return []
 
-	filters = {"status": "Active"}
+	# Walk through everyone, Active or not: a senior who has LEFT still links
+	# his old team to the director above him, and the upward chain skips him
+	# (_cannot_act). Only Active people are kept as a result, below.
+	filters = {}
 	companies = allowed_companies(user)
 	if companies:
 		filters["company"] = ("in", companies)
@@ -1377,24 +1425,39 @@ def get_employees_routed_to(
 			below += frappe.get_all(
 				"Employee",
 				filters={**filters, employee_approver_field: ("in", by_login)},
-				fields=["name", "user_id"],
+				fields=["name", "user_id", "status"],
 			)
 		if by_manager:
 			below += frappe.get_all(
 				"Employee",
 				filters={**filters, "reports_to": ("in", by_manager)},
-				fields=["name", "user_id"],
+				fields=["name", "user_id", "status"],
 			)
 		by_login, by_manager = [], []
 		for row in below:
 			if row.name in seen:
 				continue
 			seen.add(row.name)
-			routed.append(row.name)
+			if row.get("status") in (None, "Active"):
+				routed.append(row.name)
 			by_manager.append(row.name)
 			if below_login := normalize_login(row.user_id):
 				by_login.append(below_login)
 
+	# Everyone below is a CANDIDATE. Who actually routes to this user is the
+	# upward chain's answer, asked of each — levels, people who left, disabled
+	# logins — so who SEES a request and who may APPROVE it can never disagree.
+	# ceiling: one upward walk per person below, upgrade: cache per employee if
+	# a senior with hundreds below opens a slow queue
+	routed = [
+		name
+		for name in routed
+		if login
+		in {
+			normalize_login(a)
+			for a in get_designated_approvers(name, employee_approver_field, department_parentfield)
+		}
+	]
 	logger.debug(
 		"[approval_scope] %s is in the approver chain of %d employee(s), company fence=%s",
 		user,
@@ -1436,6 +1499,22 @@ def validate_staff_approver(doc, approver_field, employee_approver_field, depart
 		# same save and walk through this fence.
 		if not doc.is_new() and frappe.db.get_value(doc.doctype, doc.name, approver_field) == user:
 			logger.info("[staff_lockdown] %s acting as stored approver on %s %s", user, doc.doctype, doc.name)
+			return
+		# ...or anyone on the employee's own approval line (owner, 29 Sep 2026:
+		# "they can act on behalf"). The SAME list the Approvals screen and the
+		# decide gate read, so a person shown Approve is never refused here.
+		# From the employee's record, never the payload, so nobody can name
+		# themselves into it.
+		if not doc.is_new() and user in get_designated_approvers(
+			doc.employee, employee_approver_field, department_parentfield
+		):
+			logger.info(
+				"[staff_lockdown] %s acting on behalf in %s's line on %s %s",
+				user,
+				doc.employee,
+				doc.doctype,
+				doc.name,
+			)
 			return
 
 		# filing for someone else — fail CLOSED. Own-record scoping normally

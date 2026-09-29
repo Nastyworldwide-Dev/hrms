@@ -58,7 +58,12 @@ def _employee_db(leave_approver=None):
 
 	def get_value(doctype, name, fieldname=None, *args, **kwargs):
 		if doctype == "Employee":
-			return rows.get(name, {}).get(fieldname)
+			row = rows.get(name, {})
+			if isinstance(fieldname, list | tuple):
+				# the approval chain reads several fields at once (as_dict), since
+				# Compensatory Leave Request routes through it (29 Sep 2026)
+				return frappe._dict({f: row.get(f) for f in fieldname}) if row else None
+			return row.get(fieldname)
 		return 0 if fieldname == "docstatus" else None
 
 	db = MagicMock()

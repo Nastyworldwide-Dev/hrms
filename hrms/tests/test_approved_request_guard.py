@@ -133,6 +133,16 @@ def _cancel(
 		if doctype == "Salary Slip":
 			return paid_slip
 		if doctype == "Employee":
+			# the manager's own record: their login is the caller. The approval
+			# chain climbs by login (since 29 Sep 2026 every request type reads
+			# it), so the manager's record must say who they are, as it does live.
+			if name == MANAGER:
+				# the caller's login only when the caller IS the manager
+				login = CALLER if own_employee == MANAGER else "manager@example.com"
+				fields = {"user_id": login, "company": "Company A", "reports_to": None, "status": "Active"}
+				if isinstance(fieldname, list | tuple):
+					return frappe._dict({f: fields.get(f) for f in fieldname})
+				return fields.get(fieldname)
 			# leave_approver: unset — comp leave's approver on file is not the caller here
 			fields = {"user_id": employee_user, "company": "Company A", "reports_to": reports_to}
 			if isinstance(fieldname, list | tuple):
