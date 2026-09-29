@@ -147,3 +147,34 @@ class TestPeopleWhoHaveLeft(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestHrSetsTheLevels(unittest.TestCase):
+	"""'dont hardcode, respect the configuration set from hr (desk)' (21 Sep
+	2026). The number of levels is an HR Setting that reaches live sites."""
+
+	def test_the_setting_is_defined_with_a_default_of_two(self):
+		import ast
+
+		source = (Path(__file__).resolve().parents[1] / "setup.py").read_text()
+		self.assertIn('"fieldname": "approval_levels"', source)
+		field = source[source.index('"fieldname": "approval_levels"') - 300 :][:700]
+		self.assertIn('"default": "2"', field)
+		self.assertIn('"fieldtype": "Int"', field)
+		ast.parse(source)
+
+	def test_it_reaches_live_sites_through_the_sync_patch(self):
+		patches = (Path(__file__).resolve().parents[1] / "patches.txt").read_text()
+		self.assertIn("sync_custom_fields_with_code #2026-09-29", patches)
+
+	def test_blank_or_zero_means_the_default(self):
+		for raw in (None, "", "0", 0, "junk"):
+			with (
+				self.subTest(raw=raw),
+				patch.object(frappe.db, "sql", return_value=((raw,),) if raw is not None else ()),
+			):
+				self.assertEqual(hr_utils.approval_levels(), 2)
+
+	def test_hr_can_set_three(self):
+		with patch.object(frappe.db, "sql", return_value=(("3",),)):
+			self.assertEqual(hr_utils.approval_levels(), 3)

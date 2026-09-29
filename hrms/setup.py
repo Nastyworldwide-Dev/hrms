@@ -633,6 +633,37 @@ def get_custom_fields():
 				"fieldtype": "Check",
 				"label": _("Require a supporting attachment on Attendance / OT / Replacement requests"),
 			},
+			# Owner, 29 Sep 2026: an employee's line may act on their behalf, "as
+			# long as they dont reach to even higher". Read by
+			# hrms.hr.utils.approval_levels; blank or 0 means the default (2).
+			{
+				"default": "2",
+				"fieldname": "approval_levels",
+				"fieldtype": "Int",
+				"label": _("Backup approval levels"),
+				"description": _(
+					"How many levels of an employee's line may approve for them: 1 = only their "
+					"approver, 2 = their approver and one level above. HR can always approve."
+				),
+				"insert_after": "require_supporting_attachment",
+			},
+			# Reminders to approvers (owner, 29 Sep 2026: the first approver owns
+			# it; nudge first, then ask the backup). Working days.
+			{
+				"default": "1",
+				"fieldname": "approval_reminder_after_days",
+				"fieldtype": "Int",
+				"label": _("Remind the approver after (working days)"),
+				"insert_after": "approval_levels",
+			},
+			{
+				"default": "3",
+				"fieldname": "approval_backup_after_days",
+				"fieldtype": "Int",
+				"label": _("Ask the backup approver after (working days)"),
+				"description": _("Leave starting within 2 days asks the backup on the first day."),
+				"insert_after": "approval_reminder_after_days",
+			},
 		],
 	}
 
