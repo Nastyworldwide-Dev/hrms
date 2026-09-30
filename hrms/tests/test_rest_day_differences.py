@@ -98,6 +98,40 @@ class TestRestDayChanges(unittest.TestCase):
 		)
 
 
+#: Two calendars covering the whole year; which one applies is the question.
+SPANS = {
+	"OLD": {"span": (date(2026, 1, 1), date(2026, 12, 31)), "rest": set()},
+	"NEW": {"span": (date(2026, 1, 1), date(2026, 12, 31)), "rest": set()},
+}
+
+
+class TestPersonCalendarIsAskedOnlyWhenItCanChange(unittest.TestCase):
+	"""Review of e0dae0e2f: one cached answer for the whole window missed a
+	calendar that starts mid-window."""
+
+	def run_days(self, truth, checkpoints):
+		asked = []
+
+		def resolve(day):
+			asked.append(day)
+			return truth(day)
+
+		mine = report._person_calendar(resolve, checkpoints, SPANS)
+		return [mine(d) for d in (MON, TUE, WED, THU)], asked
+
+	def test_an_assignment_starting_mid_window_is_picked_up(self):
+		got, _ = self.run_days(lambda d: "NEW" if d >= WED else "OLD", {WED})
+		self.assertEqual(got, ["OLD", "OLD", "NEW", "NEW"])
+
+	def test_a_calendar_gained_mid_window_is_picked_up(self):
+		got, _ = self.run_days(lambda d: "NEW" if d >= WED else None, {WED})
+		self.assertEqual(got, [None, None, "NEW", "NEW"])
+
+	def test_without_a_change_it_asks_once(self):
+		_, asked = self.run_days(lambda d: "OLD", set())
+		self.assertEqual(asked, [MON])
+
+
 class TestColumns(unittest.TestCase):
 	def test_every_column_label_is_unique(self):
 		# two "Which dates" columns could not be told apart once exported

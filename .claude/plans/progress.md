@@ -257,3 +257,9 @@ DEAD END: commit fedf16621 is the Rest Day Differences report (step 0: hrms/hr/r
 - 2026-09-30T11:19:39Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
 - 2026-09-30T11:20:27Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
 - 2026-09-30T11:21:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-09-30T11:21:07Z EVIDENCE: 6 behaves — family hunt: class=a per-day lookup inside a per-employee loop in a report; 16 call site(s) given verdicts, 3 same-root ⟂bd4bcf991ec9
+- 2026-09-30T11:21:07Z COMMIT: e0dae0e2f fix(reports): Rest Day Differences looked a calendar up per person per day → review dispatched
+- 2026-09-30T11:23:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-30T11:23:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+EVIDENCE: 3 fresh.local mid-window Holiday List Assignment switch Sun->Sat: work dates Sun 04/11 Oct then Sat 17/24 Oct; 23 lookups, 0.05s
+- 2026-09-30T11:24:10Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1

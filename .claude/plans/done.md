@@ -1,3 +1,3 @@
-GOAL: "Couldn't load your leave" is announced to screen readers and "pull down to try again" really reloads the balances.
-DONE WHEN: the row carries role="status"; Requests pull-to-refresh reloads requestsSummary; test red before, green after.
-CHECK: node --test frontend/src/components/__tests__/request-balances.test.js
+GOAL: Rest Day Differences stays fast and still sees a calendar that changes mid-window.
+DONE WHEN: the person's calendar is re-asked on any Holiday List Assignment start date and where the cached span ends; tests red before, green after; fresh.local shows Sundays then Saturdays after a mid-window switch, 23 lookups.
+CHECK: PYTHONPATH=. python3 hrms/tests/test_rest_day_differences.py

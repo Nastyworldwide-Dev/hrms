@@ -88,6 +88,50 @@ def rest_day_changes(days, shift_of, shift_calendar, person_calendar, calendars)
 	return becomes_rest, becomes_work
 
 
+def _person_calendar(resolve, checkpoints, calendars):
+	"""A per-day `person_calendar` that asks the resolver only when the answer
+	can change. Pure but for `resolve`.
+
+	Review of fedf16621/e0dae0e2f: resolving every day was ~100k queries on a
+	large site, but caching one answer for the whole window missed a Holiday
+	List Assignment that starts mid-window, and someone who gains a calendar
+	part way through. The answer can change only on a `checkpoints` date (an
+	assignment starting) or where the cached calendar's own span ends, so it is
+	re-asked exactly there.
+	"""
+	state = {}
+
+	def mine(day):
+		if "calendar" in state and day not in checkpoints:
+			cached = state["calendar"]
+			if cached is None:
+				return None
+			span = calendars.get(cached, {}).get("span")
+			if span and span[0] <= day <= span[1]:
+				return cached
+		state["calendar"] = resolve(day)
+		return state["calendar"]
+
+	return mine
+
+
+def _calendar_checkpoints(employee, company, start, end) -> set:
+	"""Dates in [start, end] where this person's calendar can change: the day a
+	submitted Holiday List Assignment for them or their company takes effect."""
+	return {
+		getdate(d)
+		for d in frappe.get_all(
+			"Holiday List Assignment",
+			filters={
+				"assigned_to": ["in", [employee, company]],
+				"docstatus": 1,
+				"from_date": ["between", [start, end]],
+			},
+			pluck="from_date",
+		)
+	}
+
+
 def _rows(filters, start, end) -> list:
 	from hrms.utils.holiday_list import get_holiday_list_for_employee
 
@@ -146,24 +190,14 @@ def _rows(filters, start, end) -> list:
 		}:
 			calendar(name)
 
-		resolved = {}
-
-		def mine(day, _emp=emp.name, _resolved=resolved):
-			# A person's calendar changes only where one calendar's span ends and
-			# another begins, so the resolver runs once and is reused while that
-			# calendar still covers the date (review of fedf16621: per day it was
-			# ~100k queries on a site with several hundred staff).
-			if "calendar" in _resolved:
-				cached = _resolved["calendar"]
-				if cached is None:
-					# no calendar at all: it will not appear mid-report
-					return None
-				start_, end_ = cache[cached]["span"]
-				if start_ <= day <= end_:
-					return cached
-			name = calendar(get_holiday_list_for_employee(_emp, raise_exception=False, as_on=day))
-			_resolved["calendar"] = name
-			return name
+		checkpoints = _calendar_checkpoints(emp.name, emp.company, start, end)
+		mine = _person_calendar(
+			lambda day, _emp=emp.name: calendar(
+				get_holiday_list_for_employee(_emp, raise_exception=False, as_on=day)
+			),
+			checkpoints,
+			cache,
+		)
 
 		becomes_rest, becomes_work = rest_day_changes(
 			days,
