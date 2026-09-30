@@ -1,4 +1,7 @@
-CLASS: the service worker's URL built from data that changes between launches (push settings order; relay fetch success), so the browser sees a new worker every launch
-frontend/src/main.js:registerServiceWorker same-root — workerURL() with sorted settings and the last good copy on relay failure
-frontend/src/components/UpdatePrompt.vue not-affected — already offers only a worker waiting behind an active one, per build id (b2f020a62)
-frontend/public/sw.js not-affected — still reads ?config= the same way (test: the worker can read the settings back)
+CLASS: a Script Report opened to a non-HR role must narrow its own rows before reading, or it shows everyone
+hrms/utils/report_scope.py:report_employees same-root — the one "who a supervisor reports on" rule (self + get_direct_report_employees)
+hrms/hr/report/monthly_attendance_sheet/monthly_attendance_sheet.py:get_employee_related_details same-root — population narrowed before attendance is read; chart and summary built from it
+hrms/patches/v16_0/let_shift_supervisor_open_roster.py:_open_report same-root — role row via db_insert (standard Report save refused outside developer mode)
+hrms/utils/report_scope.py:apply_employee_scope not-affected — staff self-scope for Shift Attendance / Employee Advance Summary, unchanged
+hrms/utils/report_scope.py:fenced_companies not-affected — company fence still applied first
+other Script Reports not-affected — Reports project deferred by owner 13 Sep 2026; only this one report is opened, by ruling

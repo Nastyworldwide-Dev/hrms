@@ -1,26 +1,3 @@
-fix(pwa): the update bar still came back on phones with a push relay
-
-Owner, 28 Sep 2026, after alpha.16: "the reload popup still a bug."
-b2f020a62 removed the second worker registration, but on sites with
-push set up the ONE address main.js registers still changed between
-launches: /hrms/sw.js?config=<the push settings, fetched from the
-relay each launch>. The browser treats a different worker URL as a new
-worker, so the same build was installed again and offered as "A new
-version is ready". The dev site has no push relay, which is why every
-check there passed.
-
-Reproduced on fresh.local with push_relay_server_url set and a relay
-stub that returns the same settings with keys in a different order and
-fails every third launch: on HEAD the bar showed on 5 of 6 launches
-with nothing deployed.
-
-utils/workerURL.js builds the address with the settings' keys sorted,
-so the same settings always give the same address, and when the relay
-fetch fails main.js reuses the settings that last worked (kept in
-localStorage) instead of registering the plain address. Push still
-initialises in that case, from the saved copy.
-
-After, same stub: 0 of 6 launches showed the bar, including the two
-where the relay failed. The stub setting was removed afterwards.
+chore(progress): alpha.22 evidence, next step and team-rule ticket
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
