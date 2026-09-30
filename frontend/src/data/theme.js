@@ -1,7 +1,8 @@
 import { reactive } from "vue"
 
 // Theme mode store — light / dark / system, persisted, applied as `.dark` on
-// <html>. Mirrors the HandaPOS Android ThemeMode (LIGHT / DARK / SYSTEM)
+// <html>. Back in You → Appearance by owner ruling, 30 Sep 2026 ("theme
+// switching is missing"), which reverses the alpha.12 "follow the phone" R4. Mirrors the HandaPOS Android ThemeMode (LIGHT / DARK / SYSTEM)
 // settings pattern; switching animates via a circular view-transition reveal
 // from the tapped control.
 
@@ -9,17 +10,21 @@ const STORAGE_KEY = "hrms:theme"
 const TRANSPARENCY_KEY = "hrms:reduce-transparency"
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)")
 
-// Always the phone's appearance (alpha.12, owner ruling R4). Apple
-// (dark-mode): "Avoid offering an app-specific appearance setting." A Light
-// or Dark chosen before is cleared, so nobody is left stuck on it with the
-// picker gone.
-try {
-	localStorage.removeItem(STORAGE_KEY)
-} catch {
-	// storage unavailable: nothing was stored to clear
+export const THEME_MODES = ["light", "dark", "system"]
+
+//: Storage can throw (private window, blocked site data); the choice is then
+//: simply not remembered, and the app follows the phone.
+function readMode() {
+	try {
+		const stored = localStorage.getItem(STORAGE_KEY)
+		return THEME_MODES.includes(stored) ? stored : "system"
+	} catch {
+		return "system"
+	}
 }
+
 export const theme = reactive({
-	mode: "system",
+	mode: readMode(),
 })
 
 export function resolvedTheme(mode = theme.mode) {
@@ -42,7 +47,11 @@ function applyTheme() {
 export function setTheme(mode, event) {
 	const from = resolvedTheme()
 	theme.mode = mode
-	localStorage.setItem(STORAGE_KEY, mode)
+	try {
+		localStorage.setItem(STORAGE_KEY, mode)
+	} catch {
+		console.warn("[Theme] could not remember the choice; it lasts until the app closes")
+	}
 	console.info("[Theme] Mode change:", { mode, resolved: resolvedTheme() })
 
 	if (from === resolvedTheme() || !document.startViewTransition) {
