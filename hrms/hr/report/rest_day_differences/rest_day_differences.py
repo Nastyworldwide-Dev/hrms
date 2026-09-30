@@ -115,21 +115,18 @@ def _person_calendar(resolve, checkpoints, calendars):
 	return mine
 
 
-def _calendar_checkpoints(employee, company, start, end) -> set:
-	"""Dates in [start, end] where this person's calendar can change: the day a
-	submitted Holiday List Assignment for them or their company takes effect."""
-	return {
-		getdate(d)
-		for d in frappe.get_all(
-			"Holiday List Assignment",
-			filters={
-				"assigned_to": ["in", [employee, company]],
-				"docstatus": 1,
-				"from_date": ["between", [start, end]],
-			},
-			pluck="from_date",
-		)
-	}
+def _calendar_checkpoints(names, start, end) -> dict:
+	"""{employee or company: set of dates} in [start, end] where that person's
+	or company's calendar can change: the day a submitted Holiday List
+	Assignment takes effect. One query for everyone (review of 9cd034555)."""
+	out = {}
+	for row in frappe.get_all(
+		"Holiday List Assignment",
+		filters={"assigned_to": ["in", list(names)], "docstatus": 1, "from_date": ["between", [start, end]]},
+		fields=["assigned_to", "from_date"],
+	):
+		out.setdefault(row.assigned_to, set()).add(getdate(row.from_date))
+	return out
 
 
 def _rows(filters, start, end) -> list:
@@ -166,6 +163,9 @@ def _rows(filters, start, end) -> list:
 		s.name: s.holiday_list for s in frappe.get_all("Shift Type", fields=["name", "holiday_list"])
 	}
 	days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
+	changes_on = _calendar_checkpoints(
+		{e.name for e in employees} | {e.company for e in employees}, start, end
+	)
 	cache = {}
 
 	def calendar(name):
@@ -190,7 +190,7 @@ def _rows(filters, start, end) -> list:
 		}:
 			calendar(name)
 
-		checkpoints = _calendar_checkpoints(emp.name, emp.company, start, end)
+		checkpoints = changes_on.get(emp.name, set()) | changes_on.get(emp.company, set())
 		mine = _person_calendar(
 			lambda day, _emp=emp.name: calendar(
 				get_holiday_list_for_employee(_emp, raise_exception=False, as_on=day)
