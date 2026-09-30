@@ -10,6 +10,18 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.23] — Choose Light or Dark Again — 2026-09-30
+
+You can pick Light, Dark or Automatic again, and the "new version" bar
+is gone.
+
+### Changed
+- **Light, Dark or Automatic, in You.** The Appearance row is back.
+  Automatic follows your phone, as before. Your choice is remembered.
+- **No more "A new version is ready" bar.** A new version now takes over
+  by itself while Nadi is in the background, so it never reloads while
+  you are typing. The next time you open it, you are on the new version.
+
 ## [2.0.0-alpha.22] — Shift Supervisors Can Roster Their Team — 2026-09-30
 
 A Shift Supervisor can now open the roster, roster their own team, and
