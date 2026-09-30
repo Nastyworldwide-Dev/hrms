@@ -1,12 +1,13 @@
 # HANDOFF
-prompt:   Fahmie roster access (Shift Supervisor)
+prompt:   theme switching back, update popup removed, regression + desktop check
 status:   done
-commit:   96cc2f87f on nz-glass (tag v2.0.0-alpha.22)
-files:    hrms/patches/v16_0/let_shift_supervisor_open_roster.py
-          hrms/overrides/employee_owned_row_scope.py
-          hrms/utils/report_scope.py
-          hrms/hr/report/monthly_attendance_sheet/monthly_attendance_sheet.py
-          hrms/patches.txt
-verify:   after deploy, sign in as Fahmie: Desk Shift & Attendance opens, /hr/roster shows his team, Monthly Attendance Sheet shows only his team
-flags:    team = direct reports ("Reports To"), not branch (owner ruling A); Attendance Count chart says "Please select company." for a user with no default company
-next:     alpha.23 larger text; ticket .claude/plans/ticket-one-my-team-rule.md
+commit:   see tag v2.0.0-alpha.23 on nz-glass
+files:    frontend/src/views/Profile.vue
+          frontend/src/data/theme.js
+          frontend/index.html
+          frontend/src/data/swRegistration.js
+          frontend/public/sw.js
+          frontend/src/App.vue
+verify:   You -> Appearance -> Dark stays dark after reload; no "A new version is ready" bar
+flags:    theme picker reverses alpha.12 ruling R4 (owner 30 Sep); iOS gate 9/9 0 findings incl. desktop
+next:     alpha.24 larger text; ticket .claude/plans/ticket-one-my-team-rule.md
