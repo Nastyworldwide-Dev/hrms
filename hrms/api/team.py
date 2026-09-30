@@ -14,7 +14,7 @@ import frappe
 from frappe import _
 from frappe.utils import get_time, getdate
 
-from hrms.hr.utils import sees_all_employee_data
+from hrms.hr.utils import rostered_employees, sees_all_employee_data
 from hrms.overrides.company_scope import allowed_companies
 from hrms.utils.identity import get_employee
 from hrms.utils.team_status import derive_member_status
@@ -379,13 +379,19 @@ def get_team_roster(start_date: str, end_date: str, manager: str | None = None) 
 	member_filters = {"reports_to": team_of, "status": "Active"}
 	if fence:
 		member_filters["company"] = ("in", fence)
+	fields = ["name", "employee_name", "designation", "department", "branch", "company"]
 	members = frappe.get_all(
 		"Employee",
 		filters=member_filters,
-		fields=["name", "employee_name", "designation", "department", "branch", "company"],
+		fields=fields,
 		order_by="employee_name asc",
 		ignore_permissions=True,
 	)
+	# A Shift Supervisor rosters their own shifts too (owner, 30 Sep 2026), so
+	# on their own roster they come first, marked as themselves.
+	if team_of == employee and employee in rostered_employees(frappe.session.user):
+		me = frappe.db.get_value("Employee", employee, fields, as_dict=True)
+		members = [frappe._dict(me, is_self=1), *members]
 	if not members:
 		return empty
 	ids = [m.name for m in members]

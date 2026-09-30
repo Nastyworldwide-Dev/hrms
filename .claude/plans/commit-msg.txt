@@ -1,3 +1,23 @@
-docs(handoff): alpha.24 done
+fix(roster): a Shift Supervisor could not assign shifts to their own team
+
+HR, 30 Sep 2026: "dia tak boleh assign shift untuk budak dia". Team
+roster listed a supervisor's reports by Reports To, in any company,
+then Assign refused them: "You are not permitted to roster this
+employee." The write also demanded the report's company be inside the
+supervisor's Company User Permission, so a supervisor locked to one
+company whose report sits in another could see them but not roster
+them. Three separate checks said no in turn: the roster fence, the
+Employee read, and Frappe's User Permission on the new Shift
+Assignment.
+
+Owner rulings the same day: "Reports To wins" and "allow self". One
+list, hrms.hr.utils.rostered_employees (self + Active Reports To,
+Shift Supervisor role required), now decides both the roster write and
+the shift row scope, so the list and the save cannot disagree again.
+Strangers stay refused; without the role nobody is rostered. The Team
+roster lists the supervisor first, as "You".
+
+Verified on fresh.local with a supervisor locked to another company:
+their report and themselves saved, a stranger refused (5-case matrix).
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

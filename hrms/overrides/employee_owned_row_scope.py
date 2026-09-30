@@ -55,7 +55,7 @@ import logging
 import frappe
 from frappe.share import get_shared
 
-from hrms.hr.utils import get_direct_report_employees, get_employees_routed_to, sees_all_employee_data
+from hrms.hr.utils import get_employees_routed_to, rostered_employees, sees_all_employee_data
 from hrms.overrides.company_scope import allowed_companies, company_visible
 from hrms.utils.identity import own_employees
 
@@ -144,18 +144,18 @@ TEAM_REVIEWED_DOCTYPES = {"Attendance Request"}
 #: REPORTED 29 Sep 2026 (Fahmie): the roster opened empty and "Add shift" was
 #: refused, because this fence let a supervisor reach only their own shifts.
 #: Owner ruling the same day: a supervisor rosters their direct reports ("A";
-#: branch-wide is not granted). Read AND write, unlike the review scope above,
+#: branch-wide is not granted); 30 Sep 2026: themselves too, and Reports To
+#: wins over the company lock (hrms.hr.utils.rostered_employees). Read AND write, unlike the review scope above,
 #: because rostering is the job; the role, not reporting alone, grants it, and
 #: hrms.api.roster._ensure_can_roster applies the same rule to every write.
 ROSTER_DOCTYPES = {"Shift Assignment", "Shift Schedule Assignment"}
-ROSTER_ROLE = "Shift Supervisor"
 
 
 def _rostered_by(user: str, doctype: str) -> list[str]:
 	"""The employees whose shifts this user rosters, or [] (no admission)."""
-	if doctype not in ROSTER_DOCTYPES or ROSTER_ROLE not in frappe.get_roles(user):
+	if doctype not in ROSTER_DOCTYPES:
 		return []
-	return get_direct_report_employees(user)
+	return rostered_employees(user)
 
 
 #: DocShare rows carry read/write/share/submit flags; anything destructive is

@@ -1,15 +1,17 @@
-# Approva User role (owner, 30 Sep 2026)
+# Supervisor rosters self and own line (HR report 30 Sep 2026)
 
-A special-case role that shows Approva in Nadi with no accounting or HR access. The roles that already had Approva keep it.
+HR: "dia tak boleh assign shift untuk budak dia". Team roster listed a supervisor's reports by Reports To, then Assign refused them.
 
 ## FLOW
-patches.txt -> add_approva_user_role.execute -> Role "Approva User" (desk_access 0)
-Nadi SideNav/More -> hrms.api.app_links.get_my_apps -> APP_ROLES["approva"] includes APPROVA_USER_ROLE -> link shown -> /approva (Approva checks login itself)
+TeamRoster.vue Assign -> hrms.api.roster.insert_shift -> _ensure_can_roster_employee -> _ensure_can_roster (HR in company | employee in hrms.hr.utils.rostered_employees) -> create_shift_assignment(ignore_permissions for the admitted line)
+employee_owned_row_scope._rostered_by -> rostered_employees (same list); hrms.api.team.get_team_roster puts the supervisor first (is_self)
 
-## MOCKUP: NOT NEEDED (no new UI; the existing Approva link row shows for one more role)
+## MOCKUP: NOT NEEDED (no new screen; the existing row reads "You", the existing button gets its words)
 
 ## EXPECTED OUTPUT
-- A user holding only Employee + Approva User sees Approva in Nadi; removing the role hides it.
-- Accounts Manager / Accounts User / System Manager / HR Manager / HR User still see Approva.
+- Supervisor with a Company lock assigns a shift to a report in another company: saved.
+- Supervisor assigns a shift to themselves: saved; they are listed first as "You".
+- A stranger: still refused. No role: nothing rostered.
+- The Assign shift button shows its words.
 
-APPROVED: owner, 30 Sep 2026 — "2 but the existing one still hold that access to use approva. 2 is special case".
+APPROVED: owner, 30 Sep 2026 — "They have the role", "Yes, allow self", "Reports To wins".

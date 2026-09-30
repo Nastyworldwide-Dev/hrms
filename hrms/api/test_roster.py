@@ -88,12 +88,11 @@ class TestRosterFence(FrappeTestCase):
 		with self.assertRaises(frappe.PermissionError):
 			_ensure_can_roster(self.stranger)
 
-	def test_supervisor_cannot_roster_themselves_without_being_own_manager(self):
-		# self is not a direct report of self -> denied (a leader rosters the
-		# team, not a self-service shift edit)
+	def test_supervisor_can_roster_themselves(self):
+		# Owner, 30 Sep 2026: a Shift Supervisor assigns their own shifts too
+		# (hrms.hr.utils.rostered_employees).
 		self._as(self.supervisor)
-		with self.assertRaises(frappe.PermissionError):
-			_ensure_can_roster(self.supervisor)
+		_ensure_can_roster(self.supervisor)  # must not throw
 
 	def test_plain_employee_can_roster_nobody(self):
 		self._as(self.plain)

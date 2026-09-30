@@ -41,7 +41,7 @@
 						<div class="flex items-start justify-between gap-2">
 							<div class="flex flex-col min-w-0">
 								<span class="text-panel-title text-inkbase truncate">{{
-									member.employee_name
+									member.is_self ? __("You") : member.employee_name
 								}}</span>
 								<span
 									v-if="member.branch || member.department"
@@ -116,9 +116,13 @@
 								/>
 							</label>
 						</div>
-						<GButton :disabled="!canSubmit" :pending="assignShift.loading" @click="submitAssign">
-							{{ __("Assign shift") }}
-						</GButton>
+						<GButton
+							:label="__('Assign shift')"
+							:pending-label="__('Assigning…')"
+							:disabled="!canSubmit"
+							:pending="assignShift.loading"
+							@click="submitAssign"
+						/>
 					</div>
 				</template>
 			</GModal>

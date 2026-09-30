@@ -1,3 +1,3 @@
-GOAL: an "Approva User" role that shows Approva in Nadi and grants nothing else; existing roles keep Approva.
-DONE WHEN: role created by patch (idempotent); get_my_apps offers approva for it; the five existing roles still get it; red then green; fresh.local add/remove shows and hides the link.
-CHECK: PYTHONPATH=. python3 -m pytest -q hrms/api/test_app_links.py
+GOAL: a Shift Supervisor rosters themselves and whoever reports to them, whatever their company lock; strangers stay refused.
+DONE WHEN: rostered_employees is the one list for the write fence and the shift row scope; insert_shift saves for self and a cross-company report; stranger refused; tests red before, green after; fresh.local 5-case matrix.
+CHECK: PYTHONPATH=. python3 hrms/tests/test_supervisor_rosters_self_and_line.py && PYTHONPATH=. python3 hrms/tests/test_shift_supervisor_rosters_own_team.py

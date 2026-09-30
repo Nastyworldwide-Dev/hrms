@@ -1205,6 +1205,38 @@ def get_direct_report_employees(user: str) -> list[str]:
 	return reports
 
 
+#: The role that lets a branch leader roster (hrms.api.roster).
+ROSTER_ROLE = "Shift Supervisor"
+
+
+def rostered_employees(user: str) -> list[str]:
+	"""Who this Shift Supervisor may roster: themselves and everyone whose
+	Reports To is them. [] without the role (no admission, never "no limit").
+
+	REPORTED 30 Sep 2026 (HR: "dia tak boleh assign shift untuk budak dia"):
+	the Team roster listed a supervisor's reports by Reports To in any company,
+	then Assign refused any report outside the supervisor's Company User
+	Permission. Owner rulings the same day: Reports To wins over the company
+	lock (HR set it, so it is the authority), and a supervisor rosters their
+	own shifts too. So this is deliberately NOT company-fenced, unlike
+	get_direct_report_employees (a READ scope); strangers stay out because only
+	Reports To admits anyone. Active employees only, both sides.
+	"""
+	if ROSTER_ROLE not in frappe.get_roles(user):
+		return []
+	own = own_employees(user)
+	if not own:
+		return []
+	reports = frappe.get_all(
+		"Employee",
+		filters={"reports_to": ("in", own), "status": "Active"},
+		pluck="name",
+		ignore_permissions=True,
+	)
+	logger.info("[roster_scope] %s rosters self + %d report(s)", user, len(reports))
+	return [*own, *reports]
+
+
 @request_cache
 def get_designated_approvers(
 	employee: str, employee_approver_field: str, department_parentfield: str

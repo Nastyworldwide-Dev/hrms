@@ -294,3 +294,7 @@ EVIDENCE: 3 fresh.local Approva User — employee apps [] -> ['approva'] with ro
 - 2026-09-30T06:49:13Z COMMIT: ddaa02b12 feat(apps): an "Approva User" role that opens Approva and nothing else → review dispatched
 - 2026-09-30T06:50:21Z COMMIT: 699adbb7f chore(release): 2.0.0-alpha.24 — Approva for Anyone Who Needs It → review+deps dispatched
 NEXT: owner deploys alpha.24; give Approva User in Desk to whoever needs Approva; alpha.25 larger text on 'go'
+- 2026-09-30T06:50:52Z COMMIT: c18817c41 docs(handoff): alpha.24 done → review dispatched
+EVIDENCE: 3 fresh.local supervisor locked to _Test Company: report in Nadi W0 A SAVED, self SAVED, stranger refused; Team roster lists You first; browser Assign x2 no errors
+- 2026-09-30T08:59:01Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-09-30T08:59:01Z EVIDENCE: 3 works — blast radius green: 28 dependent(s), 16 extra test file(s) ⟂0ef7741de903

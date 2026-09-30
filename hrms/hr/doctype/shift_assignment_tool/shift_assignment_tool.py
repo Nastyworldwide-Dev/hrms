@@ -315,8 +315,12 @@ def create_shift_assignment(
 	status: str,
 	shift_location: str | None = None,
 	shift_schedule_assignment: str | None = None,
+	ignore_permissions: bool = False,
 ) -> str:
 	assignment = frappe.new_doc("Shift Assignment")
+	# Only the roster passes True, and only after its own fence admitted the
+	# employee (hrms.api.roster._ensure_can_roster_employee).
+	assignment.flags.ignore_permissions = ignore_permissions
 	assignment.employee = employee
 	assignment.company = company
 	assignment.shift_type = shift_type

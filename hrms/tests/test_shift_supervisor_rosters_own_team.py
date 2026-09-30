@@ -41,7 +41,8 @@ def _as(roles):
 		(frappe, "get_roles", roles),
 		(scope, "_is_hr", False),
 		(scope, "_own_employees", [LEAD]),
-		(scope, "get_direct_report_employees", [REPORT]),
+		# the one "who a supervisor rosters" list, role-gated (hrms.hr.utils)
+		(scope, "rostered_employees", [LEAD, REPORT] if "Shift Supervisor" in roles else []),
 		(scope, "get_employees_routed_to", [REPORT]),
 		(scope, "get_shared", []),
 	):

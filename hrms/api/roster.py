@@ -7,6 +7,7 @@ from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employe
 from hrms.hr.doctype.shift_assignment.shift_assignment import ShiftAssignment
 from hrms.hr.doctype.shift_assignment_tool.shift_assignment_tool import create_shift_assignment
 from hrms.hr.doctype.shift_schedule.shift_schedule import get_or_insert_shift_schedule
+from hrms.hr.utils import rostered_employees
 from hrms.telemetry import capture
 from hrms.utils.company_scope import (
 	get_permitted_companies,
@@ -25,9 +26,9 @@ def _ensure_can_roster(employee: str) -> None:
 	(_may_read_employee) but for WRITES, and fails CLOSED:
 
 	  · HR operators (company-fenced) may roster anyone in their companies.
-	  · A Shift Supervisor may roster their OWN direct reports, in a company
-	    they are permitted to see — never another leader's team, never another
-	    company's staff.
+	  · A Shift Supervisor may roster themselves and their OWN direct reports
+	    (Reports To), in any company — never another leader's team
+	    (hrms.hr.utils.rostered_employees; owner rulings 30 Sep 2026).
 	  · Everyone else is denied.
 
 	This is the security boundary that keeps a multi-company hub from letting
@@ -38,7 +39,6 @@ def _ensure_can_roster(employee: str) -> None:
 	"""
 	from hrms.hr.utils import sees_all_employee_data
 	from hrms.overrides.company_scope import company_visible
-	from hrms.utils.identity import get_employee
 
 	if not frappe.db.exists("Employee", employee):
 		frappe.throw(_("Employee {0} does not exist.").format(employee), frappe.DoesNotExistError)
@@ -47,19 +47,32 @@ def _ensure_can_roster(employee: str) -> None:
 	if sees_all_employee_data(frappe.session.user) and company_visible(company):
 		return
 
-	caller = get_employee()
-	if (
-		caller
-		and ROSTER_SUPERVISOR_ROLE in frappe.get_roles(frappe.session.user)
-		and frappe.db.get_value("Employee", employee, "reports_to") == caller
-		and company_visible(company)
-	):
+	# A Shift Supervisor rosters themselves and whoever reports to them, in
+	# any company (owner, 30 Sep 2026: "Reports To wins"). One list, shared
+	# with the shift row scope, so the list and the save cannot disagree.
+	if employee in rostered_employees(frappe.session.user):
 		return
 
 	frappe.logger("hrms").warning(
 		"[roster] %s denied roster write on employee %s", frappe.session.user, employee
 	)
 	frappe.throw(_("You are not permitted to roster this employee."), frappe.PermissionError)
+
+
+def _ensure_can_roster_employee(employee: str) -> None:
+	"""Every roster write's gate: may this caller roster this employee?
+
+	Used to be `has_permission("Employee", "read")` THEN `_ensure_can_roster`.
+	The read check applies the caller's Company User Permission, so a Shift
+	Supervisor locked to one company was refused their own report in another
+	before the roster fence ran (30 Sep 2026, HR: "dia tak boleh assign shift
+	untuk budak dia"). Owner: Reports To wins. The roster fence is the stricter
+	question (HR in company, or the supervisor's own line), so it is asked
+	first; the Employee read stays for everyone it does not admit.
+	"""
+	_ensure_can_roster(employee)
+	if employee not in rostered_employees(frappe.session.user):
+		frappe.has_permission("Employee", "read", employee, throw=True)
 
 
 ALLOWED_EMPLOYEE_FILTERS = {
@@ -191,8 +204,7 @@ def create_shift_schedule_assignment(
 	frequency: str,
 	shift_location: str | None = None,
 ) -> None:
-	frappe.has_permission("Employee", "read", employee, throw=True)
-	_ensure_can_roster(employee)
+	_ensure_can_roster_employee(employee)
 	frappe.has_permission("Shift Schedule Assignment", "create", throw=True)
 	shift_schedule = get_or_insert_shift_schedule(shift_type, frequency, repeat_on_days)
 	shift_schedule_assignment = frappe.get_doc(
@@ -234,8 +246,7 @@ def delete_shift_schedule_assignment(shift_schedule_assignment: str) -> None:
 		"Shift Assignment", {"shift_schedule_assignment": shift_schedule_assignment}, pluck="name"
 	):
 		shift_assignment_doc = frappe.get_doc("Shift Assignment", shift_assignment_name)
-		frappe.has_permission("Employee", "read", shift_assignment_doc.employee, throw=True)
-		_ensure_can_roster(shift_assignment_doc.employee)
+		_ensure_can_roster_employee(shift_assignment_doc.employee)
 		shift_assignment_doc.check_permission("cancel" if shift_assignment_doc.docstatus == 1 else "delete")
 		if shift_assignment_doc.docstatus == 1:
 			shift_assignment_doc.cancel()
@@ -251,17 +262,15 @@ def swap_shift(
 		frappe.throw(_("Source and target shifts cannot be the same"))
 
 	src_shift_doc = frappe.get_doc("Shift Assignment", src_shift)
-	frappe.has_permission("Employee", "read", src_shift_doc.employee, throw=True)
-	_ensure_can_roster(src_shift_doc.employee)
+	_ensure_can_roster_employee(src_shift_doc.employee)
 	src_shift_doc.check_permission("write")
 
-	frappe.has_permission("Employee", "read", tgt_employee, throw=True)
-	_ensure_can_roster(tgt_employee)
+	_ensure_can_roster_employee(tgt_employee)
 	frappe.has_permission("Shift Assignment", "create", throw=True)
 
 	if tgt_shift:
 		tgt_shift_doc = frappe.get_doc("Shift Assignment", tgt_shift)
-		frappe.has_permission("Employee", "read", tgt_shift_doc.employee, throw=True)
+		_ensure_can_roster_employee(tgt_shift_doc.employee)
 		tgt_shift_doc.check_permission("write")
 		tgt_company = tgt_shift_doc.company
 		break_shift(tgt_shift_doc, tgt_date)
@@ -299,8 +308,7 @@ def break_shift(assignment: str | ShiftAssignment, date: str) -> None:
 	if isinstance(assignment, str):
 		assignment = frappe.get_doc("Shift Assignment", assignment)
 
-	frappe.has_permission("Employee", "read", assignment.employee, throw=True)
-	_ensure_can_roster(assignment.employee)
+	_ensure_can_roster_employee(assignment.employee)
 	assignment.check_permission("write")
 
 	if assignment.end_date and date_diff(assignment.end_date, date) < 0:
@@ -338,9 +346,21 @@ def insert_shift(
 	status: str,
 	shift_location: str | None = None,
 ) -> None:
-	frappe.has_permission("Employee", "read", employee, throw=True)
-	_ensure_can_roster(employee)
+	_ensure_can_roster_employee(employee)
 	frappe.has_permission("Shift Assignment", "create", throw=True)
+	# A supervisor's own line is admitted by the roster fence above, company
+	# lock or not ("Reports To wins", 30 Sep 2026). Frappe's User Permission
+	# layer would still refuse a report in another company, so for that line
+	# the per-document checks are the fence's, not Frappe's.
+	# ceiling: only insert_shift (Team roster "Assign") skips the lock; upgrade:
+	# swap/break/schedule the same way when the Desk roster is used across
+	# companies.
+	own_line = employee in rostered_employees(frappe.session.user)
+
+	def may(ptype, name):
+		if not own_line:
+			frappe.has_permission("Shift Assignment", ptype, name, throw=True)
+
 	filters = {
 		"doctype": "Shift Assignment",
 		"employee": employee,
@@ -356,21 +376,30 @@ def insert_shift(
 	)
 
 	if prev_shift:
-		frappe.has_permission("Shift Assignment", "write", prev_shift, throw=True)
+		may("write", prev_shift)
 		if next_shift:
-			frappe.has_permission("Shift Assignment", "write", next_shift, throw=True)
+			may("write", next_shift)
 			end_date = frappe.db.get_value("Shift Assignment", next_shift, "end_date")
-			frappe.has_permission("Shift Assignment", "delete", next_shift, throw=True)
+			may("delete", next_shift)
 			frappe.db.set_value("Shift Assignment", next_shift, "docstatus", 2)
-			frappe.delete_doc("Shift Assignment", next_shift)
+			frappe.delete_doc("Shift Assignment", next_shift, ignore_permissions=own_line)
 		frappe.db.set_value("Shift Assignment", prev_shift, "end_date", end_date or None)
 
 	elif next_shift:
-		frappe.has_permission("Shift Assignment", "write", next_shift, throw=True)
+		may("write", next_shift)
 		frappe.db.set_value("Shift Assignment", next_shift, "start_date", start_date)
 
 	else:
-		create_shift_assignment(employee, company, shift_type, start_date, end_date, status, shift_location)
+		create_shift_assignment(
+			employee,
+			company,
+			shift_type,
+			start_date,
+			end_date,
+			status,
+			shift_location,
+			ignore_permissions=own_line,
+		)
 
 
 def get_holidays(month_start: str, month_end: str, employee_filters: dict[str, str]) -> dict[str, list[dict]]:
