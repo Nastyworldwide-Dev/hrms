@@ -1,10 +1,11 @@
 # HANDOFF
-prompt:   "No Holiday List was found" blocked leave (5th report, HR-EMP-00310 Nsty Holding)
-status:   done
-commit:   8c191c356 on nz-glass (tag v2.0.0-alpha.26)
-files:    hrms/utils/holiday_list.py
-          hrms/utils/readiness.py
-          hrms/tests/test_holiday_list.py
-verify:   staff with a Holiday List on their Employee or Company files a half-day leave: no error
-flags:    if Nsty Holding has no Default Holiday List and the employee none, the plain refusal shows: set it on the Company
-next:     alpha.27 larger text; ticket .claude/plans/ticket-one-my-team-rule.md
+prompt:   honest leave balance, pull-to-refresh, monthly sheet calendar; working-day map
+status:   done (alpha.27); rest-day rule waits for plan approval
+commit:   5dbc1592f on nz-glass (tag v2.0.0-alpha.27)
+files:    frontend/src/components/RequestBalances.vue
+          frontend/src/views/Requests.vue
+          hrms/utils/holiday_list.py
+          docs/glass/plan/WORKING_DAY_MAP.md
+verify:   Requests: a balance that fails says "Couldn't load your leave"; pull down reloads it
+flags:    51f319e17 has the wrong subject (monthly sheet fix); leave import error = wrong Import Type, not code
+next:     rest-day rule (owner: 3 yes, 4 no, 5 keep) — plan first, from deploy date
