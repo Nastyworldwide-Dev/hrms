@@ -58,7 +58,15 @@
 		     answer, in one place, even before HR allocates any. -->
 		<section class="g-form-section">
 			<h2 class="g-form-section__title">{{ __("Leave left") }}</h2>
-			<div v-if="!shownLeave.length" class="g-form-group">
+			<!-- The server leaves a section OUT when it could not read it (30 Sep
+			     2026, Fazwan: eight allocations, and the strip said "None
+			     allocated yet"). Absent is "we could not check", never "none". -->
+			<div v-if="leaveUnread" class="g-form-group">
+				<div class="g-form-row g-form-row--readonly">
+					<span class="g-form-row__label">{{ __("Couldn't load your leave. Pull down to try again.") }}</span>
+				</div>
+			</div>
+			<div v-else-if="!shownLeave.length" class="g-form-group">
 				<div class="g-form-row g-form-row--readonly">
 					<span class="g-form-row__label">{{ __("None allocated yet") }}</span>
 				</div>
@@ -143,6 +151,8 @@ const router = useRouter()
 const firstLoad = computed(() => requestsSummary.loading && !requestsSummary.data)
 const data = computed(() => requestsSummary.data || {})
 const leave = computed(() => data.value.leave || [])
+//: The answer arrived without a leave section: the server could not read it.
+const leaveUnread = computed(() => Boolean(requestsSummary.data) && !("leave" in requestsSummary.data))
 //: Two names fit the one balances line on a phone; the rest are in the sheet.
 const LEAVE_SHOWN = 2
 //: Annual and Medical lead the strip (owner ruling R2), matched by name

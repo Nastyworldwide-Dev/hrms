@@ -83,6 +83,19 @@ test("a section the server could not read is absent, never zero", () => {
 	assert.match(component, /overtime\?\./, "so an absent section builds no row")
 })
 
+test("leave that could not be read never says None allocated yet", () => {
+	// REPORTED 30 Sep 2026 (Fazwan, HR-EMP-00310): eight Leave Allocations
+	// submitted, Requests said "None allocated yet". The server's leave read
+	// raised (no holiday calendar to count his past leave days against) and
+	// omitted the section, as designed; this strip read the omission as an
+	// empty list. Absent is "we could not check", never "you have none".
+	assert.match(component, /leaveUnread/, "an absent leave section is its own state")
+	const none = component.indexOf('__("None allocated yet")')
+	const unread = component.indexOf("leaveUnread")
+	assert.ok(unread !== -1 && unread < none, "and it is checked before None allocated yet")
+	assert.match(component, /couldn't load your leave/i, "it says so")
+})
+
 test("nothing here recomputes a number that already exists", () => {
 	// A second implementation of "how much leave is left" is a second answer.
 	// Every figure is composed from the endpoint that already owns it.
