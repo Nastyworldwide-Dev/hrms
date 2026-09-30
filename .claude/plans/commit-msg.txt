@@ -1,10 +1,3 @@
-chore(release): 2.0.0-alpha.24 — Approva for Anyone Who Needs It
-
-Owner, 30 Sep 2026: "push". Ships the Approva User role (ddaa02b12):
-Approva in the Nadi menu with no accounting or HR access; the roles
-that already had it keep it. Reviewed, no Critical; verified on
-fresh.local.
-
-Larger text moves to alpha.25.
+docs(handoff): alpha.24 done
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

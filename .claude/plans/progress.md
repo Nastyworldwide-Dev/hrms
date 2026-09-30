@@ -292,3 +292,5 @@ EVIDENCE: 3 fresh.local Approva User — employee apps [] -> ['approva'] with ro
 - 2026-09-30T06:49:11Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-30T06:49:11Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
 - 2026-09-30T06:49:13Z COMMIT: ddaa02b12 feat(apps): an "Approva User" role that opens Approva and nothing else → review dispatched
+- 2026-09-30T06:50:21Z COMMIT: 699adbb7f chore(release): 2.0.0-alpha.24 — Approva for Anyone Who Needs It → review+deps dispatched
+NEXT: owner deploys alpha.24; give Approva User in Desk to whoever needs Approva; alpha.25 larger text on 'go'
