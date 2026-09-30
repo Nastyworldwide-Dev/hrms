@@ -10,6 +10,31 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.22] — Shift Supervisors Can Roster Their Team — 2026-09-30
+
+A Shift Supervisor can now open the roster, roster their own team, and
+see their team's attendance. Before, the role had the right name but
+opened onto errors.
+
+### Fixed
+- **"No permission for Page" on Shift & Attendance.** That Desk page let
+  in HR only. A Shift Supervisor can now open it.
+- **Red errors on the roster.** The filter bar showed "Insufficient
+  Permission for Branch" and "for Designation". A Shift Supervisor can now
+  read those two lists (read only).
+- **The roster was empty for a supervisor.** They saw none of their team's
+  shifts, and "Add shift" was refused. They now see and roster the people
+  who report to them, and nobody else.
+
+### Added
+- **The Monthly Attendance Sheet for a supervisor's team.** A Shift
+  Supervisor sees themselves and the people who report to them. HR sees
+  what it saw before.
+
+Who counts as "the team" is the people whose **Reports To** is the
+supervisor. Staff at the same branch who report to someone else are not
+included.
+
 ## [2.0.0-alpha.21] — Undo and a Warning Before Send — 2026-09-29
 
 Withdrawing a request is instant with Undo, and a leave that would be
