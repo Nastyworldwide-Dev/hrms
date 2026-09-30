@@ -64,24 +64,28 @@ def get_holiday_dates_between_range(
 		and to_holiday_list
 		and from_holiday_list.holiday_list != to_holiday_list.holiday_list
 	):
-		return list(
-			set(
-				get_holiday_dates_between(
-					holiday_list=from_holiday_list.holiday_list,
-					start_date=start_date,
-					end_date=add_days(to_holiday_list.from_date, -1),
-					select_weekly_off=select_weekly_offs,
-					skip_weekly_offs=skip_weekly_offs,
-				)
-				+ get_holiday_dates_between(
-					holiday_list=to_holiday_list.holiday_list,
-					start_date=to_holiday_list.from_date,
-					end_date=end_date,
-					select_weekly_off=select_weekly_offs,
-					skip_weekly_offs=skip_weekly_offs,
-				)
+		# The second calendar takes over at its own start, clamped to the range:
+		# a calendar set on the Employee or Company record usually starts on
+		# 1 Jan, long before the range (review of 3722a3ace), and counting from
+		# there would pull in holidays outside [start_date, end_date].
+		switch = max(getdate(to_holiday_list.from_date), start_date)
+		dates = []
+		if switch > start_date:
+			dates += get_holiday_dates_between(
+				holiday_list=from_holiday_list.holiday_list,
+				start_date=start_date,
+				end_date=add_days(switch, -1),
+				select_weekly_off=select_weekly_offs,
+				skip_weekly_offs=skip_weekly_offs,
 			)
+		dates += get_holiday_dates_between(
+			holiday_list=to_holiday_list.holiday_list,
+			start_date=switch,
+			end_date=end_date,
+			select_weekly_off=select_weekly_offs,
+			skip_weekly_offs=skip_weekly_offs,
 		)
+		return list(set(dates))
 	elif holiday_list := from_holiday_list.get("holiday_list", None) or to_holiday_list.get(
 		"holiday_list", None
 	):

@@ -1,9 +1,10 @@
-fix(holidays): a split date range could add days to an empty start
+fix(holidays): a range across two calendars counted holidays outside it
 
-Review of a234b66dc: the new record-calendar fallback returned
-from_date=None in its dict form. get_holiday_dates, its only dict
-caller, splits a range at the second calendar's from_date when the two
-ends resolve to different calendars, and add_days(None, -1) raised.
-It now carries the Holiday List's own start date.
+Review of 3722a3ace: when the two ends of a date range resolve to
+different calendars, get_holiday_dates_between_range split at the
+second calendar's start. A calendar from the Employee or Company
+record usually starts on 1 Jan, long before the range, so the second
+part counted holidays before start_date and the first part ran
+backwards. The split point is now clamped to the range.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

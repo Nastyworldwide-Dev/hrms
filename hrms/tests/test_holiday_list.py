@@ -224,5 +224,40 @@ class TestTheCalendarSetOnTheRecordCounts(unittest.TestCase):
 		self.assertNotIn("Holiday List Assignment", str(caught.exception))
 
 
+class TestASplitRangeStaysInsideItself(unittest.TestCase):
+	"""get_holiday_dates_between_range splits at the second calendar's start
+	when the two ends of a range resolve to different calendars. A record
+	calendar can start BEFORE the range (review of 3722a3ace), so the split must
+	be clamped to the range: no holiday outside [start, end] is counted."""
+
+	def test_the_split_never_reaches_before_the_start(self):
+		calls = []
+
+		def day(d):
+			return d.date() if hasattr(d, "date") and callable(d.date) else d
+
+		def between(holiday_list, start_date, end_date, **kwargs):
+			calls.append((holiday_list, day(start_date), day(end_date)))
+			return []
+
+		ends = {
+			date(2026, 12, 20): frappe._dict(holiday_list="A-ASSIGNED", from_date=date(2026, 12, 1)),
+			date(2026, 12, 31): frappe._dict(holiday_list="MY-2026", from_date=date(2026, 1, 1)),
+		}
+		with (
+			patch.object(
+				module, "get_holiday_list_for_employee", side_effect=lambda e, as_on, **k: ends[as_on]
+			),
+			patch.object(module, "get_holiday_dates_between", side_effect=between),
+			patch.object(module, "getdate", side_effect=lambda d: d),
+		):
+			module.get_holiday_dates_between_range(EMPLOYEE, date(2026, 12, 20), date(2026, 12, 31))
+		for holiday_list, start, end in calls:
+			self.assertGreaterEqual(start, date(2026, 12, 20), holiday_list)
+			self.assertLessEqual(end, date(2026, 12, 31), holiday_list)
+			self.assertLessEqual(start, end, holiday_list)
+		self.assertIn(("MY-2026", date(2026, 12, 20), date(2026, 12, 31)), calls)
+
+
 if __name__ == "__main__":
 	unittest.main()
