@@ -10,6 +10,20 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.27] — Honest Leave Balances — 2026-09-30
+
+When your leave balance can't be read, Nadi now says so, and pulling down
+tries again.
+
+### Fixed
+- **"None allocated yet" for people who do have leave.** If your balance
+  couldn't be read, Requests said you had none. It now says "Couldn't load
+  your leave. Pull down to try again."
+- **Pulling down on Requests didn't reload the balances.** It only
+  refreshed the list of requests. It now refreshes both.
+- **The Monthly Attendance Sheet showed no holidays or rest days** for staff
+  whose holiday calendar is set on their Employee or Company record.
+
 ## [2.0.0-alpha.26] — Leave Works for New Staff — 2026-09-30
 
 Staff added after Nadi was set up can send leave again.
