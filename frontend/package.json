@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.24",
-	"releaseName": "Approva for Anyone Who Needs It",
+	"version": "2.0.0-alpha.25",
+	"releaseName": "Supervisors Roster Their Whole Team",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

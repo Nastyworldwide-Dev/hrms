@@ -10,6 +10,25 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.25] — Supervisors Roster Their Whole Team — 2026-09-30
+
+A Shift Supervisor can now assign shifts to everyone who reports to them,
+and to themselves.
+
+### Fixed
+- **"You are not permitted to roster this employee."** The Team roster
+  showed a supervisor's team, then refused to save a shift for anyone in a
+  different company from the supervisor's own. Now whoever HR set as
+  **Reports To** can be rostered, whatever their company.
+- **The Assign shift button was blank.** It now says "Assign shift".
+
+### Added
+- **Supervisors roster themselves.** On their own Team roster they come
+  first, as "You", and can assign their own shifts.
+
+People who don't report to the supervisor are still refused, and without
+the Shift Supervisor role nobody can be rostered.
+
 ## [2.0.0-alpha.24] — Approva for Anyone Who Needs It — 2026-09-30
 
 A new role lets someone use Approva without giving them accounting or HR
