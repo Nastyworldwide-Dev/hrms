@@ -94,6 +94,12 @@ test("leave that could not be read never says None allocated yet", () => {
 	const unread = component.indexOf("leaveUnread")
 	assert.ok(unread !== -1 && unread < none, "and it is checked before None allocated yet")
 	assert.match(component, /couldn't load your leave/i, "it says so")
+	const row = component.slice(unread, none)
+	assert.match(row, /role="status"/, "and a screen reader is told")
+	// "Pull down to try again" must be true: the pull reloads the balances.
+	const page = code(read("views/Requests.vue"))
+	const pull = page.slice(page.indexOf("async function refreshRequests"))
+	assert.match(pull.slice(0, pull.indexOf("\n}")), /requestsSummary\.reload\(\)/)
 })
 
 test("nothing here recomputes a number that already exists", () => {

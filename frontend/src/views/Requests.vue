@@ -63,6 +63,7 @@ import GIconButton from "@/components/glass/GIconButton.vue"
 //: refresher is 41 KB, and nobody pulls before the page has drawn).
 const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
 import { reloadRequestLists } from "@/data/requestLists"
+import { requestsSummary } from "@/data/requestsSummary"
 
 const __ = inject("$translate")
 const router = useRouter()
@@ -126,7 +127,9 @@ function startRequest(key) {
 
 async function refreshRequests(event) {
 	console.info("[Requests] pull-to-refresh")
-	await reloadRequestLists("pull")
+	// The balances too: "Couldn't load your leave. Pull down to try again."
+	// promises this pull (30 Sep 2026); it used to reload only the lists.
+	await Promise.allSettled([reloadRequestLists("pull"), requestsSummary.reload()])
 	event.target?.complete?.()
 }
 </script>

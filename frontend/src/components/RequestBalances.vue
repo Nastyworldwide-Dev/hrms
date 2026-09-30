@@ -62,7 +62,9 @@
 			     2026, Fazwan: eight allocations, and the strip said "None
 			     allocated yet"). Absent is "we could not check", never "none". -->
 			<div v-if="leaveUnread" class="g-form-group">
-				<div class="g-form-row g-form-row--readonly">
+				<!-- Announced when it appears (design review of 681545ac0): the
+				     loading line above is a status too, so this answers it. -->
+				<div class="g-form-row g-form-row--readonly" role="status">
 					<span class="g-form-row__label">{{ __("Couldn't load your leave. Pull down to try again.") }}</span>
 				</div>
 			</div>
