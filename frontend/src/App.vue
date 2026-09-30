@@ -20,7 +20,6 @@
 		<Toasts />
 		<UndoBar />
 
-		<UpdatePrompt />
 		<InstallPrompt />
 		<!-- Must-read notices open full screen on launch (alpha.7 §4.4). -->
 		<MustReadNotice />
@@ -39,7 +38,6 @@ import InstallPrompt from "@/components/InstallPrompt.vue"
 import MustReadNotice from "@/components/MustReadNotice.vue"
 import OfflineBanner from "@/components/OfflineBanner.vue"
 import UndoBar from "@/components/UndoBar.vue"
-import UpdatePrompt from "@/components/UpdatePrompt.vue"
 import { showNotification } from "@/utils/pushNotifications"
 
 onMounted(() => {

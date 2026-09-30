@@ -85,13 +85,25 @@ export function setTheme(mode, event) {
 // Reduce-transparency (glass spec §6.2) — persisted manual override on top of
 // the prefers-reduced-transparency media query, which CSS honours directly.
 // html[data-transparency="reduce"] swaps every .g-glass to the fallback fill.
+function readTransparency() {
+	try {
+		return localStorage.getItem(TRANSPARENCY_KEY) === "1"
+	} catch {
+		return false
+	}
+}
+
 export const transparency = reactive({
-	reduce: localStorage.getItem(TRANSPARENCY_KEY) === "1",
+	reduce: readTransparency(),
 })
 
 export function setTransparency(reduce) {
 	transparency.reduce = reduce
-	localStorage.setItem(TRANSPARENCY_KEY, reduce ? "1" : "0")
+	try {
+		localStorage.setItem(TRANSPARENCY_KEY, reduce ? "1" : "0")
+	} catch {
+		console.warn("[Theme] could not remember reduce-transparency; it lasts until the app closes")
+	}
 	applyTransparency()
 }
 

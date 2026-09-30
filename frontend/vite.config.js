@@ -64,12 +64,12 @@ export default defineConfig({
 			// "prompt", not "autoUpdate": a new build used to activate and reload the
 			// page the moment it downloaded — mid-session, mid-form, losing whatever
 			// the employee had typed. It is still downloaded immediately; it takes
-			// the page when they press Reload (src/components/UpdatePrompt.vue).
+			// the page while the app is hidden (src/data/swRegistration.js).
 			registerType: "prompt",
 			strategies: "injectManifest",
 			injectRegister: null,
 			// main.js is the ONLY place the worker is registered (/hrms/sw.js,
-			// served by hrms/www/service_worker.py, scope /hrms); UpdatePrompt
+			// served by hrms/www/service_worker.py, scope /hrms); swRegistration.js
 			// watches that registration (src/data/swRegistration.js). Never add a
 			// registerSW call: a second URL is a second worker, and the two swap
 			// on every load (28 Sep 2026: the update bar showed with nothing new).

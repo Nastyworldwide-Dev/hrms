@@ -41,38 +41,6 @@ function rule(className) {
 	return at < 0 ? null : text.slice(at, text.indexOf("}", at))
 }
 
-test("the update prompt is not trapped inside Ionic's stacking context", () => {
-	// It has to be a child of the tabbed shell, where it can out-stack the tab
-	// bar, OR the tab bar has to be told to sit below it. The first is a bigger
-	// change; the second is one declaration and keeps the prompt in App.vue
-	// where every screen gets it.
-	const tabbar = rule(".g-tabbar")
-	assert.ok(tabbar, ".g-tabbar should exist")
-	assert.match(tabbar, /z-index:/, "the bar needs an explicit layer to sit below the prompt")
-	const prompt = rule(".g-update")
-	assert.match(prompt, /z-index: var\(--g-layer-scrim\)/, "and the prompt sits above it")
-})
-
-test("the update prompt clears the tab bar by more than a rounding error", () => {
-	const prompt = rule(".g-update")
-	// 64 + 9 is what the bar occupies; +12 left three pixels. The gap token is
-	// what the bar actually uses, so the prompt must use it too rather than a
-	// number somebody hoped was big enough.
-	assert.match(
-		prompt,
-		/--g-tabbar-height\)[^;]*\+[^;]*--g-tabbar-gap/,
-		"offset by the bar's own two tokens, not by a guess"
-	)
-})
-
-test("the prompt can be dismissed", () => {
-	// The owner could not swipe it away or clear it. A bar with one button and
-	// no way out is a bar that owns the bottom of the screen for ever if the
-	// reload ever fails.
-	const prompt = read("components/UpdatePrompt.vue")
-	assert.match(prompt, /aria-label|Dismiss|Later/, "there is a way to put it away")
-})
-
 test("pull-to-refresh cannot print through the screen it is behind", () => {
 	// `ion-refresher` ships z-index:-1 — behind the page, revealed by pulling.
 	// That works while the page is one flat layer, and this one is not:
