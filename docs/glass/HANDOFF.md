@@ -1,13 +1,10 @@
 # HANDOFF
-prompt:   supervisor could not assign shifts to own team (HR report) + blank Assign button
+prompt:   "No Holiday List was found" blocked leave (5th report, HR-EMP-00310 Nsty Holding)
 status:   done
-commit:   2f1b7b8dd on nz-glass (tag v2.0.0-alpha.25)
-files:    hrms/hr/utils.py
-          hrms/api/roster.py
-          hrms/api/team.py
-          hrms/overrides/employee_owned_row_scope.py
-          hrms/hr/doctype/shift_assignment_tool/shift_assignment_tool.py
-          frontend/src/views/team/TeamRoster.vue
-verify:   supervisor opens Team roster: "You" first; Assign a report in another company -> "Shift assigned"
-flags:    Reports To wins over the company lock (owner ruling); swap/break still company-locked (ceiling marked)
-next:     alpha.26 larger text; ticket .claude/plans/ticket-one-my-team-rule.md
+commit:   8c191c356 on nz-glass (tag v2.0.0-alpha.26)
+files:    hrms/utils/holiday_list.py
+          hrms/utils/readiness.py
+          hrms/tests/test_holiday_list.py
+verify:   staff with a Holiday List on their Employee or Company files a half-day leave: no error
+flags:    if Nsty Holding has no Default Holiday List and the employee none, the plain refusal shows: set it on the Company
+next:     alpha.27 larger text; ticket .claude/plans/ticket-one-my-team-rule.md
