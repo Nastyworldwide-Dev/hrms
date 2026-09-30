@@ -356,6 +356,12 @@ def insert_shift(
 	# swap/break/schedule the same way when the Desk roster is used across
 	# companies.
 	own_line = employee in rostered_employees(frappe.session.user)
+	if own_line:
+		# The company comes from the employee, never the browser: with Frappe's
+		# per-document checks skipped for this line, a caller-chosen company
+		# would file the shift under a company the employee is not in
+		# (review of 7913dc781).
+		company = frappe.db.get_value("Employee", employee, "company")
 
 	def may(ptype, name):
 		if not own_line:

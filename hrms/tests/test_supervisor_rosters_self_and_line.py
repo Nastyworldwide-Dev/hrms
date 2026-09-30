@@ -95,6 +95,14 @@ class TestSupervisorRostersSelfAndLine(unittest.TestCase):
 		self.assertIn("rostered_employees(", scope)
 		self.assertNotIn('"reports_to") == caller', roster, "no second copy of the rule")
 
+	def test_the_company_comes_from_the_employee_not_the_browser(self):
+		# With Frappe's per-document checks skipped for the admitted line, a
+		# caller-chosen company would file the shift in the wrong company.
+		root = pathlib.Path(__file__).resolve().parents[1]
+		insert = (root / "api" / "roster.py").read_text().split("def insert_shift(")[1].split("\ndef ")[0]
+		own = insert.index("own_line = employee in rostered_employees")
+		self.assertIn('company = frappe.db.get_value("Employee", employee, "company")', insert[own:])
+
 
 class _Column:
 	"""A query-builder column that accepts any comparison (no SQL is built)."""
