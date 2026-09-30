@@ -10,6 +10,22 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.26] — Leave Works for New Staff — 2026-09-30
+
+Staff added after Nadi was set up can send leave again.
+
+### Fixed
+- **"No Holiday List was found" blocked leave.** Nadi only knew a
+  person's holiday calendar if it had been linked for them when Nadi was
+  first set up, so anyone added later could not send leave. It now also
+  uses the Holiday List set on the person's Employee record, or their
+  company's default one.
+- **When no calendar is set anywhere,** the message now says so in plain
+  words ("There is no holiday calendar for … yet") instead of pointing
+  staff at a form they cannot open. HR's daily check names who is
+  affected and says how to fix it: set a Default Holiday List on the
+  Company.
+
 ## [2.0.0-alpha.25] — Supervisors Roster Their Whole Team — 2026-09-30
 
 A Shift Supervisor can now assign shifts to everyone who reports to them,

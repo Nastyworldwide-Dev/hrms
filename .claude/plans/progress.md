@@ -223,3 +223,5 @@ EVIDENCE: 3 fresh.local HR-EMP-00012 (record calendar only) resolves Nadi W0 202
 - 2026-09-30T09:41:08Z COMMIT: 3722a3ace fix(holidays): a split date range could add days to an empty start → review dispatched
 - 2026-09-30T09:43:45Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
 - 2026-09-30T09:43:45Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
+- 2026-09-30T09:43:46Z COMMIT: 1f3bfb3d3 fix(holidays): a range across two calendars counted holidays outside it → review dispatched
+EVIDENCE: 2 pre-push — holiday/OT stub suites 74+ pass; fresh.local record-calendar employee resolves, half day 0.5

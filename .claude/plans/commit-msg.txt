@@ -1,10 +1,11 @@
-fix(holidays): a range across two calendars counted holidays outside it
+chore(release): 2.0.0-alpha.26 — Leave Works for New Staff
 
-Review of 3722a3ace: when the two ends of a date range resolve to
-different calendars, get_holiday_dates_between_range split at the
-second calendar's start. A calendar from the Employee or Company
-record usually starts on 1 Jan, long before the range, so the second
-part counted holidays before start_date and the first part ran
-backwards. The split point is now clamped to the range.
+Owner, 30 Sep 2026: "push". Ships a234b66dc (holiday calendar falls
+back to the Employee, then the Company record; plain-words refusal
+when nothing is set), 66ed9b420 (HR's daily finding names the simpler
+fix) and the two range fixes the reviews found (3722a3ace, 1f3bfb3d3).
+Reviewed, no Critical; verified on fresh.local.
+
+Larger text moves to alpha.27.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
