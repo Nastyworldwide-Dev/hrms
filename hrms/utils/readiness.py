@@ -220,8 +220,9 @@ def evaluate(facts: dict) -> list[dict]:
 				+ (f" and {len(no_calendar) - 5} more" if len(no_calendar) > 5 else "")
 				+ ". Every rest day and public holiday reads as a working day for them — "
 				"auto-Absent on Sundays, holiday overtime priced at the weekday rate.",
-				"Submit a Holiday List Assignment for the Company (covers everyone) or for "
-				"each employee, naming a Holiday List whose dates include today.",
+				"Set a Default Holiday List on the Company (covers everyone), or a Holiday "
+				"List on the Employee, whose dates include today. A Holiday List "
+				"Assignment works too and wins over both.",
 			)
 		)
 
