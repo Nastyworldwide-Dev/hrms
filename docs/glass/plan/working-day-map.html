@@ -1,0 +1,172 @@
+<title>Working Day Map</title>
+<style>
+/* Layout: one readable column in Nadi's own grouped-list style; three decision cards at the end. */
+:root {
+  --bg: #F2F2F7;
+  --surface: #FFFFFF;
+  --ink: #0B0C10;
+  --muted: #636366;
+  --line: #E5E5EA;
+  --accent: #C8FF00;
+  --accent-ink: #3F5C00;
+  --warn: #B25000;
+  --warn-bg: #FFF4E5;
+  --ok: #1F7A36;
+  --ok-bg: #E9F7EE;
+  --bad: #D70015;
+  --bad-bg: #FDECEE;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --surface: #1C1C1E; --ink: #FFFFFF; --muted: #8E8E93; --line: #2C2C2E;
+    --accent-ink: #C8FF00; --warn: #FFB35C; --warn-bg: #2A1E0E; --ok: #5BD68A; --ok-bg: #0F2417;
+    --bad: #FF6B78; --bad-bg: #2A1013; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #1C1C1E; --ink: #FFFFFF; --muted: #8E8E93; --line: #2C2C2E;
+  --accent-ink: #C8FF00; --warn: #FFB35C; --warn-bg: #2A1E0E; --ok: #5BD68A; --ok-bg: #0F2417;
+  --bad: #FF6B78; --bad-bg: #2A1013; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font-ui); margin: 0; }
+.wrap { max-width: 720px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 64px; display: flex; flex-direction: column; gap: 32px; }
+h1 { font: 700 34px/1.15 var(--font-display); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+h2 { font: 600 13px/1.3 var(--font-ui); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 8px 16px; }
+p { margin: 0; }
+.lede { color: var(--muted); font-size: 17px; max-width: 62ch; }
+.lede strong { color: var(--ink); }
+.group { background: var(--surface); border-radius: 12px; overflow: hidden; }
+.row { padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row .k { font-weight: 600; }
+.row .v { color: var(--muted); font-size: 15px; }
+.src { font: 12px/1.4 var(--font-mono); color: var(--muted); word-break: break-word; }
+.table-wrap { overflow-x: auto; background: var(--surface); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 12px; vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--line); }
+td { border-top: 1px solid var(--line); }
+tr:first-child td { border-top: 0; }
+.chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.shift { background: var(--ok-bg); color: var(--ok); }
+.chip.person { background: var(--warn-bg); color: var(--warn); }
+.chip.none { background: var(--bad-bg); color: var(--bad); }
+.scen { display: flex; flex-direction: column; gap: 12px; }
+.card { background: var(--surface); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.card h3 { margin: 0; font: 600 17px/1.3 var(--font-ui); }
+.card p { color: var(--muted); font-size: 15px; }
+.days { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; font-size: 13px; }
+.days div { background: var(--bg); border-radius: 8px; padding: 8px; }
+.days b { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+.days .off { color: var(--ok); font-weight: 600; }
+.days .on { color: var(--bad); font-weight: 600; }
+.note { border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 12px 12px 0; padding: 12px 16px; font-size: 15px; }
+.decide { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.decide .card { border: 1px solid var(--line); }
+.decide .q { font-size: 12px; font-weight: 700; color: var(--accent-ink); text-transform: uppercase; letter-spacing: 0.06em; }
+.foot { color: var(--muted); font-size: 13px; }
+code { font: 13px var(--font-mono); }
+@media (max-width: 480px) { .days { grid-template-columns: repeat(2, minmax(0, 1fr)); } h1 { font-size: 28px; } }
+</style>
+
+<main class="wrap">
+  <header style="display:flex;flex-direction:column;gap:12px">
+    <h1>Is this a working day?</h1>
+    <p class="lede">How Nadi decides today, read from the code on 30 Sep 2026. <strong>Nothing here has been changed yet.</strong> The flows that count days disagree with each other, and three decisions are needed before any of it is changed.</p>
+  </header>
+
+  <section>
+    <h2>Three things say "not working today"</h2>
+    <div class="group">
+      <div class="row"><span class="k">Holiday calendar</span><span class="v">Public holidays and weekly off days, set by HR. Found through a Holiday List Assignment, else the Employee, else the Company default.</span><span class="src">hrms/utils/holiday_list.py:99-160</span></div>
+      <div class="row"><span class="k">The shift's own calendar</span><span class="v">A Shift Type can carry its own holiday calendar, for example an outlet shift whose rest day is Wednesday.</span><span class="src">Shift Type · holiday_list</span></div>
+      <div class="row"><span class="k">A gap in the roster</span><span class="v">A day with no shift assigned. A weekly roster only creates shifts on its chosen days, so the other days are simply empty.</span><span class="src">shift_schedule_assignment.py:64-104</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Which part of Nadi listens to which</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Flow</th><th>Rest day comes from</th><th>Code</th></tr></thead>
+        <tbody>
+          <tr><td>Overtime rate (work, rest, public holiday)</td><td><span class="chip shift">Shift first, then person</span></td><td class="src">ot_calculation.py:370</td></tr>
+          <tr><td>Auto attendance and Absent marking</td><td><span class="chip shift">Shift first, then person</span></td><td class="src">shift_type.py:1081</td></tr>
+          <tr><td>Leave days (form, approval, balance)</td><td><span class="chip person">Person only</span></td><td class="src">leave_application.py:1087</td></tr>
+          <tr><td>Payroll payment days</td><td><span class="chip person">Person only</span></td><td class="src">salary_slip.py:695</td></tr>
+          <tr><td>Monthly Attendance Sheet</td><td><span class="chip person">Person only</span></td><td class="src">monthly_attendance_sheet.py:488</td></tr>
+          <tr><td>Unmarked days, Fix a day</td><td><span class="chip person">Person only</span></td><td class="src">attendance.py:759</td></tr>
+          <tr><td>Home, roster screen, offboarding</td><td><span class="chip person">Person only</span></td><td class="src">home.py:88 · roster.py:419</td></tr>
+          <tr><td>A gap in the roster</td><td><span class="chip none">No flow treats it as a day off</span></td><td class="src">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="scen">
+    <h2>Where they disagree today</h2>
+
+    <div class="card">
+      <h3>Outlet worker: shift rest day Wednesday, company calendar rest day Sunday</h3>
+      <div class="days">
+        <div><b>Overtime</b><span class="off">Wed = rest</span></div>
+        <div><b>Absent marking</b><span class="off">Wed = rest</span></div>
+        <div><b>Leave on Wed</b><span class="on">1 day taken</span></div>
+        <div><b>Payroll</b><span class="on">Wed = work</span></div>
+      </div>
+      <p>And the other way round: a Sunday on leave costs 0 days, but Absent marking treats it as a working day.</p>
+    </div>
+
+    <div class="card">
+      <h3>Rostered by hand, Wednesday left empty</h3>
+      <p>Absent marking skips Wednesday because there is no shift. Leave on Wednesday still costs 1 day, and payroll counts it as a working day.</p>
+    </div>
+
+    <div class="card">
+      <h3>New staff, no calendar anywhere</h3>
+      <p>Before alpha.26 this was anyone added after setup. Leave is refused, the balance says "None allocated yet", and the monthly sheet shows no rest days. alpha.26 and the monthly-sheet fix cover everyone whose Employee or Company has a calendar.</p>
+    </div>
+
+    <div class="card">
+      <h3>Leave that spans two calendars</h3>
+      <p>For example, the old calendar ends 31 Dec and the new one starts 1 Jan. Each date is counted against its own calendar. This is correct today and must stay correct.</p>
+    </div>
+
+    <div class="card">
+      <h3>Calendar edited after a leave was approved</h3>
+      <p>A holiday added later changes the recount of that old leave, so a balance can move after approval. This is how HRMS is designed, not a crash.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>What I got wrong last time</h2>
+    <div class="note">
+      <p>I proposed recounting past leave against the calendar saved on each leave record. HRMS deliberately stopped doing that on 26 Feb 2026, so that leave spanning two calendars counts each date correctly. Doing it would break that case, so <strong>that proposal is withdrawn</strong>.</p>
+      <p style="margin-top:8px">What still holds: when no calendar at all is found for a past leave date, the whole balance fails to load. A narrow fix uses the saved calendar only when nothing else is found. It would land only with a test for the two-calendar case.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Three decisions for you</h2>
+    <div class="decide">
+      <div class="card"><span class="q">Decision 1</span><h3>One rest-day rule for everything?</h3><p>Overtime and Absent marking already use "the shift's calendar first, then the person's". Using it for leave and payroll too makes everything agree, but it changes pay and balances. This is the biggest change here.</p></div>
+      <div class="card"><span class="q">Decision 2</span><h3>Is a roster gap a day off?</h3><p>Should leave on a day with no shift cost 0 days? Today it costs 1.</p></div>
+      <div class="card"><span class="q">Decision 3</span><h3>Can an approved leave change later?</h3><p>Should a holiday added after approval change that leave's day count? Today it can.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How each change is proven</h2>
+    <div class="group">
+      <div class="row"><span class="k">Runs here, every change</span><span class="v">Tests for holiday calendars, overtime classification, Absent marking and the balance screen.</span><span class="src">test_holiday_list · test_ot_* · test_absent_sweep_* · request-balances.test.js</span></div>
+      <div class="row"><span class="k">Checked on the test site, before and after</span><span class="v">Real records for each case above, run on the old code and then the new.</span></div>
+      <div class="row"><span class="k">Cannot run on this machine</span><span class="v">The full leave, payroll and attendance test suites. The live test-site checks stand in for them.</span><span class="src">test_leave_application · test_salary_slip · test_attendance</span></div>
+    </div>
+  </section>
+
+  <p class="foot">Source file: docs/glass/plan/WORKING_DAY_MAP.md. Branch nz-glass. Nothing on this page has been changed in the code yet.</p>
+</main>
