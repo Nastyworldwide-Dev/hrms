@@ -35,6 +35,15 @@ class TestMyApps(unittest.TestCase):
 	def test_finance_gets_approva_only(self):
 		self.assertEqual(self._apps(["Employee", "Accounts User"]), ["approva"])
 
+	def test_approva_user_gets_approva_and_nothing_else(self):
+		# Owner, 30 Sep 2026: a special-case role for someone who needs Approva
+		# without the accounting or HR access the other roles carry.
+		self.assertEqual(self._apps(["Employee", "Approva User"]), ["approva"])
+
+	def test_the_roles_that_already_had_approva_keep_it(self):
+		for role in ("Accounts Manager", "Accounts User", "System Manager", "HR Manager", "HR User"):
+			self.assertIn("approva", self._apps([role]), role)
+
 	def test_projects_gets_the_board_only(self):
 		self.assertEqual(self._apps(["Projects User"]), ["board"])
 

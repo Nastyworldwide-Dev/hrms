@@ -273,3 +273,21 @@ EVIDENCE: 2 pre-push batch — 12 stub test files OK (roster/report/fence/worksp
 NEXT: owner deploys alpha.22 on Frappe Cloud, then Fahmie checks Desk Shift & Attendance + roster + Monthly Attendance Sheet
 - 2026-09-30T04:05:10Z COMMIT: 772add72f docs(handoff): alpha.22 done → review dispatched
 NEXT: owner deploys alpha.22 on Frappe Cloud; Fahmie checks Desk Shift & Attendance, roster (team shifts + add), Monthly Attendance Sheet (team only); then alpha.23 larger text on owner 'go'
+- 2026-09-30T04:06:29Z COMMIT: d5e151cb7 chore(progress): alpha.22 evidence, next step and team-rule ticket → review dispatched
+- 2026-09-30T04:41:30Z PLAN: approved 28937b8d3127 — # alpha.23 — theme choice back, no update popup (owner, 30 Sep 2026)
+- 2026-09-30T04:41:34Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
+EVIDENCE: 2 theme — theme-choice-in-you 4/4 red on HEAD, green after; 25/25 across theme/You/boot tests
+- 2026-09-30T04:41:36Z COMMIT: 7d7b1b5c2 fix(you): theme switching was missing → review+design dispatched
+EVIDENCE: 2 update popup — update-applies-quietly red (2 fail) before, 4/4 after; full frontend suite 1576/1576; vite build OK
+- 2026-09-30T04:45:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 16 file(s) ⟂80a763f10cf1
+- 2026-09-30T04:45:08Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-30T04:45:09Z COMMIT: 02d69dfec fix(pwa): remove the "A new version is ready" popup → review+design dispatched
+EVIDENCE: 5 desktop 1440 light+dark — home/requests/calendar/you/leaves: sidenav on, 672 column centred, no h-scroll; You shows Appearance (Automatic) in dark
+EVIDENCE: 5 iOS gate 9/9 OK, 0 findings (phone + desktop 1280, light + dark, installed-iPhone journey) on fresh.local with the alpha.23 bundle
+- 2026-09-30T05:15:08Z COMMIT: fb6dc5745 chore(release): 2.0.0-alpha.23 — Choose Light or Dark Again → review+deps dispatched
+NEXT: owner deploys alpha.23; then alpha.24 larger text on owner 'go'
+- 2026-09-30T05:15:34Z COMMIT: d86508c67 docs(handoff): alpha.23 done → review dispatched
+- 2026-09-30T05:16:24Z COMMIT: 8a641484a docs(handoff): name the alpha.23 release commit → review dispatched
+EVIDENCE: 3 fresh.local Approva User — employee apps [] -> ['approva'] with role -> [] removed; patch twice clean; test_app_links 7/7 (1 red before)
+- 2026-09-30T06:49:11Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-09-30T06:49:11Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10

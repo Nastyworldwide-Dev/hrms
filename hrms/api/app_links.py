@@ -13,9 +13,21 @@ import frappe
 
 logger = logging.getLogger(__name__)
 
+#: Owner, 30 Sep 2026: a role for the special case of someone who needs
+#: Approva and nothing else (no accounting, no HR). Created by
+#: patches/v16_0/add_approva_user_role. The roles before it keep Approva.
+APPROVA_USER_ROLE = "Approva User"
+
 #: App key -> roles that are offered it. Order is the order shown.
 APP_ROLES = {
-	"approva": ("Accounts Manager", "Accounts User", "System Manager", "HR Manager", "HR User"),
+	"approva": (
+		"Accounts Manager",
+		"Accounts User",
+		"System Manager",
+		"HR Manager",
+		"HR User",
+		APPROVA_USER_ROLE,
+	),
 	"board": ("Projects User", "Projects Manager", "HR Manager", "System Manager"),
 }
 

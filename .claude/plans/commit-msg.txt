@@ -1,3 +1,17 @@
-chore(progress): alpha.22 evidence, next step and team-rule ticket
+feat(apps): an "Approva User" role that opens Approva and nothing else
+
+Owner, 30 Sep 2026: some people need Approva (purchase requests and
+approvals) without the accounting or HR access that comes with the
+roles which offered it until now. Those roles keep Approva; this is
+the special case.
+
+A patch creates the role with no Desk access and no doctype rights.
+Holding it only makes Nadi show the Approva link. Approva itself lets
+any signed-in person open it and send a request (checked in its repo:
+approva/www/approva.py and api.submit_request only require a login);
+approving still needs Reporting Manager or being the named approver.
+
+Verified on fresh.local: an employee sees no apps, with the role sees
+Approva, with it removed sees none again; the patch runs twice clean.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

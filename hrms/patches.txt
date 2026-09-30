@@ -136,3 +136,4 @@ hrms.patches.v16_0.add_roster_patterns_link #2026-09-27 HR: how each person is r
 hrms.patches.v16_0.ot_request_approved_on_and_payment #2026-09-28 HR: when each OT Request was approved (from its history) and a Pending/Paid column HR sets by hand
 hrms.patches.v16_0.ot_rates_from_policy_date #2026-09-28 HR policy: Public Holiday 2x first 8h then 3x, Off Day flat 2x, minimum on non-work days — from the deploy day, older days keep their price
 hrms.patches.v16_0.let_shift_supervisor_open_roster #2026-09-29 Shift Supervisor could not open the roster: workspace HR-only, Branch/Designation unreadable
+hrms.patches.v16_0.add_approva_user_role #2026-09-30 owner: a role that opens Approva only, for the special case with no accounting or HR access
