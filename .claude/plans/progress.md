@@ -291,3 +291,4 @@ NEXT: owner deploys alpha.23; then alpha.24 larger text on owner 'go'
 EVIDENCE: 3 fresh.local Approva User — employee apps [] -> ['approva'] with role -> [] removed; patch twice clean; test_app_links 7/7 (1 red before)
 - 2026-09-30T06:49:11Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-09-30T06:49:11Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-09-30T06:49:13Z COMMIT: ddaa02b12 feat(apps): an "Approva User" role that opens Approva and nothing else → review dispatched

@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.24] — Approva for Anyone Who Needs It — 2026-09-30
+
+A new role lets someone use Approva without giving them accounting or HR
+access.
+
+### Added
+- **The "Approva User" role.** Give it to a person in Desk (User → Roles)
+  and Approva shows in their Nadi menu. It gives nothing else. People who
+  already saw Approva (Accounts, HR and System Managers) still do.
+
 ## [2.0.0-alpha.23] — Choose Light or Dark Again — 2026-09-30
 
 You can pick Light, Dark or Automatic again, and the "new version" bar

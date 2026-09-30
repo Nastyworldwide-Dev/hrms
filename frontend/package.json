@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.23",
-	"releaseName": "Choose Light or Dark Again",
+	"version": "2.0.0-alpha.24",
+	"releaseName": "Approva for Anyone Who Needs It",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
