@@ -146,8 +146,24 @@ def _rows(filters, start, end) -> list:
 		}:
 			calendar(name)
 
-		def mine(day, _emp=emp.name):
-			return calendar(get_holiday_list_for_employee(_emp, raise_exception=False, as_on=day))
+		resolved = {}
+
+		def mine(day, _emp=emp.name, _resolved=resolved):
+			# A person's calendar changes only where one calendar's span ends and
+			# another begins, so the resolver runs once and is reused while that
+			# calendar still covers the date (review of fedf16621: per day it was
+			# ~100k queries on a site with several hundred staff).
+			if "calendar" in _resolved:
+				cached = _resolved["calendar"]
+				if cached is None:
+					# no calendar at all: it will not appear mid-report
+					return None
+				start_, end_ = cache[cached]["span"]
+				if start_ <= day <= end_:
+					return cached
+			name = calendar(get_holiday_list_for_employee(_emp, raise_exception=False, as_on=day))
+			_resolved["calendar"] = name
+			return name
 
 		becomes_rest, becomes_work = rest_day_changes(
 			days,
@@ -211,10 +227,10 @@ def _columns():
 	return [
 		col("employee", "Employee", "Link", 130, "Employee"),
 		col("employee_name", "Name", width=180),
-		col("becomes_rest", "Become rest days", "Int", 130),
-		col("rest_dates", "Which dates", width=220),
-		col("becomes_work", "Become work days", "Int", 130),
-		col("work_dates", "Which dates", width=220),
+		col("becomes_rest", "Days that become rest", "Int", 150),
+		col("rest_dates", "Dates that become rest", width=220),
+		col("becomes_work", "Days that become work", "Int", 150),
+		col("work_dates", "Dates that become work", width=220),
 		col("shifts", "Shifts", width=180),
 		col("branch", "Branch", "Link", 130, "Branch"),
 		col("department", "Department", "Link", 150, "Department"),

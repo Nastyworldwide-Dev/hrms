@@ -1,10 +1,9 @@
-fix(requests): "pull down to try again" did not reload the balances
+docs(plan): payroll consumers and the start-date patch spelled out
 
-Design review of 681545ac0. The new "Couldn't load your leave. Pull
-down to try again." row, and the older "Your balances could not be
-loaded. Pull down to try again." banner, both promise a pull that
-reloaded only the request lists, never the balances. The pull now
-reloads both. The row is also role="status", so a screen reader hears
-it appear, as it already hears "Loading your balances".
+Second review of the rest-day plan: say that unpaid leave, half-day
+absence and unmarked days share the one payroll reader, that the
+payroll period uses the same function, and that the start date is set
+only if empty. Two more edge tests (unpaid leave across a shift change;
+night shift on a rest day). Still a plan.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

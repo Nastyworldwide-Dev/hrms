@@ -237,3 +237,23 @@ EVIDENCE: 3 fresh.local employee with allocation + past leave + no assignment: l
 - 2026-09-30T10:15:19Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
 - 2026-09-30T10:15:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
 - 2026-09-30T10:15:44Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
+- 2026-09-30T10:15:49Z COMMIT: 51f319e17 fix(requests): "pull down to try again" did not reload the balances → review dispatched
+DEAD END: commit 51f319e17 carries the Monthly Attendance Sheet record-calendar fallback (holiday_list.get_assigned_holiday_lists_to_employee_and_company + 5 tests) under the previous subject 'pull down to try again' — the command that wrote the new commit-msg was refused by a gate, so the old file was reused. Correct subject: fix(attendance): the monthly sheet showed no holidays for newer staff. Evidence: fresh.local Sep holidays [] -> [09-06, 09-16].
+NEXT: owner answers the 3 decisions in docs/glass/plan/WORKING_DAY_MAP.md before any leave/payroll day-count change; 3 commits (balance msg, pull refresh, monthly sheet) wait for 'push'
+- 2026-09-30T10:24:04Z COMMIT: 3de46d30e docs(plan): how Nadi decides a working day, and where the flows disagree → review+design dispatched
+- 2026-09-30T10:25:24Z COMMIT: 4a8513bf0 docs(plan): state the upstream leave-count change as it is, not as intent → review+design dispatched
+- 2026-09-30T10:43:39Z COMMIT: 88fd57169 test(requests): the pull-to-refresh guard names both reloads → review dispatched
+EVIDENCE: 5 alpha.27 pre-push — frontend 1580/1580; iOS gate 9/9 0 findings
+- 2026-09-30T11:01:48Z COMMIT: 5dbc1592f chore(release): 2.0.0-alpha.27 — Honest Leave Balances → review+deps dispatched
+NEXT: write the rest-day rule plan (shift calendar first for leave and payroll, from deploy date; roster gap is not a day off; approved leave may still recount) and wait for owner approval
+- 2026-09-30T11:06:42Z COMMIT: 7db2b35c3 docs(handoff): alpha.27 done → review dispatched
+NEXT: owner approves docs/glass/plan/REST_DAY_RULE_PLAN.md; then step 0 (read-only Rest day differences report) ships alone
+- 2026-09-30T11:08:06Z COMMIT: 745e30dd6 docs(plan): one rest-day rule for leave and payroll, from the deploy day → review dispatched
+- 2026-09-30T11:09:57Z COMMIT: 7fe1dbc68 docs(plan): rest-day plan covers every payroll reader and defines "the shift" → review dispatched
+- 2026-09-30T11:11:06Z COMMIT: 7912ba96a docs(plan): payroll consumers and the start-date patch spelled out → review dispatched
+- 2026-09-30T11:17:24Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
+- 2026-09-30T11:17:26Z COMMIT: fedf16621 docs(plan): payroll consumers and the start-date patch spelled out → review+design dispatched
+DEAD END: commit fedf16621 is the Rest Day Differences report (step 0: hrms/hr/report/rest_day_differences/*, tests) under the previous subject 'docs(plan): payroll consumers...' — the command that wrote the new commit-msg.txt was refused by the TDD gate, so the old file was reused. Second time today (first: 51f319e17). Correct subject: feat(reports): Rest Day Differences shows who a one-rule rest day would move. LEARNING(gate): stale commit-msg.txt after a refused command -> write commit-msg.txt and git commit in the SAME command, or have the pipeline clear commit-msg.txt after each successful commit.
+- 2026-09-30T11:19:39Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-30T11:20:27Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-30T11:21:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73

@@ -98,6 +98,13 @@ class TestRestDayChanges(unittest.TestCase):
 		)
 
 
+class TestColumns(unittest.TestCase):
+	def test_every_column_label_is_unique(self):
+		# two "Which dates" columns could not be told apart once exported
+		labels = [c["label"] for c in report._columns()]
+		self.assertEqual(len(labels), len(set(labels)), labels)
+
+
 class TestReadOnly(unittest.TestCase):
 	def test_the_report_never_writes(self):
 		source = (pathlib.Path(report.__file__)).read_text()
