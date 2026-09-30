@@ -1,25 +1,9 @@
-fix(holidays): leave was refused for anyone added after install
+fix(holidays): a split date range could add days to an empty start
 
-Reported five times, last 30 Sep 2026: HR-EMP-00310 (Nsty Holding Sdn
-Bhd) could not send a half-day leave: "No Holiday List was found for
-Employee ... Please assign through Holiday List Assignment".
-
-The resolver read ONLY Holiday List Assignments. Those are derived from
-Employee.holiday_list and Company.default_holiday_list at install and
-after a sync, never when HR adds an employee or company later. So
-anyone new had no calendar, whatever HR set on their record, and each
-report was fixed by hand for one person.
-
-Owner ruling: when no assignment covers the date, use the Holiday List
-on the Employee, then the Company default. Every reader routes through
-this resolver (ERPNext's employee_holiday_list hook), so leave,
-attendance, OT and the readiness check all get it. An assignment still
-wins. With nothing set anywhere the request is still refused, now in
-plain words ("There is no holiday calendar for <company> yet ... HR
-needs to set one.") instead of a form link staff cannot open.
-
-Verified on fresh.local: an employee with only Employee.holiday_list
-resolves and a half day counts 0.5; one with nothing gets the plain
-refusal.
+Review of a234b66dc: the new record-calendar fallback returned
+from_date=None in its dict form. get_holiday_dates, its only dict
+caller, splits a range at the second calendar's from_date when the two
+ends resolve to different calendars, and add_days(None, -1) raised.
+It now carries the Holiday List's own start date.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

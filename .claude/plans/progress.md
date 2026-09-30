@@ -216,3 +216,7 @@ NEXT: owner deploys alpha.25; HR retests Assign for the supervisor; alpha.26 lar
 EVIDENCE: 3 fresh.local HR-EMP-00012 (record calendar only) resolves Nadi W0 2026, half day 0.5; HR-EMP-00003 (none) plain refusal; holiday tests 33 pass
 - 2026-09-30T09:38:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
 - 2026-09-30T09:38:52Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
+- 2026-09-30T09:38:55Z COMMIT: a234b66dc fix(holidays): leave was refused for anyone added after install → review dispatched
+- 2026-09-30T09:39:43Z COMMIT: 66ed9b420 docs(readiness): tell HR the simpler way to give someone a calendar → review dispatched
+- 2026-09-30T09:41:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-30T09:41:05Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393

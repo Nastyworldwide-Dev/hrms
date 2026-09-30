@@ -196,6 +196,27 @@ class TestTheCalendarSetOnTheRecordCounts(unittest.TestCase):
 		rows = [assignment(EMPLOYEE, "CO-2026", date(2026, 1, 1))]
 		self.assertEqual(self.resolve(date(2026, 10, 2), employee_list="MY-2026", rows=rows), "CO-2026")
 
+	def test_as_dict_carries_the_calendar_start(self):
+		# get_holiday_dates splits a range at to.from_date when the two ends
+		# resolve to different calendars; None there raised in add_days
+		# (review of a234b66dc).
+		def get_value(doctype, name, field, **kwargs):
+			if doctype == "Holiday List":
+				span = CALENDARS.get(name)
+				return span[0] if field == "from_date" else span
+			if doctype == "Employee":
+				return {"company": COMPANY, "holiday_list": "MY-2026"}.get(field)
+			return None
+
+		with (
+			patch.object(frappe, "qb", FakeQB([]), create=True),
+			patch.object(frappe.db, "get_value", side_effect=get_value),
+			patch.object(module, "getdate", side_effect=lambda d: d),
+		):
+			row = module.get_holiday_list_for_employee(EMPLOYEE, False, as_on=date(2026, 10, 2), as_dict=True)
+		self.assertEqual(row.holiday_list, "MY-2026")
+		self.assertEqual(row.from_date, date(2026, 1, 1))
+
 	def test_with_nothing_anywhere_the_request_is_still_refused_in_plain_words(self):
 		with self.assertRaises(frappe.ValidationError) as caught:
 			self.resolve(date(2026, 10, 2), raise_exception=True)

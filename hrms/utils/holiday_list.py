@@ -156,7 +156,12 @@ def _record_calendar(employee: str, company: str | None, as_on, as_dict: bool):
 				as_on,
 				holiday_list,
 			)
-			return frappe._dict(holiday_list=holiday_list, from_date=None) if as_dict else holiday_list
+			if not as_dict:
+				return holiday_list
+			# from_date is where this calendar starts applying: get_holiday_dates
+			# splits a range there when its two ends resolve differently.
+			start = frappe.db.get_value("Holiday List", holiday_list, "from_date")
+			return frappe._dict(holiday_list=holiday_list, from_date=getdate(start))
 	return None
 
 
