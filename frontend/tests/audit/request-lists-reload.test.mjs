@@ -77,7 +77,10 @@ test("the registry is reached from mount, pull-to-refresh, reconnect and resume"
 		/<GPullRefresh @refresh="refreshRequests"/,
 		"Requests has pull-to-refresh"
 	)
-	assert.match(home, /await reloadRequestLists\("pull"\)/)
+	// The pull reloads the lists AND the balances (30 Sep 2026: "Pull down to
+	// try again" under the balances promised a reload that never came).
+	assert.match(home, /reloadRequestLists\("pull"\)/, "the pull reloads the lists")
+	assert.match(home, /requestsSummary\.reload\(\)/, "and the balances")
 })
 
 test("a cached paint says it is refreshing until the first fetch answers", () => {
