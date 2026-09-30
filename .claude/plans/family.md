@@ -1,9 +1,5 @@
-CLASS: GButton text written between its tags is thrown away (it renders only the `label` prop)
-frontend/src/views/team/TeamRoster.vue same-root — Assign shift button now passes :label
-frontend/src/components/CheckinDecisionSheet.vue not-affected — passes :label
-frontend/src/components/DaySheet.vue not-affected — passes :label
-frontend/src/components/ResourceError.vue not-affected — passes :label
-frontend/src/components/WorkflowActionSheet.vue not-affected — passes :label
-frontend/src/components/RequestActionSheet.vue not-affected — its four GButtons pass :label
-frontend/src/components/ExpenseTaxesTable.vue not-affected — passes :label
-frontend/src/components/LateCheckoutDialog.vue not-affected — passes :label
+CLASS: with Frappe's per-document checks skipped for the admitted line, a caller-chosen value decides where the row is filed
+hrms/api/roster.py:insert_shift same-root — company taken from the Employee for the admitted line
+hrms/api/roster.py:create_shift_schedule_assignment not-affected — still runs Frappe's own checks (no ignore_permissions)
+hrms/api/roster.py:swap_shift not-affected — company from the existing assignment or the Employee
+hrms/api/roster.py:break_shift not-affected — company from the existing assignment

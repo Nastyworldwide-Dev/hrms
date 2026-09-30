@@ -1,11 +1,3 @@
-fix(team): the Assign shift button was a blank green pill
-
-Owner's screenshot, 30 Sep 2026: the Team roster sheet's only action
-had no words. GButton draws its text from the `label` prop and has no
-default slot, so "Assign shift" written between its tags was thrown
-away. Every other GButton in the app passes the prop (checked).
-
-Also: a Shift Supervisor now rosters their own shifts (7913dc781), so
-their own row on the Team roster reads "You".
+docs(handoff): alpha.25 done
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

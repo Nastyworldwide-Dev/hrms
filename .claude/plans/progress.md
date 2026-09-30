@@ -205,3 +205,10 @@ EVIDENCE: 3 fresh.local supervisor locked to _Test Company: report in Nadi W0 A 
 EVIDENCE: 2 team-roster-assign 3/3 (2 red before); browser: button reads 'Assign shift', first row 'You'
 - 2026-09-30T08:59:55Z EVIDENCE: 2 correct — mapped tests green (bun ) for 1 file(s) ⟂447b403db931
 - 2026-09-30T09:00:26Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-09-30T09:00:29Z COMMIT: a494357ca fix(team): the Assign shift button was a blank green pill → review+design dispatched
+- 2026-09-30T09:01:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+EVIDENCE: 2 company-from-employee test red on HEAD (1 fail), green after
+- 2026-09-30T09:01:33Z COMMIT: 729262e15 fix(roster): a supervisor's shift took its company from the browser → review dispatched
+EVIDENCE: 2 pre-push — frontend suite 1579/1579; roster/fence stub tests OK
+- 2026-09-30T09:07:19Z COMMIT: 2f1b7b8dd chore(release): 2.0.0-alpha.25 — Supervisors Roster Their Whole Team → review+deps dispatched
+NEXT: owner deploys alpha.25; HR retests Assign for the supervisor; alpha.26 larger text on 'go'

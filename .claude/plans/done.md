@@ -1,3 +1,3 @@
-GOAL: the Team roster "Assign shift" button shows its words, and a supervisor's own row reads "You".
-DONE WHEN: GButton gets :label; is_self row reads You; test red before, green after; browser shows "Assign shift".
-CHECK: node --test frontend/src/views/team/__tests__/team-roster-assign.test.js
+GOAL: a supervisor's shift is always filed under the employee's own company, never one the browser sent.
+DONE WHEN: insert_shift reads company from Employee for the admitted line; test red before, green after.
+CHECK: PYTHONPATH=. python3 hrms/tests/test_supervisor_rosters_self_and_line.py
