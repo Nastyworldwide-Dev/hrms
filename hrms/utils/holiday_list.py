@@ -3,7 +3,7 @@ from datetime import date
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, formatdate, get_link_to_form, getdate
+from frappe.utils import add_days, getdate
 
 logger = logging.getLogger(__name__)
 
@@ -117,20 +117,47 @@ def get_holiday_list_for_employee(
 		company = frappe.db.get_value("Employee", employee, "company")
 		holiday_list = get_assigned_holiday_list(company, as_on, as_dict)
 	if not holiday_list:
+		holiday_list = _record_calendar(employee, company, as_on, as_dict)
+	if not holiday_list:
 		holiday_list = _ended_calendar(employee, company, as_on, as_dict)
 
 	if not holiday_list and raise_exception:
+		logger.warning("[holiday_list] no calendar for %s (%s) on %s", employee, company, as_on)
+		# In the words of the person filing (leave, attendance, OT forms show
+		# this verbatim). HR sees who is affected in the readiness check.
 		frappe.throw(
 			_(
-				"No Holiday List was found for Employee {0} or their company {1} for date {2}. Please assign through {3}"
-			).format(
-				frappe.bold(employee),
-				frappe.bold(company),
-				frappe.bold(formatdate(as_on)),
-				get_link_to_form("Holiday List Assignment", label="Holiday List Assignment"),
-			)
+				"There is no holiday calendar for {0} yet, so days off can't be counted. HR needs to set one."
+			).format(company or employee)
 		)
 	return holiday_list
+
+
+def _record_calendar(employee: str, company: str | None, as_on, as_dict: bool):
+	"""The Holiday List set on the Employee, then on their Company, when it
+	covers `as_on`.
+
+	REPORTED five times, last 30 Sep 2026 (HR-EMP-00310, Nsty Holding Sdn Bhd:
+	leave refused with "No Holiday List was found"). Assignments are derived
+	from these two fields only at install and after a sync, so an employee or
+	company added later never got one, whatever calendar HR set on the record.
+	Owner ruling the same day: fall back to the record. An assignment still
+	wins when one covers the date.
+	"""
+	company = company or frappe.db.get_value("Employee", employee, "company")
+	for holiday_list in (
+		frappe.db.get_value("Employee", employee, "holiday_list"),
+		company and frappe.db.get_value("Company", company, "default_holiday_list"),
+	):
+		if holiday_list_covers(holiday_list, as_on):
+			logger.info(
+				"[holiday_list] %s has no assignment for %s; using %s from the record",
+				employee,
+				as_on,
+				holiday_list,
+			)
+			return frappe._dict(holiday_list=holiday_list, from_date=None) if as_dict else holiday_list
+	return None
 
 
 def holiday_list_covers(holiday_list: str | None, day) -> bool:

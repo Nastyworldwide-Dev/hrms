@@ -212,3 +212,7 @@ EVIDENCE: 2 company-from-employee test red on HEAD (1 fail), green after
 EVIDENCE: 2 pre-push — frontend suite 1579/1579; roster/fence stub tests OK
 - 2026-09-30T09:07:19Z COMMIT: 2f1b7b8dd chore(release): 2.0.0-alpha.25 — Supervisors Roster Their Whole Team → review+deps dispatched
 NEXT: owner deploys alpha.25; HR retests Assign for the supervisor; alpha.26 larger text on 'go'
+- 2026-09-30T09:08:14Z COMMIT: b275fad44 docs(handoff): alpha.25 done → review dispatched
+EVIDENCE: 3 fresh.local HR-EMP-00012 (record calendar only) resolves Nadi W0 2026, half day 0.5; HR-EMP-00003 (none) plain refusal; holiday tests 33 pass
+- 2026-09-30T09:38:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-30T09:38:52Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393

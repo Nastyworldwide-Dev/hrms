@@ -107,7 +107,10 @@ class TestApplicableCalendarCoversTheDate(unittest.TestCase):
 			if doctype == "Holiday List":
 				return CALENDARS.get(name)
 			if doctype == "Employee":
-				return COMPANY
+				# no calendar set on the record: these cases are about assignments
+				return COMPANY if field == "company" else None
+			if doctype == "Company":
+				return None
 			raise AssertionError(doctype)
 
 		with (
@@ -153,6 +156,51 @@ class TestApplicableCalendarCoversTheDate(unittest.TestCase):
 			self.assertFalse(module.holiday_list_covers("MY-2025", date(2026, 1, 1)))
 			self.assertFalse(module.holiday_list_covers("UNKNOWN", date(2026, 1, 1)))
 			self.assertFalse(module.holiday_list_covers(None, date(2026, 1, 1)))
+
+
+class TestTheCalendarSetOnTheRecordCounts(unittest.TestCase):
+	"""REPORTED five times, last 30 Sep 2026 (HR-EMP-00310, Nsty Holding Sdn
+	Bhd): "No Holiday List was found" blocked a leave request. The resolver read
+	ONLY Holiday List Assignments, which are derived once (install, post-sync);
+	an employee or company added later never got one, whatever Holiday List HR
+	set on the record. Owner ruling: fall back to Employee.holiday_list, then
+	Company.default_holiday_list, when no assignment covers the date.
+	"""
+
+	def resolve(self, day, employee_list=None, company_list=None, rows=(), raise_exception=False):
+		def get_value(doctype, name, field, **kwargs):
+			if doctype == "Holiday List":
+				return CALENDARS.get(name)
+			if doctype == "Employee":
+				return {"company": COMPANY, "holiday_list": employee_list}.get(field)
+			if doctype == "Company":
+				return {"default_holiday_list": company_list}.get(field)
+			raise AssertionError(doctype)
+
+		with (
+			patch.object(frappe, "qb", FakeQB(list(rows)), create=True),
+			patch.object(frappe.db, "get_value", side_effect=get_value),
+		):
+			return module.get_holiday_list_for_employee(EMPLOYEE, raise_exception, as_on=day)
+
+	def test_the_employee_record_calendar_is_used_without_an_assignment(self):
+		self.assertEqual(self.resolve(date(2026, 10, 2), employee_list="MY-2026"), "MY-2026")
+
+	def test_the_company_default_is_used_when_the_employee_has_none(self):
+		self.assertEqual(self.resolve(date(2026, 10, 2), company_list="CO-2026"), "CO-2026")
+
+	def test_a_record_calendar_that_does_not_cover_the_date_is_not_used(self):
+		self.assertIsNone(self.resolve(date(2026, 10, 2), employee_list="MY-2025"))
+
+	def test_an_assignment_still_wins_over_the_record(self):
+		rows = [assignment(EMPLOYEE, "CO-2026", date(2026, 1, 1))]
+		self.assertEqual(self.resolve(date(2026, 10, 2), employee_list="MY-2026", rows=rows), "CO-2026")
+
+	def test_with_nothing_anywhere_the_request_is_still_refused_in_plain_words(self):
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self.resolve(date(2026, 10, 2), raise_exception=True)
+		self.assertIn("no holiday calendar", str(caught.exception).lower())
+		self.assertNotIn("Holiday List Assignment", str(caught.exception))
 
 
 if __name__ == "__main__":
