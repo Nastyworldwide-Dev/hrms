@@ -1,23 +1,11 @@
-fix(roster): a Shift Supervisor could not assign shifts to their own team
+fix(team): the Assign shift button was a blank green pill
 
-HR, 30 Sep 2026: "dia tak boleh assign shift untuk budak dia". Team
-roster listed a supervisor's reports by Reports To, in any company,
-then Assign refused them: "You are not permitted to roster this
-employee." The write also demanded the report's company be inside the
-supervisor's Company User Permission, so a supervisor locked to one
-company whose report sits in another could see them but not roster
-them. Three separate checks said no in turn: the roster fence, the
-Employee read, and Frappe's User Permission on the new Shift
-Assignment.
+Owner's screenshot, 30 Sep 2026: the Team roster sheet's only action
+had no words. GButton draws its text from the `label` prop and has no
+default slot, so "Assign shift" written between its tags was thrown
+away. Every other GButton in the app passes the prop (checked).
 
-Owner rulings the same day: "Reports To wins" and "allow self". One
-list, hrms.hr.utils.rostered_employees (self + Active Reports To,
-Shift Supervisor role required), now decides both the roster write and
-the shift row scope, so the list and the save cannot disagree again.
-Strangers stay refused; without the role nobody is rostered. The Team
-roster lists the supervisor first, as "You".
-
-Verified on fresh.local with a supervisor locked to another company:
-their report and themselves saved, a stranger refused (5-case matrix).
+Also: a Shift Supervisor now rosters their own shifts (7913dc781), so
+their own row on the Team roster reads "You".
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
