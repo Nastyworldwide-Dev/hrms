@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Working Day Map</title>
 <style>
 /* Layout: one readable column in Nadi's own grouped-list style; three decision cards at the end. */
@@ -72,7 +77,8 @@ tr:first-child td { border-top: 0; }
 code { font: 13px var(--font-mono); }
 @media (max-width: 480px) { .days { grid-template-columns: repeat(2, minmax(0, 1fr)); } h1 { font-size: 28px; } }
 </style>
-
+</head>
+<body>
 <main class="wrap">
   <header style="display:flex;flex-direction:column;gap:12px">
     <h1>Is this a working day?</h1>
@@ -145,7 +151,7 @@ code { font: 13px var(--font-mono); }
   <section>
     <h2>What I got wrong last time</h2>
     <div class="note">
-      <p>I proposed recounting past leave against the calendar saved on each leave record. HRMS deliberately stopped doing that on 26 Feb 2026, so that leave spanning two calendars counts each date correctly. Doing it would break that case, so <strong>that proposal is withdrawn</strong>.</p>
+      <p>I proposed recounting past leave against the calendar saved on each leave record. Since January 2026, HRMS counts each date against the calendar that applies on that date, and a test checks leave that spans two calendars. Recounting against the saved calendar would break that case, so <strong>that proposal is withdrawn</strong>.</p>
       <p style="margin-top:8px">What still holds: when no calendar at all is found for a past leave date, the whole balance fails to load. A narrow fix uses the saved calendar only when nothing else is found. It would land only with a test for the two-calendar case.</p>
     </div>
   </section>
@@ -170,3 +176,5 @@ code { font: 13px var(--font-mono); }
 
   <p class="foot">Source file: docs/glass/plan/WORKING_DAY_MAP.md. Branch nz-glass. Nothing on this page has been changed in the code yet.</p>
 </main>
+</body>
+</html>

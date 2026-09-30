@@ -37,19 +37,23 @@ A. **Outlet worker, shift rest day Wednesday, company calendar rest day Sunday.*
    - Sunday: leave = 0 days. Absent sweep = working day (Absent if no punch).
 B. **Rostered by hand, Wednesday left empty in the roster.** Leave on Wednesday = 1 day taken. Absent sweep = skipped. Payroll = working day.
 C. **New hire, no calendar anywhere (before alpha.26: anyone without an assignment).** Leave form refused; balance hidden; monthly sheet shows no rest days; readiness names them.
-D. **Leave spanning two calendars** (old list ends 31 Dec, new starts 1 Jan): counted per date, correct since upstream `21850690e` / `3bea68de3`.
+D. **Leave spanning two calendars** (old list ends 31 Dec, new starts 1 Jan): counted per date, correct since upstream `21850690e` (8 Jan 2026, tested).
 E. **Calendar edited after leave was approved** (a holiday added): the balance recounts the old leave against today's calendar, so the balance changes after approval. Upstream design; not a bug to "fix" without a ruling.
 
 ## 4. What I got wrong in the last proposal
 
 Step 2 was "recount past leave against the calendar stored on each ledger row".
-Upstream deliberately stopped doing that on 26 Feb 2026 (`3bea68de3`, after
-`21850690e`) so leave spanning two calendars counts per date. Doing it would regress
-scenario D. Withdrawn.
+Upstream `21850690e` (8 Jan 2026) changed `get_holidays` to resolve the calendar per
+date across assignments, with a test named `test_leave_days_across_two_holiday_lists`.
+From then on the stored ledger calendar had no effect on the count; `3bea68de3`
+(26 Feb 2026, a cherry-pick) removed the leftover argument. That the stored calendar
+was dropped ON PURPOSE is my inference; the per-date counting across two calendars is
+tested and must not regress. Recounting against the stored calendar would break it.
+Withdrawn.
 
 What remains true: when **no** calendar resolves for a past leave date, the whole
 balance fails to load. A narrow fix (use the stored snapshot ONLY when nothing
-resolves) keeps D intact. It still needs a test for D before it lands.
+resolves) keeps scenario D intact. It still needs a test for D before it lands.
 
 ## 5. Decisions only the owner can make
 
