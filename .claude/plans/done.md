@@ -1,3 +1,3 @@
-GOAL: a date range split across two holiday calendars counts only holidays inside the range.
-DONE WHEN: the split point is clamped to [start, end]; test red before, green after; fresh.local range read stays in range.
-CHECK: PYTHONPATH=. python3 -m pytest -q hrms/tests/test_holiday_list.py
+GOAL: "Couldn't load your leave" is announced to screen readers and "pull down to try again" really reloads the balances.
+DONE WHEN: the row carries role="status"; Requests pull-to-refresh reloads requestsSummary; test red before, green after.
+CHECK: node --test frontend/src/components/__tests__/request-balances.test.js

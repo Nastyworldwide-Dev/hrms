@@ -259,5 +259,65 @@ class TestASplitRangeStaysInsideItself(unittest.TestCase):
 		self.assertIn(("MY-2026", date(2026, 12, 20), date(2026, 12, 31)), calls)
 
 
+#: The Holiday List HR set on each record (no assignment behind any of them).
+RECORD_CALENDARS = {
+	"Employee": {"EMP-REC": "MY-2026", "EMP-NONE": None},
+	"Company": {COMPANY: "CO-2026"},
+}
+
+
+class TestTheRangeReaderUsesTheRecordToo(unittest.TestCase):
+	"""The Monthly Attendance Sheet resolves calendars for many employees at
+	once through get_assigned_holiday_lists_to_employee_and_company, a second
+	reader that also looked only at assignments ("is this fix truly fix?",
+	owner, 30 Sep 2026). With no assignment, the record calendar must fill in,
+	clipped to its own dates and the range, as the single-day resolver does."""
+
+	def ranges(self, names, start, end):
+		def get_all(doctype, filters=None, fields=None, **kwargs):
+			rows = RECORD_CALENDARS[doctype]
+			field = "holiday_list" if doctype == "Employee" else "default_holiday_list"
+			return [frappe._dict(name=n, **{field: rows[n]}) for n in filters["name"][1] if n in rows]
+
+		def get_value(doctype, name, fields, **kwargs):
+			span = CALENDARS.get(name)
+			return span
+
+		with (
+			patch.object(module, "build_holiday_list_map", return_value={}),
+			patch.object(frappe, "get_all", side_effect=get_all),
+			patch.object(frappe.db, "get_value", side_effect=get_value),
+		):
+			return module.get_assigned_holiday_lists_to_employee_and_company(names, start, end)
+
+	def test_an_employee_record_calendar_fills_the_range(self):
+		out = self.ranges(["EMP-REC"], date(2026, 9, 1), date(2026, 9, 30))
+		self.assertEqual(
+			out["EMP-REC"],
+			[{"holiday_list": "MY-2026", "from_date": date(2026, 9, 1), "to_date": date(2026, 9, 30)}],
+		)
+
+	def test_a_company_default_fills_the_range(self):
+		out = self.ranges([COMPANY], date(2026, 9, 1), date(2026, 9, 30))
+		self.assertEqual(out[COMPANY][0]["holiday_list"], "CO-2026")
+
+	def test_the_range_is_clipped_to_the_calendar(self):
+		out = self.ranges(["EMP-REC"], date(2026, 12, 20), date(2027, 1, 10))
+		self.assertEqual(out["EMP-REC"][0]["to_date"], date(2026, 12, 31))
+
+	def test_nothing_set_stays_absent(self):
+		self.assertNotIn("EMP-NONE", self.ranges(["EMP-NONE"], date(2026, 9, 1), date(2026, 9, 30)))
+
+	def test_an_assignment_is_not_overridden(self):
+		assigned = {
+			"EMP-REC": [{"holiday_list": "A-1", "from_date": date(2026, 9, 1), "to_date": date(2026, 9, 30)}]
+		}
+		with patch.object(module, "build_holiday_list_map", return_value=assigned):
+			out = module.get_assigned_holiday_lists_to_employee_and_company(
+				["EMP-REC"], date(2026, 9, 1), date(2026, 9, 30)
+			)
+		self.assertEqual(out["EMP-REC"][0]["holiday_list"], "A-1")
+
+
 if __name__ == "__main__":
 	unittest.main()

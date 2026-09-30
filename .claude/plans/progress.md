@@ -225,3 +225,15 @@ EVIDENCE: 3 fresh.local HR-EMP-00012 (record calendar only) resolves Nadi W0 202
 - 2026-09-30T09:43:45Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
 - 2026-09-30T09:43:46Z COMMIT: 1f3bfb3d3 fix(holidays): a range across two calendars counted holidays outside it → review dispatched
 EVIDENCE: 2 pre-push — holiday/OT stub suites 74+ pass; fresh.local record-calendar employee resolves, half day 0.5
+- 2026-09-30T09:45:28Z COMMIT: 8c191c356 chore(release): 2.0.0-alpha.26 — Leave Works for New Staff → review+deps dispatched
+NEXT: owner deploys alpha.26; HR sets Nsty Holding Default Holiday List if blank; alpha.27 larger text on 'go'
+- 2026-09-30T09:45:58Z COMMIT: 1b168a8c5 docs(handoff): alpha.26 done → review dispatched
+- 2026-09-30T10:06:20Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+EVIDENCE: 3 fresh.local employee with allocation + past leave + no assignment: live resolver -> leave section omitted ("None allocated yet"); alpha.26 resolver with record calendar -> balance 7.0
+- 2026-09-30T10:06:22Z COMMIT: 681545ac0 fix(requests): "None allocated yet" for someone with eight allocations → review+design dispatched
+- 2026-09-30T10:08:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-09-30T10:08:11Z COMMIT: 25d4ed093 fix(requests): "pull down to try again" did not reload the balances → review+design dispatched
+- 2026-09-30T10:15:19Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-30T10:15:19Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
+- 2026-09-30T10:15:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-30T10:15:44Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393

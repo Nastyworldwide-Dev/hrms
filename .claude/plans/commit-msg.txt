@@ -1,11 +1,10 @@
-chore(release): 2.0.0-alpha.26 — Leave Works for New Staff
+fix(requests): "pull down to try again" did not reload the balances
 
-Owner, 30 Sep 2026: "push". Ships a234b66dc (holiday calendar falls
-back to the Employee, then the Company record; plain-words refusal
-when nothing is set), 66ed9b420 (HR's daily finding names the simpler
-fix) and the two range fixes the reviews found (3722a3ace, 1f3bfb3d3).
-Reviewed, no Critical; verified on fresh.local.
-
-Larger text moves to alpha.27.
+Design review of 681545ac0. The new "Couldn't load your leave. Pull
+down to try again." row, and the older "Your balances could not be
+loaded. Pull down to try again." banner, both promise a pull that
+reloaded only the request lists, never the balances. The pull now
+reloads both. The row is also role="status", so a screen reader hears
+it appear, as it already hears "Loading your balances".
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>

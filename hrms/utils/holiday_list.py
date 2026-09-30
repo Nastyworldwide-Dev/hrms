@@ -244,7 +244,37 @@ def get_assigned_holiday_lists_to_employee_and_company(
 	start_date = getdate(start_date)
 	end_date = getdate(end_date)
 
-	return build_holiday_list_map(assigned_to_list, start_date, end_date)
+	result = build_holiday_list_map(assigned_to_list, start_date, end_date)
+	# The same record fallback as the single-day resolver (_record_calendar):
+	# anyone with no assignment in range gets the Holiday List on their
+	# Employee or Company record, clipped to its dates. Without it the Monthly
+	# Attendance Sheet read everyone added after install as having no calendar.
+	missing = [name for name in assigned_to_list if name not in result]
+	result.update(_record_calendar_ranges(missing, start_date, end_date))
+	return result
+
+
+def _record_calendar_ranges(names: list[str], start_date: date, end_date: date) -> dict[str, list[dict]]:
+	"""{name: [range]} from Employee.holiday_list or Company.default_holiday_list,
+	for names (employees and companies mixed) with no assignment in range."""
+	if not names:
+		return {}
+	lists = {}
+	for doctype, field in (("Employee", "holiday_list"), ("Company", "default_holiday_list")):
+		for row in frappe.get_all(doctype, filters={"name": ("in", names)}, fields=["name", field]):
+			if row.get(field):
+				lists[row.name] = row.get(field)
+	out = {}
+	for name, holiday_list in lists.items():
+		span = frappe.db.get_value("Holiday List", holiday_list, ["from_date", "to_date"])
+		if not span or not all(span):
+			continue
+		start, end = max(getdate(span[0]), start_date), min(getdate(span[1]), end_date)
+		if start <= end:
+			out[name] = [{"holiday_list": holiday_list, "from_date": start, "to_date": end}]
+	if out:
+		logger.info("[holiday_list] %d name(s) with no assignment use their record calendar", len(out))
+	return out
 
 
 def build_holiday_list_map(

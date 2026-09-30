@@ -1,3 +1,4 @@
-CLASS: a range split at the second calendar's start date assumed that start lay inside the range
-hrms/utils/holiday_list.py:get_holiday_dates_between_range same-root — split clamped with max(from_date, start_date); first part skipped when empty
-hrms/utils/holiday_list.py:get_holiday_dates_between not-affected — takes the range it is given
+CLASS: a message promises an action the screen does not perform
+frontend/src/views/Requests.vue:refreshRequests same-root — pull now reloads requestsSummary as well as the lists
+frontend/src/components/RequestBalances.vue same-root — the unread row is role="status"
+frontend/src/components/RequestBalances.vue:GBanner error not-affected — same "Pull down to try again" words, now also true
