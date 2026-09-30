@@ -1,7 +1,7 @@
 # HANDOFF
 prompt:   theme switching back, update popup removed, regression + desktop check
 status:   done
-commit:   see tag v2.0.0-alpha.23 on nz-glass
+commit:   fb6dc5745 on nz-glass (tag v2.0.0-alpha.23)
 files:    frontend/src/views/Profile.vue
           frontend/src/data/theme.js
           frontend/index.html
