@@ -36,15 +36,17 @@ readers that follow them into line.
 | Step | What | Files | Why this is safe |
 |---|---|---|---|
 | 0 | **Measure first**: a read-only HR report "Rest day differences". Per employee, which dates the shift calendar calls rest but the person's does not, and the reverse, from today. Ships alone; changes nothing. | new report | Owner sees how many people and days move before anything moves. |
-| 1 | Start date: HR Settings `rest_day_rule_from`, set ONCE by an idempotent patch to the deploy day (same pattern as `ot_nonwork_minimum_from`, read raw from tabSingles). The patch also clears the payroll holiday cache. | patch + `hrms/utils/holiday_list.py` | Old dates never change; empty = old behaviour. |
+| 1 | Start date: HR Settings `rest_day_rule_from`, set ONCE, only if empty, by an idempotent patch to the deploy day (same pattern as `ot_nonwork_minimum_from`, read raw from tabSingles). The patch also clears the payroll holiday cache. | patch + `hrms/utils/holiday_list.py` | Old dates never change; empty = old behaviour. |
 | 2 | One function `rest_days_for(employee, start, end)` → the set of rest dates, per date by the rule above. Built and tested before any reader uses it. | `hrms/utils/holiday_list.py` | One rule, one place. |
 | 3 | Leave counts with it: `leave_application.get_holidays` (used by `get_number_of_leave_days:1088` and the whitelisted call). *(amended: employee_reminders does not use this one.)* | `leave_application.py:1514` | Per-date counting across two calendars (scenario D) kept; tested. |
-| 4 | Payroll with it. *(amended)* Every reader, not one: `salary_slip.get_holidays_for_employee` (used at :519 for working days / LWP / half-absent / unmarked days, and :689 for payment days) and `payroll_period.py:74`. The slip cache key today is the calendar name only; it becomes employee + dates + a fingerprint of the shifts in the range, or the cache is dropped for this path. | `salary_slip.py:519, 689, 694`; `payroll_period.py:74` | Old months: the start date is after them, so the same days come back. |
+| 4 | Payroll with it. *(amended)* Every reader, not one: `salary_slip.get_holidays_for_employee` (used at :519 for working days / LWP / half-absent / unmarked days, and :689 for payment days) and `payroll_period.py:74`. The slip cache key today is the calendar name only; it becomes employee + dates + a fingerprint of the shifts in the range, or the cache is dropped for this path. *(amended)* Unpaid leave (LWP / PPL), half-day absence and unmarked days all read the same `holidays` list from :519, so they follow the rule through that one reader; `payroll_period.py:74` must use the same function so the period's working days and the slip's payment days agree. | `salary_slip.py:519, 689, 694`; `payroll_period.py:74` | Old months: the start date is after them, so the same days come back. |
 | 5 | The other person-calendar readers, one by one, each with its own before/after: `hr/utils.get_holidays_for_employee` (attendance.py:615, employee_reminders), Monthly Attendance Sheet (:488), `api/__init__.py:460, 1301`, `api/home.py:88`, `api/roster.py:419`. | listed | Each reader is its own commit, so one can be reverted alone. |
 | 6 | Leave on a day with **no shift** still counts as a working day (ruling 4). | none (explicit test) | Pinned so nobody "fixes" it later. |
 
 Out of scope: overtime and absent marking (already on the rule); approved-leave
-recount (ruling 5, unchanged).
+recount (ruling 5, unchanged). Shift reminders (`employee_reminders`) follow in
+step 5 through `hr/utils.get_holidays_for_employee`, so nobody is reminded on a
+shift rest day.
 
 ## Edge cases, each a test before the code
 
@@ -63,6 +65,8 @@ recount (ruling 5, unchanged).
 13. *(amended)* Two overlapping Shift Assignments on one date → the later start_date wins.
 14. *(amended)* Employee-level Holiday List Assignment AND a shift calendar → the shift's, while it covers the date.
 15. *(amended)* Only a default_shift, no assignment → the default shift's calendar.
+16. *(amended)* Unpaid leave (is_lwp) across a shift change inside one payroll month → working days and payment days agree, slip and payroll period.
+17. *(amended)* Night shift 19:00-04:00 starting on a shift rest day → the whole shift belongs to that rest day.
 
 ## Proof per step
 
