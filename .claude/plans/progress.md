@@ -272,3 +272,6 @@ EVIDENCE: 2 sw.test.js 10/10 (2 new red before); vite build OK, notificationclic
 - 2026-10-01T06:32:23Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
 - 2026-10-01T06:33:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
 - 2026-10-01T06:33:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-10-01T06:33:51Z EVIDENCE: 6 behaves — family hunt: class=an event handler registered inside a try block that can fail first, so it is someti; 8 call site(s) given verdicts, 1 same-root ⟂737944510390
+- 2026-10-01T06:33:52Z COMMIT: a5cdc1bc1 fix(pwa): tapping a notification did nothing when push failed to start → review+design dispatched
+- 2026-10-01T06:37:31Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142

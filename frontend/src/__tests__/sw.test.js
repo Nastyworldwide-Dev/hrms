@@ -128,3 +128,12 @@ test("the tap waits for the window to open or be focused", () => {
 	assert.match(body.slice(0, 1200), /event\.waitUntil\(/, "the open is kept alive with waitUntil")
 	assert.match(body.slice(0, 1200), /clients\.matchAll\(/, "an open Nadi window is reused")
 })
+
+test("a window that cannot be moved still gets the page opened", () => {
+	// review of a5cdc1bc1: navigate() rejects for a window this worker does
+	// not control; without a fallback the tap did nothing again.
+	const body = src.slice(src.indexOf('addEventListener("notificationclick"'))
+	const handler = body.slice(0, body.indexOf("\n})\n") + 4)
+	assert.match(handler, /\.navigate\(url\)[\s\S]*?\.catch\(\(\) => clients\.openWindow\(url\)\)/)
+	assert.match(handler, /sameOrigin/, "another site's link is opened, not navigated into")
+})

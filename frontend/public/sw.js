@@ -97,11 +97,20 @@ self.addEventListener("notificationclick", (event) => {
 	event.notification.close()
 	const url = (event.notification.data && event.notification.data.url) || event.action
 	if (!url) return
+	const sameOrigin = new URL(url, self.location.origin).origin === self.location.origin
 	event.waitUntil(
 		clients.matchAll({ type: "window", includeUncontrolled: true }).then((open) => {
-			const nadi = open.find((client) => new URL(client.url).pathname.startsWith("/hrms"))
-			if (nadi && "navigate" in nadi) {
-				return nadi.navigate(url).then((client) => (client || nadi).focus())
+			const nadi = open.find((client) => {
+				const path = new URL(client.url).pathname
+				return path === "/hrms" || path.startsWith("/hrms/")
+			})
+			if (sameOrigin && nadi && "navigate" in nadi) {
+				// navigate() refuses a window this worker does not control yet;
+				// then a new window is opened, so the tap is never lost.
+				return nadi
+					.navigate(url)
+					.then((client) => (client || nadi).focus())
+					.catch(() => clients.openWindow(url))
 			}
 			return clients.openWindow(url)
 		})
