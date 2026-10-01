@@ -108,3 +108,23 @@ test("push moves to the app-root worker once, only for people who had it on", ()
 	assert.match(fn, /localStorage\.getItem\(PUSH_MOVED_KEY\)/)
 	assert.match(fn, /enableNotification\(\)/)
 })
+
+// REPORTED 30 Sep 2026: a senior tapped an announcement notification and
+// "nothing happens". The tap handler sat INSIDE the try block that starts
+// Firebase, so any failure to start messaging in the worker (a bad or stale
+// config, the cloned-site relay case) left no handler at all. And it opened the
+// window without event.waitUntil, so the browser may end the event (and the
+// open) before it finishes; MDN's pattern wraps it and focuses an open window.
+test("the tap handler is registered even when Firebase fails to start", () => {
+	const handler = src.indexOf('addEventListener("notificationclick"')
+	const tryStart = src.indexOf("try {", src.indexOf("Firebase config initialization"))
+	const catchAt = src.indexOf("} catch (error)", tryStart)
+	assert.ok(handler > 0 && tryStart > 0 && catchAt > 0)
+	assert.ok(handler > catchAt || handler < tryStart, "notificationclick must be outside the Firebase try block")
+})
+
+test("the tap waits for the window to open or be focused", () => {
+	const body = src.slice(src.indexOf('addEventListener("notificationclick"'))
+	assert.match(body.slice(0, 1200), /event\.waitUntil\(/, "the open is kept alive with waitUntil")
+	assert.match(body.slice(0, 1200), /clients\.matchAll\(/, "an open Nadi window is reused")
+})

@@ -78,21 +78,35 @@ try {
 		self.registration.showNotification(notificationTitle, notificationOptions)
 	})
 
-	// Register for ALL browsers — this used to be Chrome-only, so on Firefox,
-	// Safari and Samsung Internet tapping the notification did nothing at all. A
-	// body tap carries no action and finds the URL on data; an action-button tap
-	// carries the URL as event.action.
-	self.addEventListener("notificationclick", (event) => {
-		event.stopImmediatePropagation()
-		event.notification.close()
-		const url = (event.notification.data && event.notification.data.url) || event.action
-		if (url) {
-			clients.openWindow(url)
-		}
-	})
 } catch (error) {
 	console.log("Failed to initialize Firebase", error)
 }
+
+// Register for ALL browsers — this used to be Chrome-only, so on Firefox,
+// Safari and Samsung Internet tapping the notification did nothing at all. A
+// body tap carries no action and finds the URL on data; an action-button tap
+// carries the URL as event.action.
+//
+// OUTSIDE the Firebase block (30 Sep 2026: a senior tapped an announcement and
+// "nothing happens"): inside it, any failure to start messaging left no tap
+// handler at all. And the open is kept alive with waitUntil; without it the
+// browser may end the event before the window opens. An open Nadi window is
+// reused and taken to the link rather than opening a second one.
+self.addEventListener("notificationclick", (event) => {
+	event.stopImmediatePropagation()
+	event.notification.close()
+	const url = (event.notification.data && event.notification.data.url) || event.action
+	if (!url) return
+	event.waitUntil(
+		clients.matchAll({ type: "window", includeUncontrolled: true }).then((open) => {
+			const nadi = open.find((client) => new URL(client.url).pathname.startsWith("/hrms"))
+			if (nadi && "navigate" in nadi) {
+				return nadi.navigate(url).then((client) => (client || nadi).focus())
+			}
+			return clients.openWindow(url)
+		})
+	)
+})
 
 // NOT skipWaiting() at module scope. That activated every new build the instant
 // it installed and reloaded the page under whatever the employee was doing. The

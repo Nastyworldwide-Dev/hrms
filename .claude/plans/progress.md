@@ -263,3 +263,12 @@ DEAD END: commit fedf16621 is the Rest Day Differences report (step 0: hrms/hr/r
 - 2026-09-30T11:23:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
 EVIDENCE: 3 fresh.local mid-window Holiday List Assignment switch Sun->Sat: work dates Sun 04/11 Oct then Sat 17/24 Oct; 23 lookups, 0.05s
 - 2026-09-30T11:24:10Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-09-30T11:24:11Z EVIDENCE: 6 behaves — family hunt: class=a cache that assumes an answer cannot change inside the window; 6 call site(s) given verdicts, 3 same-root ⟂c6bc03d262ad
+- 2026-09-30T11:24:12Z COMMIT: 9cd034555 fix(reports): Rest Day Differences missed a calendar that changes mid-window → review dispatched
+EVIDENCE: 3 fresh.local checkpoints in one query: same Sun/Sat split, 0.05s
+- 2026-09-30T11:25:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
+- 2026-09-30T11:25:53Z COMMIT: 3e1e97c0f perf(reports): Rest Day Differences reads calendar changes in one query → review dispatched
+EVIDENCE: 2 sw.test.js 10/10 (2 new red before); vite build OK, notificationclick in built sw.js
+- 2026-10-01T06:32:23Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-10-01T06:33:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-10-01T06:33:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c

@@ -1,3 +1,3 @@
-GOAL: Rest Day Differences stays fast and still sees a calendar that changes mid-window.
-DONE WHEN: the person's calendar is re-asked on any Holiday List Assignment start date and where the cached span ends; tests red before, green after; fresh.local shows Sundays then Saturdays after a mid-window switch, 23 lookups.
-CHECK: PYTHONPATH=. python3 hrms/tests/test_rest_day_differences.py
+GOAL: tapping a Nadi push notification always opens its page, even when push messaging failed to start in the worker.
+DONE WHEN: the notificationclick handler sits outside the Firebase try block, waits with event.waitUntil, and reuses an open Nadi window; sw tests red before, green after; build OK.
+CHECK: node --test frontend/src/__tests__/sw.test.js
