@@ -275,3 +275,7 @@ EVIDENCE: 2 sw.test.js 10/10 (2 new red before); vite build OK, notificationclic
 - 2026-10-01T06:33:51Z EVIDENCE: 6 behaves — family hunt: class=an event handler registered inside a try block that can fail first, so it is someti; 8 call site(s) given verdicts, 1 same-root ⟂737944510390
 - 2026-10-01T06:33:52Z COMMIT: a5cdc1bc1 fix(pwa): tapping a notification did nothing when push failed to start → review+design dispatched
 - 2026-10-01T06:37:31Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-10-01T06:37:35Z COMMIT: 51e6973dc fix(pwa): a notification tap could still do nothing on an uncontrolled window → review+design dispatched
+- 2026-10-01T06:39:09Z COMPACT: context compacted — read the last NEXT above before continuing
+DEAD END: none this step. Sign-in plan for non-HQ staff written (phone-number login = Frappe System Settings allow_login_using_mobile_number, user.py:835; SMS-code self reset = new code, needs SMS provider). sw tap fix 51e6973dc reviewed: no Critical (suggest try/catch around new URL).
+NEXT: wait for owner: (1) "push" -> scripts/release.sh alpha.28 (Rest Day Differences + sw tap fix); (2) SMS provider name + "go phone sign-in"; (3) announcement name + login email; (4) HR leave-import intent + one row. Do NOT push the safety tag.
