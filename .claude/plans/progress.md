@@ -222,3 +222,5 @@ EVIDENCE: 2 fresh.local test_roster 13/13 (HR User first-day change red before: 
 - 2026-10-02T07:33:23Z COMMIT: f8d7da809 fix(roster): HR could not change a shift on the Desk roster → review+design dispatched
 EVIDENCE: 2 review follow-up f8d7da809: test_roster 14/14 fresh.local, dialog node 5/5; HR worked-day message no 'Ask HR'; shift+end-date edit refused not dropped; 'Changes <date> only' hint
 - 2026-10-02T07:35:27Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
+- 2026-10-02T07:35:30Z COMMIT: b4d308942 fix(roster): a shift change no longer drops an end-date edit silently → review+design dispatched
+NEXT: alpha.30 pushed; read .claude/tmp/review-hr-roster-2.md for b4d308942 and fix anything Critical.

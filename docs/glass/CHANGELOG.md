@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.30] — HR Can Change Shifts on the Roster — 2026-10-02
+
+HR can change a shift on the Desk Roster again.
+
+### Fixed
+- **Update did nothing on the Roster.** Shift Type, Shift Location and End
+  Date were locked on an existing shift. HR can now change the shift for
+  the day they clicked, or the end date of the whole assignment.
+- **Changing the first day of a shift was refused for HR User.**
+
 ## [2.0.0-alpha.29] — Nadi Opens the App for Staff — 2026-10-02
 
 Staff who click Nadi on Desk now land in the Nadi app.

@@ -1,10 +1,11 @@
 # HANDOFF
-prompt:   plain staff Desk Nadi -> PWA (ruling b)
+prompt:   HR "asal aku takleh update?" on Desk Roster
 status:   done
-commit:   e770733ba on nz-glass (v2.0.0-alpha.29)
-files:    hrms/desk_boot.py
-          hrms/hooks.py
-          hrms/tests/test_desk_boot.py
-verify:   deploy; plain staff click Nadi on Desk -> /hrms; Fauzi -> Shift & Attendance
-flags:    none
-next:     deploy alpha.29 on Frappe Cloud
+commit:   b4d308942 on nz-glass (v2.0.0-alpha.30)
+files:    roster/src/components/ShiftAssignmentDialog.vue
+          roster/src/components/Link.vue
+          hrms/api/roster.py
+          hrms/api/test_roster.py
+verify:   deploy; HR opens Desk Roster, clicks a shift, changes Shift Type -> Update -> that day changes
+flags:    final review of b4d308942 still running at push time
+next:     read .claude/tmp/review-hr-roster-2.md; fix anything Critical
