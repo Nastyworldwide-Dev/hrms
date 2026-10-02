@@ -60,3 +60,8 @@ test("the day cell marks a set day type", () => {
 	assert.match(view, /"Public Holiday": "PH"/)
 	assert.match(view, /v-if="dayTypeMark\(member, day\)"/)
 })
+
+test("a screen reader hears the day type too", () => {
+	const fn = view.slice(view.indexOf("function dayLabel"), view.indexOf("function openDay"))
+	assert.match(fn, /dayTypeOptions\.value\.find/)
+})

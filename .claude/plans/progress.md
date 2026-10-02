@@ -249,3 +249,5 @@ EVIDENCE: 2 test_roster 17/17 fresh.local incl. repeating schedule carries Off D
 - 2026-10-02T09:03:00Z COMMIT: 8993f5f80 fix(roster): a repeating schedule dropped the Day Type HR chose → review dispatched
 EVIDENCE: 3 slice 4 Nadi Team roster Day Type: frontend yarn test 1588/1588, vite build OK; team-roster-assign 8/8 (3 new)
 - 2026-10-02T09:05:06Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-02T09:05:10Z COMMIT: 60610277c feat(team): supervisors set the Day Type in the Nadi Team roster → review+design dispatched
+- 2026-10-02T09:05:58Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142

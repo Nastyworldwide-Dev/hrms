@@ -283,7 +283,13 @@ const dayTitle = computed(() =>
 
 function dayLabel(member, day) {
 	const s = shiftOn(member, day)
-	return `${member.employee_name}, ${day.iso}: ${s ? s.shift_type : __("No shift")}`
+	const type =
+		s && s.day_type && s.day_type !== "None"
+			? dayTypeOptions.value.find((o) => o.value === s.day_type)?.label
+			: ""
+	return `${member.employee_name}, ${day.iso}: ${s ? s.shift_type : __("No shift")}${
+		type ? `, ${type}` : ""
+	}`
 }
 // an empty day goes straight to Assign for that date; a rostered day opens the sheet
 function openDay(member, day) {
