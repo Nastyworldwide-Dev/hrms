@@ -1,16 +1,15 @@
-# Shift Supervisor: Nadi tile says "No permission for Page" (Fauzi, 2 Oct 2026)
+# Plain staff: Desk Nadi tile opens the PWA (owner ruling b, 2 Oct 2026)
 
 ## FLOW
-Desk launcher -> frappe desktop_icon.get_desktop_icons filters each tile by the icon's own Has Role rows
--> "Shift & Attendance" tile HR-only -> Nadi app tile has no children -> opens its own link /desk/people
--> no "people" workspace (upstream renamed to HR Setup) -> router falls to Page "people" -> Page read is System Manager only -> error.
-Fix: tile roles + Shift Supervisor (JSON + patch let_shift_supervisor_open_nadi_tile); app_home / add_to_apps_screen / Nadi icon link -> /desk/shift-&-attendance.
+frappe.sessions.get -> extend_bootinfo hook hrms.desk_boot.send_plain_staff_to_pwa(bootinfo)
+-> "Shift & Attendance" not in bootinfo.workspaces["pages"] (Frappe's own allowed list)
+-> Nadi desktop icon link + app_data[hrms].app_route = /hrms. HR / Shift Supervisor unchanged.
 
-## MOCKUP: NOT NEEDED (no new screen; an existing tile becomes visible to one more role)
+## MOCKUP: NOT NEEDED (no new screen; a tile's link changes for one group)
 
 ## EXPECTED OUTPUT
-- Shift Supervisor with an Employee record: Desk shows Nadi -> Shift & Attendance; app route /desk/shift-&-attendance.
-- HR: unchanged (tile already theirs). Plain employee: tile still hidden.
-- Patch idempotent (ran twice on fresh.local).
+- Plain Employee: Nadi tile and app switcher open /hrms (the Nadi app).
+- Shift Supervisor, HR: Nadi opens /desk/shift-&-attendance as before.
+- Other apps' tiles untouched.
 
-APPROVED: owner, 2 Oct 2026 — "urgent fix ... shift supervisor should able to use roster and view roster page!"
+APPROVED: owner, 2 Oct 2026 — "b, send plain staff to the PWA"

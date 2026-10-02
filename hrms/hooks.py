@@ -19,6 +19,9 @@ add_to_apps_screen = [
 	}
 ]
 
+# Plain staff cannot open the Desk home above; their Nadi tile opens the PWA.
+extend_bootinfo = "hrms.desk_boot.send_plain_staff_to_pwa"
+
 # Includes in <head>
 # ------------------
 

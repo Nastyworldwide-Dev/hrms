@@ -203,3 +203,12 @@ NEXT: wait for the 2 frappe-reviewer verdicts (.claude/tmp/review-roster-edit.md
 EVIDENCE: review b4e7adb81 no Critical (12/12 console, 5/5 node); calendar-day warning judged safe-direction, ticket-roster-py-refactor.md filed
 - 2026-10-02T03:41:19Z COMMIT: dddcaa3ca chore(release): 2.0.0-alpha.28 — Supervisors Edit the Roster → review+deps dispatched
 NEXT: owner ruling — plain staff clicking Desk Nadi still dead-end (hide the tile for non-HR/non-supervisor, or send them to /hrms PWA). alpha.28 pushed.
+- 2026-10-02T03:41:55Z PUSH: nz-glass @ 08a7b8ba7
+- 2026-10-02T03:41:55Z COMMIT: 08a7b8ba7 docs: handoff for alpha.28 → review dispatched
+EVIDENCE: 3 fresh.local get_bootinfo+extend_bootinfo: plain Employee -> Nadi link /hrms, app_route /hrms; Shift Supervisor -> /desk/shift-&-attendance. test_desk_boot 3/3 (red first: module missing)
+- 2026-10-02T03:46:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-10-02T03:46:59Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-10-02T03:47:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-10-02T03:47:06Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-10-02T03:47:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-10-02T03:47:21Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
