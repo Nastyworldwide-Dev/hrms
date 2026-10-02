@@ -1,57 +1,36 @@
-# Roster Day Type decides the day (HR request, 2 Oct 2026)
+# Shift Supervisor on Desk: their team's attendance and clock-ins, read only (owner, 2 Oct 2026)
 
-HR screenshot: a "Day Type" select on the roster — Work Day / Rest Day / Public Holiday / None.
-Owner: add Off Day; the PH (and every day) rate follows it.
-Owner answers 2 Oct: applies EVERYWHERE (OT rate, absent marking, reminders); 5 options with
-None = follow the calendar; set from Desk Roster AND Nadi Team roster.
+Owner: "shift supervisor role, can use desk, as usual, but limited to only attendance, clock in
+records ... only can view their own people under them". Answers: VIEW ONLY; team = the roster's
+own list (self + Reports To = them, hrms.hr.utils.rostered_employees); Desk shows ONLY Shift &
+Attendance.
 
 ## FLOW
-1. Shift Assignment gets `day_type` Select: None / Work Day / Rest Day / Off Day / Public Holiday,
-   default None, allow_on_submit (HR can fix it after submit, like end_date / status).
-2. `hrms.utils.ot_calculation._classify_day(employee, day, ...)` — the ONE place every caller asks
-   "what kind of day is this?" (OT pay, OT eligibility on attendance, check-in OT, shift + approval
-   reminders: 9 call sites, 5 files). It first reads the employee's Active, submitted Shift
-   Assignment covering `day` (the `shift` passed in, else any):
-     Work Day -> "normal" · Rest Day -> "rest" · Off Day -> "off" · Public Holiday -> "public_holiday"
-     None / no assignment -> today's calendar logic, unchanged.
-   Two assignments the same day that disagree: the higher-paying one wins
-   (public_holiday > off = rest > normal) and an Error Log names the conflict.
-3. Desk Roster dialog (roster/src/components/ShiftAssignmentDialog.vue): Day Type select on new
-   AND existing shifts. On an existing shift, Day Type is a one-day change -> change_shift_day
-   (same path as Shift Type), so one day can be PH inside a week-long shift.
-4. Roster API: insert_shift / create_shift_assignment / change_shift_day / break_shift carry
-   day_type (a break keeps the pieces' day_type; merging neighbours requires equal day_type).
-5. Nadi Team roster (TeamRoster.vue): Day Type select in Assign and in the day sheet's Change.
-   get_team_roster returns day_type; the day cell shows a small PH / R / O mark.
-6. Desk month view (MonthViewTable.vue): the shift card shows the Day Type when it is not None.
+1. Row fence (hrms/overrides/employee_owned_row_scope.py) — Attendance and Employee Checkin
+   already route through it (hooks.py permission_query_conditions + has_permission). Add a
+   READ-ONLY team scope for a Shift Supervisor: list + document read admit rows whose employee
+   is in rostered_employees(user). Write/create/submit/delete: unchanged.
+2. Role permission (patch, idempotent): Shift Supervisor gets read + report on Attendance and
+   Employee Checkin, incl. Employee Checkin permlevel 1 read. No write/create/submit/export.
+3. Desk: Shift & Attendance sidebar shows a supervisor only what they can open (Frappe hides
+   links the user cannot read). Other Nadi tiles are already HR-only. Check as the persona.
+4. Monthly Attendance Sheet is already fenced to the team (report_scope). Other reports stay
+   HR-only.
 
-## MOCKUP: NOT NEEDED (one select added to two existing forms; owner saw the HR screenshot and approved the text mockup below — deploy-once-when-complete, no mockups ruling)
-Desk dialog (new row under Shift Location):
-  Shift Type  [7PM - 3.30AM v]        Start Date [01/10/2026]
-  Shift Location [Pagi Malam v]       End Date   [04/10/2026]
-  Day Type    [Public Holiday v]      Status     [Active v]
-              Changes 2026-10-04 only
-Nadi Assign / Change sheet: one more select "Day type" (None = follows calendar) above the button.
-Nadi day cell:  N  over a tiny "PH" when set.
+## MOCKUP: NOT NEEDED (no new screen; existing Desk lists/forms, read only, team rows only)
 
 ## EXPECTED OUTPUT
-- Shift with Day Type = Public Holiday on a calendar workday: OT priced 2x first 8h then 3x
-  (PH bands); no absent mark logic difference vs a calendar PH; no "not in yet" reminder.
-- Day Type = Work Day on a calendar holiday: priced 1.5x, treated as a workday everywhere.
-- Day Type = Off Day: flat 2x (Off Day bands).
-- Day Type = None (every existing shift after deploy): nothing changes — calendar decides.
-- Already-paid days are not re-priced: only new calculations read it (payroll run / OT backfill
-  re-runs would pick it up — same as a calendar edit today).
-
-## OPEN (owner)
-- Same-day conflict: higher pay wins + Error Log (owner: "a", 2 Oct 2026).
+- A Shift Supervisor on Desk -> Nadi -> Shift & Attendance: Attendance and Employee Checkin
+  lists show only them + their direct reports; forms read only; no New/Edit/Submit.
+- A stranger's Attendance / Checkin by URL: "not permitted".
+- Plain Employee and HR: unchanged. Nadi PWA: unchanged.
 
 ## TESTS
-- _classify_day: 5 cases (each day type + None falls back) — red first.
-- roster: change_shift_day with day_type splits one day; merge refuses differing day_type.
-- dialog + TeamRoster static tests for the select and wiring.
+- row scope: supervisor reads a report's Attendance + Checkin; refused a stranger's; refused
+  write on a report's row; plain employee unchanged — red first.
+- patch idempotent; persona boot check on fresh.local.
 
 ## RISK
-Pay. Schema (one new Select, default None, no data change). Every shift today stays None.
+Permissions (read only, team only). Pay untouched (no write).
 
-APPROVED: owner, 2 Oct 2026 — "Everything", "5 options", "Desk + Nadi", conflict "a".
+APPROVED: owner, 2 Oct 2026 — "go" (view only, roster team, Desk Shift & Attendance only).

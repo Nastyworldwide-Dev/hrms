@@ -253,3 +253,6 @@ EVIDENCE: 3 slice 4 Nadi Team roster Day Type: frontend yarn test 1588/1588, vit
 - 2026-10-02T09:05:58Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
 - 2026-10-02T09:06:04Z COMMIT: 7ad9678dc fix(team): a screen reader did not hear a day's Day Type → review+design dispatched
 NEXT: alpha.32 pushed (Day Type). Deploy; HR sets one day PH and checks its OT price. Pre-existing: test_ot_calculation 2 red on HEAD.
+- 2026-10-02T09:06:31Z COMMIT: 253fcef96 chore(release): 2.0.0-alpha.32 — Day Type on the Roster → review+deps dispatched
+EVIDENCE: 3 fresh.local persona: Shift Supervisor lists only their report's Attendance + Employee Checkin, reads it, write False, create False, stranger False; plain employee unchanged; sidebar shows Attendance after patch (ran twice); other sidebar doctypes list 0 team rows. stub test_supervisor_team_view 6/6 red first
+- 2026-10-02T09:43:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0

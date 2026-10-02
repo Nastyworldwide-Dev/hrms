@@ -151,9 +151,23 @@ TEAM_REVIEWED_DOCTYPES = {"Attendance Request"}
 ROSTER_DOCTYPES = {"Shift Assignment", "Shift Schedule Assignment"}
 
 
+#: Doctypes a Shift Supervisor READS for the same people they roster (owner,
+#: 2 Oct 2026: "can use desk ... limited to only attendance, clock in records
+#: ... only their own people under them"; view only). Read, never write: a
+#: change to attendance or a punch still goes through HR or a request.
+SUPERVISOR_READ_DOCTYPES = {"Attendance", "Employee Checkin"}
+
+
 def _rostered_by(user: str, doctype: str) -> list[str]:
 	"""The employees whose shifts this user rosters, or [] (no admission)."""
 	if doctype not in ROSTER_DOCTYPES:
+		return []
+	return rostered_employees(user)
+
+
+def _supervised_reads(user: str, doctype: str) -> list[str]:
+	"""The team whose attendance and clock-ins this user may READ, or []."""
+	if doctype not in SUPERVISOR_READ_DOCTYPES:
 		return []
 	return rostered_employees(user)
 
@@ -249,7 +263,7 @@ def get_permission_query_conditions(doctype: str, user: str | None = None) -> st
 	if doctype in TEAM_REVIEWED_DOCTYPES:
 		# get_employees_routed_to already includes the reporting line
 		visible = visible + get_employees_routed_to(user)
-	visible = visible + _rostered_by(user, doctype)
+	visible = visible + _rostered_by(user, doctype) + _supervised_reads(user, doctype)
 	if visible:
 		values = ", ".join(frappe.db.escape(e) for e in visible)
 		conditions.extend(f"`tab{doctype}`.`{field}` in ({values})" for field in owner_fields)
@@ -299,6 +313,11 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	rostered = set(_rostered_by(user, doctype))
 	if rostered and any(doc.get(field) in rostered for field in owner_fields):
 		return True
+
+	if ptype in ("read", "report", "print"):
+		team = set(_supervised_reads(user, doctype))
+		if team and any(doc.get(field) in team for field in owner_fields):
+			return True
 
 	if ptype == "read" and doctype in TEAM_REVIEWED_DOCTYPES:
 		# every superior this app routes to — reporting manager, the approver
