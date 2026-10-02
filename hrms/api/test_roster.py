@@ -145,7 +145,7 @@ class TestSupervisorEditsRoster(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		frappe.db.delete("Shift Assignment", {"employee": ("in", [self.report, self.stranger])})
-		frappe.db.delete("Employee Checkin", {"employee": self.report})
+		frappe.db.delete("Employee Checkin", {"employee": ("in", [self.report, self.stranger])})
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
@@ -253,3 +253,21 @@ class TestSupervisorEditsRoster(FrappeTestCase):
 			self._days(self.stranger),
 			[(self.late_shift, "2031-03-03", "2031-03-03"), (self.day_shift, "2031-03-04", "2031-03-09")],
 		)
+
+	def test_hr_is_not_told_to_ask_hr(self):
+		from hrms.api.roster import remove_shift_day
+
+		hr = _make_employee("roster.hr@bench.test", ["HR User"])
+		name = self._week(self.stranger)
+		frappe.get_doc(
+			{
+				"doctype": "Employee Checkin",
+				"employee": self.stranger,
+				"time": "2031-03-05 08:02:00",
+				"log_type": "IN",
+			}
+		).insert(ignore_permissions=True)
+		frappe.set_user(frappe.db.get_value("Employee", hr, "user_id"))
+		with self.assertRaises(frappe.ValidationError) as caught:
+			remove_shift_day(name, "2031-03-05")
+		self.assertNotIn("Ask HR", str(caught.exception))

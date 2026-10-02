@@ -25,6 +25,7 @@
 					doctype="Shift Type"
 					label="Shift Type"
 					v-model="form.shift_type"
+					:description="dayOnlyHint"
 				/>
 				<FormControl
 					type="date"
@@ -36,12 +37,9 @@
 					doctype="Shift Location"
 					label="Shift Location"
 					v-model="form.shift_location"
+					:description="dayOnlyHint"
 				/>
-				<FormControl
-					type="date"
-					label="End Date"
-					v-model="form.end_date"
-				/>
+				<FormControl type="date" label="End Date" v-model="form.end_date" />
 				<FormControl
 					type="select"
 					:options="['Active', 'Inactive']"
@@ -351,7 +349,21 @@ const shiftChanged = computed(
 			(form.shift_location || null) !== (shiftAssignment.value.doc.shift_location || null)),
 );
 
+// the one-day scope said where the change happens, not just in the title
+const dayOnlyHint = computed(() =>
+	props.shiftAssignmentName && selectedDate.value ? `Changes ${selectedDate.value} only` : "",
+);
+
 const updateShiftAssigment = () => {
+	const doc = shiftAssignment.value.doc;
+	if (shiftChanged.value && (form.status !== doc.status || form.end_date !== doc.end_date)) {
+		// one is a one-day change, the other edits the whole assignment
+		raiseToast(
+			"error",
+			"Change the shift for this day, or the end date and status — one at a time.",
+		);
+		return;
+	}
 	if (shiftChanged.value) changeShiftDay.submit();
 	else shiftAssignment.value.setValue.submit({ status: form.status, end_date: form.end_date });
 };

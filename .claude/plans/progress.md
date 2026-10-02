@@ -219,3 +219,6 @@ EVIDENCE: review e770733ba no Critical/Warning; live p4 rerun plain->/hrms, sv->
 - 2026-10-02T03:48:58Z COMMIT: 0032b8022 docs: handoff for alpha.29 → review dispatched
 EVIDENCE: 2 fresh.local test_roster 13/13 (HR User first-day change red before: PermissionError at cancel); node ShiftAssignmentDialog.test 3/3 (old dialog 2 red)
 - 2026-10-02T07:33:20Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
+- 2026-10-02T07:33:23Z COMMIT: f8d7da809 fix(roster): HR could not change a shift on the Desk roster → review+design dispatched
+EVIDENCE: 2 review follow-up f8d7da809: test_roster 14/14 fresh.local, dialog node 5/5; HR worked-day message no 'Ask HR'; shift+end-date edit refused not dropped; 'Changes <date> only' hint
+- 2026-10-02T07:35:27Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e

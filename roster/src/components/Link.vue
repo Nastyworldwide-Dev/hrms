@@ -12,6 +12,9 @@
 			:disabled="disabled"
 			@update:query="handleQueryUpdate"
 		/>
+		<span v-if="props.description" class="block text-xs leading-5 text-gray-600 mt-1">
+			{{ props.description }}
+		</span>
 	</div>
 </template>
 
@@ -38,6 +41,10 @@ const props = defineProps({
 		default: false,
 	},
 	label: {
+		type: String,
+		default: "",
+	},
+	description: {
 		type: String,
 		default: "",
 	},

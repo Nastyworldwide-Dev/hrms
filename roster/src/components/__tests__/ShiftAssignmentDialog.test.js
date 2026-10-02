@@ -32,3 +32,16 @@ test("a changed shift type wakes Update and goes to change_shift_day", () => {
 	assert.match(view, /if \(shiftChanged\.value\) changeShiftDay\.submit\(\)/)
 	assert.match(view, /url: "hrms\.api\.roster\.change_shift_day"/)
 })
+
+// design review of f8d7da809: say the change is for one day, and never drop an
+// end-date / status edit silently when the shift type changes too
+test("shift type and location say they change this day only", () => {
+	assert.match(field("Shift Type"), /:description="dayOnlyHint"/)
+	assert.match(field("Shift Location"), /:description="dayOnlyHint"/)
+	assert.match(view, /`Changes \$\{selectedDate\.value\} only`/)
+})
+
+test("a shift change plus an end-date or status change is refused, not half-applied", () => {
+	assert.match(view, /shiftChanged\.value && \(form\.status !== doc\.status \|\| form\.end_date !== doc\.end_date\)/)
+	assert.match(view, /one at a time/)
+})

@@ -360,6 +360,13 @@ def _refuse_worked_day(employee: str, date: str) -> None:
 	) or frappe.db.exists("Employee Checkin", {"employee": employee, "time": ["between", [date, date]]})
 	if worked:
 		logger.info("[roster] %s refused change on worked day %s %s", frappe.session.user, employee, date)
+		from hrms.hr.utils import sees_all_employee_data
+
+		if sees_all_employee_data(frappe.session.user):
+			# HR is who a supervisor is sent to; never tell HR to ask HR
+			frappe.throw(
+				_("This day already has punches or attendance, so its shift cannot be changed here.")
+			)
 		frappe.throw(_("This day already has punches or attendance. Ask HR to change it."))
 
 
