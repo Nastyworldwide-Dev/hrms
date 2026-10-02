@@ -215,3 +215,7 @@ EVIDENCE: 3 fresh.local get_bootinfo+extend_bootinfo: plain Employee -> Nadi lin
 - 2026-10-02T03:47:22Z COMMIT: e770733ba feat(desk): plain staff who click Nadi on Desk land in the Nadi app → review+cross-app dispatched
 EVIDENCE: review e770733ba no Critical/Warning; live p4 rerun plain->/hrms, sv->desk. NEXT: alpha.29 pushed; deploy, then a plain staff user clicks Desk Nadi -> lands in /hrms.
 - 2026-10-02T03:48:44Z COMMIT: 77e5119ef chore(release): 2.0.0-alpha.29 — Nadi Opens the App for Staff → review+deps dispatched
+- 2026-10-02T03:48:58Z PUSH: nz-glass @ 0032b8022
+- 2026-10-02T03:48:58Z COMMIT: 0032b8022 docs: handoff for alpha.29 → review dispatched
+EVIDENCE: 2 fresh.local test_roster 13/13 (HR User first-day change red before: PermissionError at cancel); node ShiftAssignmentDialog.test 3/3 (old dialog 2 red)
+- 2026-10-02T07:33:20Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea

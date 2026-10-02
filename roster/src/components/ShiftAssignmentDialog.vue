@@ -25,7 +25,6 @@
 					doctype="Shift Type"
 					label="Shift Type"
 					v-model="form.shift_type"
-					:disabled="!!props.shiftAssignmentName"
 				/>
 				<FormControl
 					type="date"
@@ -37,13 +36,11 @@
 					doctype="Shift Location"
 					label="Shift Location"
 					v-model="form.shift_location"
-					:disabled="!!props.shiftAssignmentName"
 				/>
 				<FormControl
 					type="date"
 					label="End Date"
 					v-model="form.end_date"
-					:disabled="!!props.shiftAssignmentName"
 				/>
 				<FormControl
 					type="select"
@@ -226,9 +223,12 @@ const dialog = computed(() => {
 			title: `[${selectedDate.value}] Shift Assignment ${props.shiftAssignmentName}`,
 			button: "Update",
 			action: updateShiftAssigment,
+			// Shift type and location change the selected day only (as Delete
+			// "Shift for <date>" does); status and end date edit the assignment.
 			actionDisabled:
 				form.status === shiftAssignment.value?.doc?.status &&
-				form.end_date === shiftAssignment.value?.doc?.end_date,
+				form.end_date === shiftAssignment.value?.doc?.end_date &&
+				!shiftChanged.value,
 		};
 	return {
 		title: "New Shift Assignment",
@@ -344,8 +344,16 @@ watch(
 	{ immediate: true },
 );
 
+const shiftChanged = computed(
+	() =>
+		!!shiftAssignment.value?.doc &&
+		(form.shift_type !== shiftAssignment.value.doc.shift_type ||
+			(form.shift_location || null) !== (shiftAssignment.value.doc.shift_location || null)),
+);
+
 const updateShiftAssigment = () => {
-	shiftAssignment.value.setValue.submit({ status: form.status, end_date: form.end_date });
+	if (shiftChanged.value) changeShiftDay.submit();
+	else shiftAssignment.value.setValue.submit({ status: form.status, end_date: form.end_date });
 };
 
 const createShiftAssigment = () => {
@@ -455,6 +463,25 @@ const insertShift = createResource({
 	},
 	onSuccess: () => {
 		raiseToast("success", "Shift Assignment created successfully!");
+		emit("fetchEvents");
+	},
+	onError(error: { messages: string[] }) {
+		raiseToast("error", error.messages[0]);
+	},
+});
+
+const changeShiftDay = createResource({
+	url: "hrms.api.roster.change_shift_day",
+	makeParams() {
+		return {
+			assignment: props.shiftAssignmentName,
+			date: selectedDate.value,
+			shift_type: form.shift_type,
+			shift_location: form.shift_location || null,
+		};
+	},
+	onSuccess: () => {
+		raiseToast("success", `Shift for ${selectedDate.value} changed.`);
 		emit("fetchEvents");
 	},
 	onError(error: { messages: string[] }) {

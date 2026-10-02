@@ -1,3 +1,3 @@
-GOAL: plain staff clicking Nadi on Desk land in the PWA (/hrms) instead of "No permission for Page" (owner ruling b, 2 Oct 2026).
-DONE WHEN: a user who cannot open the Shift & Attendance workspace gets Nadi tile + app-switcher route /hrms; HR and Shift Supervisor keep /desk/shift-&-attendance.
-CHECK: PYTHONPATH=. python3 hrms/tests/test_desk_boot.py; fresh.local boot as plain Employee -> ['/hrms'], as Shift Supervisor -> ['/desk/shift-&-attendance'].
+GOAL: HR can change a shift on the Desk Roster (screenshot: Update greyed, fields locked).
+DONE WHEN: Shift Type / Location / End Date editable on an existing shift; a type/location change updates that day via change_shift_day; HR User can do it on a first day.
+CHECK: node --test roster/src/components/__tests__/ShiftAssignmentDialog.test.js; fresh.local console test_roster 13/13.

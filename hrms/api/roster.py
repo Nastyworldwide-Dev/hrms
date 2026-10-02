@@ -311,13 +311,14 @@ def break_shift(assignment: str | ShiftAssignment, date: str) -> None:
 		assignment = frappe.get_doc("Shift Assignment", assignment)
 
 	_ensure_can_roster_employee(assignment.employee)
-	# A supervisor's own line is admitted by the fence above; Frappe would still
-	# refuse them the cancel a first-day break needs (owner, 2 Oct 2026:
-	# supervisors edit and remove their team's shifts). Same rule as insert_shift.
-	own_line = assignment.employee in rostered_employees(frappe.session.user)
-	if not own_line:
+	# The fence above admits HR (in company) and a supervisor's own line. Past
+	# it, a break is a roster EDIT: Frappe would still refuse the cancel +
+	# delete a first-day break needs, which neither HR User nor Shift
+	# Supervisor holds (owner, 2 Oct 2026; HR: "asal aku takleh update?").
+	if assignment.employee not in rostered_employees(frappe.session.user):
 		assignment.check_permission("write")
-	assignment.flags.ignore_permissions = own_line
+	assignment.flags.ignore_permissions = True
+	logger.info("[roster] %s breaks %s on %s", frappe.session.user, assignment.name, date)
 
 	if assignment.end_date and date_diff(assignment.end_date, date) < 0:
 		frappe.throw(_("Cannot break shift after end date"))
@@ -347,7 +348,7 @@ def break_shift(assignment: str | ShiftAssignment, date: str) -> None:
 			end_date,
 			status,
 			shift_location,
-			ignore_permissions=own_line,
+			ignore_permissions=True,
 		)
 
 

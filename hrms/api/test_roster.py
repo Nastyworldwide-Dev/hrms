@@ -237,3 +237,19 @@ class TestSupervisorEditsRoster(FrappeTestCase):
 		self._as_supervisor()
 		with self.assertRaises(frappe.PermissionError):
 			remove_shift_day(name, "2031-03-05")
+
+	def test_hr_user_changes_a_day_from_the_desk_roster(self):
+		# HR, 2 Oct 2026 ("asal aku takleh update?"): the Desk Roster now sends a
+		# shift-type change here. HR User holds no cancel/delete on Shift
+		# Assignment, so a first-day change must still go through for them.
+		from hrms.api.roster import change_shift_day
+
+		hr = _make_employee("roster.hr@bench.test", ["HR User"])
+		name = self._week(self.stranger)
+		frappe.set_user(frappe.db.get_value("Employee", hr, "user_id"))
+		change_shift_day(name, "2031-03-03", self.late_shift)
+		frappe.set_user("Administrator")
+		self.assertEqual(
+			self._days(self.stranger),
+			[(self.late_shift, "2031-03-03", "2031-03-03"), (self.day_shift, "2031-03-04", "2031-03-09")],
+		)
