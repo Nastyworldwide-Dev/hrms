@@ -1,11 +1,14 @@
 # HANDOFF
-prompt:   honest leave balance, pull-to-refresh, monthly sheet calendar; working-day map
-status:   done (alpha.27); rest-day rule waits for plan approval
-commit:   5dbc1592f on nz-glass (tag v2.0.0-alpha.27)
-files:    frontend/src/components/RequestBalances.vue
-          frontend/src/views/Requests.vue
-          hrms/utils/holiday_list.py
-          docs/glass/plan/WORKING_DAY_MAP.md
-verify:   Requests: a balance that fails says "Couldn't load your leave"; pull down reloads it
-flags:    51f319e17 has the wrong subject (monthly sheet fix); leave import error = wrong Import Type, not code
-next:     rest-day rule (owner: 3 yes, 4 no, 5 keep) — plan first, from deploy date
+prompt:   roster edit + Nadi tile for Shift Supervisor
+status:   done
+commit:   dddcaa3ca on nz-glass (v2.0.0-alpha.28)
+files:    hrms/api/roster.py
+          frontend/src/views/team/TeamRoster.vue
+          frontend/src/data/team.js
+          hrms/desktop_icon/shift_&_attendance.json
+          hrms/desktop_icon/nadi.json
+          hrms/hooks.py
+          hrms/patches/v16_0/let_shift_supervisor_open_nadi_tile.py
+verify:   deploy, then Fauzi refreshes Desk -> Nadi -> Shift & Attendance -> Roster
+flags:    plain employees clicking Nadi on Desk still hit a dead end (workspace is HR+Supervisor) — owner ruling needed
+next:     owner: where plain staff land on Desk Nadi (hide tile / PWA link)
