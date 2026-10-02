@@ -316,6 +316,7 @@ def create_shift_assignment(
 	shift_location: str | None = None,
 	shift_schedule_assignment: str | None = None,
 	ignore_permissions: bool = False,
+	day_type: str | None = None,
 ) -> str:
 	assignment = frappe.new_doc("Shift Assignment")
 	# Only the roster passes True, and only after its own fence admitted the
@@ -329,6 +330,8 @@ def create_shift_assignment(
 	assignment.status = status
 	assignment.shift_location = shift_location
 	assignment.shift_schedule_assignment = shift_schedule_assignment
+	if day_type:
+		assignment.day_type = day_type
 	assignment.save()
 	assignment.submit()
 	return assignment

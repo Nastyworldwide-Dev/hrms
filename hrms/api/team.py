@@ -407,6 +407,7 @@ def get_team_roster(start_date: str, end_date: str, manager: str | None = None) 
 			ShiftAssignment.name,
 			ShiftAssignment.shift_type,
 			ShiftAssignment.shift_location,
+			ShiftAssignment.day_type,
 			ShiftAssignment.start_date,
 			ShiftAssignment.end_date,
 			ShiftType.start_time,

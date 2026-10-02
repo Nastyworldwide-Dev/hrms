@@ -331,6 +331,7 @@ def break_shift(assignment: str | ShiftAssignment, date: str) -> None:
 	status = assignment.status
 	end_date = assignment.end_date
 	shift_location = assignment.shift_location
+	day_type = assignment.get("day_type") or "None"
 
 	if date_diff(date, assignment.start_date) == 0:
 		assignment.cancel()
@@ -349,6 +350,7 @@ def break_shift(assignment: str | ShiftAssignment, date: str) -> None:
 			status,
 			shift_location,
 			ignore_permissions=True,
+			day_type=day_type,
 		)
 
 
@@ -381,13 +383,22 @@ def remove_shift_day(assignment: str, date: str) -> None:
 
 
 @frappe.whitelist(methods=["POST"])
-def change_shift_day(assignment: str, date: str, shift_type: str, shift_location: str | None = None) -> None:
-	"""Nadi Team roster "Change": one day moves to another shift type."""
+def change_shift_day(
+	assignment: str,
+	date: str,
+	shift_type: str,
+	shift_location: str | None = None,
+	day_type: str | None = None,
+) -> None:
+	"""Roster "Change": one day moves to another shift type, location or Day Type."""
 	doc = frappe.get_doc("Shift Assignment", assignment)
 	employee, company, status = doc.employee, doc.company, doc.status
-	logger.info("[roster] %s changes %s on %s to %s", frappe.session.user, doc.name, date, shift_type)
+	day_type = day_type or doc.get("day_type") or "None"
+	logger.info(
+		"[roster] %s changes %s on %s to %s (%s)", frappe.session.user, doc.name, date, shift_type, day_type
+	)
 	remove_shift_day(doc.name, date)
-	insert_shift(employee, company, shift_type, date, date, status, shift_location)
+	insert_shift(employee, company, shift_type, date, date, status, shift_location, day_type=day_type)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -399,9 +410,11 @@ def insert_shift(
 	end_date: str | None,
 	status: str,
 	shift_location: str | None = None,
+	day_type: str | None = None,
 ) -> None:
 	_ensure_can_roster_employee(employee)
 	frappe.has_permission("Shift Assignment", "create", throw=True)
+	day_type = _valid_day_type(day_type)
 	# A supervisor's own line is admitted by the roster fence above, company
 	# lock or not ("Reports To wins", 30 Sep 2026). Frappe's User Permission
 	# layer would still refuse a report in another company, so for that line
@@ -428,6 +441,8 @@ def insert_shift(
 		"shift_type": shift_type,
 		"status": status,
 		"shift_location": shift_location,
+		# a neighbour joins this one only when it is the same kind of day
+		"day_type": day_type,
 		"docstatus": ["!=", 2],
 	}
 	prev_shift = frappe.db.exists(dict({"end_date": add_days(start_date, -1)}, **filters))
@@ -459,7 +474,17 @@ def insert_shift(
 			status,
 			shift_location,
 			ignore_permissions=own_line,
+			day_type=day_type,
 		)
+
+
+def _valid_day_type(day_type: str | None) -> str:
+	"""The roster's Day Type, from the doctype's own options (never the browser's word)."""
+	options = frappe.get_meta("Shift Assignment").get_options("day_type").split("\n")
+	value = day_type or "None"
+	if value not in options:
+		frappe.throw(_("Day Type must be one of {0}.").format(", ".join(options)))
+	return value
 
 
 def get_holidays(month_start: str, month_end: str, employee_filters: dict[str, str]) -> dict[str, list[dict]]:

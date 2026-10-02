@@ -84,6 +84,10 @@ def queue_restamp(doc, method=None):
 	otherwise be lost. The job is idempotent, so two of them cost only time.
 	Mirrored rows are the ERP's; their punches are never re-stamped here.
 	"""
+	# the roster's Day Type was read and cached earlier in this request
+	from hrms.utils.ot_calculation import forget_rostered_day_types
+
+	forget_rostered_day_types()
 	if getattr(doc, "synced_from_instance", None):
 		return
 	start = getdate(doc.start_date)

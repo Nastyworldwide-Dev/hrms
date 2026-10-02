@@ -28,6 +28,7 @@ DAY = date(2026, 10, 7)  # a Wednesday, a plain workday on any calendar
 
 
 def _classify(rostered, calendar="normal", shift=None):
+	ot.frappe.flags = ot.frappe._dict()  # a fresh request each time
 	with (
 		patch.object(ot, "_rostered_day_types", return_value=rostered) as read,
 		patch.object(ot, "_calendar_day_type", return_value=calendar),
@@ -63,6 +64,17 @@ class TestRosterDayType(unittest.TestCase):
 	def test_the_shift_asked_about_is_passed_on(self):
 		_result, read = _classify([], shift="7PM - 3.30AM")
 		read.assert_called_once_with("EMP-1", DAY, "7PM - 3.30AM")
+
+	def test_a_conflict_is_logged_once_per_day_not_per_call(self):
+		ot.frappe.flags = ot.frappe._dict()
+		with (
+			patch.object(ot, "_read_rostered_day_types", return_value=["Off Day", "Public Holiday"]),
+			patch.object(ot, "_calendar_day_type", return_value="normal"),
+			patch.object(ot.frappe, "log_error") as logged,
+		):
+			for _ in range(5):
+				self.assertEqual(ot._classify_day("EMP-1", DAY, "normal"), "public_holiday")
+		self.assertEqual(logged.call_count, 1)
 
 
 if __name__ == "__main__":

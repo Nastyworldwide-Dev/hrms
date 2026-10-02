@@ -271,3 +271,36 @@ class TestSupervisorEditsRoster(FrappeTestCase):
 		with self.assertRaises(frappe.ValidationError) as caught:
 			remove_shift_day(name, "2031-03-05")
 		self.assertNotIn("Ask HR", str(caught.exception))
+
+	def test_one_day_becomes_a_public_holiday(self):
+		# HR, 2 Oct 2026: the roster's Day Type sets the day's rate. One day in a
+		# week-long shift is marked Public Holiday; the rest keep their type.
+		from hrms.api.roster import change_shift_day
+
+		name = self._week(self.report)
+		self._as_supervisor()
+		change_shift_day(name, "2031-03-05", self.day_shift, day_type="Public Holiday")
+		frappe.set_user("Administrator")
+		rows = frappe.get_all(
+			"Shift Assignment",
+			filters={"employee": self.report, "docstatus": 1},
+			fields=["start_date", "end_date", "day_type"],
+			order_by="start_date",
+		)
+		self.assertEqual(
+			[(str(r.start_date), str(r.end_date), r.day_type) for r in rows],
+			[
+				("2031-03-03", "2031-03-04", "None"),
+				("2031-03-05", "2031-03-05", "Public Holiday"),
+				("2031-03-06", "2031-03-09", "None"),
+			],
+		)
+
+	def test_an_unknown_day_type_is_refused(self):
+		from hrms.api.roster import insert_shift
+
+		self._as_supervisor()
+		with self.assertRaises(frappe.ValidationError):
+			insert_shift(
+				self.report, COMPANY, self.day_shift, "2031-04-01", "2031-04-01", "Active", day_type="Holiday"
+			)

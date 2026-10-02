@@ -34,6 +34,7 @@ from decimal import Decimal
 import frappe
 from frappe import _
 from frappe.utils import cint, flt, get_datetime, get_time, getdate
+from frappe.utils.caching import request_cache
 
 from hrms.utils.ot_precision import stored_ot_hours
 
@@ -370,7 +371,20 @@ _PAY_ORDER = {"normal": 0, "rest": 1, "off": 1, "public_holiday": 2}
 
 def _rostered_day_types(employee, day, shift=None) -> list:
 	"""Day Type of each Active, submitted Shift Assignment covering `day`
-	(only the given shift's, when one is named)."""
+	(only the given shift's, when one is named). Cached for the request: the
+	pay and attendance loops ask the same day many times."""
+	return _read_rostered_day_types(employee, str(day), shift)
+
+
+def forget_rostered_day_types():
+	"""Drop this request's cached Day Types (a Shift Assignment just changed)."""
+	cache = getattr(frappe.local, "request_cache", None)
+	if cache is not None:
+		cache.pop(_read_rostered_day_types.__wrapped__, None)
+
+
+@request_cache
+def _read_rostered_day_types(employee, day, shift=None) -> list:
 	filters = {"employee": employee, "docstatus": 1, "status": "Active", "start_date": ("<=", day)}
 	if shift:
 		filters["shift_type"] = shift
@@ -396,7 +410,11 @@ def _classify_day(employee, day, default_day_type, shift=None):
 	kinds = {ROSTER_DAY_TYPES[t] for t in _rostered_day_types(employee, day, shift) if t in ROSTER_DAY_TYPES}
 	if kinds:
 		chosen = max(kinds, key=_PAY_ORDER.get)
-		if len(kinds) > 1:
+		if frappe.flags.roster_day_type_conflicts is None:
+			frappe.flags.roster_day_type_conflicts = set()
+		logged = frappe.flags.roster_day_type_conflicts
+		if len(kinds) > 1 and (employee, day) not in logged:
+			logged.add((employee, day))
 			frappe.log_error(
 				title=_("Two shifts on one day set different day types"),
 				message=_(

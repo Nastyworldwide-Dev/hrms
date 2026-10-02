@@ -235,3 +235,7 @@ EVIDENCE: test_ot_calculation 47/49 on fresh.local both before and after (test_o
 EVIDENCE: 2 test_ot_nonworking_hours + test_attendance_recovery 128 passed (same as HEAD); stub fakes answer the new Shift Assignment day_type read with [] (no roster)
 - 2026-10-02T08:55:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
 - 2026-10-02T08:55:08Z EVIDENCE: 3 works — blast radius green: 17 dependent(s), 9 extra test file(s) ⟂f707328e3e9d
+- 2026-10-02T08:55:11Z COMMIT: 8f463dccd feat(roster): a shift's Day Type decides what kind of day it is → review dispatched
+EVIDENCE: 3 slice 2: test_roster 16/16 fresh.local (day_type split + refuse unknown); real save PH -> classify public_holiday, Off Day -> off (request cache cleared by queue_restamp); stub 133 passed; review 8f463dccd warnings fixed (request_cache + conflict log once per day)
+- 2026-10-02T08:58:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-10-02T08:58:52Z EVIDENCE: 3 works — blast radius green: 22 dependent(s), 13 extra test file(s) ⟂57065ab3ea96
