@@ -239,3 +239,7 @@ EVIDENCE: 2 test_ot_nonworking_hours + test_attendance_recovery 128 passed (same
 EVIDENCE: 3 slice 2: test_roster 16/16 fresh.local (day_type split + refuse unknown); real save PH -> classify public_holiday, Off Day -> off (request cache cleared by queue_restamp); stub 133 passed; review 8f463dccd warnings fixed (request_cache + conflict log once per day)
 - 2026-10-02T08:58:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
 - 2026-10-02T08:58:52Z EVIDENCE: 3 works — blast radius green: 22 dependent(s), 13 extra test file(s) ⟂57065ab3ea96
+- 2026-10-02T08:58:56Z COMMIT: aa6afa294 feat(roster): assign and change a shift's Day Type through the roster API → review+cross-app dispatched
+- 2026-10-02T09:01:02Z COMMIT: aa6afa294 feat(roster): assign and change a shift's Day Type through the roster API → review+cross-app dispatched
+EVIDENCE: 2 slice 3 Desk dialog + month view Day Type: node 10/10 (4 new); test_roster 16/16; _valid_day_type returns None before the schema update (review aa6afa294 W1); W2 read-select: Frappe Cloud updates the schema during maintenance, accepted
+- 2026-10-02T09:01:44Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 5 file(s) ⟂5d9cef17ceeb

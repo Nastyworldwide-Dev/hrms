@@ -50,3 +50,24 @@ test("a shift change plus an end-date or status change is refused, not half-appl
 test("a blank end date matches an open-ended shift", () => {
 	assert.match(view, /\(form\.end_date \|\| null\) === \(shiftAssignment\.value\?\.doc\?\.end_date \|\| null\)/)
 })
+
+// HR, 2 Oct 2026: Day Type on the roster sets the kind of day and its OT rate
+const table = readFileSync(fileURLToPath(new URL("../MonthViewTable.vue", import.meta.url)), "utf8")
+
+test("the dialog offers the five day types, None first", () => {
+	assert.match(view, /label="Day Type"/)
+	assert.match(view, /\["None", "Work Day", "Rest Day", "Off Day", "Public Holiday"\]/)
+})
+
+test("every save path sends the day type", () => {
+	assert.equal(view.match(/day_type: form\.day_type \|\| "None"/g).length, 3)
+})
+
+test("a changed day type is a one-day change", () => {
+	assert.match(view, /\(form\.day_type \|\| "None"\) !== \(shiftAssignment\.value\.doc\.day_type \|\| "None"\)/)
+})
+
+test("the month view shows a day type that is set", () => {
+	assert.match(table, /day_type: event\.day_type/)
+	assert.match(table, /shift\['day_type'\] !== 'None'/)
+})

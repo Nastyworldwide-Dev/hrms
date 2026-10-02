@@ -39,6 +39,13 @@
 					v-model="form.shift_location"
 					:description="dayOnlyHint"
 				/>
+				<FormControl
+					type="select"
+					:options="dayTypes"
+					label="Day Type"
+					v-model="form.day_type"
+					:description="dayTypeHint"
+				/>
 				<FormControl type="date" label="End Date" v-model="form.end_date" />
 				<FormControl
 					type="select"
@@ -154,7 +161,8 @@ type Form = {
 		| "department"
 		| "employee"
 		| "shift_type"
-		| "shift_location"]: string | { value: string; label?: string };
+		| "shift_location"
+		| "day_type"]: string | { value: string; label?: string };
 } & {
 	start_date: string;
 	end_date: string;
@@ -191,6 +199,7 @@ const formObject: Form = {
 	shift_type: "",
 	start_date: "",
 	shift_location: "",
+	day_type: "None",
 	end_date: "",
 	status: "Active",
 	shift_schedule_assignment: "",
@@ -346,7 +355,16 @@ const shiftChanged = computed(
 	() =>
 		!!shiftAssignment.value?.doc &&
 		(form.shift_type !== shiftAssignment.value.doc.shift_type ||
-			(form.shift_location || null) !== (shiftAssignment.value.doc.shift_location || null)),
+			(form.shift_location || null) !== (shiftAssignment.value.doc.shift_location || null) ||
+			(form.day_type || "None") !== (shiftAssignment.value.doc.day_type || "None")),
+);
+
+// HR, 2 Oct 2026: the roster decides the kind of day (and its OT rate)
+const dayTypes = ["None", "Work Day", "Rest Day", "Off Day", "Public Holiday"];
+const dayTypeHint = computed(() =>
+	(form.day_type || "None") === "None"
+		? "Follows the holiday calendar"
+		: dayOnlyHint.value || "Sets the OT rate for these days",
 );
 
 // the one-day scope said where the change happens, not just in the title
@@ -470,6 +488,7 @@ const insertShift = createResource({
 			employee: form.employee,
 			shift_type: form.shift_type,
 			shift_location: form.shift_location,
+			day_type: form.day_type || "None",
 			company: form.company,
 			status: form.status,
 			start_date: form.start_date,
@@ -493,6 +512,7 @@ const changeShiftDay = createResource({
 			date: selectedDate.value,
 			shift_type: form.shift_type,
 			shift_location: form.shift_location || null,
+			day_type: form.day_type || "None",
 		};
 	},
 	onSuccess: () => {
@@ -532,6 +552,7 @@ const createShiftAssignmentSchedule = createResource({
 			start_date: form.start_date,
 			end_date: form.end_date,
 			shift_location: form.shift_location,
+			day_type: form.day_type || "None",
 			repeat_on_days: Object.keys(repeatOnDays).filter(
 				(day) => repeatOnDays[day as keyof typeof repeatOnDays],
 			),

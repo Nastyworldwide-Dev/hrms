@@ -480,7 +480,11 @@ def insert_shift(
 
 def _valid_day_type(day_type: str | None) -> str:
 	"""The roster's Day Type, from the doctype's own options (never the browser's word)."""
-	options = frappe.get_meta("Shift Assignment").get_options("day_type").split("\n")
+	field = frappe.get_meta("Shift Assignment").get_field("day_type")
+	if not field:
+		# deploy skew: the code is new, the site not migrated yet
+		return "None"
+	options = (field.options or "").split("\n")
 	value = day_type or "None"
 	if value not in options:
 		frappe.throw(_("Day Type must be one of {0}.").format(", ".join(options)))
@@ -557,6 +561,7 @@ def get_shifts(
 			ShiftAssignment.employee,
 			ShiftAssignment.shift_type,
 			ShiftAssignment.shift_location,
+			ShiftAssignment.day_type,
 			ShiftAssignment.start_date,
 			ShiftAssignment.end_date,
 			ShiftAssignment.status,

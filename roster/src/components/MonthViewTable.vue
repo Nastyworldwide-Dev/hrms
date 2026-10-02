@@ -227,6 +227,13 @@
 										/>
 										<span>{{ shift["shift_location"] }}</span>
 									</div>
+									<!-- HR, 2 Oct 2026: the roster's Day Type sets the day's OT rate -->
+									<div
+										v-if="shift['day_type'] && shift['day_type'] !== 'None'"
+										class="font-semibold"
+									>
+										{{ shift["day_type"] }}
+									</div>
 								</div>
 							</div>
 
@@ -310,7 +317,14 @@ type Color =
 	| "yellow";
 
 type Shift = {
-	[K in "name" | "shift_type" | "status" | "start_time" | "end_time" | "shift_location"]: string;
+	[K in
+		| "name"
+		| "shift_type"
+		| "status"
+		| "start_time"
+		| "end_time"
+		| "shift_location"
+		| "day_type"]: string;
 } & {
 	color: Color;
 };
@@ -500,6 +514,7 @@ const handleShifts = (
 			name: event.name,
 			shift_type: event.shift_type,
 			shift_location: event.shift_location,
+			day_type: event.day_type,
 			status: event.status,
 			start_time: dayjs(event.start_time, "hh:mm:ss").format("HH:mm"),
 			end_time: dayjs(event.end_time, "hh:mm:ss").format("HH:mm"),
