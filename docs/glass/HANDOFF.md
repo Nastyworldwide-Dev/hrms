@@ -1,14 +1,10 @@
 # HANDOFF
-prompt:   roster edit + Nadi tile for Shift Supervisor
+prompt:   plain staff Desk Nadi -> PWA (ruling b)
 status:   done
-commit:   dddcaa3ca on nz-glass (v2.0.0-alpha.28)
-files:    hrms/api/roster.py
-          frontend/src/views/team/TeamRoster.vue
-          frontend/src/data/team.js
-          hrms/desktop_icon/shift_&_attendance.json
-          hrms/desktop_icon/nadi.json
+commit:   e770733ba on nz-glass (v2.0.0-alpha.29)
+files:    hrms/desk_boot.py
           hrms/hooks.py
-          hrms/patches/v16_0/let_shift_supervisor_open_nadi_tile.py
-verify:   deploy, then Fauzi refreshes Desk -> Nadi -> Shift & Attendance -> Roster
-flags:    plain employees clicking Nadi on Desk still hit a dead end (workspace is HR+Supervisor) — owner ruling needed
-next:     owner: where plain staff land on Desk Nadi (hide tile / PWA link)
+          hrms/tests/test_desk_boot.py
+verify:   deploy; plain staff click Nadi on Desk -> /hrms; Fauzi -> Shift & Attendance
+flags:    none
+next:     deploy alpha.29 on Frappe Cloud
