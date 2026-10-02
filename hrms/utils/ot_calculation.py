@@ -355,7 +355,60 @@ def _company_weekend(company) -> tuple[int, int]:
 	)
 
 
+#: Shift Assignment "Day Type" (the roster) -> the kind of day every rule reads.
+#: "None" (the default) leaves the holiday calendar in charge.
+ROSTER_DAY_TYPES = {
+	"Work Day": "normal",
+	"Rest Day": "rest",
+	"Off Day": "off",
+	"Public Holiday": "public_holiday",
+}
+#: Two rostered shifts the same day that disagree: the higher-paying kind wins
+#: (owner ruling a, 2 Oct 2026). Rest and Off Day both pay flat 2x.
+_PAY_ORDER = {"normal": 0, "rest": 1, "off": 1, "public_holiday": 2}
+
+
+def _rostered_day_types(employee, day, shift=None) -> list:
+	"""Day Type of each Active, submitted Shift Assignment covering `day`
+	(only the given shift's, when one is named)."""
+	filters = {"employee": employee, "docstatus": 1, "status": "Active", "start_date": ("<=", day)}
+	if shift:
+		filters["shift_type"] = shift
+	rows = frappe.get_all(
+		"Shift Assignment",
+		filters=filters,
+		or_filters=[["end_date", ">=", day], ["end_date", "is", "not set"]],
+		pluck="day_type",
+	)
+	logger.debug("[ot_calculation] rostered day types %s %s %s: %s", employee, day, shift, rows)
+	return rows
+
+
 def _classify_day(employee, day, default_day_type, shift=None):
+	"""What kind of day this is for the employee: normal / rest / off / public_holiday.
+
+	The roster wins (HR, 2 Oct 2026): a shift whose Day Type is set decides the
+	day for every caller — OT pay, attendance OT, reminders. Otherwise the same
+	applicable calendar as Shift Type decides.
+	"""
+	day = getdate(day)
+	logger.info("[ot_calculation] classify day=%s employee=%s shift=%s", day, employee, shift)
+	kinds = {ROSTER_DAY_TYPES[t] for t in _rostered_day_types(employee, day, shift) if t in ROSTER_DAY_TYPES}
+	if kinds:
+		chosen = max(kinds, key=_PAY_ORDER.get)
+		if len(kinds) > 1:
+			frappe.log_error(
+				title=_("Two shifts on one day set different day types"),
+				message=_(
+					"{0} has shifts on {1} rostered as {2}. The day is paid as {3}, the highest. "
+					"Set one Day Type on the roster if that is wrong."
+				).format(employee, day, ", ".join(sorted(kinds)), chosen),
+			)
+		return chosen
+	return _calendar_day_type(employee, day, shift)
+
+
+def _calendar_day_type(employee, day, shift=None):
 	"""Resolve the work date from the same applicable calendar as Shift Type.
 
 	Company weekend settings distinguish listed weekly-off rows; they never
@@ -363,8 +416,7 @@ def _classify_day(employee, day, default_day_type, shift=None):
 	"""
 	from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
-	day = getdate(day)
-	logger.info("[ot_calculation] classify day=%s employee=%s shift=%s", day, employee, shift)
+	logger.info("[ot_calculation] calendar day type day=%s employee=%s shift=%s", day, employee, shift)
 	from hrms.utils.holiday_list import holiday_list_covers
 
 	shift_list = frappe.db.get_value("Shift Type", shift, "holiday_list") if shift else None

@@ -201,6 +201,8 @@ class TestNonworkingHours(unittest.TestCase):
 				]
 			if doctype in ("Leave Application", "Attendance Request"):
 				return []  # 86371d5cc: discovery reads leave cover; nothing covers a day here
+			if doctype == "Shift Assignment" and kwargs.get("pluck") == "day_type":
+				return []  # no roster Day Type here: the holiday calendar decides
 			raise AssertionError(doctype)
 
 		def get_value(doctype, name, field, **kwargs):
@@ -320,7 +322,9 @@ class TestNonworkingHours(unittest.TestCase):
 				shift.process_attendance_after = str(DAY)
 				shift.last_sync_of_checkin = str(DAY + timedelta(days=1))
 
-				def query(doctype, fields, filters, **kwargs):
+				def query(doctype, fields=None, filters=None, **kwargs):
+					if doctype == "Shift Assignment" and kwargs.get("pluck") == "day_type":
+						return []  # no roster Day Type here: the holiday calendar decides
 					# Honor actual query exclusion and field projection, not just
 					# return the full fixture and hide the scheduler boundary.
 					return [

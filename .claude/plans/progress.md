@@ -229,3 +229,9 @@ EVIDENCE: 2 review b4d308942 warning: blank end date vs null on open-ended shift
 - 2026-10-02T07:36:59Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-10-02T07:37:02Z COMMIT: 9dbfb35af fix(roster): an open-ended shift could refuse a shift change by mistake → review+design dispatched
 NEXT: deploy alpha.31 (HR Desk Roster update incl. open-ended shifts).
+- 2026-10-02T07:37:34Z COMMIT: 2276c06a0 chore(release): 2.0.0-alpha.31 — Roster Fix for Open-Ended Shifts → review+deps dispatched
+EVIDENCE: 3 fresh.local real _classify_day on HR-SHA-26-09-00030 2026-10-12: normal -> public_holiday (Day Type PH) -> off (Off Day); migrate fills existing rows 'None' (0 null of 20). test_roster_day_type 5/5 red first
+EVIDENCE: test_ot_calculation 47/49 on fresh.local both before and after (test_ot_below_minimum_is_zero, test_ot_off_day_tiered_bands fail on HEAD too — pre-existing)
+EVIDENCE: 2 test_ot_nonworking_hours + test_attendance_recovery 128 passed (same as HEAD); stub fakes answer the new Shift Assignment day_type read with [] (no roster)
+- 2026-10-02T08:55:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-10-02T08:55:08Z EVIDENCE: 3 works — blast radius green: 17 dependent(s), 9 extra test file(s) ⟂f707328e3e9d
