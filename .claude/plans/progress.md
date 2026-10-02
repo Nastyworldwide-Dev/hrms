@@ -224,3 +224,6 @@ EVIDENCE: 2 review follow-up f8d7da809: test_roster 14/14 fresh.local, dialog no
 - 2026-10-02T07:35:27Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
 - 2026-10-02T07:35:30Z COMMIT: b4d308942 fix(roster): a shift change no longer drops an end-date edit silently → review+design dispatched
 NEXT: alpha.30 pushed; read .claude/tmp/review-hr-roster-2.md for b4d308942 and fix anything Critical.
+- 2026-10-02T07:36:13Z COMMIT: c79232a46 chore(release): 2.0.0-alpha.30 — HR Can Change Shifts on the Roster → review+deps dispatched
+EVIDENCE: 2 review b4d308942 warning: blank end date vs null on open-ended shift; dialog node 6/6
+- 2026-10-02T07:36:59Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1

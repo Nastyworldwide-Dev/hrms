@@ -225,7 +225,7 @@ const dialog = computed(() => {
 			// "Shift for <date>" does); status and end date edit the assignment.
 			actionDisabled:
 				form.status === shiftAssignment.value?.doc?.status &&
-				form.end_date === shiftAssignment.value?.doc?.end_date &&
+				(form.end_date || null) === (shiftAssignment.value?.doc?.end_date || null) &&
 				!shiftChanged.value,
 		};
 	return {
@@ -356,7 +356,10 @@ const dayOnlyHint = computed(() =>
 
 const updateShiftAssigment = () => {
 	const doc = shiftAssignment.value.doc;
-	if (shiftChanged.value && (form.status !== doc.status || form.end_date !== doc.end_date)) {
+	if (
+		shiftChanged.value &&
+		(form.status !== doc.status || (form.end_date || null) !== (doc.end_date || null))
+	) {
 		// one is a one-day change, the other edits the whole assignment
 		raiseToast(
 			"error",

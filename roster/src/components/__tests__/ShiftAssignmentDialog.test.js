@@ -42,6 +42,11 @@ test("shift type and location say they change this day only", () => {
 })
 
 test("a shift change plus an end-date or status change is refused, not half-applied", () => {
-	assert.match(view, /shiftChanged\.value && \(form\.status !== doc\.status \|\| form\.end_date !== doc\.end_date\)/)
+	assert.match(view, /shiftChanged\.value &&\s*\(form\.status !== doc\.status \|\| \(form\.end_date \|\| null\) !== \(doc\.end_date \|\| null\)\)/)
 	assert.match(view, /one at a time/)
+})
+
+// review of b4d308942: an open-ended shift's blank end date ("" vs null) is not a change
+test("a blank end date matches an open-ended shift", () => {
+	assert.match(view, /\(form\.end_date \|\| null\) === \(shiftAssignment\.value\?\.doc\?\.end_date \|\| null\)/)
 })
