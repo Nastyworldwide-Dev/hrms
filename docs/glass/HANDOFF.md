@@ -1,13 +1,11 @@
 # HANDOFF
-prompt:   HR Day Type on the roster (PH rate follows it, add Off Day)
+prompt:   Shift Supervisor on Desk: team attendance + clock-ins, view only
 status:   done
-commit:   7ad9678dc on nz-glass (v2.0.0-alpha.32)
-files:    hrms/utils/ot_calculation.py
-          hrms/api/roster.py
-          hrms/hr/doctype/shift_assignment/shift_assignment.json
-          hrms/hr/doctype/shift_schedule_assignment/shift_schedule_assignment.json
-          roster/src/components/ShiftAssignmentDialog.vue
-          frontend/src/views/team/TeamRoster.vue
-verify:   deploy; Desk Roster: set a day Public Holiday -> OT for that day priced 2x/3x
-flags:    test_ot_calculation 2 failures pre-exist on HEAD (not this change)
-next:     HR tries Day Type on one real day and checks the OT figure
+commit:   d425496e5 on nz-glass (v2.0.0-alpha.33)
+files:    hrms/overrides/employee_owned_row_scope.py
+          hrms/overrides/test_supervisor_team_view.py
+          hrms/patches/v16_0/let_shift_supervisor_read_team_attendance.py
+          hrms/patches.txt
+verify:   deploy; a Shift Supervisor refreshes Desk -> Shift & Attendance -> Attendance: only their team
+flags:    supervisors also see clock-in location/device fields (Employee Checkin level 1)
+next:     owner: keep location visible to supervisors, or hide it

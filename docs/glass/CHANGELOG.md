@@ -10,6 +10,17 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.33] — Supervisors See Their Team's Attendance — 2026-10-02
+
+Shift Supervisors can check their team's attendance and clock-ins on Desk.
+
+### Added
+- **Attendance and Employee Checkin for Shift Supervisors.** In Nadi →
+  Shift & Attendance on Desk, a supervisor sees the records of themselves
+  and the people who report to them. View only: changes still go through
+  HR or a request.
+- **An Attendance link in the Shift & Attendance sidebar.**
+
 ## [2.0.0-alpha.32] — Day Type on the Roster — 2026-10-02
 
 The roster now says what kind of day each shift is, and overtime is paid

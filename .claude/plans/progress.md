@@ -256,3 +256,5 @@ NEXT: alpha.32 pushed (Day Type). Deploy; HR sets one day PH and checks its OT p
 - 2026-10-02T09:06:31Z COMMIT: 253fcef96 chore(release): 2.0.0-alpha.32 — Day Type on the Roster → review+deps dispatched
 EVIDENCE: 3 fresh.local persona: Shift Supervisor lists only their report's Attendance + Employee Checkin, reads it, write False, create False, stranger False; plain employee unchanged; sidebar shows Attendance after patch (ran twice); other sidebar doctypes list 0 team rows. stub test_supervisor_team_view 6/6 red first
 - 2026-10-02T09:43:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-10-02T09:43:10Z COMMIT: d425496e5 feat(desk): a Shift Supervisor sees their team's attendance and clock-ins → review dispatched
+NEXT: alpha.33 pushed (supervisor team attendance view). Owner to confirm supervisors may see clock-in location/device fields.
