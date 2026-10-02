@@ -205,6 +205,7 @@ def create_shift_schedule_assignment(
 	repeat_on_days: list[str],
 	frequency: str,
 	shift_location: str | None = None,
+	day_type: str | None = None,
 ) -> None:
 	_ensure_can_roster_employee(employee)
 	frappe.has_permission("Shift Schedule Assignment", "create", throw=True)
@@ -217,6 +218,7 @@ def create_shift_schedule_assignment(
 			"company": company,
 			"shift_status": status,
 			"shift_location": shift_location,
+			"day_type": _valid_day_type(day_type),
 			"enabled": 0 if end_date else 1,
 		}
 	).insert()

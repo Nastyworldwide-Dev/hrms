@@ -13,6 +13,7 @@
   "schedule_settings_section",
   "shift_schedule",
   "shift_location",
+  "day_type",
   "shift_status",
   "column_break_iprq",
   "enabled",
@@ -97,6 +98,14 @@
    "fieldtype": "Link",
    "label": "Shift Location",
    "options": "Shift Location"
+  },
+  {
+   "default": "None",
+   "description": "Day Type for every shift this schedule creates. None follows the holiday calendar.",
+   "fieldname": "day_type",
+   "fieldtype": "Select",
+   "label": "Day Type",
+   "options": "None\nWork Day\nRest Day\nOff Day\nPublic Holiday"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -106,7 +115,7 @@
    "link_fieldname": "shift_schedule_assignment"
   }
  ],
- "modified": "2026-09-15 11:00:00.000000",
+ "modified": "2026-10-02 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Shift Schedule Assignment",

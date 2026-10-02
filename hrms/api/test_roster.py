@@ -304,3 +304,29 @@ class TestSupervisorEditsRoster(FrappeTestCase):
 			insert_shift(
 				self.report, COMPANY, self.day_shift, "2031-04-01", "2031-04-01", "Active", day_type="Holiday"
 			)
+
+	def test_a_repeating_schedule_carries_its_day_type(self):
+		# A long shift with repeat days is saved through the schedule endpoint;
+		# its Day Type must reach every shift it creates.
+		from hrms.api.roster import create_shift_schedule_assignment
+
+		frappe.db.delete("Shift Schedule Assignment", {"employee": self.report})
+		create_shift_schedule_assignment(
+			employee=self.report,
+			company=COMPANY,
+			shift_type=self.day_shift,
+			status="Active",
+			start_date="2031-05-05",
+			end_date="2031-05-18",
+			repeat_on_days=["Monday", "Wednesday"],
+			frequency="Every Week",
+			day_type="Off Day",
+		)
+		types = set(
+			frappe.get_all(
+				"Shift Assignment",
+				filters={"employee": self.report, "start_date": (">=", "2031-05-05")},
+				pluck="day_type",
+			)
+		)
+		self.assertEqual(types, {"Off Day"})

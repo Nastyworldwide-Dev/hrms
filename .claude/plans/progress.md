@@ -243,3 +243,6 @@ EVIDENCE: 3 slice 2: test_roster 16/16 fresh.local (day_type split + refuse unkn
 - 2026-10-02T09:01:02Z COMMIT: aa6afa294 feat(roster): assign and change a shift's Day Type through the roster API → review+cross-app dispatched
 EVIDENCE: 2 slice 3 Desk dialog + month view Day Type: node 10/10 (4 new); test_roster 16/16; _valid_day_type returns None before the schema update (review aa6afa294 W1); W2 read-select: Frappe Cloud updates the schema during maintenance, accepted
 - 2026-10-02T09:01:44Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 5 file(s) ⟂5d9cef17ceeb
+- 2026-10-02T09:01:47Z COMMIT: b89f4791c feat(roster): HR sets the Day Type in the Desk Roster → review+design dispatched
+EVIDENCE: 2 test_roster 17/17 fresh.local incl. repeating schedule carries Off Day to every created shift (review b89f4791c W: schedule path dropped day_type)
+- 2026-10-02T09:02:56Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
