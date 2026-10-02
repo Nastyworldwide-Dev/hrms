@@ -1,11 +1,13 @@
 # HANDOFF
-prompt:   HR "asal aku takleh update?" on Desk Roster
+prompt:   HR Day Type on the roster (PH rate follows it, add Off Day)
 status:   done
-commit:   9dbfb35af on nz-glass (v2.0.0-alpha.31)
-files:    roster/src/components/ShiftAssignmentDialog.vue
-          roster/src/components/Link.vue
+commit:   7ad9678dc on nz-glass (v2.0.0-alpha.32)
+files:    hrms/utils/ot_calculation.py
           hrms/api/roster.py
-          hrms/api/test_roster.py
-verify:   deploy; HR opens Desk Roster, clicks a shift, changes Shift Type -> Update -> that day changes
-flags:    none
-next:     deploy alpha.31; HR refreshes Desk Roster
+          hrms/hr/doctype/shift_assignment/shift_assignment.json
+          hrms/hr/doctype/shift_schedule_assignment/shift_schedule_assignment.json
+          roster/src/components/ShiftAssignmentDialog.vue
+          frontend/src/views/team/TeamRoster.vue
+verify:   deploy; Desk Roster: set a day Public Holiday -> OT for that day priced 2x/3x
+flags:    test_ot_calculation 2 failures pre-exist on HEAD (not this change)
+next:     HR tries Day Type on one real day and checks the OT figure

@@ -251,3 +251,5 @@ EVIDENCE: 3 slice 4 Nadi Team roster Day Type: frontend yarn test 1588/1588, vit
 - 2026-10-02T09:05:06Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-10-02T09:05:10Z COMMIT: 60610277c feat(team): supervisors set the Day Type in the Nadi Team roster → review+design dispatched
 - 2026-10-02T09:05:58Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-10-02T09:06:04Z COMMIT: 7ad9678dc fix(team): a screen reader did not hear a day's Day Type → review+design dispatched
+NEXT: alpha.32 pushed (Day Type). Deploy; HR sets one day PH and checks its OT price. Pre-existing: test_ot_calculation 2 red on HEAD.

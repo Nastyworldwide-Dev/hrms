@@ -10,6 +10,25 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.32] — Day Type on the Roster — 2026-10-02
+
+The roster now says what kind of day each shift is, and overtime is paid
+for that kind of day.
+
+### Added
+- **Day Type on every shift**: Follows the calendar, Work day, Rest day,
+  Off day or Public holiday. HR sets it on the Desk Roster; supervisors
+  set it in Nadi's Team roster. On an existing shift it changes the day
+  you picked.
+- **The roster shows it**: PH, O, R or W under the shift in Nadi, and
+  the Day Type on the Desk Roster card.
+
+### Changed
+- **Overtime follows the roster.** A day set as Public holiday pays 2x
+  for the first 8 hours then 3x; Off day and Rest day pay 2x; Work day
+  pays 1.5x, whatever the holiday calendar says. Shifts left as "Follows
+  the calendar" (every shift today) pay as before.
+
 ## [2.0.0-alpha.31] — Roster Fix for Open-Ended Shifts — 2026-10-02
 
 ### Fixed
