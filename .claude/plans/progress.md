@@ -296,3 +296,6 @@ EVIDENCE: 2 bench fresh.local console: test_roster 12/12 green; old break_shift 
 - 2026-10-02T03:39:01Z COMMIT: b4e7adb81 feat(roster): supervisors change and remove their team's shifts in Nadi → review+design dispatched
 - 2026-10-02T03:39:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
 - 2026-10-02T03:39:18Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
+- 2026-10-02T03:39:20Z COMMIT: d6f21438f fix(desk): Shift Supervisor got "No permission for Page" opening Nadi → review+cross-app dispatched
+NEXT: wait for the 2 frappe-reviewer verdicts (.claude/tmp/review-roster-edit.md, review-nadi-tile.md). No Critical -> scripts/release.sh alpha.28 and push nz-glass (9 commits: Rest Day Differences, sw tap x2, docs, roster edit b4e7adb81, Nadi tile d6f21438f). Do NOT push the safety tag. After deploy: Fauzi refreshes Desk.
+EVIDENCE: review b4e7adb81 no Critical (12/12 console, 5/5 node); calendar-day warning judged safe-direction, ticket-roster-py-refactor.md filed

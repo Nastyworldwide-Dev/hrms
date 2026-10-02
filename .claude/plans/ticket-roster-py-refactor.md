@@ -1,0 +1,3 @@
+# Ticket: roster.py hotspot (4 fixes/90d)
+roster.py re-derives "may this caller touch this row" per endpoint (insert_shift `may`, break_shift own_line, swap/schedule still plain Frappe checks). One helper: fence + own_line -> ignore_permissions, used by every write. Also swap_shift/delete_shift_schedule_assignment still refuse a supervisor's cross-company line (ceiling marker in insert_shift).
+Review b4e7adb81 note: _refuse_worked_day reads calendar day; safe direction only (a night OUT after midnight makes the NEXT day look worked = over-refuse; an IN is always on its own day), so no miss. Revisit if HR reports a wrong "Ask HR".

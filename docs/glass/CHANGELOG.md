@@ -10,6 +10,24 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.28] — Supervisors Edit the Roster — 2026-10-02
+
+Shift Supervisors can now change and remove their team's shifts, and the
+Nadi tile on Desk opens for them.
+
+### Added
+- **Change or remove a shift from Team roster.** Tap a day: change it to
+  another shift, or remove it. A day that already has punches or
+  attendance stays as it is; ask HR to change those.
+- **Tap an empty day to assign a shift** for that date.
+
+### Fixed
+- **"No permission for Page" when a Shift Supervisor opened Nadi on Desk.**
+  Nadi now opens Shift & Attendance, where the Roster lives.
+- **Tapping a notification sometimes did nothing.**
+- **Rest Day Differences missed a holiday calendar that changed mid-month**,
+  and it now loads faster.
+
 ## [2.0.0-alpha.27] — Honest Leave Balances — 2026-09-30
 
 When your leave balance can't be read, Nadi now says so, and pulling down
