@@ -59,11 +59,14 @@
 						</div>
 						<!-- day strip; scrolls horizontally on a narrow phone -->
 						<div class="flex gap-1.5 overflow-x-auto pb-1">
-							<div
+							<button
 								v-for="day in weekDays"
 								:key="day.iso"
-								class="flex flex-col items-center justify-center flex-none w-11 py-1.5 rounded-well border border-divider"
+								type="button"
+								class="g-focusable flex flex-col items-center justify-center flex-none w-11 py-1.5 rounded-well border border-divider"
 								:class="shiftOn(member, day) ? 'bg-surface' : ''"
+								:aria-label="dayLabel(member, day)"
+								@click="openDay(member, day)"
 							>
 								<span class="text-caption text-ink-600">{{ day.dow }}</span>
 								<span
@@ -72,7 +75,7 @@
 								>
 									{{ shiftCode(member, day) }}
 								</span>
-							</div>
+							</button>
 						</div>
 					</div>
 				</template>
@@ -126,6 +129,36 @@
 					</div>
 				</template>
 			</GModal>
+
+			<!-- Day sheet: change or remove one day's shift. Server fences and
+			     refuses a day that already has punches (owner ruling a, 2 Oct 2026). -->
+			<GModal :isOpen="dayOpen" :title="dayTitle" @did-dismiss="dayOpen = false">
+				<template #actionSheet>
+					<div class="flex flex-col gap-4 pt-1">
+						<div class="text-kra-label text-ink-600">
+							{{ dayTarget?.member.employee_name }} · {{ dayTarget?.shift.shift_type }}
+						</div>
+						<label class="flex flex-col gap-1.5">
+							<span class="g-eyebrow">{{ __("Change to") }}</span>
+							<Link doctype="Shift Type" v-model="dayForm.shift_type" />
+						</label>
+						<GButton
+							:label="__('Change shift')"
+							:pending-label="__('Changing…')"
+							:disabled="!dayForm.shift_type || dayForm.shift_type === dayTarget?.shift.shift_type"
+							:pending="changeShiftDay.loading"
+							@click="submitChange"
+						/>
+						<GButton
+							danger
+							:label="__('Remove this day')"
+							:pending-label="__('Removing…')"
+							:pending="removeShiftDay.loading"
+							@click="submitRemove"
+						/>
+					</div>
+				</template>
+			</GModal>
 		</template>
 	</BaseLayout>
 </template>
@@ -144,7 +177,7 @@ import GModal from "@/components/glass/GModal.vue"
 import GButton from "@/components/glass/GButton.vue"
 import Link from "@/components/Link.vue"
 import ResourceError from "@/components/ResourceError.vue"
-import { teamRoster, assignShift, teamManagers } from "@/data/team"
+import { teamRoster, assignShift, teamManagers, changeShiftDay, removeShiftDay } from "@/data/team"
 import { buildManagerOptions } from "@/utils/team"
 
 const __ = inject("$translate")
@@ -206,6 +239,64 @@ function shiftCode(member, day) {
 		.replace(/[^A-Za-z0-9]/g, "")
 		.slice(0, 1)
 		.toUpperCase()
+}
+
+// --- change / remove one day ---
+const dayOpen = ref(false)
+const dayTarget = ref(null)
+const dayForm = reactive({ shift_type: "" })
+const dayTitle = computed(() =>
+	dayTarget.value ? dayjs(dayTarget.value.date).format("ddd D MMM") : ""
+)
+
+function dayLabel(member, day) {
+	const s = shiftOn(member, day)
+	return `${member.employee_name}, ${day.iso}: ${s ? s.shift_type : __("No shift")}`
+}
+// an empty day goes straight to Assign for that date; a rostered day opens the sheet
+function openDay(member, day) {
+	const shift = shiftOn(member, day)
+	if (!shift) {
+		openAssign(member)
+		form.start_date = form.end_date = day.iso
+		return
+	}
+	dayTarget.value = { member, shift, date: day.iso }
+	dayForm.shift_type = ""
+	dayOpen.value = true
+}
+function onDayDone(title) {
+	dayOpen.value = false
+	gToast({ title, variant: "success" })
+	load()
+}
+const dayError = (fallback) => (e) =>
+	gToast({ title: e?.messages?.[0] || fallback, variant: "error" })
+
+function submitChange() {
+	const t = dayTarget.value
+	changeShiftDay.submit(
+		{
+			assignment: t.shift.name,
+			date: t.date,
+			shift_type: dayForm.shift_type,
+			shift_location: t.shift.shift_location || null,
+		},
+		{
+			onSuccess: () => onDayDone(__("Shift changed")),
+			onError: dayError(__("Could not change shift")),
+		}
+	)
+}
+function submitRemove() {
+	const t = dayTarget.value
+	removeShiftDay.submit(
+		{ assignment: t.shift.name, date: t.date },
+		{
+			onSuccess: () => onDayDone(__("Shift removed")),
+			onError: dayError(__("Could not remove shift")),
+		}
+	)
 }
 
 // --- assign ---

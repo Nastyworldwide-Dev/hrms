@@ -42,3 +42,12 @@ export const teamRoster = createResource({
 export const assignShift = createResource({
 	url: "hrms.api.roster.insert_shift",
 })
+
+// Change or remove one rostered day (same server fence as assign; a day with
+// punches or attendance is refused and left for HR).
+export const changeShiftDay = createResource({
+	url: "hrms.api.roster.change_shift_day",
+})
+export const removeShiftDay = createResource({
+	url: "hrms.api.roster.remove_shift_day",
+})

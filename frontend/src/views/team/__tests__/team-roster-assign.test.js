@@ -25,3 +25,17 @@ test("the Assign shift button has words", () => {
 test("a supervisor's own row reads You", () => {
 	assert.match(view, /member\.is_self \? __\("You"\) : member\.employee_name/)
 })
+
+// 2 Oct 2026: a supervisor changes and removes their team's shifts from Nadi.
+const data = read("../../../data/team.js")
+
+test("each day in the strip is a button that opens that day", () => {
+	assert.match(view, /<button[\s\S]*?v-for="day in weekDays"[\s\S]*?@click="openDay\(member, day\)"/)
+})
+
+test("the day sheet has Change and Remove, wired to the roster endpoints", () => {
+	assert.match(view, /:label="__\('Change shift'\)"/)
+	assert.match(view, /:label="__\('Remove this day'\)"/)
+	assert.match(data, /url: "hrms\.api\.roster\.change_shift_day"/)
+	assert.match(data, /url: "hrms\.api\.roster\.remove_shift_day"/)
+})

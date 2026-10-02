@@ -117,3 +117,123 @@ class TestRosterFence(FrappeTestCase):
 		self._as(self.supervisor)
 		with self.assertRaises(frappe.PermissionError):
 			_ensure_can_roster(self.stranger)
+
+
+def _shift_type(name: str, start: str, end: str) -> str:
+	if not frappe.db.exists("Shift Type", name):
+		frappe.get_doc(
+			{"doctype": "Shift Type", "__newname": name, "start_time": start, "end_time": end}
+		).insert()
+	return name
+
+
+class TestSupervisorEditsRoster(FrappeTestCase):
+	"""Owner, 2 Oct 2026: a Shift Supervisor changes and removes their own
+	team's shifts from Nadi, with no lock — except a day already worked
+	(punches or attendance), which stays for HR (ruling a)."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		ensure_role()
+		cls.supervisor = _make_employee("roster.sv@bench.test", [ROSTER_SUPERVISOR_ROLE])
+		cls.report = _make_employee("roster.report@bench.test", [], reports_to=cls.supervisor)
+		cls.stranger = _make_employee("roster.stranger@bench.test", [])
+		cls.day_shift = _shift_type("_Roster Day", "08:00:00", "12:00:00")
+		cls.late_shift = _shift_type("_Roster Late", "14:00:00", "18:00:00")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("Shift Assignment", {"employee": ("in", [self.report, self.stranger])})
+		frappe.db.delete("Employee Checkin", {"employee": self.report})
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def _week(self, employee):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Shift Assignment",
+				"shift_type": self.day_shift,
+				"company": COMPANY,
+				"employee": employee,
+				"start_date": "2031-03-03",
+				"end_date": "2031-03-09",
+			}
+		)
+		doc.submit()
+		return doc.name
+
+	def _as_supervisor(self):
+		frappe.set_user(frappe.db.get_value("Employee", self.supervisor, "user_id"))
+
+	def _days(self, employee):
+		rows = frappe.get_all(
+			"Shift Assignment",
+			filters={"employee": employee, "docstatus": 1},
+			fields=["shift_type", "start_date", "end_date"],
+			order_by="start_date",
+		)
+		return [(r.shift_type, str(r.start_date), str(r.end_date)) for r in rows]
+
+	def test_supervisor_removes_a_middle_day(self):
+		from hrms.api.roster import remove_shift_day
+
+		name = self._week(self.report)
+		self._as_supervisor()
+		remove_shift_day(name, "2031-03-05")
+		frappe.set_user("Administrator")
+		self.assertEqual(
+			self._days(self.report),
+			[(self.day_shift, "2031-03-03", "2031-03-04"), (self.day_shift, "2031-03-06", "2031-03-09")],
+		)
+
+	def test_supervisor_removes_the_first_day(self):
+		# The first day is a cancel + delete, which the role alone may not do.
+		from hrms.api.roster import remove_shift_day
+
+		name = self._week(self.report)
+		self._as_supervisor()
+		remove_shift_day(name, "2031-03-03")
+		frappe.set_user("Administrator")
+		self.assertEqual(self._days(self.report), [(self.day_shift, "2031-03-04", "2031-03-09")])
+
+	def test_supervisor_changes_one_day_to_another_shift(self):
+		from hrms.api.roster import change_shift_day
+
+		name = self._week(self.report)
+		self._as_supervisor()
+		change_shift_day(name, "2031-03-05", self.late_shift)
+		frappe.set_user("Administrator")
+		self.assertEqual(
+			self._days(self.report),
+			[
+				(self.day_shift, "2031-03-03", "2031-03-04"),
+				(self.late_shift, "2031-03-05", "2031-03-05"),
+				(self.day_shift, "2031-03-06", "2031-03-09"),
+			],
+		)
+
+	def test_worked_day_is_refused(self):
+		from hrms.api.roster import remove_shift_day
+
+		name = self._week(self.report)
+		frappe.get_doc(
+			{
+				"doctype": "Employee Checkin",
+				"employee": self.report,
+				"time": "2031-03-05 08:02:00",
+				"log_type": "IN",
+			}
+		).insert(ignore_permissions=True)
+		self._as_supervisor()
+		with self.assertRaisesRegex(frappe.ValidationError, "Ask HR"):
+			remove_shift_day(name, "2031-03-05")
+
+	def test_supervisor_cannot_remove_another_teams_shift(self):
+		from hrms.api.roster import remove_shift_day
+
+		name = self._week(self.stranger)
+		self._as_supervisor()
+		with self.assertRaises(frappe.PermissionError):
+			remove_shift_day(name, "2031-03-05")

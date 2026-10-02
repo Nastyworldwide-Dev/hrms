@@ -279,3 +279,4 @@ EVIDENCE: 2 sw.test.js 10/10 (2 new red before); vite build OK, notificationclic
 - 2026-10-01T06:39:09Z COMPACT: context compacted — read the last NEXT above before continuing
 DEAD END: none this step. Sign-in plan for non-HQ staff written (phone-number login = Frappe System Settings allow_login_using_mobile_number, user.py:835; SMS-code self reset = new code, needs SMS provider). sw tap fix 51e6973dc reviewed: no Critical (suggest try/catch around new URL).
 NEXT: wait for owner: (1) "push" -> scripts/release.sh alpha.28 (Rest Day Differences + sw tap fix); (2) SMS provider name + "go phone sign-in"; (3) announcement name + login email; (4) HR leave-import intent + one row. Do NOT push the safety tag.
+- 2026-10-01T06:42:36Z COMMIT: 5dcc9e8bb docs: record sign-in plan and pending owner decisions in progress → review dispatched

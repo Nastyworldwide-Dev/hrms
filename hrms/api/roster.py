@@ -20,6 +20,8 @@ from hrms.utils.company_scope import (
 #: fenced to the caller's direct reports and permitted companies below.
 ROSTER_SUPERVISOR_ROLE = "Shift Supervisor"
 
+logger = frappe.logger("hrms")
+
 
 def _ensure_can_roster(employee: str) -> None:
 	"""Write fence for every roster action. Mirrors the read fence
@@ -309,7 +311,13 @@ def break_shift(assignment: str | ShiftAssignment, date: str) -> None:
 		assignment = frappe.get_doc("Shift Assignment", assignment)
 
 	_ensure_can_roster_employee(assignment.employee)
-	assignment.check_permission("write")
+	# A supervisor's own line is admitted by the fence above; Frappe would still
+	# refuse them the cancel a first-day break needs (owner, 2 Oct 2026:
+	# supervisors edit and remove their team's shifts). Same rule as insert_shift.
+	own_line = assignment.employee in rostered_employees(frappe.session.user)
+	if not own_line:
+		assignment.check_permission("write")
+	assignment.flags.ignore_permissions = own_line
 
 	if assignment.end_date and date_diff(assignment.end_date, date) < 0:
 		frappe.throw(_("Cannot break shift after end date"))
@@ -332,8 +340,46 @@ def break_shift(assignment: str | ShiftAssignment, date: str) -> None:
 
 	if not end_date or date_diff(end_date, date) > 0:
 		create_shift_assignment(
-			employee, company, shift_type, add_days(date, 1), end_date, status, shift_location
+			employee,
+			company,
+			shift_type,
+			add_days(date, 1),
+			end_date,
+			status,
+			shift_location,
+			ignore_permissions=own_line,
 		)
+
+
+def _refuse_worked_day(employee: str, date: str) -> None:
+	"""A day with punches or attendance keeps its shift (owner ruling a, 2 Oct
+	2026): taking it away would leave the punches pointing at no shift."""
+	worked = frappe.db.exists(
+		"Attendance", {"employee": employee, "attendance_date": date, "docstatus": ["!=", 2]}
+	) or frappe.db.exists("Employee Checkin", {"employee": employee, "time": ["between", [date, date]]})
+	if worked:
+		logger.info("[roster] %s refused change on worked day %s %s", frappe.session.user, employee, date)
+		frappe.throw(_("This day already has punches or attendance. Ask HR to change it."))
+
+
+@frappe.whitelist(methods=["POST"])
+def remove_shift_day(assignment: str, date: str) -> None:
+	"""Nadi Team roster "Remove": take one day out of an assignment."""
+	doc = frappe.get_doc("Shift Assignment", assignment)
+	_ensure_can_roster_employee(doc.employee)
+	_refuse_worked_day(doc.employee, date)
+	logger.info("[roster] %s removes %s on %s", frappe.session.user, doc.name, date)
+	break_shift(doc, date)
+
+
+@frappe.whitelist(methods=["POST"])
+def change_shift_day(assignment: str, date: str, shift_type: str, shift_location: str | None = None) -> None:
+	"""Nadi Team roster "Change": one day moves to another shift type."""
+	doc = frappe.get_doc("Shift Assignment", assignment)
+	employee, company, status = doc.employee, doc.company, doc.status
+	logger.info("[roster] %s changes %s on %s to %s", frappe.session.user, doc.name, date, shift_type)
+	remove_shift_day(doc.name, date)
+	insert_shift(employee, company, shift_type, date, date, status, shift_location)
 
 
 @frappe.whitelist(methods=["POST"])
