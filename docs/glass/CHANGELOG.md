@@ -10,6 +10,15 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.29] — Nadi Opens the App for Staff — 2026-10-02
+
+Staff who click Nadi on Desk now land in the Nadi app.
+
+### Fixed
+- **Staff clicking Nadi on Desk got "No permission".** Nadi now opens
+  the Nadi app for them. HR and Shift Supervisors still land on Shift &
+  Attendance.
+
 ## [2.0.0-alpha.28] — Supervisors Edit the Roster — 2026-10-02
 
 Shift Supervisors can now change and remove their team's shifts, and the

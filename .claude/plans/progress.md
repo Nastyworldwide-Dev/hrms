@@ -212,3 +212,5 @@ EVIDENCE: 3 fresh.local get_bootinfo+extend_bootinfo: plain Employee -> Nadi lin
 - 2026-10-02T03:47:06Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
 - 2026-10-02T03:47:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
 - 2026-10-02T03:47:21Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-10-02T03:47:22Z COMMIT: e770733ba feat(desk): plain staff who click Nadi on Desk land in the Nadi app → review+cross-app dispatched
+EVIDENCE: review e770733ba no Critical/Warning; live p4 rerun plain->/hrms, sv->desk. NEXT: alpha.29 pushed; deploy, then a plain staff user clicks Desk Nadi -> lands in /hrms.
