@@ -227,3 +227,5 @@ NEXT: alpha.30 pushed; read .claude/tmp/review-hr-roster-2.md for b4d308942 and 
 - 2026-10-02T07:36:13Z COMMIT: c79232a46 chore(release): 2.0.0-alpha.30 — HR Can Change Shifts on the Roster → review+deps dispatched
 EVIDENCE: 2 review b4d308942 warning: blank end date vs null on open-ended shift; dialog node 6/6
 - 2026-10-02T07:36:59Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-02T07:37:02Z COMMIT: 9dbfb35af fix(roster): an open-ended shift could refuse a shift change by mistake → review+design dispatched
+NEXT: deploy alpha.31 (HR Desk Roster update incl. open-ended shifts).

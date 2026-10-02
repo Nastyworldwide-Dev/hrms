@@ -10,6 +10,12 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.31] — Roster Fix for Open-Ended Shifts — 2026-10-02
+
+### Fixed
+- **Changing a shift with no end date could be refused** with "one at a
+  time" even when only the shift type changed.
+
 ## [2.0.0-alpha.30] — HR Can Change Shifts on the Roster — 2026-10-02
 
 HR can change a shift on the Desk Roster again.
