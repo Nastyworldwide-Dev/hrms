@@ -30,7 +30,10 @@ test("a supervisor's own row reads You", () => {
 const data = read("../../../data/team.js")
 
 test("each day in the strip is a button that opens that day", () => {
-	assert.match(view, /<button[\s\S]*?v-for="day in weekDays"[\s\S]*?@click="openDay\(member, day\)"/)
+	assert.match(
+		view,
+		/<button[\s\S]*?v-for="day in weekDays"[\s\S]*?@click="openDay\(member, day\)"/
+	)
 })
 
 test("the day sheet has Change and Remove, wired to the roster endpoints", () => {
@@ -38,4 +41,22 @@ test("the day sheet has Change and Remove, wired to the roster endpoints", () =>
 	assert.match(view, /:label="__\('Remove this day'\)"/)
 	assert.match(data, /url: "hrms\.api\.roster\.change_shift_day"/)
 	assert.match(data, /url: "hrms\.api\.roster\.remove_shift_day"/)
+})
+
+// HR, 2 Oct 2026: supervisors set the Day Type in Nadi too
+test("assign and change both offer the day type and send it", () => {
+	assert.equal(view.match(/:options="dayTypeOptions"/g).length, 2)
+	assert.match(view, /day_type: form\.day_type,/)
+	assert.match(view, /day_type: dayForm\.day_type,/)
+	assert.match(view, /\{ label: __\("Follows the calendar"\), value: "None" \}/)
+})
+
+test("a day type change alone wakes Change shift", () => {
+	assert.match(view, /dayForm\.day_type !== \(shift\.day_type \|\| "None"\)/)
+	assert.match(view, /:disabled="!dayChanged"/)
+})
+
+test("the day cell marks a set day type", () => {
+	assert.match(view, /"Public Holiday": "PH"/)
+	assert.match(view, /v-if="dayTypeMark\(member, day\)"/)
 })

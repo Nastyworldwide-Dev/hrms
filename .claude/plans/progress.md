@@ -246,3 +246,6 @@ EVIDENCE: 2 slice 3 Desk dialog + month view Day Type: node 10/10 (4 new); test_
 - 2026-10-02T09:01:47Z COMMIT: b89f4791c feat(roster): HR sets the Day Type in the Desk Roster → review+design dispatched
 EVIDENCE: 2 test_roster 17/17 fresh.local incl. repeating schedule carries Off Day to every created shift (review b89f4791c W: schedule path dropped day_type)
 - 2026-10-02T09:02:56Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-10-02T09:03:00Z COMMIT: 8993f5f80 fix(roster): a repeating schedule dropped the Day Type HR chose → review dispatched
+EVIDENCE: 3 slice 4 Nadi Team roster Day Type: frontend yarn test 1588/1588, vite build OK; team-roster-assign 8/8 (3 new)
+- 2026-10-02T09:05:06Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1

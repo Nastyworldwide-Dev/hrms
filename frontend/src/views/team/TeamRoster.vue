@@ -75,6 +75,12 @@
 								>
 									{{ shiftCode(member, day) }}
 								</span>
+								<span
+									v-if="dayTypeMark(member, day)"
+									class="text-caption font-semibold text-accent-ink"
+								>
+									{{ dayTypeMark(member, day) }}
+								</span>
 							</button>
 						</div>
 					</div>
@@ -101,6 +107,7 @@
 							<span class="g-eyebrow">{{ __("Location") }}</span>
 							<Link doctype="Shift Location" v-model="form.shift_location" />
 						</label>
+						<GSelect :label="__('Day type')" :options="dayTypeOptions" v-model="form.day_type" />
 						<div class="flex gap-3">
 							<label class="flex flex-col gap-1.5 flex-1">
 								<span class="g-eyebrow">{{ __("From") }}</span>
@@ -142,10 +149,15 @@
 							<span class="g-eyebrow">{{ __("Change to") }}</span>
 							<Link doctype="Shift Type" v-model="dayForm.shift_type" />
 						</label>
+						<GSelect
+							:label="__('Day type')"
+							:options="dayTypeOptions"
+							v-model="dayForm.day_type"
+						/>
 						<GButton
 							:label="__('Change shift')"
 							:pending-label="__('Changing…')"
-							:disabled="!dayForm.shift_type || dayForm.shift_type === dayTarget?.shift.shift_type"
+							:disabled="!dayChanged"
 							:pending="changeShiftDay.loading"
 							@click="submitChange"
 						/>
@@ -244,7 +256,27 @@ function shiftCode(member, day) {
 // --- change / remove one day ---
 const dayOpen = ref(false)
 const dayTarget = ref(null)
-const dayForm = reactive({ shift_type: "" })
+const dayForm = reactive({ shift_type: "", day_type: "None" })
+
+// HR, 2 Oct 2026: the roster's Day Type sets the kind of day and its OT rate.
+// "None" follows the holiday calendar.
+const dayTypeOptions = computed(() => [
+	{ label: __("Follows the calendar"), value: "None" },
+	{ label: __("Work day"), value: "Work Day" },
+	{ label: __("Rest day"), value: "Rest Day" },
+	{ label: __("Off day"), value: "Off Day" },
+	{ label: __("Public holiday"), value: "Public Holiday" },
+])
+const DAY_TYPE_MARKS = { "Rest Day": "R", "Off Day": "O", "Public Holiday": "PH", "Work Day": "W" }
+function dayTypeMark(member, day) {
+	return DAY_TYPE_MARKS[shiftOn(member, day)?.day_type] || ""
+}
+const dayChanged = computed(() => {
+	const shift = dayTarget.value?.shift
+	if (!shift) return false
+	const type = dayForm.shift_type || shift.shift_type
+	return type !== shift.shift_type || dayForm.day_type !== (shift.day_type || "None")
+})
 const dayTitle = computed(() =>
 	dayTarget.value ? dayjs(dayTarget.value.date).format("ddd D MMM") : ""
 )
@@ -263,6 +295,7 @@ function openDay(member, day) {
 	}
 	dayTarget.value = { member, shift, date: day.iso }
 	dayForm.shift_type = ""
+	dayForm.day_type = shift.day_type || "None"
 	dayOpen.value = true
 }
 function onDayDone(title) {
@@ -279,8 +312,9 @@ function submitChange() {
 		{
 			assignment: t.shift.name,
 			date: t.date,
-			shift_type: dayForm.shift_type,
+			shift_type: dayForm.shift_type || t.shift.shift_type,
 			shift_location: t.shift.shift_location || null,
+			day_type: dayForm.day_type,
 		},
 		{
 			onSuccess: () => onDayDone(__("Shift changed")),
@@ -302,12 +336,19 @@ function submitRemove() {
 // --- assign ---
 const assignOpen = ref(false)
 const assignTarget = ref(null)
-const form = reactive({ shift_type: "", shift_location: "", start_date: "", end_date: "" })
+const form = reactive({
+	shift_type: "",
+	shift_location: "",
+	day_type: "None",
+	start_date: "",
+	end_date: "",
+})
 
 function openAssign(member) {
 	assignTarget.value = member
 	form.shift_type = ""
 	form.shift_location = ""
+	form.day_type = "None"
 	form.start_date = weekStart.value.format("YYYY-MM-DD")
 	form.end_date = weekStart.value.add(6, "day").format("YYYY-MM-DD")
 	assignOpen.value = true
@@ -324,6 +365,7 @@ function submitAssign() {
 			end_date: form.end_date || null,
 			status: "Active",
 			shift_location: form.shift_location || null,
+			day_type: form.day_type,
 		},
 		{
 			onSuccess: () => {
