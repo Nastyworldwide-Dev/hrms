@@ -11,7 +11,7 @@
  "link_to": "Shift & Attendance",
  "link_type": "Workspace Sidebar",
  "logo_url": "/assets/hrms/icons/desktop_icons/shift-attendence.svg",
- "modified": "2026-09-08 17:05:00.000000",
+ "modified": "2026-10-02 12:00:00.000000",
  "modified_by": "Administrator",
  "name": "Shift & Attendance",
  "owner": "Administrator",
@@ -35,6 +35,12 @@
    "parentfield": "roles",
    "parenttype": "Desktop Icon",
    "role": "System Manager"
+  },
+  {
+   "doctype": "Has Role",
+   "parentfield": "roles",
+   "parenttype": "Desktop Icon",
+   "role": "Shift Supervisor"
   }
  ],
  "standard": 1

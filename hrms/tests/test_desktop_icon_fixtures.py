@@ -88,6 +88,24 @@ class TestDesktopIconFixtures(unittest.TestCase):
 		]
 		self.assertEqual(stale, [])
 
+	def test_shift_supervisor_sees_the_shift_tile(self):
+		# 2 Oct 2026, Fauzi (Shift Supervisor): Nadi said "No permission for
+		# Page". The workspace admits the role (let_shift_supervisor_open_roster)
+		# but this tile's roles did not, so the launcher had no child for him
+		# and fell back to the app's own link.
+		roles = {r["role"] for r in self.by_label["Shift & Attendance"]["roles"]}
+		self.assertIn("Shift Supervisor", roles)
+
+	def test_the_app_icon_points_at_a_workspace_that_exists(self):
+		# "/desk/people": upstream renamed People to HR Setup (babe55b8a), so the
+		# fallback link resolved to a Page nobody but System Manager may read.
+		workspaces = {
+			p.name.replace("_", "-") for p in (ICON_DIR.parent / "hr" / "workspace").iterdir() if p.is_dir()
+		}
+		link = self.by_label[APP_LABEL]["link"]
+		self.assertTrue(link.startswith("/desk/"), link)
+		self.assertIn(link.removeprefix("/desk/"), workspaces)
+
 
 if __name__ == "__main__":
 	unittest.main()

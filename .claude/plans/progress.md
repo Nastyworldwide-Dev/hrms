@@ -280,3 +280,19 @@ EVIDENCE: 2 sw.test.js 10/10 (2 new red before); vite build OK, notificationclic
 DEAD END: none this step. Sign-in plan for non-HQ staff written (phone-number login = Frappe System Settings allow_login_using_mobile_number, user.py:835; SMS-code self reset = new code, needs SMS provider). sw tap fix 51e6973dc reviewed: no Critical (suggest try/catch around new URL).
 NEXT: wait for owner: (1) "push" -> scripts/release.sh alpha.28 (Rest Day Differences + sw tap fix); (2) SMS provider name + "go phone sign-in"; (3) announcement name + login email; (4) HR leave-import intent + one row. Do NOT push the safety tag.
 - 2026-10-01T06:42:36Z COMMIT: 5dcc9e8bb docs: record sign-in plan and pending owner decisions in progress → review dispatched
+EVIDENCE: 2 bench fresh.local console: test_roster 12/12 green; old break_shift -> test_supervisor_removes_the_first_day ERROR (red); node team-roster-assign 5/5. Mutation probe escaped: bench-only FrappeTestCase, pytest cannot run it
+- 2026-10-02T03:36:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-10-02T03:36:51Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
+- 2026-10-02T03:37:14Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-10-02T03:37:14Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
+- 2026-10-02T03:37:28Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-10-02T03:37:28Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
+- 2026-10-02T03:37:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-10-02T03:37:53Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
+- 2026-10-02T03:38:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
+- 2026-10-02T03:38:18Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
+- 2026-10-02T03:38:58Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-10-02T03:38:58Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
+- 2026-10-02T03:39:01Z COMMIT: b4e7adb81 feat(roster): supervisors change and remove their team's shifts in Nadi → review+design dispatched
+- 2026-10-02T03:39:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
+- 2026-10-02T03:39:18Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
