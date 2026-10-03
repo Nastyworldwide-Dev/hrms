@@ -1,11 +1,11 @@
 # HANDOFF
-prompt:   Shift Supervisor on Desk: team attendance + clock-ins, view only
+prompt:   Fahmie (Shift Supervisor) roster Delete/Update refused
 status:   done
-commit:   d425496e5 on nz-glass (v2.0.0-alpha.33)
-files:    hrms/overrides/employee_owned_row_scope.py
-          hrms/overrides/test_supervisor_team_view.py
-          hrms/patches/v16_0/let_shift_supervisor_read_team_attendance.py
-          hrms/patches.txt
-verify:   deploy; a Shift Supervisor refreshes Desk -> Shift & Attendance -> Attendance: only their team
-flags:    supervisors also see clock-in location/device fields (Employee Checkin level 1)
-next:     owner: keep location visible to supervisors, or hide it
+commit:   3759c2854 on nz-glass (v2.0.0-alpha.34)
+files:    hrms/api/roster.py
+          hrms/api/test_roster.py
+          roster/src/components/ShiftAssignmentDialog.vue
+          roster/src/components/__tests__/ShiftAssignmentDialog.test.js
+verify:   deploy; Fahmie refreshes Desk Roster -> Delete / Update a team shift on an unworked day
+flags:    worked days still refused for supervisors (ruling a)
+next:     owner: supervisors see clock-in location/device — keep or hide

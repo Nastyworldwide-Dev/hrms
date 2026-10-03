@@ -10,6 +10,14 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.34] — Supervisors Can Delete and Update Shifts — 2026-10-03
+
+### Fixed
+- **Shift Supervisors got "does not have doctype access" on the Roster.**
+  Delete (one day, all consecutive shifts, or a repeating schedule) and
+  Update now work for their own team. Days that already have punches or
+  attendance still need HR.
+
 ## [2.0.0-alpha.33] — Supervisors See Their Team's Attendance — 2026-10-02
 
 Shift Supervisors can check their team's attendance and clock-ins on Desk.

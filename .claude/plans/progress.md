@@ -266,3 +266,5 @@ EVIDENCE: 2 test_roster 21/21 fresh.local; old delete_shift_schedule_assignment 
 - 2026-10-03T03:19:41Z COMMIT: bb6400b3a fix(roster): a Shift Supervisor was refused deleting or updating a shift → review+design dispatched
 EVIDENCE: 2 review bb6400b3a W: supervisor whole-assignment delete/update/inactive/schedule-delete now refuse worked days (HR keeps power); test_roster 22/22; class guard widened (bulk_update, desk.form.save, .setValue., list .update.submit) 12/12
 - 2026-10-03T03:22:38Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 4 file(s) ⟂bdfcc00ed624
+- 2026-10-03T03:22:41Z COMMIT: 3759c2854 fix(roster): a supervisor could delete or cut a shift over worked days → review+design dispatched
+NEXT: alpha.34 pushed (Fahmie roster delete/update). Open: clock-in location visible to supervisors — keep or hide.
