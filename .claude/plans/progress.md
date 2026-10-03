@@ -258,3 +258,8 @@ EVIDENCE: 3 fresh.local persona: Shift Supervisor lists only their report's Atte
 - 2026-10-02T09:43:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
 - 2026-10-02T09:43:10Z COMMIT: d425496e5 feat(desk): a Shift Supervisor sees their team's attendance and clock-ins → review dispatched
 NEXT: alpha.33 pushed (supervisor team attendance view). Owner to confirm supervisors may see clock-in location/device fields.
+- 2026-10-02T09:44:29Z COMMIT: 3022951d4 chore(release): 2.0.0-alpha.33 — Supervisors See Their Team's Attendance → review+deps dispatched
+EVIDENCE: 2 test_roster 21/21 fresh.local; old delete_shift_schedule_assignment -> repeating-schedule delete ERROR (red); roster dialog node 12/12 incl. class guard (no frappe.client writes in roster/src; old dialog had 2); roster vite build OK
+- 2026-10-03T03:19:03Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
+- 2026-10-03T03:19:14Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
+- 2026-10-03T03:19:37Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21

@@ -71,3 +71,37 @@ test("the month view shows a day type that is set", () => {
 	assert.match(table, /day_type: event\.day_type/)
 	assert.match(table, /shift\['day_type'\] !== 'None'/)
 })
+
+// Fahmie, 3 Oct 2026: "User ... does not have doctype access via role permission
+// for document Shift Assignment". The Desk Roster deleted and updated through
+// frappe.client set_value / delete, which asks Frappe for cancel and delete — a
+// Shift Supervisor holds neither. Every roster write now goes through
+// hrms.api.roster, where the roster fence decides. This pins the CLASS: no
+// generic Frappe write resource anywhere in the roster app.
+import { readdirSync } from "node:fs"
+import { join } from "node:path"
+
+const srcDir = fileURLToPath(new URL("../../", import.meta.url))
+const sources = (dir) =>
+	readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+		e.isDirectory()
+			? e.name === "__tests__"
+				? []
+				: sources(join(dir, e.name))
+			: /\.(vue|ts|js)$/.test(e.name)
+				? [join(dir, e.name)]
+				: []
+	)
+
+test("no roster screen writes through a generic Frappe resource", () => {
+	for (const file of sources(srcDir)) {
+		const text = readFileSync(file, "utf8")
+		assert.doesNotMatch(text, /setValue\s*\.\s*submit|\.delete\s*\.\s*submit|\.insert\s*\.\s*submit/, file)
+		assert.doesNotMatch(text, /frappe\.client\.(set_value|delete|insert|submit|cancel|save)/, file)
+	}
+})
+
+test("delete and update use the roster API", () => {
+	assert.match(view, /url: "hrms\.api\.roster\.delete_shift_assignment"/)
+	assert.match(view, /url: "hrms\.api\.roster\.update_shift_assignment"/)
+})

@@ -243,19 +243,58 @@ def create_shift_schedule_assignment(
 
 @frappe.whitelist(methods=["POST"])
 def delete_shift_schedule_assignment(shift_schedule_assignment: str) -> None:
-	shift_schedule_assignment_doc = frappe.get_doc("Shift Schedule Assignment", shift_schedule_assignment)
-	shift_schedule_assignment_doc.check_permission("delete")
-
-	for shift_assignment_name in frappe.get_all(
+	schedule = frappe.get_doc("Shift Schedule Assignment", shift_schedule_assignment)
+	# The roster fence decides, as for every roster write: HR in company or the
+	# supervisor's own line. Frappe's own cancel/delete check refused a Shift
+	# Supervisor (Fahmie, 3 Oct 2026); the role holds neither by design.
+	_ensure_can_roster_employee(schedule.employee)
+	for name in frappe.get_all(
 		"Shift Assignment", {"shift_schedule_assignment": shift_schedule_assignment}, pluck="name"
 	):
-		shift_assignment_doc = frappe.get_doc("Shift Assignment", shift_assignment_name)
-		_ensure_can_roster_employee(shift_assignment_doc.employee)
-		shift_assignment_doc.check_permission("cancel" if shift_assignment_doc.docstatus == 1 else "delete")
-		if shift_assignment_doc.docstatus == 1:
-			shift_assignment_doc.cancel()
-		frappe.delete_doc("Shift Assignment", shift_assignment_name, ignore_permissions=True)
+		_remove_assignment(frappe.get_doc("Shift Assignment", name))
 	frappe.delete_doc("Shift Schedule Assignment", shift_schedule_assignment, ignore_permissions=True)
+	logger.info("[roster] %s deleted schedule %s", frappe.session.user, shift_schedule_assignment)
+
+
+def _remove_assignment(doc) -> None:
+	"""Cancel and delete one Shift Assignment after the roster fence admitted it."""
+	_ensure_can_roster_employee(doc.employee)
+	doc.flags.ignore_permissions = True
+	if doc.docstatus == 1:
+		doc.cancel()
+	frappe.delete_doc("Shift Assignment", doc.name, ignore_permissions=True)
+
+
+@frappe.whitelist(methods=["POST"])
+def delete_shift_assignment(assignment: str) -> None:
+	"""Desk Roster "Delete -> All Consecutive Shifts": the whole assignment.
+
+	Was frappe.client set_value(docstatus=2) + delete from the browser, which
+	asks Frappe for cancel and delete — a Shift Supervisor holds neither, so
+	the roster refused them (3 Oct 2026). Same fence as every roster write.
+	"""
+	doc = frappe.get_doc("Shift Assignment", assignment)
+	logger.info("[roster] %s deletes %s", frappe.session.user, assignment)
+	_remove_assignment(doc)
+
+
+@frappe.whitelist(methods=["POST"])
+def update_shift_assignment(assignment: str, status: str, end_date: str | None = None) -> None:
+	"""Desk Roster "Update": status and end date of the whole assignment.
+
+	Was frappe.client set_value from the browser — Frappe's write check, with
+	the company User Permission, refused a supervisor's report in another
+	company. Only the two fields that may change after submit.
+	"""
+	doc = frappe.get_doc("Shift Assignment", assignment)
+	_ensure_can_roster_employee(doc.employee)
+	if status not in ("Active", "Inactive"):
+		frappe.throw(_("Status must be Active or Inactive."))
+	doc.flags.ignore_permissions = True
+	doc.status = status
+	doc.end_date = end_date or None
+	doc.save()
+	logger.info("[roster] %s updated %s: %s until %s", frappe.session.user, assignment, status, end_date)
 
 
 @frappe.whitelist(methods=["POST"])

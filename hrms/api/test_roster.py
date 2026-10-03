@@ -330,3 +330,55 @@ class TestSupervisorEditsRoster(FrappeTestCase):
 			)
 		)
 		self.assertEqual(types, {"Off Day"})
+
+	def test_supervisor_deletes_a_whole_assignment(self):
+		# Fahmie, 3 Oct 2026: "Delete -> All Consecutive Shifts" refused a Shift
+		# Supervisor (Frappe cancel/delete check). The roster fence decides now.
+		from hrms.api.roster import delete_shift_assignment
+
+		name = self._week(self.report)
+		self._as_supervisor()
+		delete_shift_assignment(name)
+		frappe.set_user("Administrator")
+		self.assertFalse(frappe.db.exists("Shift Assignment", name))
+
+	def test_supervisor_updates_status_and_end_date(self):
+		from hrms.api.roster import update_shift_assignment
+
+		name = self._week(self.report)
+		self._as_supervisor()
+		update_shift_assignment(name, "Active", "2031-03-06")
+		frappe.set_user("Administrator")
+		self.assertEqual(str(frappe.db.get_value("Shift Assignment", name, "end_date")), "2031-03-06")
+
+	def test_supervisor_deletes_a_repeating_schedule(self):
+		from hrms.api.roster import create_shift_schedule_assignment, delete_shift_schedule_assignment
+
+		frappe.db.delete("Shift Schedule Assignment", {"employee": self.report})
+		frappe.set_user("Administrator")
+		create_shift_schedule_assignment(
+			employee=self.report,
+			company=COMPANY,
+			shift_type=self.day_shift,
+			status="Active",
+			start_date="2031-07-07",
+			end_date="2031-07-20",
+			repeat_on_days=["Monday"],
+			frequency="Every Week",
+		)
+		schedule = frappe.db.get_value("Shift Schedule Assignment", {"employee": self.report})
+		self._as_supervisor()
+		delete_shift_schedule_assignment(schedule)
+		frappe.set_user("Administrator")
+		self.assertFalse(frappe.db.exists("Shift Schedule Assignment", schedule))
+		self.assertFalse(frappe.db.exists("Shift Assignment", {"shift_schedule_assignment": schedule}))
+
+	def test_a_stranger_cannot_be_deleted_or_updated(self):
+		from hrms.api.roster import delete_shift_assignment, update_shift_assignment
+
+		name = self._week(self.stranger)
+		self._as_supervisor()
+		with self.assertRaises(frappe.PermissionError):
+			delete_shift_assignment(name)
+		with self.assertRaises(frappe.PermissionError):
+			update_shift_assignment(name, "Inactive", None)

@@ -141,14 +141,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, watch } from "vue";
-import {
-	Dialog,
-	FormControl,
-	Dropdown,
-	createDocumentResource,
-	createResource,
-	createListResource,
-} from "frappe-ui";
+import { Dialog, FormControl, Dropdown, createDocumentResource, createResource } from "frappe-ui";
 import Link from "./Link.vue";
 import { dayjs, raiseToast } from "../utils";
 
@@ -270,10 +263,7 @@ const actions = computed(() => {
 					}</u></a> (scheduled from <b>${form.start_date}</b>${
 						form.end_date ? ` to <b>${form.end_date}</b>` : ""
 					}).`,
-					action: async () => {
-						await shiftAssignment.value.setValue.submit({ docstatus: 2 });
-						shiftAssignments.delete.submit(props.shiftAssignmentName);
-					},
+					action: () => deleteShiftAssignment.submit(),
 				};
 				showDeleteDialog.value = true;
 			},
@@ -386,7 +376,7 @@ const updateShiftAssigment = () => {
 		return;
 	}
 	if (shiftChanged.value) changeShiftDay.submit();
-	else shiftAssignment.value.setValue.submit({ status: form.status, end_date: form.end_date });
+	else updateShiftAssignment.submit();
 };
 
 const createShiftAssigment = () => {
@@ -412,15 +402,6 @@ const getShiftAssignment = (name: string) =>
 		},
 		onError(error: { messages: string[] }) {
 			raiseToast("error", error.messages[0]);
-		},
-		setValue: {
-			onSuccess() {
-				raiseToast("success", "Shift Assignment updated successfully!");
-				emit("fetchEvents");
-			},
-			onError(error: { messages: string[] }) {
-				raiseToast("error", error.messages[0]);
-			},
 		},
 	});
 
@@ -459,28 +440,6 @@ const shiftSchedule = createResource({
 	},
 });
 
-const shiftAssignments = createListResource({
-	doctype: "Shift Assignment",
-	insert: {
-		onSuccess() {
-			raiseToast("success", "Shift Assignment created successfully!");
-			emit("fetchEvents");
-		},
-		onError(error: { messages: string[] }) {
-			raiseToast("error", error.messages[0]);
-		},
-	},
-	delete: {
-		onSuccess() {
-			raiseToast("success", "Shift Assignment deleted successfully!");
-			emit("fetchEvents");
-		},
-		onError(error: { messages: string[] }) {
-			raiseToast("error", error.messages[0]);
-		},
-	},
-});
-
 const insertShift = createResource({
 	url: "hrms.api.roster.insert_shift",
 	makeParams() {
@@ -497,6 +456,42 @@ const insertShift = createResource({
 	},
 	onSuccess: () => {
 		raiseToast("success", "Shift Assignment created successfully!");
+		emit("fetchEvents");
+	},
+	onError(error: { messages: string[] }) {
+		raiseToast("error", error.messages[0]);
+	},
+});
+
+// Every roster write goes through hrms.api.roster, where the roster fence
+// (HR in company, a Shift Supervisor's own line) decides. frappe.client
+// set_value / delete asked Frappe for cancel and delete, which a Shift
+// Supervisor does not hold (Fahmie, 3 Oct 2026).
+const deleteShiftAssignment = createResource({
+	url: "hrms.api.roster.delete_shift_assignment",
+	makeParams() {
+		return { assignment: props.shiftAssignmentName };
+	},
+	onSuccess: () => {
+		raiseToast("success", "Shift Assignment deleted successfully!");
+		emit("fetchEvents");
+	},
+	onError(error: { messages: string[] }) {
+		raiseToast("error", error.messages[0]);
+	},
+});
+
+const updateShiftAssignment = createResource({
+	url: "hrms.api.roster.update_shift_assignment",
+	makeParams() {
+		return {
+			assignment: props.shiftAssignmentName,
+			status: typeof form.status === "string" ? form.status : form.status?.value,
+			end_date: form.end_date || null,
+		};
+	},
+	onSuccess: () => {
+		raiseToast("success", "Shift Assignment updated successfully!");
 		emit("fetchEvents");
 	},
 	onError(error: { messages: string[] }) {
