@@ -382,3 +382,26 @@ class TestSupervisorEditsRoster(FrappeTestCase):
 			delete_shift_assignment(name)
 		with self.assertRaises(frappe.PermissionError):
 			update_shift_assignment(name, "Inactive", None)
+
+	def test_supervisor_cannot_delete_or_cut_a_worked_assignment(self):
+		# review of bb6400b3a: whole-assignment Delete / Update follow ruling a too
+		from hrms.api.roster import delete_shift_assignment, update_shift_assignment
+
+		name = self._week(self.report)
+		frappe.get_doc(
+			{
+				"doctype": "Employee Checkin",
+				"employee": self.report,
+				"time": "2031-03-07 08:02:00",
+				"log_type": "IN",
+			}
+		).insert(ignore_permissions=True)
+		self._as_supervisor()
+		with self.assertRaisesRegex(frappe.ValidationError, "Ask HR"):
+			delete_shift_assignment(name)
+		with self.assertRaisesRegex(frappe.ValidationError, "Ask HR"):
+			update_shift_assignment(name, "Active", "2031-03-05")
+		with self.assertRaisesRegex(frappe.ValidationError, "Ask HR"):
+			update_shift_assignment(name, "Inactive", "2031-03-09")
+		# cutting only days after the punch is fine
+		update_shift_assignment(name, "Active", "2031-03-08")

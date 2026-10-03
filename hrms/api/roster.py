@@ -248,10 +248,16 @@ def delete_shift_schedule_assignment(shift_schedule_assignment: str) -> None:
 	# supervisor's own line. Frappe's own cancel/delete check refused a Shift
 	# Supervisor (Fahmie, 3 Oct 2026); the role holds neither by design.
 	_ensure_can_roster_employee(schedule.employee)
-	for name in frappe.get_all(
-		"Shift Assignment", {"shift_schedule_assignment": shift_schedule_assignment}, pluck="name"
-	):
-		_remove_assignment(frappe.get_doc("Shift Assignment", name))
+	shifts = [
+		frappe.get_doc("Shift Assignment", name)
+		for name in frappe.get_all(
+			"Shift Assignment", {"shift_schedule_assignment": shift_schedule_assignment}, pluck="name"
+		)
+	]
+	for doc in shifts:  # check every shift before removing any
+		_refuse_worked_range_for_supervisor(doc.employee, doc.start_date, doc.end_date)
+	for doc in shifts:
+		_remove_assignment(doc)
 	frappe.delete_doc("Shift Schedule Assignment", shift_schedule_assignment, ignore_permissions=True)
 	logger.info("[roster] %s deleted schedule %s", frappe.session.user, shift_schedule_assignment)
 
@@ -274,6 +280,8 @@ def delete_shift_assignment(assignment: str) -> None:
 	the roster refused them (3 Oct 2026). Same fence as every roster write.
 	"""
 	doc = frappe.get_doc("Shift Assignment", assignment)
+	_ensure_can_roster_employee(doc.employee)
+	_refuse_worked_range_for_supervisor(doc.employee, doc.start_date, doc.end_date)
 	logger.info("[roster] %s deletes %s", frappe.session.user, assignment)
 	_remove_assignment(doc)
 
@@ -290,6 +298,14 @@ def update_shift_assignment(assignment: str, status: str, end_date: str | None =
 	_ensure_can_roster_employee(doc.employee)
 	if status not in ("Active", "Inactive"):
 		frappe.throw(_("Status must be Active or Inactive."))
+	from frappe.utils import add_days, getdate
+
+	if status == "Inactive" and doc.status != "Inactive":
+		# the whole assignment stops counting
+		_refuse_worked_range_for_supervisor(doc.employee, doc.start_date, doc.end_date)
+	elif end_date and (not doc.end_date or getdate(end_date) < getdate(doc.end_date)):
+		# the days cut off the end stop counting
+		_refuse_worked_range_for_supervisor(doc.employee, add_days(end_date, 1), doc.end_date)
 	doc.flags.ignore_permissions = True
 	doc.status = status
 	doc.end_date = end_date or None
@@ -411,6 +427,33 @@ def _refuse_worked_day(employee: str, date: str) -> None:
 				_("This day already has punches or attendance, so its shift cannot be changed here.")
 			)
 		frappe.throw(_("This day already has punches or attendance. Ask HR to change it."))
+
+
+def _refuse_worked_range_for_supervisor(employee: str, start, end) -> None:
+	"""A supervisor may not take a shift away from days already worked (owner
+	ruling a, 2 Oct 2026) — the whole-assignment Delete / Update included
+	(review of bb6400b3a). HR keeps its power: Frappe's on_cancel still guards
+	linked punches and attendance for everyone."""
+	from frappe.utils import getdate
+
+	from hrms.hr.utils import sees_all_employee_data
+	from hrms.utils.timezone import employee_now
+
+	if sees_all_employee_data(frappe.session.user):
+		return
+	end = getdate(end) if end else employee_now(employee).date()
+	start = getdate(start)
+	if end < start:
+		return
+	worked = frappe.db.exists(
+		"Attendance",
+		{"employee": employee, "attendance_date": ["between", [start, end]], "docstatus": ["!=", 2]},
+	) or frappe.db.exists("Employee Checkin", {"employee": employee, "time": ["between", [start, end]]})
+	if worked:
+		logger.info(
+			"[roster] %s refused range %s..%s for %s: worked", frappe.session.user, start, end, employee
+		)
+		frappe.throw(_("Some of these days already have punches or attendance. Ask HR to change them."))
 
 
 @frappe.whitelist(methods=["POST"])

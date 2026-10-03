@@ -97,7 +97,11 @@ test("no roster screen writes through a generic Frappe resource", () => {
 	for (const file of sources(srcDir)) {
 		const text = readFileSync(file, "utf8")
 		assert.doesNotMatch(text, /setValue\s*\.\s*submit|\.delete\s*\.\s*submit|\.insert\s*\.\s*submit/, file)
-		assert.doesNotMatch(text, /frappe\.client\.(set_value|delete|insert|submit|cancel|save)/, file)
+		assert.doesNotMatch(
+			text,
+			/frappe\.client\.(set_value|delete|insert|insert_many|submit|cancel|save|bulk_update|rename_doc)|frappe\.desk\.form\.save|\.setValue\.|\.update\s*\.\s*submit/,
+			file
+		)
 	}
 })
 

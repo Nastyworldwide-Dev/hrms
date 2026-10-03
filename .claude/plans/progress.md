@@ -263,3 +263,6 @@ EVIDENCE: 2 test_roster 21/21 fresh.local; old delete_shift_schedule_assignment 
 - 2026-10-03T03:19:03Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
 - 2026-10-03T03:19:14Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
 - 2026-10-03T03:19:37Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 9 file(s) ⟂79474414be21
+- 2026-10-03T03:19:41Z COMMIT: bb6400b3a fix(roster): a Shift Supervisor was refused deleting or updating a shift → review+design dispatched
+EVIDENCE: 2 review bb6400b3a W: supervisor whole-assignment delete/update/inactive/schedule-delete now refuse worked days (HR keeps power); test_roster 22/22; class guard widened (bulk_update, desk.form.save, .setValue., list .update.submit) 12/12
+- 2026-10-03T03:22:38Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 4 file(s) ⟂bdfcc00ed624
