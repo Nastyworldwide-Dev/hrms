@@ -247,3 +247,6 @@ NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch
 - 2026-10-05T10:29:30Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 4 extra test file(s) ⟂5c6fe2548ee6
 - 2026-10-05T10:29:32Z COMMIT: 66f0ed539 feat(ot): a typed Overtime Pay claim is cut down to the half hour → review dispatched
 - 2026-10-05T10:30:21Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-05T10:30:24Z COMMIT: b4ba0595a fix(roster): the picker's own box was not disabled and had no name → review+design dispatched
+- 2026-10-05T10:32:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-10-05T10:32:51Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452

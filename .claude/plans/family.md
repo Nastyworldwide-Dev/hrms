@@ -1,5 +1,5 @@
-CLASS: a custom control that replaces a library's own widget must carry what the library's widget gave for free, or never had. frappe-ui's Autocomplete has no disabled state (the Employee picker is "disabled" only by pointer-events-none, so Tab then Enter still opened it) and its default button had no accessible name; when the box was drawn by hand in 72f38eb43 both gaps became ours to close (design review).
-roster/src/components/Link.vue same-root (fixed here: the button carries :disabled with a disabled look, an aria-label of "label: chosen value", aria-haspopup="listbox"; the chevron no longer shrinks)
-roster/src/components/ShiftAssignmentDialog.vue:Link x3 same-root — the disabled Employee picker (editing an existing shift) is the one that mattered; Shift Type and Shift Location get the accessible name
-frontend/src/components/Link.vue not-affected — the Nadi picker is its own component with its own disabled and aria handling
-roster/src/components/MonthViewHeader.vue ticket roster-filter-box-blank — FormControl type=autocomplete filters, same library: the disabled filter boxes before a company is chosen use :disabled on a FormControl, not checked here
+CLASS: a rule that acts on "what changed" when "what it was before" cannot be read. get_doc_before_save() is None outside a normal save, so a non-new claim could not be told from an edit and a legacy figure an approver already read would be cut under them. Unknown history must mean "leave it", never "act".
+hrms/hr/doctype/ot_request/ot_request.py:band_typed_claim same-root (fixed here: a saved claim with no earlier version is left as it is)
+hrms/hr/doctype/ot_request/ot_request.py:set_day_type_and_rate not-affected — reads the claim, never rewrites it
+hrms/sync/runner.py:doc.flags.ignore_validate not-affected — OT Request is not a mirrored transaction (write_block.py), so no unbanded claim arrives that way
+hrms/utils/ot_precision.py:half_hour_claim not-affected — pure function, no history involved

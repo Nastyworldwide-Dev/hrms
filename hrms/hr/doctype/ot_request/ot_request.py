@@ -242,9 +242,13 @@ class OTRequest(Document, PWANotificationsMixin):
 		an approver already read is never changed under them. Replacement Leave is left as typed."""
 		if self.compensation != OT_PAY:
 			return
-		before = None if self.is_new() else self.get_doc_before_save()
-		if before is not None and flt(before.get("claimed_hours")) == flt(self.claimed_hours):
-			return  # saved as it was (an approval, a note): never changed under an approver
+		if not self.is_new():
+			before = self.get_doc_before_save()
+			# A saved claim is only re-cut when it was EDITED. If the earlier version cannot be read we
+			# cannot tell an edit from an approval, so we leave it: never change a figure an approver may
+			# already have read (review of 66f0ed539).
+			if before is None or flt(before.get("claimed_hours")) == flt(self.claimed_hours):
+				return
 		typed = self.claimed_hours
 		banded = half_hour_claim(typed)
 		if banded <= 0 < flt(typed):

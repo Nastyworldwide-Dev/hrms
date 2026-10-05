@@ -249,6 +249,13 @@ class TestTypedClaimIsBandedToHalfHours(unittest.TestCase):
 		doc.band_typed_claim()
 		self.assertEqual(doc.claimed_hours, 1.37)
 
+	def test_a_saved_claim_with_no_earlier_version_is_left_alone(self):
+		# get_doc_before_save() is None (validate called outside a normal save): an edit cannot be told
+		# from an approval, so a legacy 1.37 an approver already read is not cut under them
+		doc = self._doc("Overtime Pay", 1.37, before=None, new=False)
+		doc.band_typed_claim()
+		self.assertEqual(doc.claimed_hours, 1.37)
+
 	def test_an_edited_saved_claim_is_banded(self):
 		before = frappe_dict(claimed_hours=1.0)
 		doc = self._doc("Overtime Pay", 1.74, before=before, new=False)
