@@ -27,22 +27,45 @@ const SUBJECT = {
 	"HD Ticket": "Ticket",
 }
 
+// The entities frappe.utils.escape_html writes. Decoded in ONE pass, `&amp;` last, so "&amp;lt;" reads
+// as the text "&lt;" and not "<". The text is shown as text (never HTML), so decoding is safe.
+const ENTITIES = {
+	"&lt;": "<",
+	"&gt;": ">",
+	"&quot;": '"',
+	"&#x27;": "'",
+	"&#39;": "'",
+	"&nbsp;": " ",
+	"&amp;": "&",
+}
+const decode = (s) => s.replace(/&(?:lt|gt|quot|#x27|#39|nbsp|amp);/g, (e) => ENTITIES[e])
+
 const text = (html) =>
-	String(html || "")
-		.replace(/<[^>]*>/g, " ")
-		.replace(/&nbsp;/g, " ")
-		.replace(/&amp;/g, "&")
+	decode(String(html || "").replace(/<[^>]*>/g, " "))
 		.replace(/\s+/g, " ")
 		.trim()
+
+// A rejection carries the approver's reason after the status sentence (hrms/mixins/pwa_notifications.py:
+// ". Reason: <escaped text>"). It is split off BEFORE the sentence is matched, or it leaks into "who".
+// (the tags are already gone by now, and removing <strong>Reason</strong> leaves a space before the colon)
+const REASON_MARK = /\.\s+Reason\s*:\s*/
+function splitReason(body) {
+	const found = REASON_MARK.exec(body)
+	if (!found) return { sentence: body, reason: "" }
+	return {
+		sentence: body.slice(0, found.index),
+		reason: body.slice(found.index + found[0].length).trim(),
+	}
+}
 
 /**
  * @param {object} item  a PWA Notification row
  * @param {object} opts  { t: translate, remoteStatus: status of a Remote Checkin Request }
- * @returns {{ title: string, who: string }}  title: "Time off approved"; who: a
+ * @returns {{ title: string, who: string, reason: string }}  title: "Time off approved"; who: a
  *   name the sentence carried ("Hafiz Salim"), or "" — the caller adds the time.
  */
-export function notificationLine(item, { t = (s, a) => fill(s, a), remoteStatus } = {}) {
-	const body = text(item?.message)
+function lineFor(item, { t = (s, a) => fill(s, a), remoteStatus } = {}) {
+	const { sentence: body, reason } = splitReason(text(item?.message))
 	const doctype = item?.reference_document_type || ""
 	const subject = SUBJECT[doctype] || ""
 
@@ -50,11 +73,20 @@ export function notificationLine(item, { t = (s, a) => fill(s, a), remoteStatus 
 	let m = body.match(/^Your .+? has been (\w[\w ]*?) by (.+?)(?: on [\d-]+ [\d:]+)?$/)
 	if (m) {
 		const word = STATUS_WORD[m[1]] || m[1].toLowerCase()
-		return { title: t("{0} {1}", [t(subject || "Request"), t(word)]), who: m[2] }
+		// only a REJECTION carries one; an approval never does
+		return {
+			title: t("{0} {1}", [t(subject || "Request"), t(word)]),
+			who: m[2],
+			reason: m[1] === "Rejected" ? reason : "",
+		}
 	}
 	// "<Name> raised a new <Doctype> for approval: <id>"
 	m = body.match(/^(.+?) raised a new .+? for approval/)
-	if (m) return { title: t("{0} asked for {1}", [m[1], t(subject || "a request").toLowerCase()]), who: "" }
+	if (m)
+		return {
+			title: t("{0} asked for {1}", [m[1], t(subject || "a request").toLowerCase()]),
+			who: "",
+		}
 	// "<Name> reported a new <type> issue: <id>"
 	m = body.match(/^(.+?) reported a new (.+?) issue/)
 	if (m) return { title: t("{0} reported an issue", [m[1]]), who: m[2] }
@@ -63,14 +95,24 @@ export function notificationLine(item, { t = (s, a) => fill(s, a), remoteStatus 
 	if (m) return { title: t("Issue {0}", [t(STATUS_WORD[m[1]] || m[1].toLowerCase())]), who: "" }
 
 	if (doctype === "Remote Checkin Request") {
-		if (remoteStatus === "Pending") return { title: t("Check-in outside the area to decide"), who: "" }
-		if (remoteStatus === "Approved") return { title: t("Check-in outside the area approved"), who: "" }
-		if (remoteStatus === "Rejected") return { title: t("Check-in outside the area not approved"), who: "" }
+		if (remoteStatus === "Pending")
+			return { title: t("Check-in outside the area to decide"), who: "" }
+		if (remoteStatus === "Approved")
+			return { title: t("Check-in outside the area approved"), who: "" }
+		if (remoteStatus === "Rejected")
+			return { title: t("Check-in outside the area not approved"), who: "" }
 	}
 	// Anything else (reminders, remote check-in text) is already written for
 	// people: keep it, minus any raw document id it carries.
-	const clean = body.replace(/\b[A-Z]{2,5}(?:-[A-Z]{2,4})?-\d{2,4}-\d{2}-?\d{2,6}\b/g, "").replace(/\s{2,}/g, " ").trim()
+	const clean = body
+		.replace(/\b[A-Z]{2,5}(?:-[A-Z]{2,4})?-\d{2,4}-\d{2}-?\d{2,6}\b/g, "")
+		.replace(/\s{2,}/g, " ")
+		.trim()
 	return { title: clean || t(subject ? "{0} update" : "Update", [t(subject)]), who: "" }
+}
+
+export function notificationLine(item, options) {
+	return { reason: "", ...lineFor(item, options) }
 }
 
 function fill(s, args = []) {

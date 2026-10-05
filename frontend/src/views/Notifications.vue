@@ -237,7 +237,8 @@ const groups = computed(() => {
 		group.items.push({
 			...item,
 			line,
-			meta: [line.who, time].filter(Boolean).join(" · "),
+			// who and when, then WHY for a rejection (the approver wrote one; the employee was never shown it)
+			meta: [line.who, time, line.reason].filter(Boolean).join(" · "),
 			navigable: Boolean(getItemRoute(item)),
 			source: item,
 		})

@@ -282,3 +282,13 @@ STILL OPEN from the hunt (not built): M2 no approver is told when the approver f
 - 2026-10-05T09:29:33Z COMMIT: f5941bed4 fix(requests): an employee was told Rejected and never why → review dispatched
 - 2026-10-05T09:34:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-10-05T09:34:37Z EVIDENCE: 3 works — blast radius green: 8 dependent(s), 7 extra test file(s) ⟂07285428dc7c
+- 2026-10-05T09:34:40Z COMMIT: ad0579c73 fix(requests): a request with no named approver reached nobody → review dispatched
+- 2026-10-05T09:36:53Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-10-05T09:38:37Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-05T09:38:59Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-05T09:39:10Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-05T09:39:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-05T09:39:53Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-05T09:40:11Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-05T09:40:14Z COMMIT: ad0579c73 fix(requests): a request with no named approver reached nobody → review dispatched
+- 2026-10-05T09:40:27Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
