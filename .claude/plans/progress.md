@@ -255,3 +255,5 @@ NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch
 - 2026-10-05T11:11:05Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
 - 2026-10-05T11:11:13Z COMMIT: 112adc0af feat(ot): the claim form says overtime is paid in half hours → review+design dispatched
 - 2026-10-05T11:14:33Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-10-05T11:14:36Z COMMIT: eb32c90c8 chore(ot): cut open Overtime Pay claims to the half hour on deploy → review+design dispatched
+- 2026-10-05T11:17:00Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892

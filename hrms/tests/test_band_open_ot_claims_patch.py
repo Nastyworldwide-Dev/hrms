@@ -29,7 +29,11 @@ def _rows(*pairs):
 
 class TestBandOpenOtClaims(unittest.TestCase):
 	def _run(self, rows):
+		self.comments = []
+		doc = MagicMock()
+		doc.add_comment.side_effect = lambda kind, text: self.comments.append(text)
 		with (
+			patch.object(patch_module.frappe, "get_doc", return_value=doc),
 			patch.object(patch_module.frappe, "get_all", return_value=rows) as get_all,
 			patch.object(patch_module.frappe.db, "exists", return_value=True),
 			patch.object(patch_module.frappe.db, "set_value") as set_value,
@@ -43,7 +47,8 @@ class TestBandOpenOtClaims(unittest.TestCase):
 		filters = get_all.call_args.kwargs["filters"]
 		self.assertEqual(filters["docstatus"], 0)
 		self.assertEqual(filters["compensation"], "Overtime Pay")
-		self.assertEqual(filters["status"], ("!=", "Rejected"))
+		# "Open" only: a draft saved in Desk as Approved or Rejected was decided by someone (review of eb32c90c8)
+		self.assertEqual(filters["status"], "Open")
 
 	def test_a_claim_between_steps_is_cut_down_and_logged_without_touching_modified(self):
 		_, set_value = self._run(_rows(1.37, 1.6))
@@ -51,6 +56,20 @@ class TestBandOpenOtClaims(unittest.TestCase):
 		self.assertEqual(calls, {"OT-0": 1.0, "OT-1": 1.5})
 		for call in set_value.call_args_list:
 			self.assertIs(call.kwargs.get("update_modified"), False)
+
+	def test_the_old_figure_is_kept_on_the_claim_as_a_comment(self):
+		# the patch log is not written on a bench and a column write leaves no Version row: without the
+		# comment the old figure is gone (migration check of eb32c90c8)
+		self._run(_rows(1.37, 1.6))
+		self.assertEqual(len(self.comments), 2)
+		self.assertIn("1.37", self.comments[0])
+		self.assertIn("1.0", self.comments[0])
+		self.assertIn("1.6", self.comments[1])
+		self.assertIn("1.5", self.comments[1])
+
+	def test_a_claim_left_alone_gets_no_comment(self):
+		self._run(_rows(1.5, 0.4))
+		self.assertEqual(self.comments, [])
 
 	def test_a_claim_already_on_a_step_or_under_half_an_hour_is_left_alone(self):
 		_, set_value = self._run(_rows(1.5, 2.0, 0.4))
