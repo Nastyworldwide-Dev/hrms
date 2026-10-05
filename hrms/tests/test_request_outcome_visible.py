@@ -122,7 +122,12 @@ class TestOTRequestTellsTheEmployee(unittest.TestCase):
 			status=status,
 			compensation="Overtime Pay",
 		)
-		with patch.object(OTRequest, "notify_approval_status", MagicMock()) as told:
+		# on_submit stamps approved_on with db_set (38f6087ba); a bare controller has no database,
+		# so the stamp is stubbed. What this test is about is the notification, not the stamp.
+		with (
+			patch.object(OTRequest, "notify_approval_status", MagicMock()) as told,
+			patch.object(OTRequest, "db_set", MagicMock(), create=True),
+		):
 			doc.on_submit()
 		return told
 
@@ -131,6 +136,11 @@ class TestOTRequestTellsTheEmployee(unittest.TestCase):
 
 	def test_rejection_is_notified(self):
 		self.assertTrue(self._submit("Rejected").called)
+
+	def test_a_request_that_is_not_decided_is_not_announced_as_decided(self):
+		# the other half of the guard: a notification that fires for everything proves nothing
+		with self.assertRaises(Exception):
+			self._submit("Open")
 
 
 class TestReplacementLeaveClaimTellsTheEmployee(unittest.TestCase):

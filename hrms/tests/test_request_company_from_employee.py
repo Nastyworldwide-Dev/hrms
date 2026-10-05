@@ -41,7 +41,10 @@ def _employee_company(doctype, name, fieldname=None, *args, **kwargs):
 class TestCompanyComesFromTheEmployee(unittest.TestCase):
 	def test_ot_request(self):
 		doc = OTRequest.__new__(OTRequest)
-		doc.__dict__.update(doctype="OT Request", employee=EMPLOYEE, _new=True, _previous=None)
+		# validate() reads self.compensation since 59d56d877 (set_compensation is stubbed below)
+		doc.__dict__.update(
+			doctype="OT Request", employee=EMPLOYEE, _new=True, _previous=None, compensation="Overtime Pay"
+		)
 		with (
 			patch.object(filing.ot_request.frappe.db, "get_value", side_effect=_employee_company),
 			patch.object(OTRequest, "validate_filing_window", MagicMock()),
@@ -49,6 +52,8 @@ class TestCompanyComesFromTheEmployee(unittest.TestCase):
 			patch.object(OTRequest, "set_punch_verified_cap", MagicMock()),
 			patch.object(OTRequest, "validate_claimed_hours", MagicMock()),
 			patch.object(OTRequest, "validate_duplicate_request", MagicMock()),
+			# the rate label (25 Sep) reads the shift and punches: nothing to do with the company
+			patch.object(OTRequest, "set_day_type_and_rate", MagicMock()),
 		):
 			doc.validate()
 		self.assertEqual(getattr(doc, "company", None), COMPANY)
