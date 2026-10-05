@@ -105,3 +105,18 @@ test("the holiday list is one group and marks the next one", () => {
 	assert.match(list, /<template v-if="index === 0" #badge>\s*<GStatusChip status="Next"/)
 	assert.doesNotMatch(list, /border-b border-divider/)
 })
+
+// A sheet can refuse to close while something is being written (Approvals, 5 Oct 2026). Ignoring
+// did-dismiss in the caller does not work: Ionic has already closed the overlay while the caller's
+// is-open stays true, so a later state change never re-presents it. The refusal belongs in the modal,
+// at BOTH doors (the Close button and the scrim go through closeOwnSheet; Ionic's own gestures and
+// Escape go through canDismiss).
+test("GModal can refuse to close, in the modal itself", async () => {
+	const { readFileSync } = await import("node:fs")
+	const { fileURLToPath } = await import("node:url")
+	const modal = readFileSync(fileURLToPath(new URL("../GModal.vue", import.meta.url)), "utf8")
+	assert.match(modal, /dismissible:\s*\{\s*type:\s*Boolean,\s*default:\s*true\s*\}/)
+	assert.match(modal, /:can-dismiss="dismissible"/)
+	const close = modal.slice(modal.indexOf("function closeOwnSheet"))
+	assert.match(close.slice(0, close.indexOf("}")), /if \(!props\.dismissible\) return/)
+})

@@ -120,11 +120,6 @@ test("a failure stays in the sheet with the ticks kept and a way to try again", 
 	)
 })
 
-test("closing the sheet while the server is approving is ignored", () => {
-	assert.match(script, /if \(sheet\.value\?\.phase !== "working"\) sheet\.value = null/)
-	assert.match(template, /@did-dismiss="dismissSheet"/)
-})
-
 test("a filter with nothing tickable says why", () => {
 	assert.match(template, /nothingTickable\(visibleRows\)/)
 	assert.match(template, /approved one by one/)
@@ -137,11 +132,68 @@ test("the sticky bar sits above the floating tab bar and the home indicator, nev
 	const style = page.slice(page.indexOf("<style"))
 	const bar = style.slice(style.indexOf(".g-approvals__bar {"))
 	const rule = bar.slice(0, bar.indexOf("}"))
-	assert.match(rule, /bottom:\s*max\(var\(--padding-bottom, 0px\), env\(safe-area-inset-bottom, 0px\)\)/)
+	assert.match(
+		rule,
+		/bottom:\s*max\(var\(--padding-bottom, 0px\), env\(safe-area-inset-bottom, 0px\)\)/
+	)
 	assert.doesNotMatch(rule, /bottom:\s*0\b/)
 })
 
 test("the last row is never covered by the bar: the list gets room while the bar shows", () => {
 	assert.match(template, /g-approvals__page--barred/)
-	assert.match(page.slice(page.indexOf("<style")), /\.g-approvals__page--barred\s*\{[^}]*padding-bottom/)
+	assert.match(
+		page.slice(page.indexOf("<style")),
+		/\.g-approvals__page--barred\s*\{[^}]*padding-bottom/
+	)
+})
+
+test("the age badge passes 4.5:1 on the page colour in the light theme: ink alone, no tint", () => {
+	// measured 5 Oct 2026: amber #B24A00 and red #D70015 on --g-bg #F2F2F7 are 4.86 / 4.83 as plain
+	// text but 4.37 / 4.20 on an 8% tint of themselves. The words (a number of days) carry the meaning.
+	const style = page.slice(page.indexOf("<style"))
+	for (const tone of ["amber", "red"]) {
+		const at = style.indexOf(`.g-approvals__age--${tone}`)
+		const rule = style.slice(at, style.indexOf("}", at))
+		assert.doesNotMatch(
+			rule,
+			/background:\s*rgb\(/,
+			`${tone} badge must not sit on a tint of itself`
+		)
+	}
+})
+
+test("a failed APPROVE does not claim nothing was approved: the server may have got some through", () => {
+	// only a failed CHECK writes nothing; a timeout after decide_many may have approved some
+	assert.match(template, /sheet\.phase === 'failed-approve'/)
+	assert.match(template, /could not confirm/i)
+	const check = script.slice(
+		script.indexOf("async function startApprove"),
+		script.indexOf("async function confirmApprove")
+	)
+	const approve = script.slice(
+		script.indexOf("async function confirmApprove"),
+		script.indexOf("async function refresh")
+	)
+	assert.match(check, /phase: "failed"/)
+	assert.match(approve, /phase: "failed-approve"/)
+	assert.doesNotMatch(approve, /phase: "failed"[^-]/)
+})
+
+test("a reload that throws while reporting a failure is handled, not left to crash the page", () => {
+	const approve = script.slice(
+		script.indexOf("async function confirmApprove"),
+		script.indexOf("async function refresh")
+	)
+	assert.match(approve, /try \{\s*await waiting\.reload\(\)\s*\} catch/)
+})
+
+test("the sheet cannot be closed under a working request: the modal itself refuses", () => {
+	// the refusal lives in GModal (dismissible), not in a handler that ignores did-dismiss: Ionic
+	// has already closed the overlay by then and the sheet is never re-presented
+	assert.match(template, /:dismissible="sheet\?\.phase !== 'working'"/)
+	assert.doesNotMatch(script, /dismissSheet/)
+})
+
+test("no dead field on the sheet object", () => {
+	assert.doesNotMatch(script, /retry:\s*startApprove/)
 })

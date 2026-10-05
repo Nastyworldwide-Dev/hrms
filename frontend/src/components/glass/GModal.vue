@@ -17,7 +17,8 @@
   D3; Apple HIG Materials) and the content under it is solid, so this is no
   longer glass over glass. The blur sits on ::part(content), not .g-sheet.
 
-  Props (CustomIonModal's API, unchanged so phase 5 can swap the import):
+  Props (CustomIonModal's API, unchanged so phase 5 can swap the import; `dismissible`
+  is the one addition, default true):
     trigger  string — id of the element that opens the modal
     isOpen   boolean — controlled open state
     title    string — the sheet's name, centred in the pinned bar. Every call
@@ -48,6 +49,7 @@
 		:backdrop-breakpoint="1"
 		:handle="false"
 		:is-open="isOpen"
+		:can-dismiss="dismissible"
 		@willPresent="onWillPresent"
 		@willDismiss="onWillDismiss"
 		@didPresent="onDidPresent"
@@ -101,6 +103,10 @@ const props = defineProps({
 	isOpen: { type: Boolean, required: false },
 	title: { type: String, default: "" },
 	detent: { type: String, default: "large" },
+	// false while the sheet's work is being written: Close, the scrim, Escape and Ionic's own
+	// gestures all refuse. Ignoring did-dismiss in the caller does not work (Ionic has already
+	// closed the overlay while the caller's is-open stays true, so it is never re-presented).
+	dismissible: { type: Boolean, default: true },
 })
 const emit = defineEmits(["did-dismiss", "did-present", "will-dismiss"])
 
@@ -184,6 +190,7 @@ function release() {
 //: overlay was on top — another sheet, or nothing while this one was still
 //: animating in (audit APP-2).
 function closeOwnSheet() {
+	if (!props.dismissible) return
 	console.info("[GModal] closing this sheet")
 	modal.value?.$el?.dismiss?.()
 }

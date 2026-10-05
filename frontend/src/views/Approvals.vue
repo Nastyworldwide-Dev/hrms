@@ -306,7 +306,12 @@
 				<GButton :label="__('Approve {0}', [ticked.size])" @click="startApprove" />
 			</div>
 
-			<GModal :is-open="!!sheet" :title="__('Approve')" @did-dismiss="dismissSheet">
+			<GModal
+				:is-open="!!sheet"
+				:title="__('Approve')"
+				:dismissible="sheet?.phase !== 'working'"
+				@did-dismiss="sheet = null"
+			>
 				<template v-if="sheet">
 					<p v-if="sheet.phase === 'check'" class="text-caption text-ink-600" role="status">
 						{{ __("Checking each one…") }}
@@ -319,6 +324,19 @@
 							{{ __("Your ticks are kept. Check your connection and try again.") }}
 						</p>
 						<GButton :label="__('Try again')" @click="startApprove" />
+					</div>
+					<!-- A failed APPROVE may have got some through before the connection dropped, so it
+					     must not claim that nothing was approved (review, 5 Oct 2026). -->
+					<div
+						v-else-if="sheet.phase === 'failed-approve'"
+						class="flex flex-col gap-3"
+						role="alert"
+					>
+						<p class="m-0 font-semibold">{{ __("We could not confirm what was approved.") }}</p>
+						<p class="m-0 text-caption text-ink-600">
+							{{ __("The list is reloading. Check what is left before you try again.") }}
+						</p>
+						<GButton :label="__('Close')" @click="sheet = null" />
 					</div>
 					<template v-else>
 						<section v-if="sheet.ready.length" class="flex flex-col gap-2">
@@ -581,11 +599,6 @@ const sheet = ref(null) // null | { phase: "check" | "ready" | "working", ready:
 const checkMany = createResource({ url: "hrms.api.approval.check_many" })
 const decideMany = createResource({ url: "hrms.api.approval.decide_many" })
 
-// closing the sheet while the server is approving would hide what it is doing
-function dismissSheet() {
-	if (sheet.value?.phase !== "working") sheet.value = null
-}
-
 async function startApprove() {
 	if (overCap(ticked.value)) {
 		return gToast({
@@ -601,7 +614,7 @@ async function startApprove() {
 	} catch (error) {
 		console.warn("[Approvals] the check failed", error)
 		// stay in the sheet with a way to try again; the ticks are kept
-		sheet.value = { phase: "failed", ready: [], refused: [], retry: startApprove }
+		sheet.value = { phase: "failed", ready: [], refused: [] }
 	}
 }
 
@@ -624,8 +637,12 @@ async function confirmApprove() {
 	} catch (error) {
 		console.warn("[Approvals] bulk approve failed", error)
 		// what went through is unknown until the list is read again; say so, keep the ticks
-		sheet.value = { phase: "failed", ready: [], refused: [], retry: startApprove }
-		await waiting.reload()
+		sheet.value = { phase: "failed-approve", ready: [], refused: [] }
+		try {
+			await waiting.reload()
+		} catch (reloadError) {
+			console.warn("[Approvals] reload after a failed approve failed", reloadError)
+		}
 	}
 }
 
@@ -697,11 +714,9 @@ async function refresh(event) {
 }
 .g-approvals__age--amber {
 	color: var(--g-warn-ink);
-	background: rgb(var(--g-warn-ink-rgb) / 0.08);
 }
 .g-approvals__age--red {
 	color: var(--g-danger-ink);
-	background: rgb(var(--g-danger-ink-rgb) / 0.08);
 }
 .g-approvals__page--barred {
 	padding-bottom: 88px;
