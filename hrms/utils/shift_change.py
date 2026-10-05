@@ -59,6 +59,11 @@ def plan_change(assignments, start, new_shifts, worked_days) -> ShiftChangePlan:
 	for row in assignments:
 		if row["end_date"] and row["end_date"] < start:
 			continue  # finished before the change; the past stays as it was
+		if row.get("synced_from_instance"):
+			# owned by the old ERP (single-writer, hrms/sync/write_block.py): never edited here
+			raise ShiftChangeRefused(
+				f"{row['name']} comes from the old ERP, so it cannot be changed here. Change it there."
+			)
 		if row["start_date"] >= start:
 			remove.append(row["name"])
 		else:

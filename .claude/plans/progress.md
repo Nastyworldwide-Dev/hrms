@@ -277,3 +277,6 @@ NEXT: (1) get live Shift Type values (Enable Auto Attendance, Process Attendance
 NEXT: Plan A step 2 = Desk dialog "Change shift from..." (mockup + owner sign-off first), then Plan B1 check_many/decide_many.
 - 2026-10-05T07:17:13Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-10-05T07:17:13Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-10-05T07:17:15Z COMMIT: 12fff2dd5 feat(roster): HR can change a person's shift from a date → review dispatched
+- 2026-10-05T07:19:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-05T07:19:54Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98

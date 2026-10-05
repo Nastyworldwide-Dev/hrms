@@ -521,7 +521,7 @@ def change_shift_from(employee: str, start_date: str, shifts: str | list, shift_
 		"Shift Assignment",
 		filters={"employee": employee, "docstatus": 1, "status": "Active"},
 		or_filters=[["end_date", ">=", start], ["end_date", "is", "not set"]],
-		fields=["name", "shift_type", "start_date", "end_date", "day_type"],
+		fields=["name", "shift_type", "start_date", "end_date", "day_type", "synced_from_instance"],
 	)
 	worked = {
 		getdate(day)

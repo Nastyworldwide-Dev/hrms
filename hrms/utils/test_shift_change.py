@@ -105,6 +105,18 @@ class TestPlanChange(unittest.TestCase):
 				[row("A", "9-6", date(2026, 9, 1))], FROM, [("10-7", None), ("10-4", ["Friday"])], worked_days=[]
 			)
 
+	def test_a_mirrored_assignment_is_never_ended_or_removed(self):
+		# rows the old ERP owns (synced_from_instance) are single-writer: refuse, never edit
+		mirrored = dict(row("M", "9-6", date(2026, 9, 1)), synced_from_instance="old-erp")
+		with self.assertRaises(ShiftChangeRefused) as caught:
+			plan_change([mirrored], FROM, [("10-7", None)], worked_days=[])
+		self.assertIn("old ERP", str(caught.exception))
+
+	def test_a_mirrored_assignment_that_ended_before_the_date_is_not_in_the_way(self):
+		mirrored = dict(row("M", "9-6", date(2026, 9, 1), date(2026, 10, 5)), synced_from_instance="old-erp")
+		plan = plan_change([mirrored], FROM, [("10-7", None)], worked_days=[])
+		self.assertEqual(plan.end, [])
+
 	def test_no_new_shift_is_refused(self):
 		with self.assertRaises(ShiftChangeRefused):
 			plan_change([row("A", "9-6", date(2026, 9, 1))], FROM, [], worked_days=[])
