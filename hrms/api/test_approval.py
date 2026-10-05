@@ -763,3 +763,19 @@ class TestHalfTransitionedReportAsksOnlyForColumnsEveryTypeHas(unittest.TestCase
 
 	def test_a_type_with_a_company_column_still_reports_it(self):
 		self.assertIn("company", self._fields_asked("Leave Application", has_company=True))
+
+
+class TestDecideHandsTheReasonToTheNotification(unittest.TestCase):
+	"""The employee's rejection notice is built inside on_submit, which runs INSIDE doc.submit();
+	the reason used to be recorded only AFTER the submit, so the notice could not carry it
+	(flows hunt M1, 5 Oct 2026). decide sets it on the document first."""
+
+	def test_the_reason_is_set_on_the_document_before_it_is_submitted(self):
+		src = (pathlib.Path(__file__).resolve().parent / "approval.py").read_text()
+		decide = src[src.index("def decide(") : src.index("def _record_rejection_reason")]
+		# CODE only: the comments around it mention doc.submit() too
+		code = "\n".join(line for line in decide.split("\n") if not line.strip().startswith("#"))
+		flag = code.index("doc.flags.rejection_reason = reason")
+		submit = code.index("doc.submit()")
+		self.assertLess(flag, submit)
+		self.assertIn('status == "Rejected"', code[max(0, flag - 160) : flag])

@@ -402,6 +402,11 @@ def decide(
 	if status == "Rejected" and not reason:
 		frappe.throw(_("Say why this is not approved."), frappe.ValidationError)
 
+	if status == "Rejected":
+		# The employee's notice is built inside on_submit, which runs INSIDE doc.submit(): the reason
+		# has to be on the document BEFORE it, or the notice can only say "Rejected" and never why
+		# (flows hunt M1, 5 Oct 2026). It is still recorded as a Comment below, where the sheet reads it.
+		doc.flags.rejection_reason = reason
 	doc.set(fieldname, status)
 	# ONE save cycle: validate -> before_submit (mirrored-employee guard) ->
 	# db_update -> on_update -> on_submit (ledger, attendance, notifications).

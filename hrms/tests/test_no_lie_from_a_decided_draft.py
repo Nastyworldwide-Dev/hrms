@@ -48,9 +48,10 @@ class _Leave(PWANotificationsMixin):
 	name = "HR-LAP-SYNTHETIC"
 	employee = "EMP-SYNTHETIC"
 
-	def __init__(self, docstatus, status):
+	def __init__(self, docstatus, status, reason=None):
 		self.docstatus = docstatus
 		self.status = status
+		self.flags = frappe._dict(rejection_reason=reason) if reason else frappe._dict()
 
 	def get(self, field):
 		return getattr(self, field)
@@ -59,7 +60,7 @@ class _Leave(PWANotificationsMixin):
 		return True
 
 
-def _notify(docstatus, status):
+def _notify(docstatus, status, reason=None):
 	sent = MagicMock()
 	db = MagicMock()
 	db.get_value.side_effect = lambda doctype, name, field, **k: {
@@ -73,8 +74,14 @@ def _notify(docstatus, status):
 		patch.object(pwa_notifications, "bold", str),
 		patch.object(pwa_notifications, "now_datetime", lambda: DECIDED_AT),
 		patch.object(pwa_notifications, "format_datetime", lambda dt: DECIDED_AT_TEXT),
+		# frappe.utils is a MagicMock under the shared stub; the real escape_html turns & < > " into entities
+		patch(
+			"frappe.utils.escape_html",
+			lambda t: str(t).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"),
+			create=True,
+		),
 	):
-		_Leave(docstatus, status).notify_approval_status()
+		_Leave(docstatus, status, reason).notify_approval_status()
 	return sent
 
 
@@ -94,6 +101,26 @@ class TestTheEmployeeHearsOnlyTheTransaction(unittest.TestCase):
 		sent.insert.assert_called_once()
 		self.assertIn("Rejected", str(sent.message))
 		self.assertIn(DECIDED_AT_TEXT, str(sent.message))
+
+	def test_a_rejection_carries_the_approvers_reason(self):
+		# the approver MUST write one (decide refuses a rejection without it) and it was only kept as a
+		# Comment: the employee was told "Rejected" and never why (flows hunt M1, 5 Oct 2026)
+		sent = _notify(docstatus=1, status="Rejected", reason="No cover for that week")
+		self.assertIn("No cover for that week", str(sent.message))
+
+	def test_the_reason_is_escaped_because_the_message_is_html(self):
+		sent = _notify(docstatus=1, status="Rejected", reason="<img src=x onerror=alert(1)> & more")
+		self.assertNotIn("<img", str(sent.message))
+		self.assertIn("&lt;img", str(sent.message))
+
+	def test_a_rejection_with_no_reason_on_the_document_still_notifies(self):
+		sent = _notify(docstatus=1, status="Rejected")
+		sent.insert.assert_called_once()
+		self.assertIn("Rejected", str(sent.message))
+
+	def test_an_approval_never_carries_a_reason(self):
+		sent = _notify(docstatus=1, status="Approved", reason="left over from an earlier decision")
+		self.assertNotIn("left over", str(sent.message))
 
 	def test_the_time_is_the_site_clock_formatted_by_frappe(self):
 		"""`format_datetime` of `now_datetime()` — the same clock `creation` uses."""

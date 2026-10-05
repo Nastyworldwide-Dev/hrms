@@ -46,6 +46,13 @@ class PWANotificationsMixin:
 				f"{bold('Your')} {bold(self.doctype)} {self.name} has been {bold(status)} "
 				f"by {bold(from_user_name)} on {decided_at}"
 			)
+			# WHY, for a rejection: the approver was made to write one and the employee was never told it.
+			# The message is an HTML Text Editor field, so the reason is escaped.
+			reason = (self.flags.get("rejection_reason") or "").strip() if status == "Rejected" else ""
+			if reason:
+				from frappe.utils import escape_html
+
+				notification.message += f". {bold('Reason')}: {escape_html(reason)}"
 
 			notification.reference_document_type = self.doctype
 			notification.reference_document_name = self.name
