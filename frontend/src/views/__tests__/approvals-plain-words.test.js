@@ -37,7 +37,7 @@ function code(text) {
 // (AUDIT-PLAN, Approvals row), so the rules below now hold there.
 test("the page says whose turn it is", () => {
 	const view = code(read("views/Approvals.vue"))
-	assert.match(view, /__\("Nothing is waiting on you\."\)/, "the empty state names the reader")
+	assert.match(view, /__\(["']Nothing is waiting on you\.["']\)/, "the empty state names the reader")
 	assert.match(view, /__\("Check-ins you've already answered"\)/, "and what they already decided")
 	assert.doesNotMatch(view, /__\("Pending"\)|__\("History"\)/, "not the system's words")
 })

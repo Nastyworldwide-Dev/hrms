@@ -27,14 +27,66 @@
 				</template>
 
 				<template v-else-if="!waiting.error">
+					<!-- The approver's own deadline, said plainly (HR, 4 Oct 2026: "make sure the
+					     approver notices and does their job"). A banner only: it blocks nothing
+					     and forces nothing (owner, 5 Oct). -->
+					<GBanner v-if="headline" variant="warning" data-testid="approvals-banner">
+						<p class="m-0 font-semibold">
+							{{
+								__("{0} waiting. Oldest since {1}.", [
+									headline.count,
+									$dayjs(headline.oldest).format("D MMM"),
+								])
+							}}
+						</p>
+						<p class="m-0 text-caption text-ink-600">
+							{{ __("Staff attendance and pay wait on your decision.") }}
+						</p>
+					</GBanner>
 					<p v-if="rows.length" class="g-form-footer">
 						{{ summary }}
 					</p>
+					<div v-if="rows.length" class="flex items-center justify-between gap-3">
+						<div class="g-approvals__chips" role="group" :aria-label="__('Filter by type')">
+							<button
+								v-for="chip in chips"
+								:key="chip.key"
+								type="button"
+								class="g-focusable g-approvals__chip"
+								:class="{ 'g-approvals__chip--on': kindFilter === chip.key }"
+								:aria-pressed="String(kindFilter === chip.key)"
+								@click="kindFilter = chip.key"
+							>
+								{{ chip.key ? __(chip.label) : __("All") }} · {{ chip.count }}
+							</button>
+						</div>
+						<button
+							type="button"
+							class="g-focusable g-approvals__select"
+							@click="toggleSelectMode"
+						>
+							{{ selectMode ? __("Done") : __("Select") }}
+						</button>
+					</div>
+					<div v-if="selectMode && pickable.length" class="flex items-center">
+						<GCheckbox
+							:model-value="allState === 'all'"
+							:label="__('Select all in this filter')"
+							@update:model-value="ticked = toggleAll(ticked, visibleRows)"
+						/>
+						<span class="text-caption text-ink-600 ml-auto">
+							{{ ticked.size }} / {{ pickable.length }}
+						</span>
+					</div>
 					<!-- The same 51 pt row as the skeleton above (alpha.8 r3: three
 					     skeleton rows collapsing to one grey line moved the page
 					     132 pt; alpha.9 D5: nothing loose). -->
-					<GListPanel v-else>
-						<GListRow :label='__("Nothing is waiting on you.")' :tint="TILE.neutral" :tappable="false">
+					<GListPanel v-if="!rows.length">
+						<GListRow
+							:label="__('Nothing is waiting on you.')"
+							:tint="TILE.neutral"
+							:tappable="false"
+						>
 							<template #icon>
 								<CircleCheckBig class="g-row-icon" />
 							</template>
@@ -60,13 +112,58 @@
 									     instead of the rows jumping when the queue reloads
 									     (alpha.13). -->
 									<TransitionGroup name="g-leave">
-										<GListRow
+										<template
 											v-for="person in shown(`${dept.key}:${kind.key}`, kind.people).rows"
 											:key="person.key"
-											:label="personLine(person, __)"
-											:sublabel="personWhen(person)"
-											@click="openPerson(person)"
-										/>
+										>
+											<!-- select mode: one tick per request, so the approver ticks what
+											     they mean (a person can have three requests of one kind) -->
+											<template v-if="selectMode && person.rows.some(canBulk)">
+												<GListRow
+													v-for="req in person.rows.filter(canBulk)"
+													:key="rowKey(req)"
+													:label="`${req.who} · ${[req.when, req.detail]
+														.filter(Boolean)
+														.join(' · ')}`"
+													:sublabel="ageText(req)"
+													:chevron="false"
+													role="checkbox"
+													:aria-checked="String(ticked.has(rowKey(req)))"
+													@click="ticked = toggle(ticked, req)"
+												>
+													<template #icon>
+														<span
+															class="g-approvals__tick"
+															:class="{ 'g-approvals__tick--on': ticked.has(rowKey(req)) }"
+															aria-hidden="true"
+														>
+															<Check v-if="ticked.has(rowKey(req))" class="g-row-icon" />
+														</span>
+													</template>
+													<template #badge>
+														<span
+															class="g-approvals__age"
+															:class="`g-approvals__age--${tone(req)}`"
+															>{{ ageWords(req) }}</span
+														>
+													</template>
+												</GListRow>
+											</template>
+											<GListRow
+												v-else
+												:label="personLine(person, __)"
+												:sublabel="personWhen(person)"
+												@click="openPerson(person)"
+											>
+												<template #badge>
+													<span
+														class="g-approvals__age"
+														:class="`g-approvals__age--${tone(person.rows[0])}`"
+														>{{ ageWords(person.rows[0]) }}</span
+													>
+												</template>
+											</GListRow>
+										</template>
 									</TransitionGroup>
 									<GroupMore
 										:page="shown(`${dept.key}:${kind.key}`, kind.people)"
@@ -154,11 +251,7 @@
 				</GListPanel>
 			</GModal>
 
-			<GModal
-				:is-open="answeredOpen"
-				:title="answeredLabel"
-				@did-dismiss="answeredOpen = false"
-			>
+			<GModal :is-open="answeredOpen" :title="answeredLabel" @did-dismiss="answeredOpen = false">
 				<div class="flex flex-col gap-3 px-4 pb-8">
 					<GListPanel v-if="decided.loading && !decided.data" loading />
 					<ResourceError v-else-if="decided.error" :resource="decided" what="your answers" />
@@ -186,6 +279,74 @@
 					v-model="selected"
 				/>
 			</GModal>
+
+			<!-- The bar the approver acts from: how many are ticked, and one button. -->
+			<div
+				v-if="selectMode && ticked.size"
+				class="g-approvals__bar"
+				role="region"
+				:aria-label="__('Approve the ticked requests')"
+			>
+				<div class="min-w-0">
+					<p class="m-0 font-semibold">{{ __("{0} selected", [ticked.size]) }}</p>
+					<p class="m-0 text-caption text-ink-600">
+						{{ __("Each one is checked before it is approved.") }}
+					</p>
+				</div>
+				<button type="button" class="g-focusable g-approvals__clear" @click="ticked = new Set()">
+					{{ __("Clear") }}
+				</button>
+				<GButton :label="__('Approve {0}', [ticked.size])" @click="startApprove" />
+			</div>
+
+			<GModal :is-open="!!sheet" :title="__('Approve')" @did-dismiss="sheet = null">
+				<template v-if="sheet">
+					<p v-if="sheet.phase === 'check'" class="text-caption text-ink-600" role="status">
+						{{ __("Checking each one…") }}
+					</p>
+					<template v-else>
+						<section v-if="sheet.ready.length" class="flex flex-col gap-2">
+							<h3 class="g-eyebrow">{{ __("{0} ready", [sheet.ready.length]) }}</h3>
+							<GListPanel>
+								<GListRow
+									v-for="req in sheet.ready"
+									:key="rowKey(req)"
+									:label="rowLabel(req)"
+									:chevron="false"
+									:tappable="false"
+								/>
+							</GListPanel>
+						</section>
+						<section v-if="sheet.refused.length" class="flex flex-col gap-2">
+							<h3 class="g-eyebrow">{{ __("{0} will be refused", [sheet.refused.length]) }}</h3>
+							<GListPanel>
+								<GListRow
+									v-for="req in sheet.refused"
+									:key="rowKey(req)"
+									:label="rowLabel(req)"
+									:sublabel="req.reason"
+									:chevron="false"
+									:tappable="false"
+								/>
+							</GListPanel>
+							<p class="text-caption text-ink-600">
+								{{ __("Refused ones stay in your list. Open one to see what to fix.") }}
+							</p>
+						</section>
+						<GButton
+							:label="
+								sheet.ready.length
+									? __('Approve {0}', [sheet.ready.length])
+									: __('Nothing to approve')
+							"
+							:pending="sheet.phase === 'working'"
+							:pending-label="__('Approving…')"
+							:disabled="!sheet.ready.length"
+							@click="confirmApprove"
+						/>
+					</template>
+				</template>
+			</GModal>
 		</template>
 	</BaseLayout>
 </template>
@@ -205,13 +366,33 @@ import GModal from "@/components/glass/GModal.vue"
 //: Loaded on first use, not in the first download (alpha.13: Ionic's
 //: refresher is 41 KB, and nobody pulls before the page has drawn).
 const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
-import { CircleCheckBig } from "lucide-vue-next"
+import { Check, CircleCheckBig } from "lucide-vue-next"
 import { TILE } from "@/utils/iconTile"
 import { personalCacheKey } from "@/utils/personalCache"
 import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
 import { decidedForApproverResource } from "@/data/remoteCheckin"
 import { isApprover } from "@/data/team"
 import { groupApprovals, pageOf, personLine } from "@/utils/approvalGroups"
+import {
+	afterApprove,
+	ageTone,
+	allState as allStateOf,
+	banner,
+	canBulk,
+	daysWaiting,
+	filterByKind,
+	itemsFor,
+	overCap,
+	prune,
+	rowKey,
+	toggle,
+	toggleAll,
+	typeChips,
+} from "@/utils/approvalBulk"
+import GBanner from "@/components/glass/GBanner.vue"
+import GButton from "@/components/glass/GButton.vue"
+import GCheckbox from "@/components/glass/GCheckbox.vue"
+import { gToast } from "@/components/glass/toast"
 
 const __ = inject("$translate")
 const router = useRouter()
@@ -228,7 +409,32 @@ const waiting = createResource({
 	auto: true,
 })
 const rows = computed(() => waiting.data?.rows || [])
-const groups = computed(() => groupApprovals(rows.value))
+
+// Filter by type (HR, 4 Oct 2026). The chips count what is waiting; the filter narrows what the
+// groups below show, so "See all", the group counts and select-all all follow it.
+const kindFilter = ref("")
+const chips = computed(() => typeChips(rows.value))
+const visibleRows = computed(() => filterByKind(rows.value, kindFilter.value))
+const groups = computed(() => groupApprovals(visibleRows.value))
+watch(chips, (list) => {
+	// a filter whose last request was decided is gone: fall back to All
+	if (kindFilter.value && !list.some((chip) => chip.key === kindFilter.value))
+		kindFilter.value = ""
+})
+
+const headline = computed(() => banner(rows.value, new Date().toISOString().slice(0, 10)))
+
+// Select mode: tick many, approve once. Check-ins stay one by one (approvalBulk.ONE_BY_ONE).
+const selectMode = ref(false)
+const ticked = ref(new Set())
+const pickable = computed(() => visibleRows.value.filter(canBulk))
+const allState = computed(() => allStateOf(ticked.value, visibleRows.value))
+function toggleSelectMode() {
+	selectMode.value = !selectMode.value
+	if (!selectMode.value) ticked.value = new Set()
+}
+// a request that left the list (decided elsewhere, or approved here) is no longer ticked
+watch(rows, (list) => (ticked.value = prune(ticked.value, list)))
 
 //: "3 waiting · oldest since 20 Sep" (mockup 4's summary line).
 const summary = computed(() => {
@@ -329,6 +535,80 @@ function close() {
 	waiting.reload()
 }
 
+// A request in the confirm sheet, named the way the list names it.
+const byKey = computed(() => new Map(rows.value.map((row) => [rowKey(row), row])))
+function rowLabel(req) {
+	const row = byKey.value.get(rowKey(req))
+	return row ? `${row.who} · ${[row.when, row.detail].filter(Boolean).join(" · ")}` : req.name
+}
+
+// How long a request has waited, in words and as a tone (amber from 7 days, red from 14).
+const today = () => new Date().toISOString().slice(0, 10)
+const waited = (row) => daysWaiting(row.modified, today())
+const tone = (row) => ageTone(waited(row))
+const ageWords = (row) => {
+	const days = waited(row)
+	return days < 1 ? __("Today") : days === 1 ? __("1 day") : __("{0} days", [days])
+}
+const ageText = (row) => __("since {0}", [$dayjs(row.modified).format("D MMM")])
+
+// Approve many: ask the server which would go through, show it, then approve those.
+// The server adds no rule of its own: each request goes through the same decide() as one by one.
+const sheet = ref(null) // null | { phase: "check" | "ready" | "working", ready: [], refused: [] }
+const checkMany = createResource({ url: "hrms.api.approval.check_many" })
+const decideMany = createResource({ url: "hrms.api.approval.decide_many" })
+
+async function startApprove() {
+	if (overCap(ticked.value)) {
+		return gToast({
+			title: __("Approve up to 50 at a time"),
+			text: __("Untick some and try again."),
+			variant: "warning",
+		})
+	}
+	sheet.value = { phase: "check", ready: [], refused: [] }
+	try {
+		const result = await checkMany.submit({ items: itemsFor(ticked.value, rows.value) })
+		sheet.value = { phase: "ready", ready: result.ready, refused: result.refused }
+	} catch (error) {
+		console.warn("[Approvals] the check failed", error)
+		sheet.value = null
+		gToast({
+			title: __("Could not check these"),
+			text: __("Nothing was approved. Try again."),
+			variant: "error",
+		})
+	}
+}
+
+async function confirmApprove() {
+	const current = sheet.value
+	if (!current || current.phase !== "ready" || !current.ready.length) return
+	sheet.value = { ...current, phase: "working" }
+	try {
+		// only the ones the check said would go through, with the revision the approver saw
+		const result = await decideMany.submit({ items: current.ready })
+		const done = afterApprove(ticked.value, result)
+		ticked.value = done.selected
+		sheet.value = null
+		gToast({
+			title: done.approved === 1 ? __("1 approved") : __("{0} approved", [done.approved]),
+			text: done.refused.length ? __("{0} stayed in your list.", [done.refused.length]) : "",
+			variant: done.refused.length ? "warning" : "success",
+		})
+		await waiting.reload()
+	} catch (error) {
+		console.warn("[Approvals] bulk approve failed", error)
+		sheet.value = null
+		gToast({
+			title: __("Could not approve"),
+			text: __("Reload the list to see what went through."),
+			variant: "error",
+		})
+		await waiting.reload()
+	}
+}
+
 async function refresh(event) {
 	console.info("[Approvals] pull-to-refresh")
 	await waiting.reload()
@@ -343,6 +623,76 @@ async function refresh(event) {
 }
 .g-approvals__kind {
 	padding: 8px 16px 0;
+}
+.g-approvals__chips {
+	display: flex;
+	gap: 8px;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+.g-approvals__chip,
+.g-approvals__select,
+.g-approvals__clear {
+	min-height: var(--g-touch-target-min);
+	padding: 0 12px;
+	border: 1px solid var(--g-hair);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--g-ink);
+	white-space: nowrap;
+	cursor: pointer;
+}
+.g-approvals__chip--on {
+	background: var(--g-ink);
+	color: var(--g-bg);
+}
+.g-approvals__select,
+.g-approvals__clear {
+	border-color: transparent;
+	color: var(--g-accent-ink);
+}
+.g-approvals__tick {
+	display: grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
+	border: 2px solid var(--g-ink-3);
+	border-radius: 999px;
+}
+.g-approvals__tick--on {
+	background: var(--g-accent);
+	border-color: var(--g-accent);
+	color: var(--g-on-brand);
+}
+/* a number AND a word: colour is never the only signal (WCAG 1.4.1) */
+.g-approvals__age {
+	font-size: 12px;
+	font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 999px;
+	white-space: nowrap;
+}
+.g-approvals__age--calm {
+	color: var(--g-ink-2);
+}
+.g-approvals__age--amber {
+	color: var(--g-warn-ink);
+	background: rgb(var(--g-warn-ink-rgb) / 0.14);
+}
+.g-approvals__age--red {
+	color: var(--g-danger-ink);
+	background: rgb(var(--g-danger-ink-rgb) / 0.14);
+}
+.g-approvals__bar {
+	position: sticky;
+	bottom: 0;
+	z-index: 3;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 16px;
+	border-top: 1px solid var(--g-hair);
+	background: var(--g-sheet-bg);
 }
 .g-approvals__toggle {
 	display: flex;

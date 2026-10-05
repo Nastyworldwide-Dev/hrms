@@ -22,7 +22,7 @@ test("each row says who, what, when; the row opens the request sheet", () => {
 })
 
 test("an empty queue is one plain line", () => {
-	assert.match(template, /__\("Nothing is waiting on you\."\)/)
+	assert.match(template, /__\(["']Nothing is waiting on you\.["']\)/)
 })
 
 test("the route exists, and Home's waiting rows open it", () => {

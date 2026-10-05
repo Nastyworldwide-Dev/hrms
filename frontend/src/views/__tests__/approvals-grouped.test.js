@@ -11,7 +11,7 @@ const page = readFileSync(fileURLToPath(new URL("../Approvals.vue", import.meta.
 const template = page.slice(0, page.indexOf("<script"))
 
 test("the page is grouped by the shared module, not a flat list", () => {
-	assert.match(page, /groupApprovals\(rows\.value\)/)
+	assert.match(page, /groupApprovals\(visibleRows\.value\)/)
 	assert.doesNotMatch(template, /v-for="row in rows"/)
 })
 
