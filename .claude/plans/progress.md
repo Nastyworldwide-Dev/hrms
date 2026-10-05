@@ -280,3 +280,6 @@ NEXT: Plan A step 2 = Desk dialog "Change shift from..." (mockup + owner sign-of
 - 2026-10-05T07:17:15Z COMMIT: 12fff2dd5 feat(roster): HR can change a person's shift from a date → review dispatched
 - 2026-10-05T07:19:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-10-05T07:19:54Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-10-05T07:19:56Z COMMIT: a0c3d9651 fix(roster): changing a shift from a date touched rows the old ERP owns → review dispatched
+- 2026-10-05T07:22:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-05T07:22:05Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98

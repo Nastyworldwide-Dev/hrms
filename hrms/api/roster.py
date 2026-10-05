@@ -511,7 +511,10 @@ def change_shift_from(employee: str, start_date: str, shifts: str | list, shift_
 		frappe.throw(_("Only HR can change a person's shift from a date."), frappe.PermissionError)
 
 	start = getdate(start_date)
-	asked = json.loads(shifts) if isinstance(shifts, str) else shifts
+	try:
+		asked = json.loads(shifts) if isinstance(shifts, str) else shifts
+	except ValueError:
+		frappe.throw(_("Pick the new shift."))
 	new_shifts = [(row.get("shift_type"), row.get("days") or None) for row in asked or []]
 	for shift_type, _days in new_shifts:
 		if not shift_type or not frappe.db.exists("Shift Type", shift_type):
@@ -537,6 +540,15 @@ def change_shift_from(employee: str, start_date: str, shifts: str | list, shift_
 			filters={"employee": employee, "time": [">=", f"{start} 00:00:00"]},
 			pluck="time",
 		)
+	} | {
+		# a punch the day before, stamped to a shift day on or after the date (an early IN, a
+		# night shift): cancelling that assignment would leave it pointing at nothing
+		getdate(day)
+		for day in frappe.get_all(
+			"Employee Checkin",
+			filters={"employee": employee, "shift_start": [">=", f"{start} 00:00:00"]},
+			pluck="shift_start",
+		)
 	}
 	try:
 		plan = plan_change(assignments, start, new_shifts, sorted(worked))
@@ -544,7 +556,7 @@ def change_shift_from(employee: str, start_date: str, shifts: str | list, shift_
 		frappe.throw(str(refused))
 
 	company = frappe.db.get_value("Employee", employee, "company")
-	day_type = next((a.day_type for a in assignments if a.day_type and a.day_type != "None"), None)
+	day_type = plan.day_type
 	logger.info("[roster] %s changes %s from %s: %s", frappe.session.user, employee, start, new_shifts)
 
 	for name, last_day in plan.end:
@@ -554,11 +566,18 @@ def change_shift_from(employee: str, start_date: str, shifts: str | list, shift_
 		doc.save()
 	for name in plan.remove:
 		_remove_assignment(frappe.get_doc("Shift Assignment", name))
-	# a repeating schedule would keep creating the old shift after the change
-	for name in frappe.get_all(
-		"Shift Schedule Assignment", {"employee": employee, "enabled": 1}, pluck="name"
-	):
+	# a repeating schedule would keep creating the old shift after the change. Mirrored ones
+	# belong to the old ERP (single-writer; set_value skips the write-block) and are ignored by
+	# process_auto_shift_creation anyway, so they are left alone.
+	stopped = frappe.get_all(
+		"Shift Schedule Assignment",
+		{"employee": employee, "enabled": 1, "synced_from_instance": ["is", "not set"]},
+		pluck="name",
+	)
+	for name in stopped:
 		frappe.db.set_value("Shift Schedule Assignment", name, "enabled", 0)
+	if stopped:
+		logger.info("[roster] %s switched off repeating schedules %s for %s", frappe.session.user, stopped, employee)
 
 	for shift_type, days in plan.create:
 		if not days:

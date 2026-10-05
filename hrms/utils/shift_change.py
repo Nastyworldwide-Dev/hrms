@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
 #: end: [(assignment, last day)], remove: [assignment], create: [(shift, weekdays or None)]
-ShiftChangePlan = namedtuple("ShiftChangePlan", "start end remove create")
+ShiftChangePlan = namedtuple("ShiftChangePlan", "start end remove create day_type")
 
 
 class ShiftChangeRefused(Exception):
@@ -54,7 +54,7 @@ def plan_change(assignments, start, new_shifts, worked_days) -> ShiftChangePlan:
 			f"{start}. Pick a later date, or fix that day in Fix attendance first."
 		)
 
-	end, remove = [], []
+	end, remove, day_types = [], [], set()
 	day_before = start - timedelta(days=1)
 	for row in assignments:
 		if row["end_date"] and row["end_date"] < start:
@@ -68,7 +68,13 @@ def plan_change(assignments, start, new_shifts, worked_days) -> ShiftChangePlan:
 			remove.append(row["name"])
 		else:
 			end.append((row["name"], day_before))
+			if row.get("day_type") not in (None, "", "None"):
+				day_types.add(row["day_type"])
 	logger.info(
 		"[shift_change] from %s: end %d, remove %d, create %d", start, len(end), len(remove), len(new_shifts)
 	)
-	return ShiftChangePlan(start, end, remove, list(new_shifts))
+	# The Day Type carries over only from what is being ENDED, and only when those agree: a
+	# removed future one-day override (an "Off Day" on 20 Oct) must never become the Day Type
+	# of every new assignment (reviewer, 5 Oct 2026).
+	day_type = day_types.pop() if len(day_types) == 1 else None
+	return ShiftChangePlan(start, end, remove, list(new_shifts), day_type)
