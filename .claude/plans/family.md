@@ -1,6 +1,6 @@
-CLASS: a row's second line forced onto ONE line (nowrap + ellipsis) when the fact that matters is at its END, so a narrow phone cuts the important words first. The Team row cut "Half day" off at 360px (design review of ff899b5a4); every other list row's sublabel already clamps to two lines.
-frontend/src/theme/glass-components.css:.g-team-row__sub same-root (fixed here: two-line clamp, no nowrap)
-frontend/src/theme/glass-components.css:.g-team-row__name not-affected — a name is one short fact, ellipsis is right
-frontend/src/theme/glass-components.css:.g-row__sub not-affected — already two-line clamp
-frontend/src/components/DaySheet.vue:GListRow sublabel not-affected — GListRow's .g-row__sub clamps at two lines
-frontend/src/theme/glass-components.css:other nowrap rules not-affected — checked at review: titles, chips and single values, none carry a trailing fact
+CLASS: a lookup built into a dict keyed by person, fed by a query with no order, so when two rows exist for one person the one that wins is whichever the database listed last. HR's half day (a submitted Attendance) could lose to an older draft row saying Present.
+hrms/api/team.py:member_statuses same-root (fixed here: order_by docstatus asc, modified asc, so the submitted and latest row is the one the dict keeps)
+hrms/api/team.py:leaves dict not-affected — filtered to docstatus 1 and status Approved, one row per person per day by the overlap rule
+hrms/api/calendar.py:get_day not-affected — reads rows from member_statuses
+hrms/api/calendar.py:month view not-affected — reads Attendance directly per day, not through a person-keyed dict
+hrms/utils/team_status.py:derive_member_status not-affected — takes the status it is given

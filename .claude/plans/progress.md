@@ -205,3 +205,6 @@ NEXT: (1) route announcements._push_to_users through push_body (same &amp; defec
 - 2026-10-05T09:52:51Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
 - 2026-10-05T09:52:54Z COMMIT: ff899b5a4 fix(team): a day HR marked half showed the boss a bare "Present" → review+design dispatched
 - 2026-10-05T09:54:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-05T09:54:50Z COMMIT: 9d6a5e062 fix(team): "Half day" was the first thing cut off on a phone → review+design dispatched
+- 2026-10-05T09:55:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-10-05T09:55:49Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81

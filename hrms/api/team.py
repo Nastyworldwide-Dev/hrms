@@ -232,6 +232,9 @@ def member_statuses(members, day) -> tuple[list[dict], dict]:
 			"Attendance",
 			filters={"employee": ("in", ids), "attendance_date": day, "docstatus": ("<", 2)},
 			fields=["employee", "status", "shift"],
+			# one row per person comes out of the dict below: a submitted row beats a draft, the latest
+			# edit beats an older one, so "Half Day" does not depend on which row the database listed first
+			order_by="docstatus asc, modified asc",
 			ignore_permissions=True,
 		)
 	}

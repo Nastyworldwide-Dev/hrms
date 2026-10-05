@@ -49,6 +49,16 @@ def _tap(employee, log_type, hh, mm):
 	)
 
 
+def _ordered(rows, kw):
+	"""Honour order_by like the database: "docstatus asc, modified asc" sorts by those keys, in turn."""
+	spec = kw.get("order_by")
+	if not spec:
+		return rows
+	keys = [part.split() for part in spec.split(",")]
+	for key, direction in reversed(keys):
+		rows = sorted(rows, key=lambda r: r.get(key) or 0, reverse=(direction.lower() == "desc"))
+	return rows
+
 class TestCalendarTeamMatchesTeamPage(unittest.TestCase):
 	def _run(self, fn, *args, members, taps, attendance=(), leave=()):
 		tables = {
@@ -59,7 +69,7 @@ class TestCalendarTeamMatchesTeamPage(unittest.TestCase):
 		}
 		shift = frappe._dict(start_time="09:00:00", end_time="18:00:00")
 		with (
-			patch.object(frappe, "get_all", side_effect=lambda doctype, **kw: tables.get(doctype, [])),
+			patch.object(frappe, "get_all", side_effect=lambda doctype, **kw: _ordered(tables.get(doctype, []), kw)),
 			patch.object(frappe, "db") as db,
 			patch.object(frappe, "session", frappe._dict(user="senior@example.com")),
 			patch("hrms.api.get_current_employee", return_value="SENIOR", create=True),
@@ -118,6 +128,19 @@ class TestCalendarTeamMatchesTeamPage(unittest.TestCase):
 		self.assertEqual(rows["A"]["status"], "Present")
 		self.assertTrue(rows["A"]["half_day_marked"])
 		self.assertFalse(rows["B"]["half_day_marked"])
+
+	def test_two_attendance_rows_for_one_day_the_submitted_one_decides(self):
+		# an old draft says Present, the submitted row says Half Day: the day is a half, whatever order
+		# the database lists them in
+		members = [_member("A", "Natrah")]
+		taps = [_tap("A", "IN", 12, 38)]
+		for order in (("draft", "submitted"), ("submitted", "draft")):
+			rows = {
+				"draft": frappe._dict(employee="A", status="Present", shift="9AM - 6PM", docstatus=0, modified="2026-10-02 10:00"),
+				"submitted": frappe._dict(employee="A", status="Half Day", shift="9AM - 6PM", docstatus=1, modified="2026-10-02 09:00"),
+			}
+			page = self._run(team.get_team_status, DAY, members=members, taps=taps, attendance=[rows[k] for k in order])
+			self.assertTrue(page["members"][0]["half_day_marked"], order)
 
 	def test_the_caller_is_never_in_their_own_team(self):
 		members = [_member("SENIOR", "Me"), _member("A", "Harith")]
