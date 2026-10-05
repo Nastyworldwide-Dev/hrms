@@ -159,22 +159,24 @@ hrms.change_shift.open = function (employee, employee_name, current) {
 				refresh();
 			} },
 			{ fieldtype: "HTML", fieldname: "rows" },
+			{ fieldtype: "HTML", fieldname: "hint", options: `<p class="text-muted small">${__("A day can be on one shift only.")}</p>` },
 			{ fieldtype: "Section Break", label: __("What will change") },
-			{ fieldtype: "HTML", fieldname: "preview" },
-			{ fieldtype: "HTML", fieldname: "error" },
+			{ fieldtype: "HTML", fieldname: "preview", options: '<div data-cs="preview" aria-live="polite"></div>' },
+			{ fieldtype: "HTML", fieldname: "error", options: '<div data-cs="error" role="alert" class="text-danger"></div>' },
 		],
 		primary_action_label: __("Change shift"),
 		primary_action: () => submit(),
 	});
 
+	// The two live regions are in the dialog from the start and only their text changes: a
+	// screen reader skips a live region that is created already filled.
 	function show_error(message) {
-		// the container already exists with role=alert, so the text is announced when it arrives
-		dialog.get_field("error").$wrapper.html(`<div role="alert" class="text-danger">${message ? cs_escape(message) : ""}</div>`);
+		dialog.get_field("error").$wrapper.find('[data-cs="error"]').html(message ? cs_escape(message) : "");
 	}
 
 	function draw() {
-		dialog.get_field("preview").$wrapper.html(
-			`<div aria-live="polite">${cs_preview(dialog.get_value("start"), state.rows, state.different, state.shifts, state.server)}</div>`
+		dialog.get_field("preview").$wrapper.find('[data-cs="preview"]').html(
+			cs_preview(dialog.get_value("start"), state.rows, state.different, state.shifts, state.server)
 		);
 	}
 
@@ -183,11 +185,11 @@ hrms.change_shift.open = function (employee, employee_name, current) {
 	function ask_server() {
 		const date = dialog.get_value("start");
 		const shifts = hrms.change_shift.payload(state.rows, state.different);
-		if (!date || !shifts.length) {
-			state.server = null;
-			return draw();
-		}
+		// every path invalidates an answer still on its way: a reply for a date that was cleared
+		// or a shift that was removed must never repaint
 		const mine = ++state.ask;
+		state.server = null; // and a slow answer for another date must not stay on screen meanwhile
+		if (!date || !shifts.length) return draw();
 		frappe.call({
 			method: "hrms.api.roster.preview_shift_change",
 			type: "POST",
@@ -198,7 +200,9 @@ hrms.change_shift.open = function (employee, employee_name, current) {
 				draw();
 			},
 			error: () => {
-				if (mine === state.ask) state.server = null;
+				if (mine !== state.ask) return;
+				state.server = null;
+				draw();
 			},
 		});
 	}
@@ -249,6 +253,7 @@ hrms.change_shift.open = function (employee, employee_name, current) {
 				.on("click", () => {
 					state.rows.push({ shift: "", days: [] });
 					render_rows();
+					wrap.find(`#cs-shift-${state.rows.length - 1}`).trigger("focus");
 				});
 		}
 	}
@@ -286,9 +291,10 @@ hrms.change_shift.open = function (employee, employee_name, current) {
 
 	frappe.db.get_list("Shift Type", { fields: ["name", "start_time", "end_time"], limit: 500 }).then((list) => {
 		list.forEach((s) => (state.shifts[s.name] = `${s.name} (${String(s.start_time).slice(0, 5)}-${String(s.end_time).slice(0, 5)})`));
+		if (!list.length) show_error(__("There are no shifts to choose from."));
 		render_rows();
 		refresh();
-	});
+	}).catch(() => show_error(__("Could not load the shifts. Close this and try again.")));
 	dialog.show();
 	dialog.get_field("start").$input && dialog.get_field("start").$input.trigger("focus");
 };
@@ -299,7 +305,7 @@ frappe.ui.form.on("Shift Assignment", {
 		if (frm.doc.docstatus !== 1 || !hrms.change_shift.enabled()) return;
 		frm.add_custom_button(
 			__("Change shift from..."),
-			() => hrms.change_shift.open(frm.doc.employee, frm.doc.employee_name, __("{0}, from {1}", [frm.doc.shift_type, frm.doc.start_date])),
+			() => hrms.change_shift.open(frm.doc.employee, frm.doc.employee_name, __("{0}, from {1}", [frm.doc.shift_type, frappe.datetime.str_to_user(frm.doc.start_date)])),
 			__("Actions")
 		);
 	},

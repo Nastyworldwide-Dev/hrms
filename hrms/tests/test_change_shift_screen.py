@@ -54,6 +54,29 @@ class TestChangeShiftScreen(unittest.TestCase):
 		names = re.search(r"CS_WEEKDAYS = \[(.*?)\]", BUNDLE).group(1)
 		self.assertEqual(re.findall(r'"(\w+)"', names), list(shift_change.WEEKDAYS))
 
+	def test_the_live_regions_exist_before_their_text_arrives(self):
+		# a screen reader skips a live region created already filled: the nodes are in the
+		# dialog's field options and only their text changes (design review pass 2)
+		self.assertIn('data-cs="error" role="alert"', BUNDLE)
+		self.assertIn('data-cs="preview" aria-live="polite"', BUNDLE)
+		show_error = BUNDLE.split("function show_error")[1].split("function draw")[0]
+		self.assertNotIn("role=", show_error)
+
+	def test_a_failed_preview_never_leaves_an_old_answer_on_screen(self):
+		ask = BUNDLE.split("function ask_server")[1].split("function refresh")[0]
+		self.assertIn("state.server = null", ask.split("frappe.call")[0])
+		self.assertIn("draw()", ask.split("error:")[1])
+
+	def test_a_shift_list_that_fails_to_load_says_so(self):
+		after = BUNDLE.split('frappe.db.get_list("Shift Type"')[1]
+		self.assertIn(".catch(", after)
+		self.assertIn("Could not load the shifts", after)
+
+	def test_an_answer_still_on_its_way_is_dropped_on_every_path(self):
+		# the counter is bumped BEFORE the early return for a cleared date / removed shift
+		ask = BUNDLE.split("function ask_server")[1].split("function refresh")[0]
+		self.assertLess(ask.index("++state.ask"), ask.index("return draw()"))
+
 	def test_a_press_while_saving_does_nothing(self):
 		self.assertIn("state.busy", BUNDLE)
 
