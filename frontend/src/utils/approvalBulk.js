@@ -18,6 +18,17 @@ export const ONE_BY_ONE = ["Remote Checkin Request"]
 
 export const canBulk = (row) => !ONE_BY_ONE.includes(row.doctype)
 
+//: Today's calendar day IN THE SITE'S TIME ZONE ("2026-10-06"), not UTC's. The page used the UTC
+//: date, so an approver at UTC+8 between midnight and 8 am saw every wait one day short. A zone
+//: the browser does not know falls back to the browser's own day instead of throwing.
+export function siteToday(now = new Date(), timeZone = "") {
+	try {
+		return new Intl.DateTimeFormat("en-CA", { timeZone: timeZone || undefined }).format(now)
+	} catch {
+		return new Intl.DateTimeFormat("en-CA").format(now)
+	}
+}
+
 // whole days between two dates, by the calendar (never negative)
 export function daysWaiting(since, today) {
 	const a = Date.UTC(...ymd(since))

@@ -97,3 +97,8 @@ test("the chip that is on has readable colours: both come from tokens that exist
 		assert.ok(defined.includes(`${name}:`), `${name} is not defined in the theme`)
 	}
 })
+
+test("ages and the banner count from the site's calendar day, never the UTC date", () => {
+	assert.match(script, /siteToday\(new Date\(\), siteTimeZone\(\)\)/)
+	assert.doesNotMatch(script, /toISOString\(\)\.slice\(0, 10\)/)
+})

@@ -385,6 +385,7 @@ import {
 	overCap,
 	prune,
 	rowKey,
+	siteToday,
 	toggle,
 	toggleAll,
 	typeChips,
@@ -393,6 +394,7 @@ import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GCheckbox from "@/components/glass/GCheckbox.vue"
 import { gToast } from "@/components/glass/toast"
+import { siteTimeZone } from "@/utils/siteTime"
 
 const __ = inject("$translate")
 const router = useRouter()
@@ -422,7 +424,7 @@ watch(chips, (list) => {
 		kindFilter.value = ""
 })
 
-const headline = computed(() => banner(rows.value, new Date().toISOString().slice(0, 10)))
+const headline = computed(() => banner(rows.value, today()))
 
 // Select mode: tick many, approve once. Check-ins stay one by one (approvalBulk.ONE_BY_ONE).
 const selectMode = ref(false)
@@ -543,7 +545,7 @@ function rowLabel(req) {
 }
 
 // How long a request has waited, in words and as a tone (amber from 7 days, red from 14).
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => siteToday(new Date(), siteTimeZone())
 const waited = (row) => daysWaiting(row.modified, today())
 const tone = (row) => ageTone(waited(row))
 const ageWords = (row) => {

@@ -13,6 +13,7 @@ import {
 	banner,
 	canBulk,
 	daysWaiting,
+	siteToday,
 	filterByKind,
 	itemsFor,
 	overCap,
@@ -158,4 +159,24 @@ test("after approving, what was refused stays ticked and listed with its reason"
 	assert.deepEqual(after.refused, result.refused)
 	assert.equal(after.selected.has(rowKey(leave("A"))), false)
 	assert.equal(after.selected.has(rowKey(leave("B"))), true)
+})
+
+test("today is the SITE's calendar day, not UTC's: 7:30 am Tuesday in Malaysia is still Monday in UTC", () => {
+	// the page used new Date().toISOString().slice(0, 10), which is the UTC date. For an approver
+	// at UTC+8 between midnight and 8 am every wait read one day short (and a request sent
+	// late on Monday read "Today" on Tuesday morning).
+	assert.equal(siteToday(new Date("2026-10-05T23:30:00Z"), "Asia/Kuala_Lumpur"), "2026-10-06")
+	assert.equal(siteToday(new Date("2026-10-05T23:30:00Z"), "UTC"), "2026-10-05")
+	assert.equal(siteToday(new Date("2026-10-05T16:00:00Z"), "Asia/Kuala_Lumpur"), "2026-10-06")
+	assert.equal(siteToday(new Date("2026-10-05T15:59:00Z"), "Asia/Kuala_Lumpur"), "2026-10-05")
+})
+
+test("a bad time zone falls back to the browser's day instead of throwing", () => {
+	assert.match(siteToday(new Date("2026-10-05T12:00:00Z"), "Not/AZone"), /^\d{4}-\d{2}-\d{2}$/)
+	assert.match(siteToday(new Date("2026-10-05T12:00:00Z"), ""), /^\d{4}-\d{2}-\d{2}$/)
+})
+
+test("a request sent late on Monday has waited one day by Tuesday morning at site time", () => {
+	const today = siteToday(new Date("2026-10-05T23:30:00Z"), "Asia/Kuala_Lumpur")
+	assert.equal(daysWaiting("2026-10-05 23:30:00", today), 1)
 })

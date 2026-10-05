@@ -228,3 +228,6 @@ NOT BUILT: the desktop Table view (columns, sort, search) - HR's "datatable"; se
 - 2026-10-05T08:03:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
 - 2026-10-05T08:03:12Z COMMIT: 5943dfa58 feat(approvals): the bookkeeping for filtering and approving many requests → review+design dispatched
 - 2026-10-05T08:03:26Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-05T08:03:30Z COMMIT: 83a7113e8 feat(approvals): filter by type and approve many requests at once → review+design dispatched
+- 2026-10-05 PLAN B step 2 fix found while the reviewers ran: ages and the banner used the UTC date (new Date().toISOString().slice(0,10)), so an approver at UTC+8 between midnight and 8 am saw every wait one day short (verified: a request really 1 day old read 1 vs 2 by the site calendar). Now siteToday(new Date(), siteTimeZone()) (new, tested: KL 23:30Z -> next day; bad zone falls back). 49 node tests green; the page test fails if the UTC date comes back.
+- 2026-10-05T08:05:46Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
