@@ -63,12 +63,13 @@ def fake_get_all(doctype, filters=None, pluck=None, **kw):
 
 
 class TestApprovalsList(unittest.TestCase):
-	def _list(self, readable=lambda doc: True):
+	def _list(self, readable=lambda doc: True, reason_readable=lambda doc: True):
 		with (
 			patch.object(frappe, "get_all", side_effect=fake_get_all, create=True),
 			patch.object(frappe, "get_doc", side_effect=lambda dt, name: DOCS[(dt, name)]),
 			patch.object(approvals_list, "_is_routed_approver", side_effect=lambda doc: doc.name != "LA-2"),
 			patch.object(approvals_list, "_request_read_allowed", side_effect=readable, create=True),
+			patch.object(approvals_list, "may_read_leave_reason", side_effect=reason_readable, create=True),
 			patch.object(approvals_list, "_types_on_site", return_value=["Leave Application", "OT Request"]),
 		):
 			return approvals_list.get_waiting_for_me()
@@ -87,6 +88,14 @@ class TestApprovalsList(unittest.TestCase):
 		names = [row["name"] for row in self._list(readable=lambda doc: doc.name != "LA-1")["rows"]]
 		self.assertNotIn("LA-1", names)
 		self.assertIn("OT-1", names)
+
+	def test_the_reason_is_withheld_from_a_reader_the_helper_refuses(self):
+		# owner ruling 5 Oct 2026: approvers on the line read the reason, others do not; the page
+		# asks the SAME helper as the leave list
+		rows = self._list(reason_readable=lambda doc: False)["rows"]
+		leave = next(row for row in rows if row["name"] == "LA-1")
+		self.assertEqual(leave["reason"], "")
+		self.assertEqual(leave["who"], "Aisyah")  # the request itself is still listed
 
 	def test_oldest_first_and_each_row_says_who_what_when_why(self):
 		rows = self._list()["rows"]
@@ -159,6 +168,7 @@ class TestRemoteCheckinsJoinTheList(unittest.TestCase):
 			patch.object(frappe, "get_doc", side_effect=lambda dt, name: DOCS[(dt, name)]),
 			patch.object(approvals_list, "_is_routed_approver", side_effect=lambda doc: doc.name != "LA-2"),
 			patch.object(approvals_list, "_request_read_allowed", side_effect=lambda doc: True),
+			patch.object(approvals_list, "may_read_leave_reason", return_value=True, create=True),
 			patch.object(approvals_list, "_types_on_site", return_value=["Leave Application"]),
 			patch.object(approvals_list, "_remote_checkins", side_effect=remote),
 		):
@@ -409,6 +419,7 @@ def grouped_patches(user=CALLER, own=(CALLER_EMPLOYEE,), routed=lambda doc: True
 		patch.object(approvals_list, "own_employees", return_value=list(own)),
 		patch.object(approvals_list, "_is_routed_approver", side_effect=routed),
 		patch.object(approvals_list, "_request_read_allowed", side_effect=lambda doc: True),
+		patch.object(approvals_list, "may_read_leave_reason", return_value=True, create=True),
 		patch.object(
 			approvals_list,
 			"_types_on_site",

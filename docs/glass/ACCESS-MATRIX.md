@@ -48,7 +48,7 @@ here for a formal yes.
 | Record | Employee | Manager | HR | System Manager | Rule |
 |---|---|---|---|---|---|
 | Who is off today + leave TYPE | own | own team | all in fence | no | hrms/api/team.py:224,279 (type only) |
-| Leave REASON | own | **never** | yes | no | owner rule; team.py sends leave_type only |
+| Leave REASON | own | only when on the approval line (the direct manager is, by the 21 and 29 Sep rulings) | yes | no | owner ruling 5 Oct 2026: approvers yes, others no. One helper, `approval.may_read_leave_reason`, asked by the leave list and the Approvals page; team.py sends leave_type only |
 | Score (KPI) | own | own team (tier) | all in fence | no | hrms/api/kpi.py:494 `_scope` / `_require_kpi_read`; "protected at any cost" |
 | Pay, salary, benefits, tax | own | no | in fence | no | employee_owned_row_scope (hooks.py:207-240) |
 | Attendance, check-ins | own | own team (read) | in fence | no | employee_owned_row_scope |

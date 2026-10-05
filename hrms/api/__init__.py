@@ -1150,6 +1150,15 @@ def get_leave_applications(
 	# and never fixed on the employee's own list (mockup 4 gap #1).
 	name_approvers(applications, "leave_approver")
 
+	# The reason is for the employee, the approvers on the line and HR (owner ruling, 5 Oct 2026):
+	# a team lead who is not an approver sees the request, not why. One helper, the same one the
+	# Approvals page asks.
+	from hrms.api.approval import may_read_leave_reason
+
+	for application in applications:
+		if not may_read_leave_reason(frappe._dict(application, doctype="Leave Application")):
+			application["description"] = ""
+
 	return applications
 
 

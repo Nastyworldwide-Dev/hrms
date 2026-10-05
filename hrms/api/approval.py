@@ -177,6 +177,34 @@ def _is_routed_approver(doc, user: str | None = None, *, system_manager_counts: 
 	return routed
 
 
+def may_read_leave_reason(doc, user: str | None = None) -> bool:
+	"""May `user` read the REASON on this request? (owner ruling, 5 Oct 2026)
+
+	The employee who filed it, an approver on the request's line (they cannot decide without
+	knowing why), and HR inside its company fence. NOT a manager who is merely `reports_to` and not
+	on the approval line, and not a System Manager alone: the access matrix said "manager: never"
+	while the code sent the reason to anyone who could open the request (probe on fresh.local,
+	5 Oct 2026: a team lead read a report's medical reason).
+
+	Only Leave Application carries a private reason; every other type answers True, so a caller can
+	ask without checking the type first. ONE question, asked by every door that sends a reason.
+	"""
+	if doc.get("doctype") != "Leave Application":
+		return True
+	from hrms.hr.utils import sees_all_employee_data
+	from hrms.overrides.company_scope import company_visible
+	from hrms.utils.identity import own_employees
+
+	user = frappe.session.user if user is None else user
+	if doc.get("employee") in own_employees(user):
+		return True
+	if sees_all_employee_data(user):
+		company = frappe.db.get_value("Employee", doc.get("employee"), "company")
+		if company_visible(company, user):
+			return True
+	return bool(_is_routed_approver(doc, user, system_manager_counts=False))
+
+
 DECIDE_THEN_SUBMIT = {
 	"Leave Application": ("status", "Open"),
 	"Shift Request": ("status", "Draft"),

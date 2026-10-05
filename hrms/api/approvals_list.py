@@ -19,7 +19,13 @@ from datetime import date, datetime
 
 import frappe
 
-from hrms.api.approval import APPROVER_FIELD, DECIDE_THEN_SUBMIT, _is_routed_approver, _request_read_allowed
+from hrms.api.approval import (
+	APPROVER_FIELD,
+	DECIDE_THEN_SUBMIT,
+	_is_routed_approver,
+	_request_read_allowed,
+	may_read_leave_reason,
+)
 from hrms.utils.identity import normalize_login, own_employees
 
 logger = logging.getLogger(__name__)
@@ -150,7 +156,9 @@ def _row(doc, me: dict | None = None, cache: dict | None = None) -> dict:
 		detail = f"{doc.get('leave_type')} · " + (
 			f"Half day · {session}" if session else _days(doc.get("total_leave_days"))
 		)
-		reason = doc.get("description") or ""
+		# the approver sees it (they cannot decide without knowing why); the helper is the one
+		# place that says who else may (owner ruling, 5 Oct 2026)
+		reason = (doc.get("description") or "") if may_read_leave_reason(doc) else ""
 	elif doc.doctype == "OT Request":
 		when = _day(doc.get("ot_date"))
 		detail = _hours(doc.get("claimed_hours"))
