@@ -242,3 +242,6 @@ NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch
 - 2026-10-05T10:25:28Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-10-05T10:25:34Z COMMIT: d94faafcd fix(roster): the picker's closed box went blank while typing a search → review+design dispatched
 - 2026-10-05T10:27:36Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-05T10:27:41Z COMMIT: 72f38eb43 fix(roster): the picker's closed box could still go blank while typing → review+design dispatched
+- 2026-10-05T10:29:30Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-10-05T10:29:30Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 4 extra test file(s) ⟂5c6fe2548ee6

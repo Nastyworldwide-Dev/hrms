@@ -198,5 +198,67 @@ class TestRefusalReadsAboveTheCap(unittest.TestCase):
 		self.assertIn("<b>8h 52m</b>", message)
 
 
+class TestTypedClaimIsBandedToHalfHours(unittest.TestCase):
+	"""Owner ruling, 5 Oct 2026: a typed Overtime Pay claim is cut DOWN to the half hour.
+
+	HR pays in half-hour steps; 1.37 saved as 1.37 paid on a figure that is no step. Replacement Leave
+	converts raw hours to days and is left as typed."""
+
+	def test_half_hour_steps_round_down(self):
+		from hrms.utils.ot_precision import half_hour_claim
+
+		for typed, expected in ((1.37, 1.0), (1.6, 1.5), (1.5, 1.5), (2, 2.0), (0.5, 0.5), (0.49, 0.0), (4.99, 4.5), (8.876944444, 8.5)):
+			self.assertEqual(half_hour_claim(typed), expected, typed)
+
+	def test_nothing_or_a_bad_number_is_zero_or_a_clean_refusal(self):
+		from hrms.utils.ot_precision import half_hour_claim
+
+		for value in (None, 0, -1, "", float("nan"), float("inf")):
+			self.assertEqual(half_hour_claim(value), 0.0, value)
+
+	def _doc(self, compensation, typed, before=None, new=True):
+		doc = filing.ot_request.OTRequest(
+			dict(compensation=compensation, claimed_hours=typed, _new=new, _previous=before, name="OT-1")
+		)
+		return doc
+
+	def test_a_new_pay_claim_is_banded(self):
+		doc = self._doc("Overtime Pay", 1.37)
+		doc.band_typed_claim()
+		self.assertEqual(doc.claimed_hours, 1.0)
+
+	def test_replacement_leave_is_left_as_typed(self):
+		doc = self._doc("Replacement Leave", 1.37)
+		doc.band_typed_claim()
+		self.assertEqual(doc.claimed_hours, 1.37)
+
+	def test_a_claim_under_half_an_hour_is_refused_in_words(self):
+		doc = self._doc("Overtime Pay", 0.4)
+		with (
+			patch.object(filing.frappe, "bold", side_effect=lambda text: f"<b>{text}</b>"),
+			patch.object(filing.ot_request, "_", side_effect=lambda text: text),
+			self.assertRaises(filing.frappe.ValidationError) as caught,
+		):
+			doc.band_typed_claim()
+		self.assertIn("half an hour", str(caught.exception))
+		self.assertIn("24m", str(caught.exception))
+
+	def test_a_saved_claim_an_approver_read_is_never_changed_under_them(self):
+		before = frappe_dict(claimed_hours=1.37)
+		doc = self._doc("Overtime Pay", 1.37, before=before, new=False)
+		doc.band_typed_claim()
+		self.assertEqual(doc.claimed_hours, 1.37)
+
+	def test_an_edited_saved_claim_is_banded(self):
+		before = frappe_dict(claimed_hours=1.0)
+		doc = self._doc("Overtime Pay", 1.74, before=before, new=False)
+		doc.band_typed_claim()
+		self.assertEqual(doc.claimed_hours, 1.5)
+
+
+def frappe_dict(**values):
+	return filing.frappe._dict(**values)
+
+
 if __name__ == "__main__":
 	unittest.main()

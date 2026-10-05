@@ -9,3 +9,7 @@ next change to this file. Keep hours_as_words (hrms/utils/ot_precision.py) as th
 ALSO (same class, not yet fixed): replacement_leave_claim.py:86 prints raw {1} hours; attendance_fix_days.py request_kept
 and _result print raw hours to HR (OD7); the app's capAsTime floors while lists round (OD3) and the sent-request sheet shows
 decimals (OD4). OD2 (a typed claim is never banded to 30 min) changes pay: needs Nabil's ruling.
+
+DONE 5 Oct 2026 (OD2, owner ruling): a typed Overtime Pay claim is cut DOWN to the half hour on file and on edit
+(ot_request.py band_typed_claim, ot_precision.half_hour_claim); a saved claim is not re-banded when an approver decides.
+LEFT: the PWA claim form should say so as the person types ("Paid in half hours: 1.37 becomes 1.0"), or the cut looks like a bug.

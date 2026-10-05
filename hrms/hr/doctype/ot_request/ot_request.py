@@ -22,7 +22,7 @@ from hrms.utils.ot_calculation import (
 	get_ot_claim_capacity,
 	replacement_leave_days,
 )
-from hrms.utils.ot_precision import hours_as_words, stored_ot_hours
+from hrms.utils.ot_precision import half_hour_claim, hours_as_words, stored_ot_hours
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +131,7 @@ class OTRequest(Document, PWANotificationsMixin):
 		# New filings and approvals always prove their financial capacity.
 		if self.is_new() or getattr(self, "status", None) != "Rejected":
 			self.set_punch_verified_cap()
+			self.band_typed_claim()
 			self.validate_claimed_hours()
 		else:
 			logger.debug("[ot_request] retaining filed punch cap for rejected request")
@@ -234,6 +235,23 @@ class OTRequest(Document, PWANotificationsMixin):
 		self.day_type = DAY_TYPE_LABELS.get(key, key)
 		self.ot_rate = rate_label(bands)
 		logger.info("[ot_request] %s %s: %s at %s", self.name, self.ot_date, self.day_type, self.ot_rate)
+
+	def band_typed_claim(self):
+		"""Overtime Pay is paid in half hours: a claim typed between them is cut to the step below
+		(1.37 -> 1.0, 1.6 -> 1.5), when it is filed or edited. An approval does not touch it, so a claim
+		an approver already read is never changed under them. Replacement Leave is left as typed."""
+		if self.compensation != OT_PAY:
+			return
+		before = None if self.is_new() else self.get_doc_before_save()
+		if before is not None and flt(before.get("claimed_hours")) == flt(self.claimed_hours):
+			return  # saved as it was (an approval, a note): never changed under an approver
+		typed = self.claimed_hours
+		banded = half_hour_claim(typed)
+		if banded <= 0 < flt(typed):
+			frappe.throw(_("Overtime is paid in half hours. {0} is less than half an hour.").format(frappe.bold(hours_as_words(typed))))
+		if banded != flt(typed):
+			logger.info("[ot_request] %s claim %s banded to %s (half hours)", self.name, typed, banded)
+		self.claimed_hours = banded
 
 	def validate_claimed_hours(self):
 		claimed = stored_ot_hours(self.claimed_hours)

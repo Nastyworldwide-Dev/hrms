@@ -91,6 +91,8 @@ class TestFilingEdits(unittest.TestCase):
 			patch.object(ot_request.frappe.db, "get_value", return_value=original),
 			patch.object(doc, "set_compensation"),
 			patch.object(doc, "set_punch_verified_cap"),
+			# the half-hour band (5 Oct 2026) is about the claim, not the filing window
+			patch.object(doc, "band_typed_claim"),
 			patch.object(doc, "validate_claimed_hours"),
 			patch.object(doc, "validate_duplicate_request"),
 			# 25 Sep 2026 (7c02c1d2b) validate also sets the day type and rate;

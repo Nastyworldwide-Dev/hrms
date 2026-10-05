@@ -50,6 +50,8 @@ class TestCompanyComesFromTheEmployee(unittest.TestCase):
 			patch.object(OTRequest, "validate_filing_window", MagicMock()),
 			patch.object(OTRequest, "set_compensation", MagicMock()),
 			patch.object(OTRequest, "set_punch_verified_cap", MagicMock()),
+			# the half-hour band (5 Oct 2026) reads the claim, not the company
+			patch.object(OTRequest, "band_typed_claim", MagicMock()),
 			patch.object(OTRequest, "validate_claimed_hours", MagicMock()),
 			patch.object(OTRequest, "validate_duplicate_request", MagicMock()),
 			# the rate label (25 Sep) reads the shift and punches: nothing to do with the company

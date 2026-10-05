@@ -1,7 +1,7 @@
 """Fixed decimal storage representation; source punch intervals stay canonical."""
 
 import logging
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
+from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
 
 import frappe
 from frappe import _
@@ -54,3 +54,19 @@ def hours_as_words(value, rounding="nearest") -> str:
 	if not hours:
 		return f"{rest}m"
 	return f"{hours}h {rest:02d}m"  # same shape as the app's hoursAsTime: "2h 00m", "8h 02m"
+
+
+def half_hour_claim(value) -> float:
+	"""A typed Overtime Pay claim, rounded DOWN to the half hour (owner ruling, 5 Oct 2026).
+
+	HR pays overtime in half-hour steps and the punch cap is already in those steps, so a claim typed
+	between them (1.37, 1.6) is cut to the step below (1.0, 1.5). Decimal, not float: a typed 1.5 must
+	stay 1.5. Overtime Pay only; Replacement Leave converts the raw hours to days and never calls this.
+	"""
+	try:
+		hours = Decimal(str(value or 0))
+	except InvalidOperation:
+		frappe.throw(_("Overtime hours must be a finite number within the supported range."))
+	if not hours.is_finite() or hours <= 0:
+		return 0.0
+	return float((hours * 2).to_integral_value(rounding=ROUND_FLOOR) / 2)
