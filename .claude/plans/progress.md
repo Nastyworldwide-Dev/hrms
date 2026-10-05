@@ -250,3 +250,6 @@ NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch
 - 2026-10-05T10:30:24Z COMMIT: b4ba0595a fix(roster): the picker's own box was not disabled and had no name → review+design dispatched
 - 2026-10-05T10:32:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-10-05T10:32:51Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452
+- 2026-10-05T10:32:52Z COMMIT: b9ca0e8dd fix(ot): the half-hour rule could cut a claim an approver had already read → review dispatched
+- 2026-10-05T10:34:12Z PUSH: nz-glass @ b9ca0e8dd
+- 2026-10-05T11:11:05Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833

@@ -149,6 +149,7 @@ import GPage from "@/components/glass/GPage.vue"
 import { settings } from "@/data/settings"
 import { formatHoursCap } from "@/utils/formatters"
 import { prefillClaim } from "./claimPrefill.js"
+import { halfHourNote } from "./halfHourNote.js"
 import { hoursAsTime } from "@/utils/daySheet"
 import { countOf } from "@/utils/countWords"
 import { requestStatusChip } from "@/utils/requestStatus"
@@ -378,7 +379,9 @@ const dayFooter = computed(() => {
 	if (otSummary.value.error) return summaryFailure(otSummary.value.error, __)
 	if (otSummary.value.loading || !otSummary.value.data) return __("Checking this day…")
 	if (isRL.value) return expectation.value ? `${paid} · ${expectation.value}` : paid
-	return __("{0} · {1} to claim", [paid, capAsTime(otSummary.value.data.punch_ot_hours)])
+	const line = __("{0} · {1} to claim", [paid, capAsTime(otSummary.value.data.punch_ot_hours)])
+	// said before the person types: a figure between half hours is cut down (1.37 saved as 1.0)
+	return `${line}. ${halfHourNote(isRL.value, __)}`
 })
 
 let previousKey = ""
