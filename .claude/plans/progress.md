@@ -283,3 +283,9 @@ NEXT: Plan A step 2 = Desk dialog "Change shift from..." (mockup + owner sign-of
 - 2026-10-05T07:19:56Z COMMIT: a0c3d9651 fix(roster): changing a shift from a date touched rows the old ERP owns → review dispatched
 - 2026-10-05T07:22:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-10-05T07:22:05Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-10-05T07:22:08Z COMMIT: e0f1f31ea fix(roster): a shift change could mis-set the Day Type and miss a stamped punch → review dispatched
+- 2026-10-05 PLAN A reviews: 12fff2dd5 + a0c3d9651 + e0f1f31ea reviewed, no Critical. Fixed: Day Type only from the ended assignment, shift_start punches count as worked, mirrored schedules left alone, malformed shifts refused plainly, mirrored assignments refused. Refactor ticket still owed: move change_shift_from's "what was worked" reads into hrms/utils/shift_change.py (roster.py is a hotspot).
+- 2026-10-05 PLAN B step 1 (server): approval.check_many / decide_many (+ BULK_CAP 50). EVIDENCE: 2 correct - test_approval_bulk.py 15 green (red first: 14 failed, module functions missing). Real fresh.local probe: 2 of 3 leaves approved, the one with no balance left refused with the controller's words and stays Open, a missing request reported gone, repeat is a no-op. LIMIT: check_many judges each request alone, so two requests competing for one balance both read "ready"; decide_many then refuses the second truthfully.
+NEXT: Plan A step 2 (Desk dialog "Change shift from...", mockup + sign-off first), Plan B step 2 (Approvals page: chips, select, banner, table, confirm sheet; fix mockup: remove check-in row, clipped Approver line). Nothing pushed.
+- 2026-10-05T07:24:47Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-10-05T07:24:47Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 10 extra test file(s) ⟂c895fe9eab8e

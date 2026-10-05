@@ -264,6 +264,12 @@ class TestTheEndpointReadsWhatWasWorked(unittest.TestCase):
 			self._run(shifts="not json")
 		self.assertNotIn("JSONDecodeError", type(caught.exception).__name__)
 
+	def test_valid_json_that_is_not_a_list_of_shifts_is_a_plain_refusal(self):
+		for bad in ("5", "{}", '"x"', "[1, 2]", [None]):
+			with self.assertRaises(Exception) as caught:
+				self._run(shifts=bad)
+			self.assertIn(type(caught.exception).__name__, ("ValidationError",), bad)
+
 	def test_the_new_assignment_takes_the_day_type_of_the_one_it_ends(self):
 		ended = _frappe_stub._Dict(
 			name="A", shift_type="9-6", start_date=date(2026, 9, 1), end_date=None, day_type="Work Day"

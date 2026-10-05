@@ -515,6 +515,8 @@ def change_shift_from(employee: str, start_date: str, shifts: str | list, shift_
 		asked = json.loads(shifts) if isinstance(shifts, str) else shifts
 	except ValueError:
 		frappe.throw(_("Pick the new shift."))
+	if not isinstance(asked, list) or not all(isinstance(row, dict) for row in asked):
+		frappe.throw(_("Pick the new shift."))
 	new_shifts = [(row.get("shift_type"), row.get("days") or None) for row in asked or []]
 	for shift_type, _days in new_shifts:
 		if not shift_type or not frappe.db.exists("Shift Type", shift_type):

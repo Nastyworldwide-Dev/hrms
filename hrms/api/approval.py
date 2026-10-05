@@ -389,6 +389,109 @@ def decide(
 	return _state(doc)
 
 
+#: Most requests one bulk call may carry. ceiling: every approval takes its own row locks
+#: (an OT request also its employee's) inside one request, upgrade: chunk and queue the batch
+#: if HR needs more than this at once.
+BULK_CAP = 50
+
+def _bulk_items(items) -> list[dict]:
+	"""The batch as a list of {doctype, name, modified}, or a plain refusal.
+
+	Accepts a JSON string (a POST body) or a list. Only the three fields below are read:
+	the caller never names a field to write.
+	"""
+	import json
+
+	if isinstance(items, str):
+		try:
+			items = json.loads(items)
+		except ValueError:
+			frappe.throw(_("Pick at least one request."), frappe.ValidationError)
+	if not isinstance(items, list) or not items:
+		frappe.throw(_("Pick at least one request."), frappe.ValidationError)
+	if not all(isinstance(row, dict) and row.get("doctype") and row.get("name") for row in items):
+		frappe.throw(_("Pick at least one request."), frappe.ValidationError)
+	if len(items) > BULK_CAP:
+		frappe.throw(
+			_("Approve up to {0} requests at a time. Untick some and try again.").format(BULK_CAP),
+			frappe.ValidationError,
+		)
+	return [
+		{"doctype": row.get("doctype"), "name": row.get("name"), "modified": row.get("modified")}
+		for row in items
+	]
+
+def _refused(row: dict, code: str, reason: str) -> dict:
+	return {"doctype": row["doctype"], "name": row["name"], "code": code, "reason": reason}
+
+@frappe.whitelist(methods=["POST"])
+def check_many(items: str | list) -> dict:
+	"""Which of these requests would Approve go through, and why not for the rest.
+
+	Read only. Each request is asked the same two questions `get_decision_actions` answers for
+	one: may THIS caller approve it, and would the controller refuse it (the dry run inside a
+	savepoint that rolls back). So the sheet before "Approve 9" tells the truth, and a request
+	that is not theirs reads as "not yours", never as a hidden failure.
+	"""
+	rows = _bulk_items(items)
+	ready, refused = [], []
+	for row in rows:
+		doctype, name = row["doctype"], row["name"]
+		if doctype not in DECIDE_THEN_SUBMIT or not frappe.db.exists(doctype, name):
+			refused.append(_refused(row, "gone", _("This request is no longer there.")))
+			continue
+		answer = get_decision_actions(doctype, name)
+		if "Approved" in answer["actions"]:
+			ready.append({**row, "modified": answer["modified"]})
+		elif answer.get("blocked"):
+			refused.append(_refused(row, answer["blocked"]["code"], answer["blocked"]["message"]))
+		else:
+			refused.append(_refused(row, "not_yours", _("This request is not waiting on you.")))
+	logger.info("[approval] %s checked %d request(s): %d ready", frappe.session.user, len(rows), len(ready))
+	return {"ready": ready, "refused": refused}
+
+@frappe.whitelist(methods=["POST"])
+def decide_many(items: str | list) -> dict:
+	"""Approve these requests, one by one; a refusal stops nothing.
+
+	No rule of its own: each request goes through `decide`, so access, state, the idempotent
+	retry, the revision check and every controller validator are exactly the one-at-a-time ones.
+	Each runs in its own savepoint, so a request that fails leaves no half write and the next
+	one still goes ahead. APPROVE ONLY: a rejection needs its own reason (decide), so it stays
+	one by one.
+	"""
+	rows = _bulk_items(items)
+	approved, refused = [], []
+	for n, row in enumerate(rows):
+		savepoint = f"bulk_approve_{n}"
+		frappe.db.savepoint(savepoint)
+		try:
+			state = decide(row["doctype"], row["name"], "Approved", expected_modified=row["modified"])
+			approved.append(state)
+		except frappe.PermissionError:
+			frappe.db.rollback(save_point=savepoint)
+			refused.append(_refused(row, "not_yours", _("This request is not waiting on you.")))
+		except frappe.ValidationError as refusal:
+			frappe.db.rollback(save_point=savepoint)
+			refused.append(_refused(row, "refused", _plain(refusal)))
+		except Exception:
+			# a bug in one request must not lose the others' approvals
+			frappe.db.rollback(save_point=savepoint)
+			logger.exception("[approval] bulk approve failed for %s %s", row["doctype"], row["name"])
+			refused.append(_refused(row, "error", _("This one could not be approved. Open it to see why.")))
+		finally:
+			frappe.clear_messages()
+	logger.info(
+		"[approval] %s bulk approved %d of %d", frappe.session.user, len(approved), len(rows)
+	)
+	return {"approved": approved, "refused": refused}
+
+def _plain(refusal) -> str:
+	"""The controller's own message, tags removed: shown as text, never markup."""
+	import re
+
+	return re.sub(r"<[^>]+>", "", str(refusal)).strip() or _("This can't be approved yet.")
+
 #: The prefix the employee's request sheet looks for. Kept here, the one place
 #: that writes it, and read back by hrms.api.get_rejection_reason.
 REJECTION_PREFIX = "Not approved: "
