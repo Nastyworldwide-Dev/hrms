@@ -1,5 +1,5 @@
-CLASS: a list that hides the chosen record while the user types, when the control draws its CLOSED text from that same list. frappe-ui's Autocomplete finds the chosen option in the options it is given; a typed search that dropped the chosen shift left the box behind the popover blank (design review of 3a860c31e). Before the picker fixes the chosen record was always kept in the list.
-roster/src/components/Link.vue:shownOptions same-root (fixed here: the chosen record is always in the list, with its looked-up label)
-roster/src/components/Link.vue:options.onSuccess same-root (fixed here: looks the label up whenever the record is outside the loaded page and not already known, typed or not)
-roster/src/components/ShiftAssignmentDialog.vue:Link x3 same-root — all three pickers use Link.vue
-frontend/src/components/Link.vue not-affected — the Nadi picker draws its trigger from modelValue and the loaded options, never hides the chosen one
+CLASS: a fix that works around a library on the wrong side of its own filter. frappe-ui's Autocomplete filters the options by the typed words BEFORE it builds the list the closed box reads its text from, so any approach that only puts the chosen record into the options is dropped again whenever the typed text does not match it (two reviewers, from the library source). The box has to draw its own text.
+roster/src/components/Link.vue same-root (fixed here: #target slot draws the closed box from chosenLabel, built from the unfiltered list plus the looked-up label)
+roster/src/components/ShiftAssignmentDialog.vue:Link x3 same-root — Employee, Shift Type and Shift Location use Link.vue
+frontend/src/components/Link.vue not-affected — the Nadi picker is its own component and does not use frappe-ui Autocomplete
+roster/src/components/MonthViewHeader.vue ticket roster-filter-box-blank — its filters use FormControl type=autocomplete (the same library control); a typed search that excludes the chosen filter value would blank that box too (not reproduced, same library path)

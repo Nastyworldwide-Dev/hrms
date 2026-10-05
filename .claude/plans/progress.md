@@ -240,3 +240,5 @@ DEAD END: the pre-commit hook bundles co-modified tracked files into the next co
 LEARNING(gate): a stub test that mocks frappe.bold/_ passes without reading the message -> assert on caught.exception text with bold/_ patched (done in test_ot_storage_precision.py).
 NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch only (Nabil said check before push); (2) build the OT 30-min banding of typed claims (ruled YES); (3) Desk wording for Expense Claim + Remote Checkin (ruled YES); (4) AU-2 signed-out notice on Submit, AU-5 stale cached page; (5) trace amend/rebuild for OT, Attendance Request, Expense Claim; (6) after deploy: Leave list in Desk must say Waiting (else a live Workflow overrides).
 - 2026-10-05T10:25:28Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-05T10:25:34Z COMMIT: d94faafcd fix(roster): the picker's closed box went blank while typing a search → review+design dispatched
+- 2026-10-05T10:27:36Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1

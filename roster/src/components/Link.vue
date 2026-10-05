@@ -12,6 +12,22 @@
 			:disabled="disabled"
 			@update:query="handleQueryUpdate"
 		>
+			<!-- The closed box draws its OWN text. frappe-ui reads the box text from the list it has already
+			     filtered by the typed words, so a chosen record that does not match what is typed would
+			     blank the box behind the open popover (design review of d94faafcd). Same look as its own button. -->
+			<template #target="{ togglePopover }">
+				<div class="w-full">
+					<button
+						type="button"
+						class="flex h-7 w-full items-center justify-between gap-2 rounded bg-surface-gray-2 px-2 py-1 transition-colors hover:bg-surface-gray-3 border border-transparent focus:border-outline-gray-4 focus:outline-none focus:ring-2 focus:ring-outline-gray-3"
+						@click="() => togglePopover()"
+					>
+						<span class="truncate text-base leading-5 text-ink-gray-8" v-if="chosenLabel">{{ chosenLabel }}</span>
+						<span class="text-base leading-5 text-ink-gray-4" v-else></span>
+						<FeatherIcon name="chevron-down" class="h-4 w-4 text-ink-gray-5" aria-hidden="true" />
+					</button>
+				</div>
+			</template>
 			<!-- the chosen shift shows a tick in a long list (frappe-ui draws one only when this slot exists) -->
 			<template #item-prefix="{ option }">
 				<FeatherIcon v-if="option.value === props.modelValue" name="check" class="h-4 w-4 text-ink-gray-7" />
@@ -105,6 +121,12 @@ const shownOptions = computed(() => {
 	if (!props.modelValue || list.some((o) => o.value === props.modelValue)) return list;
 	const label = (chosen.data || []).find((o) => o.value === props.modelValue)?.label;
 	return [{ label: label || props.modelValue, value: props.modelValue }, ...list];
+});
+
+// The text the closed box shows: the chosen record's label, whatever is typed in the search.
+const chosenLabel = computed(() => {
+	if (!props.modelValue) return "";
+	return shownOptions.value.find((o) => o.value === props.modelValue)?.label || props.modelValue;
 });
 
 const options = createResource({

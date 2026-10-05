@@ -143,3 +143,11 @@ test("the chosen option carries a tick in the list", () => {
 	assert.match(picker, /<template #item-prefix="\{ option \}">/)
 	assert.match(picker, /option\.value === props\.modelValue/)
 })
+
+// design review of d94faafcd: frappe-ui reads the closed box's text from the list it has ALREADY filtered
+// by the typed words, so keeping the chosen record in the list is not enough; the box draws its own text
+test("the closed box draws its own text, so a typed search cannot blank it", () => {
+	assert.match(picker, /<template #target="\{ togglePopover \}">/)
+	assert.match(picker, /const chosenLabel = computed\(/)
+	assert.match(picker, /\{\{ chosenLabel \}\}/)
+})
