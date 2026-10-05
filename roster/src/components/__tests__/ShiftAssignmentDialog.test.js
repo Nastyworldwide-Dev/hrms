@@ -151,3 +151,12 @@ test("the closed box draws its own text, so a typed search cannot blank it", () 
 	assert.match(picker, /const chosenLabel = computed\(/)
 	assert.match(picker, /\{\{ chosenLabel \}\}/)
 })
+
+// design review of 72f38eb43: the library has no disabled state, and an unnamed button says nothing
+test("the picker's own button carries the disabled state and an accessible name", () => {
+	const button = picker.slice(picker.indexOf("<button"), picker.indexOf("</button>"))
+	assert.match(button, /:disabled="disabled"/)
+	assert.match(button, /disabled:opacity-50 disabled:cursor-not-allowed/)
+	assert.match(button, /:aria-label="label \? \(chosenLabel \? `\$\{label\}: \$\{chosenLabel\}` : label\) : undefined"/)
+	assert.match(button, /aria-haspopup="listbox"/)
+})

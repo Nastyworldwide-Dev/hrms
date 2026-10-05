@@ -17,14 +17,20 @@
 			     blank the box behind the open popover (design review of d94faafcd). Same look as its own button. -->
 			<template #target="{ togglePopover }">
 				<div class="w-full">
+					<!-- frappe-ui's Autocomplete has no disabled state of its own (pointer-events-none only stops the
+					     mouse), so this button carries it: Tab then Enter cannot open a disabled picker, and it looks
+					     disabled. The name is the label plus the chosen value, so a screen reader hears both. -->
 					<button
 						type="button"
-						class="flex h-7 w-full items-center justify-between gap-2 rounded bg-surface-gray-2 px-2 py-1 transition-colors hover:bg-surface-gray-3 border border-transparent focus:border-outline-gray-4 focus:outline-none focus:ring-2 focus:ring-outline-gray-3"
+						:disabled="disabled"
+						:aria-label="label ? (chosenLabel ? `${label}: ${chosenLabel}` : label) : undefined"
+						aria-haspopup="listbox"
+						class="flex h-7 w-full items-center justify-between gap-2 rounded bg-surface-gray-2 px-2 py-1 transition-colors hover:bg-surface-gray-3 border border-transparent focus:border-outline-gray-4 focus:outline-none focus:ring-2 focus:ring-outline-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
 						@click="() => togglePopover()"
 					>
 						<span class="truncate text-base leading-5 text-ink-gray-8" v-if="chosenLabel">{{ chosenLabel }}</span>
 						<span class="text-base leading-5 text-ink-gray-4" v-else></span>
-						<FeatherIcon name="chevron-down" class="h-4 w-4 text-ink-gray-5" aria-hidden="true" />
+						<FeatherIcon name="chevron-down" class="h-4 w-4 shrink-0 text-ink-gray-5" aria-hidden="true" />
 					</button>
 				</div>
 			</template>
