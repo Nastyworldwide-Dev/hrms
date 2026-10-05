@@ -8,6 +8,9 @@ from frappe.utils import format_datetime, now_datetime
 
 logger = logging.getLogger(__name__)
 
+#: Longest rejection reason a notice carries (characters). ceiling: 500, upgrade: staff report a cut-off reason
+REASON_NOTICE_MAX = 500
+
 
 class PWANotificationsMixin:
 	"""Mixin class for managing PWA updates"""
@@ -53,6 +56,10 @@ class PWANotificationsMixin:
 			if reason:
 				from frappe.utils import escape_html
 
+				# the notice is a line in a feed and on a lock screen, not the record: the full text stays
+				# on the request's own sheet (a Comment), so a long one is cut here, not refused
+				if len(reason) > REASON_NOTICE_MAX:
+					reason = reason[: REASON_NOTICE_MAX - 1].rstrip() + "…"
 				notification.message += f". {bold('Reason')}: {escape_html(reason)}"
 
 			notification.reference_document_type = self.doctype

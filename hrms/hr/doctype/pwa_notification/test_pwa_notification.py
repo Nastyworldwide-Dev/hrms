@@ -42,3 +42,26 @@ class TestPWANotification(HRMSTestSuite):
 				expected,
 				msg=f"wrong link for {reference_doctype}",
 			)
+
+
+class TestPushBody(HRMSTestSuite):
+	"""What a phone shows: tags gone, entities decoded (a rejection reason is stored as escaped HTML)."""
+
+	def test_a_reason_with_an_ampersand_reads_as_typed(self):
+		from hrms.hr.doctype.pwa_notification.pwa_notification import push_body
+
+		message = "<b>Your</b> <b>Leave Application</b> LA-1 has been <b>Rejected</b>. <b>Reason</b>: Tom &amp; Jerry &quot;cover&quot;"
+		self.assertEqual(
+			push_body(message),
+			'Your Leave Application LA-1 has been Rejected. Reason: Tom & Jerry "cover"',
+		)
+
+	def test_an_escaped_tag_in_a_reason_stays_text(self):
+		from hrms.hr.doctype.pwa_notification.pwa_notification import push_body
+
+		self.assertEqual(push_body("<b>Reason</b>: &lt;b&gt;no&lt;/b&gt;"), "Reason: <b>no</b>")
+
+	def test_no_message_is_an_empty_body(self):
+		from hrms.hr.doctype.pwa_notification.pwa_notification import push_body
+
+		self.assertEqual(push_body(None), "")

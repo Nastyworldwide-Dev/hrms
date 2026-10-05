@@ -292,3 +292,6 @@ STILL OPEN from the hunt (not built): M2 no approver is told when the approver f
 - 2026-10-05T09:40:11Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
 - 2026-10-05T09:40:14Z COMMIT: ad0579c73 fix(requests): a request with no named approver reached nobody → review dispatched
 - 2026-10-05T09:40:27Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-05T09:40:32Z COMMIT: 1ad6e6c7d fix(notifications): a rejected request showed no reason in the feed → review+design dispatched
+- 2026-10-05T09:43:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-10-05T09:43:03Z EVIDENCE: 3 works — blast radius green: 8 dependent(s), 7 extra test file(s) ⟂07285428dc7c

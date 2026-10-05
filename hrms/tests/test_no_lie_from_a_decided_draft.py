@@ -113,6 +113,17 @@ class TestTheEmployeeHearsOnlyTheTransaction(unittest.TestCase):
 		self.assertNotIn("<img", str(sent.message))
 		self.assertIn("&lt;img", str(sent.message))
 
+	def test_a_very_long_reason_is_cut_in_the_notice_not_refused(self):
+		sent = _notify(docstatus=1, status="Rejected", reason="q" * 2000)
+		sent.insert.assert_called_once()
+		self.assertLessEqual(str(sent.message).count("q"), pwa_notifications.REASON_NOTICE_MAX)
+		self.assertIn("…", str(sent.message))
+
+	def test_a_reason_at_the_limit_is_not_cut(self):
+		sent = _notify(docstatus=1, status="Rejected", reason="q" * pwa_notifications.REASON_NOTICE_MAX)
+		self.assertEqual(str(sent.message).count("q"), pwa_notifications.REASON_NOTICE_MAX)
+		self.assertNotIn("…", str(sent.message))
+
 	def test_a_rejection_with_no_reason_on_the_document_still_notifies(self):
 		sent = _notify(docstatus=1, status="Rejected")
 		sent.insert.assert_called_once()

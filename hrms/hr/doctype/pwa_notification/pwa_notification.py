@@ -51,9 +51,10 @@ class PWANotification(Document):
 					push_notification.send_notification_to_user,
 					self.to_user,
 					self.reference_document_type,
-					self.message,
+					push_body(self.message),
 					link=self.get_notification_link(),
 					icon=f"{frappe.utils.get_url()}/assets/hrms/manifest/favicon-196.png",
+					strip_html=False,  # push_body already did, and decoded the entities the framework leaves
 				)
 		except ImportError:
 			# push notifications are not supported in the current framework version
@@ -139,3 +140,15 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 		owned,
 	)
 	return owned
+
+
+def push_body(message: str | None) -> str:
+	"""The text a phone shows: tags removed, then entities decoded.
+
+	The framework strips tags but leaves entities, so a rejection reason with an & or a quote reached
+	the lock screen as "&amp;" (the message is stored as escaped HTML). Strip first, decode second:
+	a reason that is literally "<b>" was escaped on the way in, so it decodes to text, never markup.
+	"""
+	import html
+
+	return html.unescape(frappe.utils.strip_html(message or "")).strip()
