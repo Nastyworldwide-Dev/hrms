@@ -257,3 +257,6 @@ NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch
 - 2026-10-05T11:14:33Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-10-05T11:14:36Z COMMIT: eb32c90c8 chore(ot): cut open Overtime Pay claims to the half hour on deploy → review+design dispatched
 - 2026-10-05T11:17:00Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-10-05T11:17:02Z COMMIT: 89502794a fix(ot): the cleanup patch kept the old claim figure nowhere readable → review dispatched
+- 2026-10-05T11:19:22Z PUSH: nz-glass @ 89502794a
+- 2026-10-05T11:26:14Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
