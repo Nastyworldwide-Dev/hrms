@@ -78,3 +78,22 @@ def plan_change(assignments, start, new_shifts, worked_days) -> ShiftChangePlan:
 	# of every new assignment (reviewer, 5 Oct 2026).
 	day_type = day_types.pop() if len(day_types) == 1 else None
 	return ShiftChangePlan(start, end, remove, list(new_shifts), day_type)
+
+def preview_removed(assignments, start) -> list[dict]:
+	"""What the change would REMOVE, for the dialog to say before HR presses it.
+
+	Anything that starts on or after the date goes: a one-day Off Day override HR set on the
+	roster, a later shift. Ended assignments and ones that merely run past the date (they are
+	ended the day before, not removed) are not listed.
+	"""
+	return [
+		{
+			"name": row["name"],
+			"shift_type": row["shift_type"],
+			"start_date": row["start_date"],
+			"end_date": row["end_date"],
+			"day_type": row.get("day_type"),
+		}
+		for row in assignments
+		if not (row["end_date"] and row["end_date"] < start) and row["start_date"] >= start
+	]

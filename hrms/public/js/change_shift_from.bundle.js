@@ -74,12 +74,52 @@ hrms.change_shift.day_before = function (date) {
 	return before.toISOString().slice(0, 10);
 };
 
+// The server's own words from a Frappe error response (_server_messages is a JSON list of
+// JSON strings). "" when there is nothing readable: the caller falls back to plain words.
+hrms.change_shift.server_message = function (reply) {
+	try {
+		const list = JSON.parse((reply && reply._server_messages) || "[]");
+		if (!list.length) return "";
+		const message = JSON.parse(list[list.length - 1]).message || "";
+		return String(message).replace(/<[^>]+>/g, "").trim();
+	} catch (error) {
+		return "";
+	}
+};
+
+// What a weekday chip says to a screen reader: the full day, whether it is on, and why not.
+hrms.change_shift.chip_state = function (day, on, used) {
+	return {
+		label: used ? __("{0} (on another shift)", [day]) : day,
+		pressed: on ? "true" : "false",
+		title: used ? __("{0} is on another shift", [day]) : "",
+	};
+};
+
+// "2 changes after this date will be removed: 17 Oct (Off Day), ..." ("" when none).
+hrms.change_shift.removed_notice = function (removed) {
+	if (!removed || !removed.length) return "";
+	const list = removed
+		.map((row) => `${cs_escape(row.start_date)}${row.day_type && row.day_type !== "None" ? ` (${cs_escape(row.day_type)})` : ""}`)
+		.join(", ");
+	const head =
+		removed.length === 1
+			? __("1 change after this date will be removed")
+			: __("{0} changes after this date will be removed", [removed.length]);
+	return `<div class="text-warning" role="status"><b>${__("Warning:")}</b> ${head}: ${list}.</div>`;
+};
+
+// The server refused this date (a worked day, a mirrored assignment): said where HR looks.
+hrms.change_shift.refusal_notice = function (refused) {
+	return refused ? `<div class="text-danger" role="alert">${cs_escape(refused)}</div>` : "";
+};
+
 function cs_escape(value) {
 	return frappe.utils.escape_html(value === null || value === undefined ? "" : String(value));
 }
 
 // the "What will change" box
-function cs_preview(date, rows, different, shift_names) {
+function cs_preview(date, rows, different, shift_names, server) {
 	if (!date) return `<p class="text-muted">${__("Pick a date to see what changes.")}</p>`;
 	const lines = [
 		`<div>${__("Until {0}", [cs_escape(hrms.change_shift.day_before(date))])}: <b>${__("no change")}</b></div>`,
@@ -94,14 +134,18 @@ function cs_preview(date, rows, different, shift_names) {
 	];
 	const free = hrms.change_shift.days_without_shift(rows, different);
 	if (free.length) {
-		lines.push(`<div class="text-warning">${__("No shift on: {0}.", [cs_escape(free.join(", "))])}</div>`);
+		lines.push(`<div class="text-warning"><b>${__("Warning:")}</b> ${__("No shift on: {0}.", [cs_escape(free.join(", "))])}</div>`);
+	}
+	if (server) {
+		lines.push(hrms.change_shift.removed_notice(server.removed));
+		lines.push(hrms.change_shift.refusal_notice(server.refused));
 	}
 	return lines.join("");
 }
 
 // Opens the dialog for one employee. `current` is a line about the shift now, if known.
 hrms.change_shift.open = function (employee, employee_name, current) {
-	const state = { rows: [{ shift: "", days: [] }], different: false, shifts: {} };
+	const state = { rows: [{ shift: "", days: [] }], different: false, shifts: {}, server: null, ask: 0 };
 	const dialog = new frappe.ui.Dialog({
 		title: __("Change shift from a date"),
 		fields: [
@@ -124,21 +168,55 @@ hrms.change_shift.open = function (employee, employee_name, current) {
 	});
 
 	function show_error(message) {
-		dialog.get_field("error").$wrapper.html(message ? `<p class="text-danger">${cs_escape(message)}</p>` : "");
+		// the container already exists with role=alert, so the text is announced when it arrives
+		dialog.get_field("error").$wrapper.html(`<div role="alert" class="text-danger">${message ? cs_escape(message) : ""}</div>`);
+	}
+
+	function draw() {
+		dialog.get_field("preview").$wrapper.html(
+			`<div aria-live="polite">${cs_preview(dialog.get_value("start"), state.rows, state.different, state.shifts, state.server)}</div>`
+		);
+	}
+
+	// Asks the server what this would do (what it drops, whether the date is refused). The
+	// newest answer wins; a slow older one is ignored.
+	function ask_server() {
+		const date = dialog.get_value("start");
+		const shifts = hrms.change_shift.payload(state.rows, state.different);
+		if (!date || !shifts.length) {
+			state.server = null;
+			return draw();
+		}
+		const mine = ++state.ask;
+		frappe.call({
+			method: "hrms.api.roster.preview_shift_change",
+			type: "POST",
+			args: { employee, start_date: date, shifts: JSON.stringify(shifts) },
+			callback: (r) => {
+				if (mine !== state.ask) return;
+				state.server = r && r.message ? r.message : null;
+				draw();
+			},
+			error: () => {
+				if (mine === state.ask) state.server = null;
+			},
+		});
 	}
 
 	function refresh() {
 		show_error("");
-		dialog.get_field("preview").$wrapper.html(
-			cs_preview(dialog.get_value("start"), state.rows, state.different, state.shifts)
-		);
+		draw();
+		ask_server();
 	}
 
 	function render_rows() {
 		const wrap = dialog.get_field("rows").$wrapper.empty();
 		state.rows.forEach((row, at) => {
-			const box = $(`<div class="cs-row" style="margin-bottom:12px"></div>`).appendTo(wrap);
-			const select = $(`<select class="form-control" aria-label="${__("New shift")}"></select>`).appendTo(box);
+			const box = $(`<div class="cs-row mb-3"></div>`).appendTo(wrap);
+			const id = `cs-shift-${at}`;
+			const heading = state.different ? __("Shift {0}", [at + 1]) : __("New shift");
+			$(`<label class="control-label" for="${id}">${cs_escape(heading)}</label>`).appendTo(box);
+			const select = $(`<select class="form-control" id="${id}"></select>`).appendTo(box);
 			select.append(`<option value="">${__("Pick a shift")}</option>`);
 			Object.entries(state.shifts).forEach(([name, label]) =>
 				select.append(`<option value="${cs_escape(name)}" ${name === row.shift ? "selected" : ""}>${cs_escape(label)}</option>`)
@@ -148,16 +226,19 @@ hrms.change_shift.open = function (employee, employee_name, current) {
 				refresh();
 			});
 			if (state.different) {
-				const chips = $(`<div style="margin-top:6px" role="group"></div>`).appendTo(box);
+				const chips = $(`<div class="mt-2" role="group" aria-label="${cs_escape(__("Days for shift {0}", [at + 1]))}"></div>`).appendTo(box);
 				CS_WEEKDAYS.forEach((day, index) => {
 					const used = state.rows.some((other, n) => n !== at && other.days.includes(index));
 					const on = row.days.includes(index);
-					$(`<button type="button" class="btn btn-xs ${on ? "btn-primary" : "btn-default"}" ${used ? "disabled" : ""} style="margin-right:4px">${day.slice(0, 3)}</button>`)
+					const chip = hrms.change_shift.chip_state(day, on, used);
+					$(`<button type="button" class="btn btn-sm ${on ? "btn-primary" : "btn-default"} mr-1 mb-1" aria-pressed="${chip.pressed}" aria-label="${cs_escape(chip.label)}" title="${cs_escape(chip.title)}" data-cs-row="${at}" data-cs-day="${index}" ${used ? "disabled" : ""}>${day.slice(0, 3)}</button>`)
 						.appendTo(chips)
 						.on("click", () => {
-							row.days = on ? row.days.filter((i) => i !== index) : [...row.days, index].sort();
+							row.days = (on ? row.days.filter((i) => i !== index) : [...row.days, index]).sort((a, b) => a - b);
 							render_rows();
 							refresh();
+							// the chip was rebuilt: put the keyboard back on it
+							wrap.find(`[data-cs-row="${at}"][data-cs-day="${index}"]`).trigger("focus");
 						});
 				});
 			}
@@ -177,7 +258,7 @@ hrms.change_shift.open = function (employee, employee_name, current) {
 		if (problems.length) return show_error(problems[0]);
 		if (state.busy) return; // a second press while saving does nothing
 		state.busy = true;
-		dialog.get_primary_btn().prop("disabled", true);
+		dialog.get_primary_btn().prop("disabled", true).text(__("Changing..."));
 		frappe.call({
 			method: CS_API,
 			type: "POST",
@@ -192,24 +273,24 @@ hrms.change_shift.open = function (employee, employee_name, current) {
 				if (cur_frm) cur_frm.reload_doc();
 				if (cur_list) cur_list.refresh();
 			},
-			error: () => {
+			error: (reply) => {
 				// the server's own words (a worked day names the day); nothing was changed
-				const raw = (frappe.messages && frappe.messages.slice(-1)[0]) || "";
-				show_error(String(raw).replace(/<[^>]+>/g, "") || __("Nothing was changed. Try again."));
+				show_error(hrms.change_shift.server_message(reply) || __("Nothing was changed. Try again."));
 			},
 			always: () => {
 				state.busy = false;
-				dialog.get_primary_btn().prop("disabled", false);
+				dialog.get_primary_btn().prop("disabled", false).text(__("Change shift"));
 			},
 		});
 	}
 
-	frappe.db.get_list("Shift Type", { fields: ["name", "start_time", "end_time"], limit: 200 }).then((list) => {
-		list.forEach((s) => (state.shifts[s.name] = `${s.name}`));
+	frappe.db.get_list("Shift Type", { fields: ["name", "start_time", "end_time"], limit: 500 }).then((list) => {
+		list.forEach((s) => (state.shifts[s.name] = `${s.name} (${String(s.start_time).slice(0, 5)}-${String(s.end_time).slice(0, 5)})`));
 		render_rows();
 		refresh();
 	});
 	dialog.show();
+	dialog.get_field("start").$input && dialog.get_field("start").$input.trigger("focus");
 };
 
 // the form door: Actions > Change shift from...
@@ -218,7 +299,7 @@ frappe.ui.form.on("Shift Assignment", {
 		if (frm.doc.docstatus !== 1 || !hrms.change_shift.enabled()) return;
 		frm.add_custom_button(
 			__("Change shift from..."),
-			() => hrms.change_shift.open(frm.doc.employee, frm.doc.employee_name, `${frm.doc.shift_type}, from ${frm.doc.start_date}`),
+			() => hrms.change_shift.open(frm.doc.employee, frm.doc.employee_name, __("{0}, from {1}", [frm.doc.shift_type, frm.doc.start_date])),
 			__("Actions")
 		);
 	},

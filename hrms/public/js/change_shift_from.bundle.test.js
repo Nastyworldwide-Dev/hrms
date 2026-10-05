@@ -17,7 +17,10 @@ function load() {
 				sandbox[root] = sandbox[root] || {};
 				sandbox[root][leaf] = sandbox[root][leaf] || {};
 			},
-			utils: { escape_html: (s) => String(s) },
+			utils: {
+				// the way frappe.utils.escape_html does: markup becomes text
+				escape_html: (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]),
+			},
 			user: { has_role: () => true },
 			datetime: {},
 			ui: { form: { on: () => {} } },
@@ -93,3 +96,63 @@ test("the day before is worked out from the date picked, not from today", () => 
 test("only HR may use it", () => {
 	assert.strictEqual(typeof cs.enabled, "function");
 });
+
+test("the server's own refusal is read from a real Frappe error response", () => {
+	const reply = {
+		_server_messages: JSON.stringify([
+			JSON.stringify({ message: "<b>2026-10-14</b> already has punches or attendance. Pick a later date." }),
+		]),
+	};
+	assert.strictEqual(
+		cs.server_message(reply),
+		"2026-10-14 already has punches or attendance. Pick a later date."
+	);
+});
+
+test("an error with no readable message falls back to plain words, never throws", () => {
+	assert.strictEqual(cs.server_message({}), "");
+	assert.strictEqual(cs.server_message(undefined), "");
+	assert.strictEqual(cs.server_message({ _server_messages: "not json" }), "");
+	assert.strictEqual(cs.server_message({ _server_messages: "[]" }), "");
+});
+
+test("a chip is named by its full weekday and says whether it is on", () => {
+	assert.deepStrictEqual(cs.chip_state("Tuesday", true, false), {
+		label: "Tuesday",
+		pressed: "true",
+		title: "",
+	});
+	assert.deepStrictEqual(cs.chip_state("Tuesday", false, true), {
+		label: "Tuesday (on another shift)",
+		pressed: "false",
+		title: "Tuesday is on another shift",
+	});
+});
+
+test("the one-day changes a date would drop are named before HR presses the button", () => {
+	const html = cs.removed_notice([
+		{ start_date: "2026-10-17", end_date: "2026-10-17", day_type: "Off Day", shift_type: "9-6" },
+		{ start_date: "2026-10-22", end_date: "2026-10-22", day_type: "None", shift_type: "9-6" },
+	]);
+	assert.match(html, /2 changes after this date will be removed/);
+	assert.match(html, /2026-10-17 \(Off Day\)/);
+	assert.match(html, /2026-10-22/);
+	assert.strictEqual(cs.removed_notice([]), "");
+});
+
+test("one removal reads in the singular", () => {
+	assert.match(
+		cs.removed_notice([{ start_date: "2026-10-17", end_date: "2026-10-17", day_type: "Off Day" }]),
+		/1 change after this date will be removed/
+	);
+});
+
+test("what the server refused is shown as the preview's refusal", () => {
+	assert.match(cs.refusal_notice("2026-10-14 already has punches."), /2026-10-14 already has punches\./);
+	assert.strictEqual(cs.refusal_notice(null), "");
+});
+
+test("text from the server is escaped, never injected", () => {
+	assert.doesNotMatch(cs.refusal_notice("<img src=x onerror=alert(1)>"), /<img/);
+});
+

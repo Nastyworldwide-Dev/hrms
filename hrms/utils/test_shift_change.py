@@ -155,6 +155,100 @@ class TestPlanChange(unittest.TestCase):
 
 
 
+class TestPreview(unittest.TestCase):
+	"""The dialog must say what a change will DROP before HR presses it: any assignment that
+	starts on or after the date is removed (a one-day Off Day override HR set on the roster,
+	a later shift). The mockup warned about it; the first build did not (design review, 5 Oct)."""
+
+	def test_what_will_be_removed_is_listed_with_its_dates_and_day_type(self):
+		from hrms.utils.shift_change import preview_removed
+
+		later = dict(row("O", "9-6", date(2026, 10, 17), date(2026, 10, 17)), day_type="Off Day")
+		ended = row("A", "9-6", date(2026, 9, 1))
+		self.assertEqual(
+			preview_removed([ended, later], FROM),
+			[{"name": "O", "shift_type": "9-6", "start_date": date(2026, 10, 17), "end_date": date(2026, 10, 17), "day_type": "Off Day"}],
+		)
+
+	def test_nothing_is_listed_when_nothing_is_removed(self):
+		from hrms.utils.shift_change import preview_removed
+
+		self.assertEqual(preview_removed([row("A", "9-6", date(2026, 9, 1))], FROM), [])
+
+	def test_an_assignment_that_already_ended_is_not_listed(self):
+		from hrms.utils.shift_change import preview_removed
+
+		done = row("D", "9-6", date(2026, 8, 1), date(2026, 10, 1))
+		self.assertEqual(preview_removed([done], FROM), [])
+
+class TestPreviewEndpoint(unittest.TestCase):
+	"""preview_shift_change answers 'what would this do?' with the SAME reads and the SAME rule
+	as change_shift_from, writes nothing, and is HR-only."""
+
+	def _preview(self, assignments=None, worked=(), allowed=True, raises=False):
+		from unittest.mock import patch
+
+		from hrms.api import roster
+
+		assignments = assignments or [
+			_frappe_stub._Dict(
+				name="A", shift_type="9-6", start_date=date(2026, 9, 1), end_date=None, day_type=None
+			)
+		]
+		with (
+			patch.object(roster, "_ensure_can_roster_employee"),
+			patch("hrms.hr.utils.sees_all_employee_data", return_value=allowed),
+			patch.object(roster, "_assignments_and_worked_days", return_value=(assignments, list(worked))),
+			patch.object(roster.frappe, "db") as db,
+			patch.object(roster.frappe, "set_value", create=True) as set_value,
+		):
+			db.exists.return_value = True
+			result = roster.preview_shift_change("EMP-1", "2026-10-12", [{"shift_type": "10-7"}])
+			return result, db, set_value
+
+	def test_it_lists_what_will_end_and_what_will_be_removed(self):
+		later = _frappe_stub._Dict(
+			name="O", shift_type="9-6", start_date=date(2026, 10, 17), end_date=date(2026, 10, 17), day_type="Off Day"
+		)
+		open_one = _frappe_stub._Dict(
+			name="A", shift_type="9-6", start_date=date(2026, 9, 1), end_date=None, day_type=None
+		)
+		result, _db, _set = self._preview(assignments=[open_one, later])
+		self.assertEqual(result["ends_on"], "2026-10-11")
+		self.assertEqual([row["name"] for row in result["removed"]], ["O"])
+		self.assertEqual(result["removed"][0]["day_type"], "Off Day")
+		self.assertIsNone(result["refused"])
+
+	def test_a_worked_day_is_reported_as_the_refusal_not_raised(self):
+		result, _db, _set = self._preview(worked=[date(2026, 10, 14)])
+		self.assertIn("2026-10-14", result["refused"])
+
+	def test_it_writes_nothing(self):
+		_result, db, set_value = self._preview()
+		db.set_value.assert_not_called()
+		db.commit.assert_not_called()
+		set_value.assert_not_called()
+
+	def test_only_hr_may_ask(self):
+		with self.assertRaises(Exception):
+			self._preview(allowed=False)
+
+	def test_the_endpoint_and_the_change_share_one_read(self):
+		import ast
+		import pathlib
+
+		from hrms.api import roster
+
+		tree = ast.parse(pathlib.Path(roster.__file__).read_text())
+		bodies = {
+			n.name: ast.unparse(n) for n in tree.body if isinstance(n, ast.FunctionDef)
+		}
+		for name in ("change_shift_from", "preview_shift_change"):
+			self.assertIn("_assignments_and_worked_days(", bodies[name], name)
+		self.assertNotIn('"Employee Checkin"', bodies["change_shift_from"])
+		self.assertNotIn('"Employee Checkin"', bodies["preview_shift_change"])
+
+
 class TestTheEndpointReadsWhatWasWorked(unittest.TestCase):
 	"""change_shift_from must hand plan_change the days that carry punches or
 	attendance. Mutation probe, 5 Oct 2026: breaking that read left every test

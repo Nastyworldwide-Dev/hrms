@@ -485,42 +485,12 @@ def change_shift_day(
 	insert_shift(employee, company, shift_type, date, date, status, shift_location, day_type=day_type)
 
 
-@frappe.whitelist(methods=["POST"])
-def change_shift_from(employee: str, start_date: str, shifts: str | list, shift_location: str | None = None) -> dict:
-	"""HR changes a person's shift from a date: 9-6 to 10-7, or Mon-Thu 10-7 and Fri 10-4.
-
-	Was impossible from the screen: cancelling the old assignment is refused once
-	punches exist ("linked to Employee Checkin"), and a submitted assignment keeps
-	no editable shift. The old one is ENDED the day before instead (end_date is
-	editable after submit), so nothing with punches is cancelled and the past stays
-	exactly as it was. A date that already has punches or attendance is refused.
-	HR only (owner, 5 Oct 2026): a supervisor keeps the per-day roster actions.
-
-	`shifts`: [{"shift_type": ..., "days": ["Monday", ...] or null for every day}].
-	One transaction: any failure leaves the roster as it was.
-	"""
-	import json
-
+def _assignments_and_worked_days(employee: str, start) -> tuple[list, list]:
+	"""What a shift change from `start` has to look at, read ONCE for the change and for its
+	preview so the two can never disagree: the person's live assignments from that date, and
+	every day from it that already carries Attendance or punches (by clock time AND by the shift
+	day a punch was stamped to: an early IN, a night shift)."""
 	from frappe.utils import getdate
-
-	from hrms.hr.utils import sees_all_employee_data
-	from hrms.utils.shift_change import ShiftChangeRefused, plan_change
-
-	_ensure_can_roster_employee(employee)
-	if not sees_all_employee_data(frappe.session.user):
-		frappe.throw(_("Only HR can change a person's shift from a date."), frappe.PermissionError)
-
-	start = getdate(start_date)
-	try:
-		asked = json.loads(shifts) if isinstance(shifts, str) else shifts
-	except ValueError:
-		frappe.throw(_("Pick the new shift."))
-	if not isinstance(asked, list) or not all(isinstance(row, dict) for row in asked):
-		frappe.throw(_("Pick the new shift."))
-	new_shifts = [(row.get("shift_type"), row.get("days") or None) for row in asked or []]
-	for shift_type, _days in new_shifts:
-		if not shift_type or not frappe.db.exists("Shift Type", shift_type):
-			frappe.throw(_("Pick a shift that exists."))
 
 	assignments = frappe.get_all(
 		"Shift Assignment",
@@ -552,8 +522,86 @@ def change_shift_from(employee: str, start_date: str, shifts: str | list, shift_
 			pluck="shift_start",
 		)
 	}
+	return assignments, sorted(worked)
+
+def _asked_shifts(shifts) -> list[tuple]:
+	"""The request's shifts as [(shift_type, days or None)], or a plain refusal."""
+	import json
+
 	try:
-		plan = plan_change(assignments, start, new_shifts, sorted(worked))
+		asked = json.loads(shifts) if isinstance(shifts, str) else shifts
+	except ValueError:
+		frappe.throw(_("Pick the new shift."))
+	if not isinstance(asked, list) or not all(isinstance(row, dict) for row in asked):
+		frappe.throw(_("Pick the new shift."))
+	new_shifts = [(row.get("shift_type"), row.get("days") or None) for row in asked]
+	for shift_type, _days in new_shifts:
+		if not shift_type or not frappe.db.exists("Shift Type", shift_type):
+			frappe.throw(_("Pick a shift that exists."))
+	return new_shifts
+
+@frappe.whitelist(methods=["POST"])
+def preview_shift_change(employee: str, start_date: str, shifts: str | list) -> dict:
+	"""What `change_shift_from` WOULD do, said before HR presses it. Writes nothing.
+
+	Same fence, same reads and same rule as the change (design review, 5 Oct 2026: the dialog
+	must name the one-day changes the date would drop, and refuse a worked day as soon as it is
+	picked). A refusal is returned in `refused`, not raised, so the dialog can show it inline.
+	"""
+	from datetime import timedelta
+
+	from frappe.utils import getdate
+
+	from hrms.hr.utils import sees_all_employee_data
+	from hrms.utils.shift_change import ShiftChangeRefused, plan_change, preview_removed
+
+	_ensure_can_roster_employee(employee)
+	if not sees_all_employee_data(frappe.session.user):
+		frappe.throw(_("Only HR can change a person's shift from a date."), frappe.PermissionError)
+	start = getdate(start_date)
+	new_shifts = _asked_shifts(shifts)
+	assignments, worked = _assignments_and_worked_days(employee, start)
+	try:
+		plan_change(assignments, start, new_shifts, worked)
+	except ShiftChangeRefused as refused:
+		return {"ends_on": None, "removed": [], "refused": str(refused)}
+	return {
+		"ends_on": str(start - timedelta(days=1)),
+		"removed": [
+			{key: (str(value) if hasattr(value, "isoformat") else value) for key, value in row.items()}
+			for row in preview_removed(assignments, start)
+		],
+		"refused": None,
+	}
+
+@frappe.whitelist(methods=["POST"])
+def change_shift_from(employee: str, start_date: str, shifts: str | list, shift_location: str | None = None) -> dict:
+	"""HR changes a person's shift from a date: 9-6 to 10-7, or Mon-Thu 10-7 and Fri 10-4.
+
+	Was impossible from the screen: cancelling the old assignment is refused once
+	punches exist ("linked to Employee Checkin"), and a submitted assignment keeps
+	no editable shift. The old one is ENDED the day before instead (end_date is
+	editable after submit), so nothing with punches is cancelled and the past stays
+	exactly as it was. A date that already has punches or attendance is refused.
+	HR only (owner, 5 Oct 2026): a supervisor keeps the per-day roster actions.
+
+	`shifts`: [{"shift_type": ..., "days": ["Monday", ...] or null for every day}].
+	One transaction: any failure leaves the roster as it was.
+	"""
+	from frappe.utils import getdate
+
+	from hrms.hr.utils import sees_all_employee_data
+	from hrms.utils.shift_change import ShiftChangeRefused, plan_change
+
+	_ensure_can_roster_employee(employee)
+	if not sees_all_employee_data(frappe.session.user):
+		frappe.throw(_("Only HR can change a person's shift from a date."), frappe.PermissionError)
+
+	start = getdate(start_date)
+	new_shifts = _asked_shifts(shifts)
+	assignments, worked = _assignments_and_worked_days(employee, start)
+	try:
+		plan = plan_change(assignments, start, new_shifts, worked)
 	except ShiftChangeRefused as refused:
 		frappe.throw(str(refused))
 
