@@ -1,3 +1,6 @@
-CLASS: a known limit left unwritten. hours_as_words reads a claim exactly one stored unit (1e-9 h) above a whole-minute cap as equal to it; real punches and typed minutes differ by seconds so it cannot occur, but the limit had no marker and no trigger.
-hrms/utils/ot_precision.py:hours_as_words same-root (fixed here: ceiling + upgrade trigger written beside the guard)
-.claude/plans/ticket-desk-wording-expense-remote.md not-affected — gains the live-site Workflow check, documentation only
+CLASS: a picker that opens by SEARCHING for the value already chosen. search_link is a "contains" search, so a person on "Day Shift" got only the shifts whose name contains "Day Shift" (2 of 25 on the test site), and every other shift vanished from the list HR was meant to choose from.
+roster/src/components/Link.vue:onMounted same-root (fixed here: opens on the full list; the chosen record is kept in it; first page 50, not 10)
+roster/src/components/ShiftAssignmentDialog.vue:Link x3 same-root — the three pickers (Shift Type, Shift Location, Employee-side) all use Link.vue, so all are fixed at once
+frontend/src/components/Link.vue not-affected — the Nadi picker opens with reloadOptions("") already and injects the chosen record
+roster/src/components/MonthViewHeader.vue not-affected — its filters use createListResource of all names (pageLength 100), not a search
+hrms/api/roster.py:get_shifts not-affected — returns assignments, the picker's list never comes from it

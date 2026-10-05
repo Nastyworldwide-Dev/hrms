@@ -53,6 +53,8 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const autocompleteRef = ref(null);
+// search_link defaults to 10; a roster has more shift types than that
+const PAGE_LENGTH = 50;
 const searchText = ref("");
 
 const value = computed({
@@ -72,10 +74,11 @@ const options = createResource({
 		doctype: props.doctype,
 		txt: searchText.value,
 		filters: props.filters,
+		page_length: PAGE_LENGTH,
 	},
 	method: "POST",
 	transform: (data) => {
-		return data.map((doc) => {
+		const mapped = data.map((doc) => {
 			let title = null;
 			if (doc.label && doc.label !== doc.value) {
 				title = doc.label;
@@ -87,6 +90,11 @@ const options = createResource({
 				value: doc.value,
 			};
 		});
+		// the chosen record may sit outside this page: keep it, so the box still names it
+		if (props.modelValue && !mapped.find((o) => o.value === props.modelValue)) {
+			mapped.unshift({ label: props.modelValue, value: props.modelValue });
+		}
+		return mapped;
 	},
 });
 
@@ -95,6 +103,8 @@ const reloadOptions = (searchTextVal) => {
 		params: {
 			txt: searchTextVal,
 			doctype: props.doctype,
+			filters: props.filters,
+			page_length: PAGE_LENGTH,
 		},
 	});
 	options.reload();
@@ -107,8 +117,11 @@ const handleQueryUpdate = debounce((newQuery) => {
 	reloadOptions(val);
 }, 300);
 
+// Open on the FULL list, never on a search for the chosen value: a person on "Security A" saw only the
+// shifts with "Security" in the name, and every other shift vanished from the picker (HR, 5 Oct 2026).
+// The chosen record is kept in the list by the transform above.
 onMounted(() => {
-	reloadOptions(props.modelValue || "");
+	reloadOptions("");
 });
 
 watch(

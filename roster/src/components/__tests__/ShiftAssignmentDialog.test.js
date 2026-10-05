@@ -109,3 +109,22 @@ test("delete and update use the roster API", () => {
 	assert.match(view, /url: "hrms\.api\.roster\.delete_shift_assignment"/)
 	assert.match(view, /url: "hrms\.api\.roster\.update_shift_assignment"/)
 })
+
+// HR, 5 Oct 2026: a person on a "Security ..." shift opened the picker and saw ONLY the shifts with
+// "Security" in the name; the rest of the list vanished. The picker opened by searching for the chosen
+// value (search_link is a "contains" search). It must open on the full list and keep the chosen one in it.
+const picker = readFileSync(fileURLToPath(new URL("../Link.vue", import.meta.url)), "utf8")
+
+test("the picker opens on the full list, not on a search for the chosen value", () => {
+	assert.match(picker, /onMounted\(\(\) => \{\s*reloadOptions\(""\);\s*\}\);/)
+	assert.doesNotMatch(picker, /reloadOptions\(props\.modelValue/)
+})
+
+test("the chosen record stays in the list even when it is outside the first page", () => {
+	assert.match(picker, /!mapped\.find\(\(o\) => o\.value === props\.modelValue\)/)
+})
+
+test("both loads ask for a fuller page than search_link's 10", () => {
+	assert.match(picker, /const PAGE_LENGTH = 50/)
+	assert.equal((picker.match(/page_length: PAGE_LENGTH/g) || []).length, 2)
+})

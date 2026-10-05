@@ -224,3 +224,8 @@ NEXT: (1) route announcements._push_to_users through push_body (same &amp; defec
 - 2026-10-05T10:05:39Z COMMIT: 0d1bfd039 fix(desk): one word per state in Desk, the same as Nadi → review+design dispatched
 - 2026-10-05T10:08:00Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-10-05T10:08:00Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452
+- 2026-10-05T10:08:03Z COMMIT: 1070014b4 chore(ot): name the one limit of the minute words → review dispatched
+EVIDENCE: announcements push NOT affected by the "&amp;" class (checked 5 Oct 2026): HR Announcement.summary is Small Text, controller strips tags on save (hr_announcement.py:55), stored as typed text, not escaped HTML. Routing it through push_body would wrongly decode a typed "&amp;". Left alone.
+NEXT: (1) read the review of 1070014b4; (2) AU-2 signed-out notice, AU-3 only Guest 403 counts as lost session (probe: expired session = PermissionError 403 from is_whitelisted, so 403 alone cannot be dropped), AU-5; (3) trace amend/rebuild for OT, Attendance Request, Expense Claim; (4) Desk wording: Expense Claim + Remote Checkin (ticket, needs Nabil's word); (5) OD2 (30-min banding of typed claims) needs Nabil's ruling; (6) wait for "push" (17+ commits local).
+- 2026-10-05T10:18:32Z PUSH: nz-glass @ 1070014b4
+- 2026-10-05T10:20:40Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
