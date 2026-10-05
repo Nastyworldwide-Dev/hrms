@@ -29,6 +29,11 @@ _erpnext_stub.install()
 
 import frappe
 
+# The shared stub does not define Frappe's lost-transaction errors; a real bench does.
+if not isinstance(getattr(frappe, "QueryDeadlockError", None), type):  # the stub answers with a MagicMock
+	frappe.QueryDeadlockError = type("QueryDeadlockError", (Exception,), {})
+	frappe.QueryTimeoutError = type("QueryTimeoutError", (Exception,), {})
+
 from hrms.api import approval
 
 
@@ -97,7 +102,15 @@ class TestCheckMany(unittest.TestCase):
 			with self.assertRaises(frappe.ValidationError, msg=repr(bad)):
 				approval.check_many(bad)
 
-	def test_an_empty_batch_is_refused(self):
+	def test_a_row_with_no_revision_is_refused_because_decide_skips_the_check_without_one(self):
+		# decide() compares `modified` only when it is given: a bulk approve of a request the
+		# approver never saw in its current form must not slip through (reviewer, 5 Oct 2026)
+		with self.assertRaises(frappe.ValidationError):
+			approval.check_many([{"doctype": "Leave Application", "name": "A"}])
+		with self.assertRaises(frappe.ValidationError):
+			approval.decide_many([{"doctype": "Leave Application", "name": "A", "modified": None}])
+
+
 		with self.assertRaises(frappe.ValidationError):
 			approval.check_many([])
 
@@ -151,6 +164,18 @@ class TestDecideMany(unittest.TestCase):
 		# decide() answers an identical retry with the settled state
 		result, _call, _db = self._decide([item("A")], {"A": "ok"})
 		self.assertEqual(result["approved"][0]["status"], "Approved")
+
+	def test_requests_are_decided_in_one_fixed_order_so_two_batches_cannot_deadlock(self):
+		items = [item("Z"), item("A"), item("M")]
+		_result, call, _db = self._decide(items, {"Z": "ok", "A": "ok", "M": "ok"})
+		self.assertEqual([c.args[1] for c in call.call_args_list], ["A", "M", "Z"])
+
+	def test_a_lost_transaction_aborts_the_batch_instead_of_being_swallowed(self):
+		# a deadlock rolls back the WHOLE transaction: carrying on would report approvals
+		# that no longer exist
+		items = [item("A"), item("B")]
+		with self.assertRaises(frappe.QueryDeadlockError):
+			self._decide(items, {"A": frappe.QueryDeadlockError("1213"), "B": "ok"})
 
 	def test_a_batch_over_the_cap_is_refused_before_anything_is_decided(self):
 		with patch.object(approval, "decide") as decide, self.assertRaises(frappe.ValidationError):

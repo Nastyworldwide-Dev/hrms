@@ -24,6 +24,7 @@ from hrms.utils.approved_request_guard import (
 	is_own_request,
 	may_cancel,
 )
+from hrms.utils.offshift_punch_heal import _lost_transaction
 
 logger = logging.getLogger(__name__)
 
@@ -416,10 +417,19 @@ def _bulk_items(items) -> list[dict]:
 			_("Approve up to {0} requests at a time. Untick some and try again.").format(BULK_CAP),
 			frappe.ValidationError,
 		)
-	return [
-		{"doctype": row.get("doctype"), "name": row.get("name"), "modified": row.get("modified")}
-		for row in items
-	]
+	if not all(row.get("modified") for row in items):
+		# decide() compares the revision only when it is given: without one a request edited after
+		# the approver last saw it would go through unread
+		frappe.throw(_("Reload the list and try again."), frappe.ValidationError)
+	# one fixed order, whatever order the phone sent: two approvers ticking the same requests in
+	# opposite orders would otherwise lock them in opposite orders and deadlock
+	return sorted(
+		(
+			{"doctype": row.get("doctype"), "name": row.get("name"), "modified": row.get("modified")}
+			for row in items
+		),
+		key=lambda row: (row["doctype"], row["name"]),
+	)
 
 def _refused(row: dict, code: str, reason: str) -> dict:
 	return {"doctype": row["doctype"], "name": row["name"], "code": code, "reason": reason}
@@ -474,7 +484,11 @@ def decide_many(items: str | list) -> dict:
 		except frappe.ValidationError as refusal:
 			frappe.db.rollback(save_point=savepoint)
 			refused.append(_refused(row, "refused", _plain(refusal)))
-		except Exception:
+		except Exception as error:
+			if _lost_transaction(error):
+				# a deadlock or lock timeout rolled back the WHOLE transaction: carrying on would
+				# report approvals that no longer exist
+				raise
 			# a bug in one request must not lose the others' approvals
 			frappe.db.rollback(save_point=savepoint)
 			logger.exception("[approval] bulk approve failed for %s %s", row["doctype"], row["name"])

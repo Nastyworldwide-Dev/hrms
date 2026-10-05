@@ -289,3 +289,12 @@ NEXT: Plan A step 2 = Desk dialog "Change shift from..." (mockup + owner sign-of
 NEXT: Plan A step 2 (Desk dialog "Change shift from...", mockup + sign-off first), Plan B step 2 (Approvals page: chips, select, banner, table, confirm sheet; fix mockup: remove check-in row, clipped Approver line). Nothing pushed.
 - 2026-10-05T07:24:47Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-10-05T07:24:47Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 10 extra test file(s) ⟂c895fe9eab8e
+- 2026-10-05T07:24:48Z COMMIT: f3f0a587a feat(approvals): approve many requests at once, each checked first → review dispatched
+- 2026-10-05T07:28:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-05T07:28:29Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 10 extra test file(s) ⟂c895fe9eab8e
+- 2026-10-05T07:28:39Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-05T07:28:39Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 10 extra test file(s) ⟂c895fe9eab8e
+- 2026-10-05T07:28:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-05T07:28:59Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 10 extra test file(s) ⟂c895fe9eab8e
+- 2026-10-05T07:30:30Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-10-05T07:30:30Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 10 extra test file(s) ⟂c895fe9eab8e
