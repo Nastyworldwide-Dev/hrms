@@ -5,6 +5,7 @@ import { employeeResource } from "./employee"
 import router from "@/router"
 import { announceSessionChange, clearPersonalCaches, sessionUser } from "@/utils/personalCache"
 import { clearCachedPages } from "@/utils/cachedPages"
+import { handBackPhone } from "@/utils/handBackPhone"
 
 export { sessionUser }
 
@@ -38,6 +39,12 @@ export const session = reactive({
 	},
 	logout: createResource({
 		url: "logout",
+		// BEFORE the request, and AWAITED: frappe-ui awaits `validate` but not `beforeSubmit`. Telling
+		// the relay to stop sending this phone the leaving person's pushes needs their session, which
+		// the logout call ends. It never returns a message, so it can never refuse the logout.
+		async validate() {
+			await handBackPhone(window.frappePushNotification)
+		},
 		async onSuccess() {
 			announceSessionChange()
 			await clearPersonalCaches(session.user)

@@ -247,3 +247,6 @@ OPEN from the reviews (page): ticks outlive the filter and Other-teams rows can 
 - 2026-10-05T08:16:01Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
 - 2026-10-05T08:16:06Z COMMIT: 987a14819 fix(approvals): the Approve sheet could be closed under a working request → review+design dispatched
 - 2026-10-05 REVIEW 987a14819 final (frappe-reviewer): no Critical. WARNING for the owner: the Approve sheet cannot be closed while "working", with no timeout, so a request that never returns leaves no way out. Recommended: after ~20 s allow close + "Taking long?" hint. Not built.
+- 2026-10-05T08:35:17Z PUSH: nz-glass @ af05c1670
+- 2026-10-05T09:03:59Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-10-05T09:03:59Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
