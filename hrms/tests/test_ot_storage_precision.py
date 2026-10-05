@@ -153,6 +153,19 @@ class TestRefusalSaysTimeNotNineDecimals(unittest.TestCase):
 		self.assertEqual(hours_as_words(2.5, rounding="up"), "2h 30m")
 		self.assertEqual(hours_as_words(0.1, rounding="up"), "6m")
 
+	def test_a_stored_minute_and_a_stored_third_read_as_typed(self):
+		from hrms.utils.ot_precision import hours_as_words
+
+		# nine-decimal storage: 1 minute is 0.016666667 h, a third of an hour is 0.333333333 h
+		self.assertEqual(hours_as_words(0.016666667, rounding="up"), "1m")
+		self.assertEqual(hours_as_words(0.333333333, rounding="down"), "20m")
+
+	def test_an_unknown_rounding_fails_loudly(self):
+		from hrms.utils.ot_precision import hours_as_words
+
+		with self.assertRaises(ValueError):
+			hours_as_words(1, rounding="floor")
+
 	def test_the_refusal_names_no_long_decimals(self):
 		doc = filing.ot_request.OTRequest(
 			dict(claimed_hours=9.5, punch_ot_hours=8.876944444, ot_date="2026-09-06")

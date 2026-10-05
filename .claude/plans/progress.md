@@ -216,3 +216,6 @@ NEXT: (1) route announcements._push_to_users through push_body (same &amp; defec
 - 2026-10-05T10:00:28Z COMMIT: bc350a0a6 fix(ot): the claim box opened on a nine-decimal number → review+design dispatched
 - 2026-10-05T10:01:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-10-05T10:01:51Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 4 extra test file(s) ⟂5c6fe2548ee6
+- 2026-10-05T10:01:53Z COMMIT: e806aab52 fix(ot): a refused claim could read equal to its cap → review dispatched
+- 2026-10-05T10:04:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-05T10:04:42Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452

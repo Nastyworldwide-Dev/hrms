@@ -6,6 +6,9 @@ frappe.listview_settings["OT Request"] = {
 	formatters: {
 		claimed_hours: two_decimals,
 	},
+	// Waiting / Approved / Rejected / Cancelled, the same words as Nadi (hrms.request_status)
+	has_indicator_for_draft: 1,
+	get_indicator: (doc) => hrms.request_status.indicator(doc),
 };
 
 // The REPORT view never reads listview_settings.formatters: it formats each

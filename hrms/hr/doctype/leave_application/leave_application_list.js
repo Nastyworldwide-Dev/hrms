@@ -7,18 +7,7 @@ frappe.listview_settings["Leave Application"] = {
 		"from_date",
 		"to_date",
 	],
+	// Waiting / Approved / Rejected / Cancelled, the same words as Nadi (hrms.request_status)
 	has_indicator_for_draft: 1,
-	get_indicator: function (doc) {
-		const status_color = {
-			Approved: "green",
-			Rejected: "red",
-			Open: "orange",
-			Draft: "red",
-			Cancelled: "red",
-			Submitted: "blue",
-		};
-		const status =
-			!doc.docstatus && ["Approved", "Rejected"].includes(doc.status) ? "Draft" : doc.status;
-		return [__(status), status_color[status], "status,=," + doc.status];
-	},
+	get_indicator: (doc) => hrms.request_status.indicator(doc),
 };

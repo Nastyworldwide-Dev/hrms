@@ -33,11 +33,16 @@ def hours_as_words(value, rounding="nearest") -> str:
 	a refused CLAIM rounds "up", so a claim above the cap always reads strictly above it
 	("8h 53m" against "8h 52m"), never equal. Lists and sheets use "nearest".
 	"""
+	if rounding not in ("nearest", "down", "up"):
+		raise ValueError(f"rounding must be nearest, down or up, not {rounding!r}")
 	minutes_float = float(value or 0) * 60
+	# The stored hours keep nine decimals, so a stored minute (0.016666667 h) is a hair OVER a whole
+	# minute and a stored third (0.333333333 h) a hair UNDER 20: the guard is the size of that
+	# storage error, a millionth of a minute, not float fuzz.
 	if rounding == "down":
-		minutes = int(minutes_float + 1e-9)
+		minutes = int(minutes_float + 1e-6)
 	elif rounding == "up":
-		minutes = -int(-(minutes_float - 1e-9) // 1)
+		minutes = -int(-(minutes_float - 1e-6) // 1)
 	else:
 		minutes = int(minutes_float + 0.5)
 	if minutes <= 0:

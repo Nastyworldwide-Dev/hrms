@@ -32,6 +32,8 @@ app_include_js = [
 	"fix_day.bundle.js",
 	# HR's "Change shift from..." dialog, opened from the Shift Assignment form.
 	"change_shift_from.bundle.js",
+	# One word per state in Desk, as in Nadi: Waiting / Approved / Rejected / Cancelled (request lists).
+	"request_status.bundle.js",
 	"hrms.bundle.js",
 ]
 app_include_css = "hrms.bundle.css"
