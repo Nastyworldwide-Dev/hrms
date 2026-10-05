@@ -260,3 +260,5 @@ NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch
 - 2026-10-05T11:17:02Z COMMIT: 89502794a fix(ot): the cleanup patch kept the old claim figure nowhere readable → review dispatched
 - 2026-10-05T11:19:22Z PUSH: nz-glass @ 89502794a
 - 2026-10-05T11:26:14Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-05T11:26:16Z COMMIT: 2110f2ec7 fix(desk): a remote check-in request says Waiting, like Nadi → review+design dispatched
+- 2026-10-05T11:29:12Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 7 file(s) ⟂85be7f79c548
