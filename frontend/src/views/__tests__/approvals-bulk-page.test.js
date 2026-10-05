@@ -129,3 +129,19 @@ test("a filter with nothing tickable says why", () => {
 	assert.match(template, /nothingTickable\(visibleRows\)/)
 	assert.match(template, /approved one by one/)
 })
+
+test("the sticky bar sits above the floating tab bar and the home indicator, never under them", () => {
+	// position: sticky; bottom: 0 sticks to the scrollport edge, which the tab bar overlays. The
+	// reservation lives in ion-content's --padding-bottom (theme/glass-components.css); the bar
+	// reads the same value, and never less than the safe area on a page with no tab bar.
+	const style = page.slice(page.indexOf("<style"))
+	const bar = style.slice(style.indexOf(".g-approvals__bar {"))
+	const rule = bar.slice(0, bar.indexOf("}"))
+	assert.match(rule, /bottom:\s*max\(var\(--padding-bottom, 0px\), env\(safe-area-inset-bottom, 0px\)\)/)
+	assert.doesNotMatch(rule, /bottom:\s*0\b/)
+})
+
+test("the last row is never covered by the bar: the list gets room while the bar shows", () => {
+	assert.match(template, /g-approvals__page--barred/)
+	assert.match(page.slice(page.indexOf("<style")), /\.g-approvals__page--barred\s*\{[^}]*padding-bottom/)
+})

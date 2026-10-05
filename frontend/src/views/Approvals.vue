@@ -11,6 +11,7 @@
 			<GPullRefresh @refresh="refresh" />
 			<div
 				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:py-7"
+				:class="{ 'g-approvals__page--barred': selectMode && ticked.size }"
 			>
 				<ResourceError :resource="waiting" what="your approvals" />
 
@@ -702,9 +703,15 @@ async function refresh(event) {
 	color: var(--g-danger-ink);
 	background: rgb(var(--g-danger-ink-rgb) / 0.08);
 }
+.g-approvals__page--barred {
+	padding-bottom: 88px;
+}
 .g-approvals__bar {
 	position: sticky;
-	bottom: 0;
+	/* sticky sticks to the scrollport edge, which the floating tab bar overlays. ion-content keeps
+	   a reservation for that bar in --padding-bottom (theme/glass-components.css); the bar sits
+	   above it, and never lower than the home indicator on a page with no tab bar */
+	bottom: max(var(--padding-bottom, 0px), env(safe-area-inset-bottom, 0px));
 	z-index: 3;
 	display: flex;
 	align-items: center;
