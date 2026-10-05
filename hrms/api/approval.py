@@ -808,10 +808,16 @@ def report_half_transitioned(doctype: str | None = None) -> dict:
 
 	for dt in doctypes:
 		fieldname = decision_field(dt)
+		# `company` only where the doctype has it: Compensatory Leave Request has none, and asking
+		# for it made one type's 1054 take the whole report down for HR (hunt M1, 5 Oct 2026)
+		meta = frappe.get_meta(dt)
+		columns = ["name", "employee", fieldname, "modified", "modified_by"]
+		if meta.has_field("company"):
+			columns.insert(2, "company")
 		rows = frappe.get_all(
 			dt,
 			filters={"docstatus": 0, fieldname: ("in", DECISIONS)},
-			fields=["name", "employee", "company", fieldname, "modified", "modified_by"],
+			fields=columns,
 			order_by="modified desc",
 			limit=500,
 		)

@@ -268,3 +268,7 @@ STILL OPEN from the hunt: H2 leave reason to managers who are not approvers (rul
 - 2026-10-05T09:24:48Z EVIDENCE: 6 behaves — family hunt: class=a private field sent to everyone who can open the record. The leave REASON (Leave A; 8 call site(s) given verdicts, 3 same-root ⟂e237a6a149e5
 - 2026-10-05T09:25:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
 - 2026-10-05T09:25:02Z EVIDENCE: 3 works — blast radius green: 15 dependent(s), 13 extra test file(s) ⟂08f9e39b63c4
+- 2026-10-05T09:25:04Z EVIDENCE: 6 behaves — family hunt: class=a private field sent to everyone who can open the record. The leave REASON (Leave A; 8 call site(s) given verdicts, 3 same-root ⟂e237a6a149e5
+- 2026-10-05T09:25:05Z COMMIT: a5fc9433f fix(requests): a person past the approval line could read a leave reason → review dispatched
+- 2026-10-05T09:26:04Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-05T09:26:04Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393

@@ -718,3 +718,48 @@ class TestTheEmployeeReadsTheReason(unittest.TestCase):
 	def test_someone_who_cannot_read_the_request_gets_nothing(self):
 		with self.assertRaises(self.frappe.PermissionError):
 			self._read(visible=False, comments=[{"content": "Not approved: private"}])
+
+
+class TestHalfTransitionedReportAsksOnlyForColumnsEveryTypeHas(unittest.TestCase):
+	"""HR's "decided but still draft" report failed for everybody (5 Oct 2026, hunt M1, proven on
+	fresh.local): it selected `company` from EVERY approvable doctype, and Compensatory Leave Request
+	has no company column, so one type's 1054 took the whole report down for HR. The columns come
+	from each doctype's own field list now, so a type without one is asked only for what it has."""
+
+	def _fields_asked(self, doctype, has_company):
+		import sys
+		import types
+		from unittest.mock import MagicMock, patch
+
+		sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests"))
+		import _erpnext_stub
+		import _frappe_stub
+
+		_frappe_stub.install()
+		_erpnext_stub.install()
+		import frappe
+
+		from hrms.api import approval
+
+		asked = {}
+
+		def get_all(dt, **kw):
+			asked[dt] = kw["fields"]
+			return []
+
+		meta = types.SimpleNamespace(has_field=lambda name: name != "company" or has_company)
+		with (
+			patch.object(approval.frappe, "only_for", MagicMock(), create=True),
+			patch.object(approval.frappe, "get_all", side_effect=get_all, create=True),
+			patch.object(approval.frappe, "get_meta", return_value=meta, create=True),
+		):
+			approval.report_half_transitioned(doctype)
+		return asked[doctype]
+
+	def test_a_type_with_no_company_column_is_not_asked_for_one(self):
+		fields = self._fields_asked("Compensatory Leave Request", has_company=False)
+		self.assertNotIn("company", fields)
+		self.assertIn("employee", fields)
+
+	def test_a_type_with_a_company_column_still_reports_it(self):
+		self.assertIn("company", self._fields_asked("Leave Application", has_company=True))
