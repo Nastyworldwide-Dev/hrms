@@ -10,7 +10,6 @@ from frappe.utils import get_datetime, now_datetime
 
 logger = logging.getLogger(__name__)
 
-HR_MANAGER_ROLE = "HR Manager"
 # Object identity cannot be supplied through a JSON document/flags payload.
 _INHERITED_CHECKOUT = object()
 
@@ -37,8 +36,9 @@ class RemoteCheckinRequest(Document):
 		return not before or before.get("status") != self.status
 
 	def before_save(self):
-		# Permission gate: only the assigned approver, an HR Manager, or System Manager
-		# can transition the status away from Pending.
+		# Permission gate: only the assigned approver, the manager, or HR inside its company
+		# fence (may_decide) can transition the status away from Pending. System Manager alone
+		# cannot (owner ruling, 5 Oct 2026).
 		if not self.has_value_changed("status"):
 			return
 		previous = self.get_doc_before_save()
@@ -113,7 +113,9 @@ class RemoteCheckinRequest(Document):
 		actor_can_derive = (
 			(bool(owner) and owner.strip().lower() == frappe.session.user.strip().lower())
 			or frappe.session.user == parent.approver
-			or bool(set(frappe.get_roles(frappe.session.user)) & {"System Manager", HR_MANAGER_ROLE})
+			# HR inside its company fence: the SAME people who may decide (may_decide), not a second
+			# list that named System Manager (owner ruling, 5 Oct 2026)
+			or may_decide(frappe._dict(parent, doctype="Remote Checkin Request"), frappe.session.user)
 		)
 		valid = (
 			out.employee == self.employee == parent.employee
@@ -151,7 +153,12 @@ def may_decide(request, user: str) -> bool:
 
 	approver = normalize_login(request.get("approver"))
 	is_approver = bool(approver) and approver == normalize_login(user)
-	allowed = not is_own_request(request, user) and (is_approver or _is_routed_approver(request, user))
+	# A System Manager alone does not decide a check-in (owner ruling, 5 Oct 2026): HR inside its
+	# fence, the approver on file or the reports_to manager do. Proven on fresh.local: an admin-only
+	# login was ADMITTED for another company's check-in while refused on a leave request.
+	allowed = not is_own_request(request, user) and (
+		is_approver or _is_routed_approver(request, user, system_manager_counts=False)
+	)
 	logger.debug("[remote_checkin_request] %s may decide %s: %s", user, request.get("name"), allowed)
 	return allowed
 

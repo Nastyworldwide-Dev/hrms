@@ -88,7 +88,7 @@ SELF_APPROVAL_SETTING = {
 }
 
 
-def _is_routed_approver(doc, user: str | None = None) -> bool:
+def _is_routed_approver(doc, user: str | None = None, *, system_manager_counts: bool = True) -> bool:
 	"""Is the supplied user (by default the session) this request's approver?
 
 	FOUND BY RUNNING AS A REAL USER: a team lead holding only the Employee role
@@ -116,7 +116,12 @@ def _is_routed_approver(doc, user: str | None = None) -> bool:
 	be4b81edf: an admin-only login saw every team's requests).
 	"""
 	user = frappe.session.user if user is None else user
-	if {"System Manager", "HR Manager", "HR User"} & set(frappe.get_roles(user)):
+	# `system_manager_counts=False` is for a gate where policy says an admin-only login must not decide
+	# (check-ins outside the area, owner ruling 5 Oct 2026). Default True: the cancel guard was built
+	# to include System Manager (14 Sep 2026, Desk cleanup) and a request's other callers read the
+	# request first, so changing the default would change rules nobody has asked to change.
+	hr_roles = {"HR Manager", "HR User"} | ({"System Manager"} if system_manager_counts else set())
+	if hr_roles & set(frappe.get_roles(user)):
 		# HR operators may decide — but a company-fenced one only inside their
 		# fence. company_visible is True for an unfenced operator (no Company
 		# User Permission) and for the request's own companies, so this changes

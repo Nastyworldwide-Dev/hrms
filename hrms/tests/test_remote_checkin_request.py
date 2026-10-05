@@ -109,8 +109,38 @@ class TestWhoMayDecide(unittest.TestCase):
 		with self.assertRaises(frappe.ValidationError):
 			_gate(*args, **kwargs)
 
+	def test_a_system_manager_alone_may_not_decide(self):
+		# Owner ruling, 5 Oct 2026: a System Manager is an admin role and sees no one's HR data
+		# (ACCESS-MATRIX). Probe on fresh.local: an admin-only login with no company permission was
+		# ADMITTED by remote_checkin._ensure_approver for another company's check-in, while the same
+		# login is refused on a leave request (_request_read_allowed). HR roles keep the right.
+		self.assertRefused("admin@example.com", roles=("Employee", "System Manager"))
+
+	def test_an_inherited_checkout_is_derived_by_the_same_people_never_a_system_manager_alone(self):
+		# validate_inherited_checkout kept its OWN copy of "who may derive an approval", naming
+		# System Manager: an admin-only login could still approve an inherited check-out after the
+		# decision gate refused them (owner ruling, 5 Oct 2026). One rule, not two.
+		import ast
+		import pathlib
+
+		src = (
+			pathlib.Path(__file__).resolve().parents[1]
+			/ "hr/doctype/remote_checkin_request/remote_checkin_request.py"
+		).read_text()
+		body = ast.unparse(
+			next(
+				n
+				for n in ast.walk(ast.parse(src))
+				if isinstance(n, ast.FunctionDef) and n.name == "validate_inherited_checkout"
+			)
+		)
+		self.assertNotIn("System Manager", body)
+
+	def test_a_system_manager_who_also_holds_an_hr_role_keeps_the_hr_right(self):
+		_gate("admin@example.com", roles=("Employee", "System Manager", "HR Manager"))
+
 	def test_every_hr_role_may_decide_inside_its_fence(self):
-		for role in ("HR User", "HR Manager", "System Manager"):
+		for role in ("HR User", "HR Manager"):
 			with self.subTest(role=role):
 				_gate("hr@example.com", roles=("Employee", role))
 				_gate("hr@example.com", roles=("Employee", role), status="Rejected")
