@@ -139,3 +139,4 @@ hrms.patches.v16_0.let_shift_supervisor_open_roster #2026-09-29 Shift Supervisor
 hrms.patches.v16_0.add_approva_user_role #2026-09-30 owner: a role that opens Approva only, for the special case with no accounting or HR access
 hrms.patches.v16_0.let_shift_supervisor_open_nadi_tile #2026-10-02 Nadi tile said No permission for Page for a Shift Supervisor: tile HR-only, app link /desk/people gone
 hrms.patches.v16_0.let_shift_supervisor_read_team_attendance #2026-10-02 owner: Shift Supervisor reads their team's Attendance and Employee Checkin on Desk, view only
+hrms.patches.v16_0.band_open_ot_claims_to_half_hours #2026-10-05 owner: open Overtime Pay claims filed before the half-hour rule are cut to the half hour; decided and paid claims are not touched

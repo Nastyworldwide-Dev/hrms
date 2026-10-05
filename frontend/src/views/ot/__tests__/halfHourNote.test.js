@@ -4,7 +4,8 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { halfHourClaim, halfHourNote } from "../halfHourNote.js"
+import * as halfHourNoteModule from "../halfHourNote.js"
+const { halfHourNote } = halfHourNoteModule
 
 test("overtime pay says it is paid in half hours, with the example", () => {
 	assert.equal(halfHourNote(false), "Paid in half hours: 1.37 is saved as 1.0, 1.6 as 1.5.")
@@ -18,14 +19,9 @@ test("the note goes through translation", () => {
 	assert.equal(halfHourNote(false, (t) => `[ms] ${t}`).startsWith("[ms] "), true)
 })
 
-test("the cut matches the server's rule (hrms.utils.ot_precision.half_hour_claim)", () => {
-	for (const [typed, expected] of [[1.37, 1], [1.6, 1.5], [1.5, 1.5], [2, 2], [0.5, 0.5], [0.49, 0], [4.99, 4.5], [8.876944444, 8.5]]) {
-		assert.equal(halfHourClaim(typed), expected, String(typed))
-	}
-})
-
-test("nothing, zero, negative and junk are zero", () => {
-	for (const v of [null, undefined, "", 0, -1, "abc", NaN, Infinity]) assert.equal(halfHourClaim(v), 0, String(v))
+test("there is ONE half-hour rule, on the server: no second copy in the app", () => {
+	// a JS copy once disagreed with the Python Decimal rule on 1.4999999999 (review of 112adc0af)
+	assert.equal(typeof halfHourNoteModule.halfHourClaim, "undefined")
 })
 
 test("the OT form shows the note in the day footer for overtime pay only", () => {
