@@ -16,7 +16,10 @@ export const RED_DAYS = 14
 //: path (Remote Checkin Request). They stay one by one.
 export const ONE_BY_ONE = ["Remote Checkin Request"]
 
-export const canBulk = (row) => !ONE_BY_ONE.includes(row.doctype)
+//: A request can be ticked only when the approver can SEE a tick on it: select mode draws ticks on
+//: the Yours section only (Other teams are someone else's to decide first), and a check-in has its
+//: own sheet. Select all must follow the same rule or it ticks rows nobody can see.
+export const canBulk = (row) => !ONE_BY_ONE.includes(row.doctype) && row.section === "yours"
 
 //: Today's calendar day IN THE SITE'S TIME ZONE ("2026-10-06"), not UTC's. The page used the UTC
 //: date, so an approver at UTC+8 between midnight and 8 am saw every wait one day short. A zone
@@ -89,6 +92,15 @@ export function allState(selected, rows) {
 	return ticked === 0 ? "none" : ticked === pickable.length ? "all" : "some"
 }
 
+//: Ticks that are no longer shown (another chip, a request that left) are dropped, so the bar never
+//: counts, and Approve never sends, a request the approver cannot see ticked.
+export function keepVisible(selected, shownRows) {
+	return prune(selected, shownRows)
+}
+
+//: A filter where nothing can be ticked (only check-ins, or only Other teams): the page says why.
+export const nothingTickable = (rows) => rows.length > 0 && !rows.some(canBulk)
+
 //: A request that left the list (decided, or gone) is no longer ticked.
 export function prune(selected, rows) {
 	const live = new Set(rows.map(rowKey))
@@ -127,4 +139,23 @@ export function afterApprove(selected, result) {
 		approved: (result.approved || []).length,
 		refused: result.refused || [],
 	}
+}
+
+//: Search for the Table view: a name or a kind, ignoring case and extra spaces.
+export function searchRows(rows, text) {
+	const needle = String(text || "")
+		.trim()
+		.toLowerCase()
+	if (!needle) return rows
+	return rows.filter((row) => `${row.who} ${row.kind}`.toLowerCase().includes(needle))
+}
+
+const SORT_KEYS = { date: "modified", who: "who", kind: "kind" }
+
+//: Sort for the Table view. A copy: the list the groups read is never reordered. Equal values
+//: keep their order (the sort is stable), so a re-sort does not shuffle the list.
+export function sortRows(rows, column, direction = 1) {
+	const key = SORT_KEYS[column]
+	if (!key) return rows
+	return [...rows].sort((a, b) => (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0) * direction)
 }

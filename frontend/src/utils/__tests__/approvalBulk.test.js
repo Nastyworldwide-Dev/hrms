@@ -14,6 +14,10 @@ import {
 	canBulk,
 	daysWaiting,
 	siteToday,
+	searchRows,
+	keepVisible,
+	nothingTickable,
+	sortRows,
 	filterByKind,
 	itemsFor,
 	overCap,
@@ -25,18 +29,21 @@ import {
 } from "../approvalBulk.js"
 
 const leave = (name, modified = "2026-08-17 09:00:00") => ({
+	section: "yours",
 	doctype: "Leave Application",
 	name,
 	kind: "Time off",
 	modified,
 })
 const ot = (name) => ({
+	section: "yours",
 	doctype: "OT Request",
 	name,
 	kind: "Overtime",
 	modified: "2026-09-01 09:00:00",
 })
 const checkin = (name) => ({
+	section: "yours",
 	doctype: "Remote Checkin Request",
 	name,
 	kind: "Check-in outside the area",
@@ -179,4 +186,128 @@ test("a bad time zone falls back to the browser's day instead of throwing", () =
 test("a request sent late on Monday has waited one day by Tuesday morning at site time", () => {
 	const today = siteToday(new Date("2026-10-05T23:30:00Z"), "Asia/Kuala_Lumpur")
 	assert.equal(daysWaiting("2026-10-05 23:30:00", today), 1)
+})
+
+// ---- the desktop Table view: search and sort over the same rows ----
+
+const named = (name, who, kind, modified, when = "") => ({
+	doctype: "Leave Application",
+	name,
+	who,
+	kind,
+	modified,
+	when,
+	detail: "",
+})
+
+test("search matches a name or a kind, ignoring case and extra spaces", () => {
+	const rows = [
+		named("A", "Ahmad Fazwan", "Time off", "2026-08-17 09:00:00"),
+		named("B", "Nurul Ain", "Overtime", "2026-08-18 09:00:00"),
+	]
+	assert.deepEqual(
+		searchRows(rows, "  fazwan ").map((r) => r.name),
+		["A"]
+	)
+	assert.deepEqual(
+		searchRows(rows, "OVERTIME").map((r) => r.name),
+		["B"]
+	)
+	assert.equal(searchRows(rows, "").length, 2)
+	assert.equal(searchRows(rows, "zzz").length, 0)
+})
+
+test("sorting by waiting since puts the oldest first, or last when reversed", () => {
+	const rows = [
+		named("new", "B", "Time off", "2026-09-30 09:00:00"),
+		named("old", "A", "Time off", "2026-08-17 09:00:00"),
+	]
+	assert.deepEqual(
+		sortRows(rows, "date", 1).map((r) => r.name),
+		["old", "new"]
+	)
+	assert.deepEqual(
+		sortRows(rows, "date", -1).map((r) => r.name),
+		["new", "old"]
+	)
+})
+
+test("sorting by person is alphabetical and does not touch the original list", () => {
+	const rows = [named("1", "Zainab", "Time off", "x"), named("2", "Aisyah", "Time off", "y")]
+	assert.deepEqual(
+		sortRows(rows, "who", 1).map((r) => r.who),
+		["Aisyah", "Zainab"]
+	)
+	assert.deepEqual(
+		rows.map((r) => r.who),
+		["Zainab", "Aisyah"]
+	)
+})
+
+test("sorting by an unknown column keeps the order given", () => {
+	const rows = [named("1", "B", "k", "x"), named("2", "A", "k", "y")]
+	assert.deepEqual(
+		sortRows(rows, "nope", 1).map((r) => r.name),
+		["1", "2"]
+	)
+})
+
+test("equal values keep their order, so the list does not shuffle on a re-sort", () => {
+	const rows = [
+		named("1", "Same", "k", "x"),
+		named("2", "Same", "k", "x"),
+		named("3", "Same", "k", "x"),
+	]
+	assert.deepEqual(
+		sortRows(rows, "who", 1).map((r) => r.name),
+		["1", "2", "3"]
+	)
+})
+
+// ---- ticks follow what the approver can SEE (design + code review, 5 Oct 2026) ----
+
+const yours = (name, kind = "Time off") => ({
+	doctype: "Leave Application",
+	name,
+	kind,
+	section: "yours",
+	modified: "2026-08-17 09:00:00",
+})
+const theirs = (name) => ({ ...yours(name), section: "other" })
+
+test("only the Yours rows can be ticked: Other-teams rows show no tick, so Select all must not take them", () => {
+	const rows = [yours("A"), theirs("B")]
+	const ticked = toggleAll(new Set(), rows)
+	assert.deepEqual([...ticked], [rowKey(yours("A"))])
+	assert.equal(canBulk(theirs("B")), false)
+	assert.equal(toggle(new Set(), theirs("B")).size, 0)
+})
+
+test("a request is tickable only when the approver can see it ticked", () => {
+	assert.equal(canBulk(yours("A")), true)
+	assert.equal(canBulk({ ...yours("A"), doctype: "Remote Checkin Request" }), false)
+})
+
+test("changing the filter drops ticks that are no longer shown", () => {
+	const rows = [yours("A"), yours("B", "Overtime")]
+	const ticked = toggleAll(new Set(), rows)
+	assert.equal(ticked.size, 2)
+	const shown = rows.filter((r) => r.kind === "Overtime")
+	assert.deepEqual([...keepVisible(ticked, shown)], [rowKey(yours("B", "Overtime"))])
+})
+
+test("what is sent is only what is ticked AND shown", () => {
+	const rows = [yours("A"), yours("B", "Overtime")]
+	const ticked = toggleAll(new Set(), rows)
+	const shown = rows.filter((r) => r.kind === "Overtime")
+	assert.deepEqual(
+		itemsFor(keepVisible(ticked, shown), shown).map((i) => i.name),
+		["B"]
+	)
+})
+
+test("a filter with nothing tickable says so", () => {
+	assert.equal(nothingTickable([{ ...yours("A"), doctype: "Remote Checkin Request" }]), true)
+	assert.equal(nothingTickable([yours("A")]), false)
+	assert.equal(nothingTickable([]), false)
 })

@@ -23,8 +23,8 @@ test("the filter narrows the groups, so every count follows it", () => {
 	assert.match(template, /aria-pressed/, "a chip says whether it is on")
 })
 
-test("what is sent is the ticked rows with the revision the approver saw", () => {
-	assert.match(script, /itemsFor\(ticked\.value, rows\.value\)/)
+test("what is sent is the ticked rows that are SHOWN, with the revision the approver saw", () => {
+	assert.match(script, /itemsFor\(ticked\.value, visibleRows\.value\)/)
 })
 
 test("only what the check said would go through is approved", () => {
@@ -101,4 +101,31 @@ test("the chip that is on has readable colours: both come from tokens that exist
 test("ages and the banner count from the site's calendar day, never the UTC date", () => {
 	assert.match(script, /siteToday\(new Date\(\), siteTimeZone\(\)\)/)
 	assert.doesNotMatch(script, /toISOString\(\)\.slice\(0, 10\)/)
+})
+
+test("ticks follow the filter: one that is no longer shown is dropped before it can be sent", () => {
+	assert.match(
+		script,
+		/watch\(visibleRows, \(list\) => \(ticked\.value = keepVisible\(ticked\.value, list\)\)\)/
+	)
+})
+
+test("a failure stays in the sheet with the ticks kept and a way to try again", () => {
+	assert.match(template, /sheet\.phase === 'failed'/)
+	assert.match(template, /__\(["']Try again["']\)/)
+	assert.doesNotMatch(
+		script,
+		/Could not check these/,
+		"no toast that disappears and leaves nothing to press"
+	)
+})
+
+test("closing the sheet while the server is approving is ignored", () => {
+	assert.match(script, /if \(sheet\.value\?\.phase !== "working"\) sheet\.value = null/)
+	assert.match(template, /@did-dismiss="dismissSheet"/)
+})
+
+test("a filter with nothing tickable says why", () => {
+	assert.match(template, /nothingTickable\(visibleRows\)/)
+	assert.match(template, /approved one by one/)
 })

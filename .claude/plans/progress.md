@@ -236,3 +236,5 @@ NOT BUILT: the desktop Table view (columns, sort, search) - HR's "datatable"; se
 OPEN from the reviews (page): ticks outlive the filter and Other-teams rows can be ticked unseen (Select all runs over visibleRows incl. Other teams) -> scope pickable/itemsFor to Yours + the filter and clear ticks on a filter change; sticky bar vs tab bar + safe area; age badge contrast (3 of 4 below 4.5:1); in-sheet failure state with retry; "nothing tickable" hint for Check-ins; dismiss while working. Desktop Table view (searchRows/sortRows done + tested, UI not built).
 - 2026-10-05T08:08:29Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-10-05T08:08:29Z EVIDENCE: 3 works — blast radius green: 13 dependent(s), 10 extra test file(s) ⟂c895fe9eab8e
+- 2026-10-05T08:08:34Z COMMIT: b5dd26acb fix(approvals): bulk approve could approve dates the approver never saw → review dispatched
+- 2026-10-05T08:11:32Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142

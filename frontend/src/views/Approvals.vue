@@ -68,10 +68,16 @@
 							{{ selectMode ? __("Done") : __("Select") }}
 						</button>
 					</div>
+					<p
+						v-if="selectMode && nothingTickable(visibleRows)"
+						class="text-caption text-ink-600 m-0"
+					>
+						{{ __("These are approved one by one. Tap one to open it.") }}
+					</p>
 					<div v-if="selectMode && pickable.length" class="flex items-center">
 						<GCheckbox
 							:model-value="allState === 'all'"
-							:label="__('Select all in this filter')"
+							:label="__('Select all shown')"
 							@update:model-value="ticked = toggleAll(ticked, visibleRows)"
 						/>
 						<span class="text-caption text-ink-600 ml-auto">
@@ -299,11 +305,20 @@
 				<GButton :label="__('Approve {0}', [ticked.size])" @click="startApprove" />
 			</div>
 
-			<GModal :is-open="!!sheet" :title="__('Approve')" @did-dismiss="sheet = null">
+			<GModal :is-open="!!sheet" :title="__('Approve')" @did-dismiss="dismissSheet">
 				<template v-if="sheet">
 					<p v-if="sheet.phase === 'check'" class="text-caption text-ink-600" role="status">
 						{{ __("Checking each one…") }}
 					</p>
+					<!-- A failed check stays here, with the ticks kept and a way to try again: a toast
+					     disappears on its own and leaves nothing to press. -->
+					<div v-else-if="sheet.phase === 'failed'" class="flex flex-col gap-3" role="alert">
+						<p class="m-0 font-semibold">{{ __("Nothing was approved.") }}</p>
+						<p class="m-0 text-caption text-ink-600">
+							{{ __("Your ticks are kept. Check your connection and try again.") }}
+						</p>
+						<GButton :label="__('Try again')" @click="startApprove" />
+					</div>
 					<template v-else>
 						<section v-if="sheet.ready.length" class="flex flex-col gap-2">
 							<h3 class="g-eyebrow">{{ __("{0} ready", [sheet.ready.length]) }}</h3>
@@ -382,6 +397,8 @@ import {
 	daysWaiting,
 	filterByKind,
 	itemsFor,
+	keepVisible,
+	nothingTickable,
 	overCap,
 	prune,
 	rowKey,
@@ -414,10 +431,14 @@ const rows = computed(() => waiting.data?.rows || [])
 
 // Filter by type (HR, 4 Oct 2026). The chips count what is waiting; the filter narrows what the
 // groups below show, so "See all", the group counts and select-all all follow it.
+const ticked = ref(new Set())
 const kindFilter = ref("")
 const chips = computed(() => typeChips(rows.value))
 const visibleRows = computed(() => filterByKind(rows.value, kindFilter.value))
 const groups = computed(() => groupApprovals(visibleRows.value))
+// A tick that is no longer shown (another chip) is dropped: the bar never counts, and Approve
+// never sends, a request the approver cannot see ticked (design + code review, 5 Oct 2026).
+watch(visibleRows, (list) => (ticked.value = keepVisible(ticked.value, list)))
 watch(chips, (list) => {
 	// a filter whose last request was decided is gone: fall back to All
 	if (kindFilter.value && !list.some((chip) => chip.key === kindFilter.value))
@@ -428,7 +449,6 @@ const headline = computed(() => banner(rows.value, today()))
 
 // Select mode: tick many, approve once. Check-ins stay one by one (approvalBulk.ONE_BY_ONE).
 const selectMode = ref(false)
-const ticked = ref(new Set())
 const pickable = computed(() => visibleRows.value.filter(canBulk))
 const allState = computed(() => allStateOf(ticked.value, visibleRows.value))
 function toggleSelectMode() {
@@ -560,6 +580,11 @@ const sheet = ref(null) // null | { phase: "check" | "ready" | "working", ready:
 const checkMany = createResource({ url: "hrms.api.approval.check_many" })
 const decideMany = createResource({ url: "hrms.api.approval.decide_many" })
 
+// closing the sheet while the server is approving would hide what it is doing
+function dismissSheet() {
+	if (sheet.value?.phase !== "working") sheet.value = null
+}
+
 async function startApprove() {
 	if (overCap(ticked.value)) {
 		return gToast({
@@ -570,16 +595,12 @@ async function startApprove() {
 	}
 	sheet.value = { phase: "check", ready: [], refused: [] }
 	try {
-		const result = await checkMany.submit({ items: itemsFor(ticked.value, rows.value) })
+		const result = await checkMany.submit({ items: itemsFor(ticked.value, visibleRows.value) })
 		sheet.value = { phase: "ready", ready: result.ready, refused: result.refused }
 	} catch (error) {
 		console.warn("[Approvals] the check failed", error)
-		sheet.value = null
-		gToast({
-			title: __("Could not check these"),
-			text: __("Nothing was approved. Try again."),
-			variant: "error",
-		})
+		// stay in the sheet with a way to try again; the ticks are kept
+		sheet.value = { phase: "failed", ready: [], refused: [], retry: startApprove }
 	}
 }
 
@@ -601,12 +622,8 @@ async function confirmApprove() {
 		await waiting.reload()
 	} catch (error) {
 		console.warn("[Approvals] bulk approve failed", error)
-		sheet.value = null
-		gToast({
-			title: __("Could not approve"),
-			text: __("Reload the list to see what went through."),
-			variant: "error",
-		})
+		// what went through is unknown until the list is read again; say so, keep the ticks
+		sheet.value = { phase: "failed", ready: [], refused: [], retry: startApprove }
 		await waiting.reload()
 	}
 }
@@ -679,11 +696,11 @@ async function refresh(event) {
 }
 .g-approvals__age--amber {
 	color: var(--g-warn-ink);
-	background: rgb(var(--g-warn-ink-rgb) / 0.14);
+	background: rgb(var(--g-warn-ink-rgb) / 0.08);
 }
 .g-approvals__age--red {
 	color: var(--g-danger-ink);
-	background: rgb(var(--g-danger-ink-rgb) / 0.14);
+	background: rgb(var(--g-danger-ink-rgb) / 0.08);
 }
 .g-approvals__bar {
 	position: sticky;
