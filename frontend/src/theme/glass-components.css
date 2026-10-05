@@ -3047,9 +3047,11 @@ textarea {
 	color: var(--g-ink2);
 }
 .g-team-row__sub {
+	/* Two lines, as .g-row__sub: one line cut "Half day", the last words, off first at 360px. */
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
 	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 .g-team-row__detail {
 	display: flex;

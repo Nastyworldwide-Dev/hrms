@@ -203,3 +203,5 @@ DEAD END: none new. Release gate keeps asking to push; owner said push only on h
 NEXT: (1) route announcements._push_to_users through push_body (same &amp; defect); (2) read /tmp/wording-inventory.md (scout) and fix PWA-vs-Desk wording mismatches; (3) trace amend/rebuild for OT, Attendance Request, Expense Claim; (4) AU-2 signed-out notice, AU-3 only Guest 403 = session lost (verified: expired session gives PermissionError 403 via is_whitelisted), AU-5, N+1 in get_leave_applications; (5) wait for "push".
 - 2026-10-05T09:52:51Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 5 file(s) ⟂5d9cef17ceeb
 - 2026-10-05T09:52:51Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-10-05T09:52:54Z COMMIT: ff899b5a4 fix(team): a day HR marked half showed the boss a bare "Present" → review+design dispatched
+- 2026-10-05T09:54:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833

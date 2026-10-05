@@ -1,7 +1,6 @@
-CLASS: a status collapsed to one word that drops the detail that changes its meaning. The team view maps Attendance "Half Day" to "Present" (someone worked), and the line under the name never said the day was a half, so a boss read a full day where HR had marked a half (2 Oct 2026). A half-day LEAVE already said "(Half day)" in the expanded row; a half day marked on the attendance did not.
-hrms/api/team.py:member_statuses same-root (fixed here: row carries half_day_marked from the Attendance status)
-frontend/src/utils/team.js:memberLine same-root (fixed here: the line ends with "Half day" when HR marked it; the Team page row and the Calendar day sheet both read this one function)
-hrms/api/calendar.py:get_day not-affected — builds its rows from member_statuses, so it carries the field; the sheet renders through memberLine
-hrms/utils/team_status.py:derive_member_status not-affected — the CHIP stays Present on purpose (someone worked); only the line gains the detail
-frontend/src/views/team/TeamDashboard.vue:expanded row not-affected — already prints "(Half day)" for a half-day LEAVE; the HR-marked half now shows in the line above it
-hrms/api/calendar.py:attendance month view not-affected — reads Attendance.status directly and already shows Half Day (calendar legend)
+CLASS: a row's second line forced onto ONE line (nowrap + ellipsis) when the fact that matters is at its END, so a narrow phone cuts the important words first. The Team row cut "Half day" off at 360px (design review of ff899b5a4); every other list row's sublabel already clamps to two lines.
+frontend/src/theme/glass-components.css:.g-team-row__sub same-root (fixed here: two-line clamp, no nowrap)
+frontend/src/theme/glass-components.css:.g-team-row__name not-affected — a name is one short fact, ellipsis is right
+frontend/src/theme/glass-components.css:.g-row__sub not-affected — already two-line clamp
+frontend/src/components/DaySheet.vue:GListRow sublabel not-affected — GListRow's .g-row__sub clamps at two lines
+frontend/src/theme/glass-components.css:other nowrap rules not-affected — checked at review: titles, chips and single values, none carry a trailing fact
