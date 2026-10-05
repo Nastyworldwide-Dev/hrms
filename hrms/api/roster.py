@@ -486,6 +486,107 @@ def change_shift_day(
 
 
 @frappe.whitelist(methods=["POST"])
+def change_shift_from(employee: str, start_date: str, shifts: str | list, shift_location: str | None = None) -> dict:
+	"""HR changes a person's shift from a date: 9-6 to 10-7, or Mon-Thu 10-7 and Fri 10-4.
+
+	Was impossible from the screen: cancelling the old assignment is refused once
+	punches exist ("linked to Employee Checkin"), and a submitted assignment keeps
+	no editable shift. The old one is ENDED the day before instead (end_date is
+	editable after submit), so nothing with punches is cancelled and the past stays
+	exactly as it was. A date that already has punches or attendance is refused.
+	HR only (owner, 5 Oct 2026): a supervisor keeps the per-day roster actions.
+
+	`shifts`: [{"shift_type": ..., "days": ["Monday", ...] or null for every day}].
+	One transaction: any failure leaves the roster as it was.
+	"""
+	import json
+
+	from frappe.utils import getdate
+
+	from hrms.hr.utils import sees_all_employee_data
+	from hrms.utils.shift_change import ShiftChangeRefused, plan_change
+
+	_ensure_can_roster_employee(employee)
+	if not sees_all_employee_data(frappe.session.user):
+		frappe.throw(_("Only HR can change a person's shift from a date."), frappe.PermissionError)
+
+	start = getdate(start_date)
+	asked = json.loads(shifts) if isinstance(shifts, str) else shifts
+	new_shifts = [(row.get("shift_type"), row.get("days") or None) for row in asked or []]
+	for shift_type, _days in new_shifts:
+		if not shift_type or not frappe.db.exists("Shift Type", shift_type):
+			frappe.throw(_("Pick a shift that exists."))
+
+	assignments = frappe.get_all(
+		"Shift Assignment",
+		filters={"employee": employee, "docstatus": 1, "status": "Active"},
+		or_filters=[["end_date", ">=", start], ["end_date", "is", "not set"]],
+		fields=["name", "shift_type", "start_date", "end_date", "day_type"],
+	)
+	worked = {
+		getdate(day)
+		for day in frappe.get_all(
+			"Attendance",
+			filters={"employee": employee, "attendance_date": [">=", start], "docstatus": ["!=", 2]},
+			pluck="attendance_date",
+		)
+	} | {
+		getdate(moment)
+		for moment in frappe.get_all(
+			"Employee Checkin",
+			filters={"employee": employee, "time": [">=", f"{start} 00:00:00"]},
+			pluck="time",
+		)
+	}
+	try:
+		plan = plan_change(assignments, start, new_shifts, sorted(worked))
+	except ShiftChangeRefused as refused:
+		frappe.throw(str(refused))
+
+	company = frappe.db.get_value("Employee", employee, "company")
+	day_type = next((a.day_type for a in assignments if a.day_type and a.day_type != "None"), None)
+	logger.info("[roster] %s changes %s from %s: %s", frappe.session.user, employee, start, new_shifts)
+
+	for name, last_day in plan.end:
+		doc = frappe.get_doc("Shift Assignment", name)
+		doc.flags.ignore_permissions = True
+		doc.end_date = last_day
+		doc.save()
+	for name in plan.remove:
+		_remove_assignment(frappe.get_doc("Shift Assignment", name))
+	# a repeating schedule would keep creating the old shift after the change
+	for name in frappe.get_all(
+		"Shift Schedule Assignment", {"employee": employee, "enabled": 1}, pluck="name"
+	):
+		frappe.db.set_value("Shift Schedule Assignment", name, "enabled", 0)
+
+	for shift_type, days in plan.create:
+		if not days:
+			create_shift_assignment(
+				employee, company, shift_type, plan.start, None, "Active", shift_location,
+				ignore_permissions=True, day_type=day_type,
+			)
+			continue
+		schedule = get_or_insert_shift_schedule(shift_type, "Every Week", days)
+		repeat = frappe.get_doc(
+			{
+				"doctype": "Shift Schedule Assignment",
+				"shift_schedule": schedule,
+				"employee": employee,
+				"company": company,
+				"shift_status": "Active",
+				"shift_location": shift_location,
+				"day_type": _valid_day_type(day_type),
+				"enabled": 1,
+				"create_shifts_after": plan.start,
+			}
+		)
+		repeat.flags.ignore_permissions = True
+		repeat.insert()
+		repeat.create_shifts(str(plan.start), None)
+	return {"ended": len(plan.end), "removed": len(plan.remove), "created": len(plan.create)}
+
+@frappe.whitelist(methods=["POST"])
 def insert_shift(
 	employee: str,
 	company: str,

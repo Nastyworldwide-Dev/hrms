@@ -405,3 +405,106 @@ class TestSupervisorEditsRoster(FrappeTestCase):
 			update_shift_assignment(name, "Inactive", "2031-03-09")
 		# cutting only days after the punch is fine
 		update_shift_assignment(name, "Active", "2031-03-08")
+
+class TestHRChangesAShiftFromADate(FrappeTestCase):
+	"""Owner, 5 Oct 2026: HR could not move a person from 9-6 to 10-7. Cancelling
+	is refused once punches exist, and a submitted assignment keeps no editable
+	shift. change_shift_from ENDS the old assignment the day before instead."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.person = _make_employee("roster.change@bench.test", [])
+		cls.old = _shift_type("_Change 9-6", "09:00:00", "18:00:00")
+		cls.new = _shift_type("_Change 10-7", "10:00:00", "19:00:00")
+		cls.fri = _shift_type("_Change Fri 10-4", "10:00:00", "16:00:00")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("Shift Assignment", {"employee": self.person})
+		frappe.db.delete("Shift Schedule Assignment", {"employee": self.person})
+		frappe.db.delete("Employee Checkin", {"employee": self.person})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Shift Assignment",
+				"shift_type": self.old,
+				"company": COMPANY,
+				"employee": self.person,
+				"start_date": "2031-03-03",
+			}
+		)
+		doc.submit()
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def _rows(self):
+		rows = frappe.get_all(
+			"Shift Assignment",
+			filters={"employee": self.person, "docstatus": 1},
+			fields=["shift_type", "start_date", "end_date"],
+			order_by="start_date, shift_type",
+		)
+		return [(r.shift_type, str(r.start_date), str(r.end_date or "")) for r in rows]
+
+	def test_the_old_shift_ends_the_day_before_and_the_new_one_starts(self):
+		from hrms.api.roster import change_shift_from
+
+		change_shift_from(self.person, "2031-03-10", [{"shift_type": self.new}])
+		self.assertEqual(
+			self._rows(), [(self.old, "2031-03-03", "2031-03-09"), (self.new, "2031-03-10", "")]
+		)
+
+	def test_a_person_who_already_has_punches_can_still_be_moved_forward(self):
+		from hrms.api.roster import change_shift_from
+
+		frappe.get_doc(
+			{"doctype": "Employee Checkin", "employee": self.person, "time": "2031-03-05 09:01:00", "log_type": "IN"}
+		).insert(ignore_permissions=True)
+		change_shift_from(self.person, "2031-03-10", [{"shift_type": self.new}])
+		self.assertEqual(self._rows()[0], (self.old, "2031-03-03", "2031-03-09"))
+
+	def test_a_worked_day_on_or_after_the_date_is_refused_and_nothing_changes(self):
+		from hrms.api.roster import change_shift_from
+
+		frappe.get_doc(
+			{"doctype": "Employee Checkin", "employee": self.person, "time": "2031-03-12 09:01:00", "log_type": "IN"}
+		).insert(ignore_permissions=True)
+		before = self._rows()
+		with self.assertRaisesRegex(frappe.ValidationError, "2031-03-12"):
+			change_shift_from(self.person, "2031-03-10", [{"shift_type": self.new}])
+		self.assertEqual(self._rows(), before)
+
+	def test_monday_to_thursday_and_friday_on_different_shifts(self):
+		from hrms.api.roster import change_shift_from
+
+		change_shift_from(
+			self.person,
+			"2031-03-10",
+			[
+				{"shift_type": self.new, "days": ["Monday", "Tuesday", "Wednesday", "Thursday"]},
+				{"shift_type": self.fri, "days": ["Friday"]},
+			],
+		)
+		rows = self._rows()
+		self.assertIn((self.new, "2031-03-10", "2031-03-13"), rows)
+		self.assertIn((self.fri, "2031-03-14", "2031-03-14"), rows)
+
+	def test_changing_twice_does_not_double_the_new_shift(self):
+		from hrms.api.roster import change_shift_from
+
+		change_shift_from(self.person, "2031-03-10", [{"shift_type": self.new}])
+		change_shift_from(self.person, "2031-03-10", [{"shift_type": self.new}])
+		self.assertEqual(
+			self._rows(), [(self.old, "2031-03-03", "2031-03-09"), (self.new, "2031-03-10", "")]
+		)
+
+	def test_only_hr_may_change_a_shift_from_a_date(self):
+		from hrms.api.roster import change_shift_from
+
+		ensure_role()
+		supervisor = _make_employee("roster.change.sv@bench.test", [ROSTER_SUPERVISOR_ROLE])
+		frappe.db.set_value("Employee", self.person, "reports_to", supervisor)
+		frappe.set_user(frappe.db.get_value("Employee", supervisor, "user_id"))
+		with self.assertRaises(frappe.PermissionError):
+			change_shift_from(self.person, "2031-03-10", [{"shift_type": self.new}])
