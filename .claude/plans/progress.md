@@ -219,3 +219,5 @@ NEXT: (1) route announcements._push_to_users through push_body (same &amp; defec
 - 2026-10-05T10:01:53Z COMMIT: e806aab52 fix(ot): a refused claim could read equal to its cap → review dispatched
 - 2026-10-05T10:04:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-10-05T10:04:42Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452
+- 2026-10-05T10:04:44Z COMMIT: 0e08bffd5 fix(ot): a stored minute read as two minutes in the refusal → review+design+cross-app dispatched
+- 2026-10-05T10:05:36Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
