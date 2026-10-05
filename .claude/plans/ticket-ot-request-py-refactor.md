@@ -1,0 +1,11 @@
+# Ticket: hrms/hr/doctype/ot_request/ot_request.py keeps needing fixes (hotspot, 16 fixes/90d)
+
+WHY: validation, pricing, day-type, notification and payment state all live in one controller. Each fix (claim cap,
+banding, rate label, refusal wording, precision) has landed inside validate_claimed_hours or its neighbours.
+
+DO: split validate() into small named checks (claim vs cap, day type and rate, status guard), one test each, before the
+next change to this file. Keep hours_as_words (hrms/utils/ot_precision.py) as the one place hours become words.
+
+ALSO (same class, not yet fixed): replacement_leave_claim.py:86 prints raw {1} hours; attendance_fix_days.py request_kept
+and _result print raw hours to HR (OD7); the app's capAsTime floors while lists round (OD3) and the sent-request sheet shows
+decimals (OD4). OD2 (a typed claim is never banded to 30 min) changes pay: needs Nabil's ruling.

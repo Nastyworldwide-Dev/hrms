@@ -213,3 +213,6 @@ NEXT: (1) route announcements._push_to_users through push_body (same &amp; defec
 - 2026-10-05T09:59:53Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 4 extra test file(s) ⟂5c6fe2548ee6
 - 2026-10-05T09:59:55Z COMMIT: a5c28c876 fix(ot): the refusal named overtime to nine decimals → review dispatched
 - 2026-10-05T10:00:25Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-05T10:00:28Z COMMIT: bc350a0a6 fix(ot): the claim box opened on a nine-decimal number → review+design dispatched
+- 2026-10-05T10:01:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-10-05T10:01:51Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 4 extra test file(s) ⟂5c6fe2548ee6

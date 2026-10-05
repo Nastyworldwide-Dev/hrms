@@ -253,8 +253,8 @@ class OTRequest(Document, PWANotificationsMixin):
 				_(
 					"Cannot claim {0} — your check-outs prove at most {1} of overtime for {2}."
 				).format(
-					frappe.bold(hours_as_words(self.claimed_hours)),
-					frappe.bold(hours_as_words(self.punch_ot_hours, floor=True)),
+					frappe.bold(hours_as_words(self.claimed_hours, rounding="up")),
+					frappe.bold(hours_as_words(self.punch_ot_hours, rounding="down")),
 					frappe.bold(str(self.ot_date)),
 				)
 				+ (f"<br><br>{reason}" if reason else "")

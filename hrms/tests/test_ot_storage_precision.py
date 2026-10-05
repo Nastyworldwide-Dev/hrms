@@ -130,7 +130,7 @@ class TestRefusalSaysTimeNotNineDecimals(unittest.TestCase):
 	def test_hours_are_said_as_time(self):
 		from hrms.utils.ot_precision import hours_as_words
 
-		self.assertEqual(hours_as_words(8.876944444, floor=True), "8h 52m")
+		self.assertEqual(hours_as_words(8.876944444, rounding="down"), "8h 52m")
 		self.assertEqual(hours_as_words(8.876944444), "8h 53m")
 		self.assertEqual(hours_as_words(2), "2h 00m")
 		self.assertEqual(hours_as_words(0.75), "45m")
@@ -141,7 +141,17 @@ class TestRefusalSaysTimeNotNineDecimals(unittest.TestCase):
 		from hrms.utils.ot_precision import hours_as_words
 
 		# 5h 59m 50s is 5h 59m of cap, not 6h: a rounded-up cap names time the check refuses
-		self.assertEqual(hours_as_words(5 + 59 / 60 + 50 / 3600, floor=True), "5h 59m")
+		self.assertEqual(hours_as_words(5 + 59 / 60 + 50 / 3600, rounding="down"), "5h 59m")
+
+	def test_a_refused_claim_never_reads_equal_to_the_cap(self):
+		from hrms.utils.ot_precision import hours_as_words
+
+		# claim 8.87 h (532.2 min) against cap 8.8699 h (532.19 min): nearest-rounding said 8h 52m twice
+		self.assertEqual(hours_as_words(8.87, rounding="up"), "8h 53m")
+		self.assertEqual(hours_as_words(8.8699, rounding="down"), "8h 52m")
+		# an exact minute is not pushed a minute higher by float fuzz
+		self.assertEqual(hours_as_words(2.5, rounding="up"), "2h 30m")
+		self.assertEqual(hours_as_words(0.1, rounding="up"), "6m")
 
 	def test_the_refusal_names_no_long_decimals(self):
 		doc = filing.ot_request.OTRequest(
@@ -158,6 +168,21 @@ class TestRefusalSaysTimeNotNineDecimals(unittest.TestCase):
 		self.assertIn("8h 52m", message)
 		self.assertIn("9h 30m", message)
 		self.assertNotIn("8.876944444", message)
+
+
+class TestRefusalReadsAboveTheCap(unittest.TestCase):
+	def test_a_claim_just_over_the_cap_never_reads_equal_to_it(self):
+		# claim 8.87 h vs cap 8.8699 h: both said "8h 52m" under nearest-rounding
+		doc = filing.ot_request.OTRequest(dict(claimed_hours=8.87, punch_ot_hours=8.8699, ot_date="2026-09-06"))
+		with (
+			patch.object(filing.frappe, "bold", side_effect=lambda text: f"<b>{text}</b>"),
+			patch.object(filing.ot_request, "_", side_effect=lambda text: text),
+			unittest.TestCase().assertRaises(filing.frappe.ValidationError) as caught,
+		):
+			doc.validate_claimed_hours()
+		message = str(caught.exception)
+		self.assertIn("<b>8h 53m</b>", message)
+		self.assertIn("<b>8h 52m</b>", message)
 
 
 if __name__ == "__main__":

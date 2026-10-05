@@ -26,13 +26,20 @@ def stored_ot_hours(value):
 		frappe.throw(_("Overtime hours must be a finite number within the supported range."))
 
 
-def hours_as_words(value, floor=False) -> str:
+def hours_as_words(value, rounding="nearest") -> str:
 	"""Hours as a person says them: "8h 52m", "45m", "2h 00m". Never "8.876944444".
 
-	`floor` is for a CAP: rounding a cap up would name a figure the cap check refuses. A claim
-	rounds to the nearest minute, like the lists and the approver's screen.
+	`rounding` keeps a refusal honest: a CAP rounds "down" (never names time the check refuses) and
+	a refused CLAIM rounds "up", so a claim above the cap always reads strictly above it
+	("8h 53m" against "8h 52m"), never equal. Lists and sheets use "nearest".
 	"""
-	minutes = int(float(value or 0) * 60 + (1e-9 if floor else 0.5))
+	minutes_float = float(value or 0) * 60
+	if rounding == "down":
+		minutes = int(minutes_float + 1e-9)
+	elif rounding == "up":
+		minutes = -int(-(minutes_float - 1e-9) // 1)
+	else:
+		minutes = int(minutes_float + 0.5)
 	if minutes <= 0:
 		return "0m"
 	hours, rest = divmod(minutes, 60)
