@@ -33,6 +33,9 @@ def hours_as_words(value, rounding="nearest") -> str:
 	a refused CLAIM rounds "up", so a claim above the cap always reads strictly above it
 	("8h 53m" against "8h 52m"), never equal. Lists and sheets use "nearest".
 	"""
+	# ceiling: a claim ONE stored unit (1e-9 h, 3.6 microseconds) above a whole-minute cap reads equal to it;
+	# real punches and typed minutes differ by seconds, so it cannot occur. upgrade: if claims ever come from a
+	# source finer than a second, compare the nine-decimal values before comparing the words.
 	if rounding not in ("nearest", "down", "up"):
 		raise ValueError(f"rounding must be nearest, down or up, not {rounding!r}")
 	minutes_float = float(value or 0) * 60

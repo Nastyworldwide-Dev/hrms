@@ -8,3 +8,8 @@ indicator before any list script can, and Nadi says "Approved · unpaid". Change
 guarded patch (property-setter-shadows-doctype-json). (2) Remote Checkin Request is not submittable: Desk says Pending, Nadi says
 Waiting. Add a *_list.js whose indicator maps Pending to Waiting.
 DO AFTER: Nabil's word on the Expense wording.
+
+LIVE CHECK (cannot be seen from the repo): a Workflow record created on the site for any of the six doctypes draws its
+own state word BEFORE the list script (frappe.get_indicator order: workflow, doctype states, listview get_indicator).
+After deploy, open the Leave Application list as HR: the pill must say Waiting / Approved. If it still says Draft or Open, look
+at Workflow List for that doctype.
