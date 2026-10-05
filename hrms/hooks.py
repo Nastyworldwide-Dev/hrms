@@ -30,6 +30,8 @@ extend_bootinfo = "hrms.desk_boot.send_plain_staff_to_pwa"
 app_include_js = [
 	# HR's Fix Day screen, opened from Employee Checkin / the two attendance reports.
 	"fix_day.bundle.js",
+	# HR's "Change shift from..." dialog, opened from the Shift Assignment form.
+	"change_shift_from.bundle.js",
 	"hrms.bundle.js",
 ]
 app_include_css = "hrms.bundle.css"
