@@ -48,7 +48,8 @@ class PWANotificationsMixin:
 			)
 			# WHY, for a rejection: the approver was made to write one and the employee was never told it.
 			# The message is an HTML Text Editor field, so the reason is escaped.
-			reason = (self.flags.get("rejection_reason") or "").strip() if status == "Rejected" else ""
+			flags = getattr(self, "flags", None) or {}
+			reason = (flags.get("rejection_reason") or "").strip() if status == "Rejected" else ""
 			if reason:
 				from frappe.utils import escape_html
 
@@ -118,7 +119,10 @@ class PWANotificationsMixin:
 		}
 		field = APPROVER_FIELD.get(self.doctype)
 		if field:
-			return self.get(field)
+			# The named approver wins. With NONE named (21 of the 22 employees on the test site carry no
+			# leave approver) the request reached nobody and sat Open; it now goes up the employee's line,
+			# then HR, like OT, Attendance Request and Replacement Leave Claim (flows hunt M2, 5 Oct 2026).
+			return self.get(field) or self._get_ot_approver()
 		if self.doctype == "Compensatory Leave Request":
 			return self._get_leave_approver_or_manager()
 		if self.doctype in ("OT Request", "Replacement Leave Claim", "Attendance Request"):

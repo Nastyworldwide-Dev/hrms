@@ -278,3 +278,7 @@ STILL OPEN from the hunt (not built): M2 no approver is told when the approver f
 - 2026-10-05T09:29:20Z EVIDENCE: 6 behaves — family hunt: class=a decision's WHY recorded in one place and never carried to the one it concerns. de; 36 call site(s) given verdicts, 2 same-root ⟂5d6829671a45
 - 2026-10-05T09:29:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
 - 2026-10-05T09:29:31Z EVIDENCE: 3 works — blast radius green: 22 dependent(s), 18 extra test file(s) ⟂cebb1b0e4801
+- 2026-10-05T09:29:32Z EVIDENCE: 6 behaves — family hunt: class=a decision's WHY recorded in one place and never carried to the one it concerns. de; 36 call site(s) given verdicts, 2 same-root ⟂5d6829671a45
+- 2026-10-05T09:29:33Z COMMIT: f5941bed4 fix(requests): an employee was told Rejected and never why → review dispatched
+- 2026-10-05T09:34:37Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-10-05T09:34:37Z EVIDENCE: 3 works — blast radius green: 8 dependent(s), 7 extra test file(s) ⟂07285428dc7c

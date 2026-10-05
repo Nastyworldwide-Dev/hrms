@@ -118,6 +118,24 @@ class TestTheEmployeeHearsOnlyTheTransaction(unittest.TestCase):
 		sent.insert.assert_called_once()
 		self.assertIn("Rejected", str(sent.message))
 
+	def test_a_document_with_no_flags_still_notifies_a_rejection(self):
+		# defensive: the notice must never fail because the reason could not be read (a rejection that
+		# throws here would roll back the whole decision)
+		sent = MagicMock()
+		doc = _Leave(1, "Rejected")
+		del doc.flags
+		with (
+			patch.object(frappe, "db", MagicMock(get_value=lambda *a, **k: "x@example.com")),
+			patch.object(frappe, "new_doc", return_value=sent),
+			patch.object(frappe, "session", frappe._dict(user="manager@example.com")),
+			patch.object(pwa_notifications, "bold", str),
+			patch.object(pwa_notifications, "now_datetime", lambda: DECIDED_AT),
+			patch.object(pwa_notifications, "format_datetime", lambda dt: DECIDED_AT_TEXT),
+		):
+			doc.notify_approval_status()
+		sent.insert.assert_called_once()
+		self.assertIn("Rejected", str(sent.message))
+
 	def test_an_approval_never_carries_a_reason(self):
 		sent = _notify(docstatus=1, status="Approved", reason="left over from an earlier decision")
 		self.assertNotIn("left over", str(sent.message))
