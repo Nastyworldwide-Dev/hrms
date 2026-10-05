@@ -231,3 +231,12 @@ NEXT: (1) read the review of 1070014b4; (2) AU-2 signed-out notice, AU-3 only Gu
 - 2026-10-05T10:20:40Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-10-05T10:20:42Z COMMIT: 1c63f546b fix(roster): the shift picker showed only shifts named like the chosen one → review+design dispatched
 - 2026-10-05T10:23:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-05T10:23:22Z COMMIT: 3a860c31e fix(roster): the shift picker lost the chosen person's name and its tick → review+design dispatched
+
+## 5 Oct 2026 (end of session): pushed 18, roster picker fix local
+EVIDENCE: pushed af05c1670..1070014b4 to origin/nz-glass on Nabil's "push" (branch only, safety tag stays local). Roster picker: 1c63f546b + 3a860c31e local; shown 2 of 25 shifts before, 25 of 25 after (search_link probe on fresh.local); reviews of 1c63f546b gave two real warnings (bare id label, no tick), fixed in 3a860c31e.
+OWNER RULINGS (5 Oct): OT typed claims banded to 30 min (YES, NOT BUILT YET: validate_claimed_hours should round_ot_pay_hours the claim for Overtime Pay only; Replacement Leave unchanged); Desk wording for Expense Claim and Remote Checkin Request YES (NOT BUILT: ticket-desk-wording-expense-remote.md).
+DEAD END: the pre-commit hook bundles co-modified tracked files into the next commit (hit twice: 0e08bffd5, a5c28c876); stage the pair and commit in separate commands; the gate checks before the command runs.
+LEARNING(gate): a stub test that mocks frappe.bold/_ passes without reading the message -> assert on caught.exception text with bold/_ patched (done in test_ot_storage_precision.py).
+NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch only (Nabil said check before push); (2) build the OT 30-min banding of typed claims (ruled YES); (3) Desk wording for Expense Claim + Remote Checkin (ruled YES); (4) AU-2 signed-out notice on Submit, AU-5 stale cached page; (5) trace amend/rebuild for OT, Attendance Request, Expense Claim; (6) after deploy: Leave list in Desk must say Waiting (else a live Workflow overrides).
+- 2026-10-05T10:25:28Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1

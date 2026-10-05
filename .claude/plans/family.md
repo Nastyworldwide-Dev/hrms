@@ -1,5 +1,5 @@
-CLASS: a fix that changes what a picker opens with can change what its trigger SAYS. Opening on the full list (1c63f546b) stopped looking up the chosen record, so a chosen person past the first page would read as a bare id ("HR-EMP-00012"), not "W0 foreign : HR-EMP-00012" (Frappe review). The chosen option also had no tick in a long list, and 50 rows plus the chosen one hid the last real row (design review).
-roster/src/components/Link.vue same-root (fixed here: the chosen record's own label is looked up once when it is outside the first page; a tick marks the chosen option; 49 rows, not 50)
-roster/src/components/ShiftAssignmentDialog.vue:Link x3 same-root — Employee, Shift Type and Shift Location all use Link.vue, so all three get it
-frontend/src/components/Link.vue not-affected — the Nadi picker is a separate component with its own sheet and selected tick
-roster/src/components/MonthViewHeader.vue not-affected — filters use createListResource of names, no search_link
+CLASS: a list that hides the chosen record while the user types, when the control draws its CLOSED text from that same list. frappe-ui's Autocomplete finds the chosen option in the options it is given; a typed search that dropped the chosen shift left the box behind the popover blank (design review of 3a860c31e). Before the picker fixes the chosen record was always kept in the list.
+roster/src/components/Link.vue:shownOptions same-root (fixed here: the chosen record is always in the list, with its looked-up label)
+roster/src/components/Link.vue:options.onSuccess same-root (fixed here: looks the label up whenever the record is outside the loaded page and not already known, typed or not)
+roster/src/components/ShiftAssignmentDialog.vue:Link x3 same-root — all three pickers use Link.vue
+frontend/src/components/Link.vue not-affected — the Nadi picker draws its trigger from modelValue and the loaded options, never hides the chosen one

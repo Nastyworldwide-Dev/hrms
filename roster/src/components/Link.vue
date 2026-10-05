@@ -97,11 +97,12 @@ const chosen = createResource({
 	transform: (data) => data.map(toOption),
 });
 
-// The list shown: the chosen record stays in it, with its real label, but only while nothing is typed
-// (a typed search shows what matches, nothing else).
+// The list shown: the chosen record ALWAYS stays in it, with its real label. frappe-ui draws the closed
+// box's text from this list, so a chosen record dropped while someone types would leave the box blank
+// (design review of 3a860c31e). It is the old behaviour too: the chosen record was always injected.
 const shownOptions = computed(() => {
 	const list = options.data || [];
-	if (!props.modelValue || searchText.value || list.some((o) => o.value === props.modelValue)) return list;
+	if (!props.modelValue || list.some((o) => o.value === props.modelValue)) return list;
 	const label = (chosen.data || []).find((o) => o.value === props.modelValue)?.label;
 	return [{ label: label || props.modelValue, value: props.modelValue }, ...list];
 });
@@ -118,7 +119,8 @@ const options = createResource({
 	transform: (data) => data.map(toOption),
 	// the chosen record fell outside this page: ask for its own label once
 	onSuccess: (data) => {
-		if (props.modelValue && !searchText.value && !data.some((o) => o.value === props.modelValue)) {
+		const known = (chosen.data || []).some((o) => o.value === props.modelValue);
+		if (props.modelValue && !known && !data.some((o) => o.value === props.modelValue)) {
 			chosen.update({ params: { doctype: props.doctype, txt: props.modelValue, page_length: 5 } });
 			chosen.reload();
 		}

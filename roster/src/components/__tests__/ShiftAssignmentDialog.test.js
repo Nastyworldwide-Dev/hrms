@@ -127,8 +127,11 @@ test("the chosen record stays in the list, with its own label, when it is outsid
 	assert.match(picker, /chosen\.update\(\{ params: \{ doctype: props\.doctype, txt: props\.modelValue, page_length: 5 \} \}\)/)
 })
 
-test("a typed search shows what matches, not the chosen record on top", () => {
-	assert.match(picker, /if \(!props\.modelValue \|\| searchText\.value \|\|/)
+test("the chosen record stays in the list while someone types, so the closed box keeps its text", () => {
+	// frappe-ui draws the box's text from the list: dropping the chosen record left the box blank
+	const shown = picker.slice(picker.indexOf("const shownOptions"), picker.indexOf("const options = createResource"))
+	assert.doesNotMatch(shown, /searchText/)
+	assert.match(shown, /if \(!props\.modelValue \|\| list\.some/)
 })
 
 test("both loads ask for 49 rows: the picker shows 50 and the chosen record may take one", () => {
