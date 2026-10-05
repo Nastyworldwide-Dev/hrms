@@ -120,11 +120,23 @@ test("the picker opens on the full list, not on a search for the chosen value", 
 	assert.doesNotMatch(picker, /reloadOptions\(props\.modelValue/)
 })
 
-test("the chosen record stays in the list even when it is outside the first page", () => {
-	assert.match(picker, /!mapped\.find\(\(o\) => o\.value === props\.modelValue\)/)
+test("the chosen record stays in the list, with its own label, when it is outside the first page", () => {
+	assert.match(picker, /list\.some\(\(o\) => o\.value === props\.modelValue\)/)
+	// its "Name : ID" label is looked up once, not shown as a bare id
+	assert.match(picker, /const chosen = createResource\(/)
+	assert.match(picker, /chosen\.update\(\{ params: \{ doctype: props\.doctype, txt: props\.modelValue, page_length: 5 \} \}\)/)
 })
 
-test("both loads ask for a fuller page than search_link's 10", () => {
-	assert.match(picker, /const PAGE_LENGTH = 50/)
+test("a typed search shows what matches, not the chosen record on top", () => {
+	assert.match(picker, /if \(!props\.modelValue \|\| searchText\.value \|\|/)
+})
+
+test("both loads ask for 49 rows: the picker shows 50 and the chosen record may take one", () => {
+	assert.match(picker, /const PAGE_LENGTH = 49/)
 	assert.equal((picker.match(/page_length: PAGE_LENGTH/g) || []).length, 2)
+})
+
+test("the chosen option carries a tick in the list", () => {
+	assert.match(picker, /<template #item-prefix="\{ option \}">/)
+	assert.match(picker, /option\.value === props\.modelValue/)
 })

@@ -1,6 +1,5 @@
-CLASS: a picker that opens by SEARCHING for the value already chosen. search_link is a "contains" search, so a person on "Day Shift" got only the shifts whose name contains "Day Shift" (2 of 25 on the test site), and every other shift vanished from the list HR was meant to choose from.
-roster/src/components/Link.vue:onMounted same-root (fixed here: opens on the full list; the chosen record is kept in it; first page 50, not 10)
-roster/src/components/ShiftAssignmentDialog.vue:Link x3 same-root — the three pickers (Shift Type, Shift Location, Employee-side) all use Link.vue, so all are fixed at once
-frontend/src/components/Link.vue not-affected — the Nadi picker opens with reloadOptions("") already and injects the chosen record
-roster/src/components/MonthViewHeader.vue not-affected — its filters use createListResource of all names (pageLength 100), not a search
-hrms/api/roster.py:get_shifts not-affected — returns assignments, the picker's list never comes from it
+CLASS: a fix that changes what a picker opens with can change what its trigger SAYS. Opening on the full list (1c63f546b) stopped looking up the chosen record, so a chosen person past the first page would read as a bare id ("HR-EMP-00012"), not "W0 foreign : HR-EMP-00012" (Frappe review). The chosen option also had no tick in a long list, and 50 rows plus the chosen one hid the last real row (design review).
+roster/src/components/Link.vue same-root (fixed here: the chosen record's own label is looked up once when it is outside the first page; a tick marks the chosen option; 49 rows, not 50)
+roster/src/components/ShiftAssignmentDialog.vue:Link x3 same-root — Employee, Shift Type and Shift Location all use Link.vue, so all three get it
+frontend/src/components/Link.vue not-affected — the Nadi picker is a separate component with its own sheet and selected tick
+roster/src/components/MonthViewHeader.vue not-affected — filters use createListResource of names, no search_link

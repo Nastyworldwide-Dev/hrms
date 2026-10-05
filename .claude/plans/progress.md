@@ -229,3 +229,5 @@ EVIDENCE: announcements push NOT affected by the "&amp;" class (checked 5 Oct 20
 NEXT: (1) read the review of 1070014b4; (2) AU-2 signed-out notice, AU-3 only Guest 403 counts as lost session (probe: expired session = PermissionError 403 from is_whitelisted, so 403 alone cannot be dropped), AU-5; (3) trace amend/rebuild for OT, Attendance Request, Expense Claim; (4) Desk wording: Expense Claim + Remote Checkin (ticket, needs Nabil's word); (5) OD2 (30-min banding of typed claims) needs Nabil's ruling; (6) wait for "push" (17+ commits local).
 - 2026-10-05T10:18:32Z PUSH: nz-glass @ 1070014b4
 - 2026-10-05T10:20:40Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-05T10:20:42Z COMMIT: 1c63f546b fix(roster): the shift picker showed only shifts named like the chosen one → review+design dispatched
+- 2026-10-05T10:23:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1

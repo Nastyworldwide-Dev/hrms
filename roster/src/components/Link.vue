@@ -7,11 +7,17 @@
 			ref="autocompleteRef"
 			size="sm"
 			v-model="value"
-			:options="options.data || []"
+			:options="shownOptions"
 			:class="disabled ? 'pointer-events-none' : ''"
 			:disabled="disabled"
 			@update:query="handleQueryUpdate"
-		/>
+		>
+			<!-- the chosen shift shows a tick in a long list (frappe-ui draws one only when this slot exists) -->
+			<template #item-prefix="{ option }">
+				<FeatherIcon v-if="option.value === props.modelValue" name="check" class="h-4 w-4 text-ink-gray-7" />
+				<div v-else class="h-4 w-4" />
+			</template>
+		</Autocomplete>
 		<span v-if="props.description" class="block text-xs leading-5 text-gray-600 mt-1">
 			{{ props.description }}
 		</span>
@@ -19,7 +25,7 @@
 </template>
 
 <script setup>
-import { createResource, Autocomplete, debounce } from "frappe-ui";
+import { createResource, Autocomplete, FeatherIcon, debounce } from "frappe-ui";
 import { ref, computed, watch, onMounted } from "vue";
 
 const props = defineProps({
@@ -53,8 +59,9 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const autocompleteRef = ref(null);
-// search_link defaults to 10; a roster has more shift types than that
-const PAGE_LENGTH = 50;
+// search_link defaults to 10; a roster has more shift types than that. 49, not 50: the picker shows at
+// most 50 rows and the chosen record may be put on top of the list, so 49 keeps the last real row visible.
+const PAGE_LENGTH = 49;
 const searchText = ref("");
 
 const value = computed({
@@ -68,6 +75,37 @@ const value = computed({
 	},
 });
 
+// one option from a search_link row: the title and the id, as before
+const toOption = (doc) => {
+	let title = null;
+	if (doc.label && doc.label !== doc.value) {
+		title = doc.label;
+	} else if (doc.description) {
+		title = doc.description.split(",")[0];
+	}
+	return {
+		label: title ? `${title} : ${doc.value}` : doc.value,
+		value: doc.value,
+	};
+};
+
+// The chosen record's own label, looked up only when it is NOT in the list that opened (a long list,
+// the person chosen sits past the first 50): without it the box would show the bare id, not "Name : ID".
+const chosen = createResource({
+	url: "frappe.desk.search.search_link",
+	method: "POST",
+	transform: (data) => data.map(toOption),
+});
+
+// The list shown: the chosen record stays in it, with its real label, but only while nothing is typed
+// (a typed search shows what matches, nothing else).
+const shownOptions = computed(() => {
+	const list = options.data || [];
+	if (!props.modelValue || searchText.value || list.some((o) => o.value === props.modelValue)) return list;
+	const label = (chosen.data || []).find((o) => o.value === props.modelValue)?.label;
+	return [{ label: label || props.modelValue, value: props.modelValue }, ...list];
+});
+
 const options = createResource({
 	url: "frappe.desk.search.search_link",
 	params: {
@@ -77,24 +115,13 @@ const options = createResource({
 		page_length: PAGE_LENGTH,
 	},
 	method: "POST",
-	transform: (data) => {
-		const mapped = data.map((doc) => {
-			let title = null;
-			if (doc.label && doc.label !== doc.value) {
-				title = doc.label;
-			} else if (doc.description) {
-				title = doc.description.split(",")[0];
-			}
-			return {
-				label: title ? `${title} : ${doc.value}` : doc.value,
-				value: doc.value,
-			};
-		});
-		// the chosen record may sit outside this page: keep it, so the box still names it
-		if (props.modelValue && !mapped.find((o) => o.value === props.modelValue)) {
-			mapped.unshift({ label: props.modelValue, value: props.modelValue });
+	transform: (data) => data.map(toOption),
+	// the chosen record fell outside this page: ask for its own label once
+	onSuccess: (data) => {
+		if (props.modelValue && !searchText.value && !data.some((o) => o.value === props.modelValue)) {
+			chosen.update({ params: { doctype: props.doctype, txt: props.modelValue, page_length: 5 } });
+			chosen.reload();
 		}
-		return mapped;
 	},
 });
 
