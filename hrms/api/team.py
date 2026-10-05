@@ -347,6 +347,9 @@ def member_statuses(members, day) -> tuple[list[dict], dict]:
 				"leave_type": leave and leave.leave_type,
 				"leave_until": str(leave.to_date) if leave else None,
 				"half_day": bool(leave and leave.half_day),
+				# HR marked the DAY a half day (Attendance, no leave filed): the status above says
+				# Present because someone worked, and the half was lost on the boss's screen
+				"half_day_marked": bool(att and att.status == "Half Day"),
 			}
 		)
 	logger.debug("[team] member_statuses day=%s members=%d summary=%s", day, len(out), summary)

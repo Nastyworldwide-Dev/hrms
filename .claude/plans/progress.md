@@ -2,106 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-- 2026-09-30T06:50:52Z COMMIT: c18817c41 docs(handoff): alpha.24 done → review dispatched
-EVIDENCE: 3 fresh.local supervisor locked to _Test Company: report in Nadi W0 A SAVED, self SAVED, stranger refused; Team roster lists You first; browser Assign x2 no errors
-- 2026-09-30T08:59:01Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
-- 2026-09-30T08:59:01Z EVIDENCE: 3 works — blast radius green: 28 dependent(s), 16 extra test file(s) ⟂0ef7741de903
-- 2026-09-30T08:59:04Z COMMIT: 7913dc781 fix(roster): a Shift Supervisor could not assign shifts to their own team → review dispatched
-EVIDENCE: 2 team-roster-assign 3/3 (2 red before); browser: button reads 'Assign shift', first row 'You'
-- 2026-09-30T08:59:55Z EVIDENCE: 2 correct — mapped tests green (bun ) for 1 file(s) ⟂447b403db931
-- 2026-09-30T09:00:26Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-09-30T09:00:29Z COMMIT: a494357ca fix(team): the Assign shift button was a blank green pill → review+design dispatched
-- 2026-09-30T09:01:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-EVIDENCE: 2 company-from-employee test red on HEAD (1 fail), green after
-- 2026-09-30T09:01:33Z COMMIT: 729262e15 fix(roster): a supervisor's shift took its company from the browser → review dispatched
-EVIDENCE: 2 pre-push — frontend suite 1579/1579; roster/fence stub tests OK
-- 2026-09-30T09:07:19Z COMMIT: 2f1b7b8dd chore(release): 2.0.0-alpha.25 — Supervisors Roster Their Whole Team → review+deps dispatched
-NEXT: owner deploys alpha.25; HR retests Assign for the supervisor; alpha.26 larger text on 'go'
-- 2026-09-30T09:08:14Z COMMIT: b275fad44 docs(handoff): alpha.25 done → review dispatched
-EVIDENCE: 3 fresh.local HR-EMP-00012 (record calendar only) resolves Nadi W0 2026, half day 0.5; HR-EMP-00003 (none) plain refusal; holiday tests 33 pass
-- 2026-09-30T09:38:52Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-30T09:38:52Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
-- 2026-09-30T09:38:55Z COMMIT: a234b66dc fix(holidays): leave was refused for anyone added after install → review dispatched
-- 2026-09-30T09:39:43Z COMMIT: 66ed9b420 docs(readiness): tell HR the simpler way to give someone a calendar → review dispatched
-- 2026-09-30T09:41:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-30T09:41:05Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
-- 2026-09-30T09:41:08Z COMMIT: 3722a3ace fix(holidays): a split date range could add days to an empty start → review dispatched
-- 2026-09-30T09:43:45Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-30T09:43:45Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
-- 2026-09-30T09:43:46Z COMMIT: 1f3bfb3d3 fix(holidays): a range across two calendars counted holidays outside it → review dispatched
-EVIDENCE: 2 pre-push — holiday/OT stub suites 74+ pass; fresh.local record-calendar employee resolves, half day 0.5
-- 2026-09-30T09:45:28Z COMMIT: 8c191c356 chore(release): 2.0.0-alpha.26 — Leave Works for New Staff → review+deps dispatched
-NEXT: owner deploys alpha.26; HR sets Nsty Holding Default Holiday List if blank; alpha.27 larger text on 'go'
-- 2026-09-30T09:45:58Z COMMIT: 1b168a8c5 docs(handoff): alpha.26 done → review dispatched
-- 2026-09-30T10:06:20Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-EVIDENCE: 3 fresh.local employee with allocation + past leave + no assignment: live resolver -> leave section omitted ("None allocated yet"); alpha.26 resolver with record calendar -> balance 7.0
-- 2026-09-30T10:06:22Z COMMIT: 681545ac0 fix(requests): "None allocated yet" for someone with eight allocations → review+design dispatched
-- 2026-09-30T10:08:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-09-30T10:08:11Z COMMIT: 25d4ed093 fix(requests): "pull down to try again" did not reload the balances → review+design dispatched
-- 2026-09-30T10:15:19Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-30T10:15:19Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
-- 2026-09-30T10:15:44Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-30T10:15:44Z EVIDENCE: 3 works — blast radius green: 14 dependent(s), 11 extra test file(s) ⟂e3a82f02d393
-- 2026-09-30T10:15:49Z COMMIT: 51f319e17 fix(requests): "pull down to try again" did not reload the balances → review dispatched
-DEAD END: commit 51f319e17 carries the Monthly Attendance Sheet record-calendar fallback (holiday_list.get_assigned_holiday_lists_to_employee_and_company + 5 tests) under the previous subject 'pull down to try again' — the command that wrote the new commit-msg was refused by a gate, so the old file was reused. Correct subject: fix(attendance): the monthly sheet showed no holidays for newer staff. Evidence: fresh.local Sep holidays [] -> [09-06, 09-16].
-NEXT: owner answers the 3 decisions in docs/glass/plan/WORKING_DAY_MAP.md before any leave/payroll day-count change; 3 commits (balance msg, pull refresh, monthly sheet) wait for 'push'
-- 2026-09-30T10:24:04Z COMMIT: 3de46d30e docs(plan): how Nadi decides a working day, and where the flows disagree → review+design dispatched
-- 2026-09-30T10:25:24Z COMMIT: 4a8513bf0 docs(plan): state the upstream leave-count change as it is, not as intent → review+design dispatched
-- 2026-09-30T10:43:39Z COMMIT: 88fd57169 test(requests): the pull-to-refresh guard names both reloads → review dispatched
-EVIDENCE: 5 alpha.27 pre-push — frontend 1580/1580; iOS gate 9/9 0 findings
-- 2026-09-30T11:01:48Z COMMIT: 5dbc1592f chore(release): 2.0.0-alpha.27 — Honest Leave Balances → review+deps dispatched
-NEXT: write the rest-day rule plan (shift calendar first for leave and payroll, from deploy date; roster gap is not a day off; approved leave may still recount) and wait for owner approval
-- 2026-09-30T11:06:42Z COMMIT: 7db2b35c3 docs(handoff): alpha.27 done → review dispatched
-NEXT: owner approves docs/glass/plan/REST_DAY_RULE_PLAN.md; then step 0 (read-only Rest day differences report) ships alone
-- 2026-09-30T11:08:06Z COMMIT: 745e30dd6 docs(plan): one rest-day rule for leave and payroll, from the deploy day → review dispatched
-- 2026-09-30T11:09:57Z COMMIT: 7fe1dbc68 docs(plan): rest-day plan covers every payroll reader and defines "the shift" → review dispatched
-- 2026-09-30T11:11:06Z COMMIT: 7912ba96a docs(plan): payroll consumers and the start-date patch spelled out → review dispatched
-- 2026-09-30T11:17:24Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 6 file(s) ⟂c4997bca2a0e
-- 2026-09-30T11:17:26Z COMMIT: fedf16621 docs(plan): payroll consumers and the start-date patch spelled out → review+design dispatched
-DEAD END: commit fedf16621 is the Rest Day Differences report (step 0: hrms/hr/report/rest_day_differences/*, tests) under the previous subject 'docs(plan): payroll consumers...' — the command that wrote the new commit-msg.txt was refused by the TDD gate, so the old file was reused. Second time today (first: 51f319e17). Correct subject: feat(reports): Rest Day Differences shows who a one-rule rest day would move. LEARNING(gate): stale commit-msg.txt after a refused command -> write commit-msg.txt and git commit in the SAME command, or have the pipeline clear commit-msg.txt after each successful commit.
-- 2026-09-30T11:19:39Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-30T11:20:27Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-30T11:21:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-09-30T11:21:07Z EVIDENCE: 6 behaves — family hunt: class=a per-day lookup inside a per-employee loop in a report; 16 call site(s) given verdicts, 3 same-root ⟂bd4bcf991ec9
-- 2026-09-30T11:21:07Z COMMIT: e0dae0e2f fix(reports): Rest Day Differences looked a calendar up per person per day → review dispatched
-- 2026-09-30T11:23:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-30T11:23:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-EVIDENCE: 3 fresh.local mid-window Holiday List Assignment switch Sun->Sat: work dates Sun 04/11 Oct then Sat 17/24 Oct; 23 lookups, 0.05s
-- 2026-09-30T11:24:10Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-09-30T11:24:11Z EVIDENCE: 6 behaves — family hunt: class=a cache that assumes an answer cannot change inside the window; 6 call site(s) given verdicts, 3 same-root ⟂c6bc03d262ad
-- 2026-09-30T11:24:12Z COMMIT: 9cd034555 fix(reports): Rest Day Differences missed a calendar that changes mid-window → review dispatched
-EVIDENCE: 3 fresh.local checkpoints in one query: same Sun/Sat split, 0.05s
-- 2026-09-30T11:25:48Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
-- 2026-09-30T11:25:53Z COMMIT: 3e1e97c0f perf(reports): Rest Day Differences reads calendar changes in one query → review dispatched
-EVIDENCE: 2 sw.test.js 10/10 (2 new red before); vite build OK, notificationclick in built sw.js
-- 2026-10-01T06:32:23Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-10-01T06:33:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-10-01T06:33:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
-- 2026-10-01T06:33:51Z EVIDENCE: 6 behaves — family hunt: class=an event handler registered inside a try block that can fail first, so it is someti; 8 call site(s) given verdicts, 1 same-root ⟂737944510390
-- 2026-10-01T06:33:52Z COMMIT: a5cdc1bc1 fix(pwa): tapping a notification did nothing when push failed to start → review+design dispatched
-- 2026-10-01T06:37:31Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-10-01T06:37:35Z COMMIT: 51e6973dc fix(pwa): a notification tap could still do nothing on an uncontrolled window → review+design dispatched
-- 2026-10-01T06:39:09Z COMPACT: context compacted — read the last NEXT above before continuing
-DEAD END: none this step. Sign-in plan for non-HQ staff written (phone-number login = Frappe System Settings allow_login_using_mobile_number, user.py:835; SMS-code self reset = new code, needs SMS provider). sw tap fix 51e6973dc reviewed: no Critical (suggest try/catch around new URL).
-NEXT: wait for owner: (1) "push" -> scripts/release.sh alpha.28 (Rest Day Differences + sw tap fix); (2) SMS provider name + "go phone sign-in"; (3) announcement name + login email; (4) HR leave-import intent + one row. Do NOT push the safety tag.
-- 2026-10-01T06:42:36Z COMMIT: 5dcc9e8bb docs: record sign-in plan and pending owner decisions in progress → review dispatched
-EVIDENCE: 2 bench fresh.local console: test_roster 12/12 green; old break_shift -> test_supervisor_removes_the_first_day ERROR (red); node team-roster-assign 5/5. Mutation probe escaped: bench-only FrappeTestCase, pytest cannot run it
-- 2026-10-02T03:36:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
-- 2026-10-02T03:36:51Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
-- 2026-10-02T03:37:14Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
-- 2026-10-02T03:37:14Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
-- 2026-10-02T03:37:28Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
-- 2026-10-02T03:37:28Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
-- 2026-10-02T03:37:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
-- 2026-10-02T03:37:53Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
-- 2026-10-02T03:38:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 8 file(s) ⟂f8ce4dca95f0
-- 2026-10-02T03:38:18Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
-- 2026-10-02T03:38:58Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-10-02T03:38:58Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
-- 2026-10-02T03:39:01Z COMMIT: b4e7adb81 feat(roster): supervisors change and remove their team's shifts in Nadi → review+design dispatched
-- 2026-10-02T03:39:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 10 file(s) ⟂28ecefc53753
-- 2026-10-02T03:39:18Z EVIDENCE: 3 works — blast radius green: 26 dependent(s), 13 extra test file(s) ⟂059c871956ed
-- 2026-10-02T03:39:20Z COMMIT: d6f21438f fix(desk): Shift Supervisor got "No permission for Page" opening Nadi → review+cross-app dispatched
 NEXT: wait for the 2 frappe-reviewer verdicts (.claude/tmp/review-roster-edit.md, review-nadi-tile.md). No Critical -> scripts/release.sh alpha.28 and push nz-glass (9 commits: Rest Day Differences, sw tap x2, docs, roster edit b4e7adb81, Nadi tile d6f21438f). Do NOT push the safety tag. After deploy: Fauzi refreshes Desk.
 EVIDENCE: review b4e7adb81 no Critical (12/12 console, 5/5 node); calendar-day warning judged safe-direction, ticket-roster-py-refactor.md filed
 - 2026-10-02T03:41:19Z COMMIT: dddcaa3ca chore(release): 2.0.0-alpha.28 — Supervisors Edit the Roster → review+deps dispatched
@@ -295,3 +195,11 @@ STILL OPEN from the hunt (not built): M2 no approver is told when the approver f
 - 2026-10-05T09:40:32Z COMMIT: 1ad6e6c7d fix(notifications): a rejected request showed no reason in the feed → review+design dispatched
 - 2026-10-05T09:43:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-10-05T09:43:03Z EVIDENCE: 3 works — blast radius green: 8 dependent(s), 7 extra test file(s) ⟂07285428dc7c
+- 2026-10-05T09:43:07Z COMMIT: 261f60b9e fix(notifications): a rejection reason reached the phone with &amp; in it → review dispatched
+
+## 5 Oct 2026 (late): hunt continues, nothing pushed
+EVIDENCE: correct half/full-day leave traced on fresh.local (request -> approve -> cancel -> amend -> attendance rebuilt); probes /tmp/probe_hd1.py, /tmp/probe_hd2.py; reviews of 1ad6e6c7d and 261f60b9e: no Critical/Warning.
+DEAD END: none new. Release gate keeps asking to push; owner said push only on his word and keep the safety tag local.
+NEXT: (1) route announcements._push_to_users through push_body (same &amp; defect); (2) read /tmp/wording-inventory.md (scout) and fix PWA-vs-Desk wording mismatches; (3) trace amend/rebuild for OT, Attendance Request, Expense Claim; (4) AU-2 signed-out notice, AU-3 only Guest 403 = session lost (verified: expired session gives PermissionError 403 via is_whitelisted), AU-5, N+1 in get_leave_applications; (5) wait for "push".
+- 2026-10-05T09:52:51Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 5 file(s) ⟂5d9cef17ceeb
+- 2026-10-05T09:52:51Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81

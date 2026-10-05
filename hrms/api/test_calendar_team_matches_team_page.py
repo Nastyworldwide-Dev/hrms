@@ -104,6 +104,21 @@ class TestCalendarTeamMatchesTeamPage(unittest.TestCase):
 		self.assertEqual([row["employee"] for row in sheet["team"]], ["A"])
 		self.assertEqual(sheet["team"][0]["status"], "Present")
 
+	def test_a_day_hr_marked_half_reaches_the_boss_as_a_half_day(self):
+		# HR set Attendance "Half Day" and filed no leave. The status stays Present (someone worked), but
+		# the row must say the day was a half, or the boss reads a bare "Present" (2 Oct 2026, Natrah).
+		members = [_member("A", "Natrah"), _member("B", "Azza")]
+		taps = [_tap("A", "IN", 12, 38), _tap("B", "IN", 9, 5)]
+		attendance = [
+			frappe._dict(employee="A", status="Half Day", shift="9AM - 6PM"),
+			frappe._dict(employee="B", status="Present", shift="9AM - 6PM"),
+		]
+		page = self._run(team.get_team_status, DAY, members=members, taps=taps, attendance=attendance)
+		rows = {row["employee"]: row for row in page["members"]}
+		self.assertEqual(rows["A"]["status"], "Present")
+		self.assertTrue(rows["A"]["half_day_marked"])
+		self.assertFalse(rows["B"]["half_day_marked"])
+
 	def test_the_caller_is_never_in_their_own_team(self):
 		members = [_member("SENIOR", "Me"), _member("A", "Harith")]
 		sheet = self._run(calendar.get_day, DAY, members=members, taps=[])

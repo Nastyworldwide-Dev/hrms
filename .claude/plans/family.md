@@ -1,7 +1,7 @@
-CLASS: text written for one surface (escaped HTML in a Text Editor field) reused on another (a phone lock screen, a feed row) without translating it. The rejection reason is stored escaped, the framework push strips tags but not entities, so "Tom & Jerry" reached the phone as "Tom &amp; Jerry"; and an unbounded reason made a notice as long as the approver typed. The push body is now stripped then decoded in ONE place, and the notice cuts a long reason (the full text stays on the request).
-hrms/hr/doctype/pwa_notification/pwa_notification.py:send_push_notification same-root (fixed here: body goes through push_body, strip_html off so it is not stripped twice)
-hrms/mixins/pwa_notifications.py:notify_approval_status same-root (fixed here: reason cut at REASON_NOTICE_MAX, ellipsis)
-hrms/mixins/pwa_notifications.py:notify_approver not-affected — message is built from names and a doc name, escaped by bold(); no free text from a user
-hrms/hr/doctype/pwa_notification/pwa_notification.py:get_notification_link not-affected — builds a URL, not text
-frontend/src/utils/notificationLine.js:notificationLine not-affected — decodes entities itself (1ad6e6c7d)
-hrms/api/approval.py:decide not-affected — records the FULL reason as a Comment; only the notice is cut
+CLASS: a status collapsed to one word that drops the detail that changes its meaning. The team view maps Attendance "Half Day" to "Present" (someone worked), and the line under the name never said the day was a half, so a boss read a full day where HR had marked a half (2 Oct 2026). A half-day LEAVE already said "(Half day)" in the expanded row; a half day marked on the attendance did not.
+hrms/api/team.py:member_statuses same-root (fixed here: row carries half_day_marked from the Attendance status)
+frontend/src/utils/team.js:memberLine same-root (fixed here: the line ends with "Half day" when HR marked it; the Team page row and the Calendar day sheet both read this one function)
+hrms/api/calendar.py:get_day not-affected — builds its rows from member_statuses, so it carries the field; the sheet renders through memberLine
+hrms/utils/team_status.py:derive_member_status not-affected — the CHIP stays Present on purpose (someone worked); only the line gains the detail
+frontend/src/views/team/TeamDashboard.vue:expanded row not-affected — already prints "(Half day)" for a half-day LEAVE; the HR-marked half now shows in the line above it
+hrms/api/calendar.py:attendance month view not-affected — reads Attendance.status directly and already shows Half Day (calendar legend)

@@ -74,13 +74,16 @@ export function memberLine(member, __, fmt) {
 		const type = __(member.leave_type, null, "Leave Type")
 		return `${type} · ${__("until")} ${fmt.shortDay(member.leave_until)}`
 	}
+	// HR marked the day a half day: say so (5 Oct 2026). The chip stays Present, someone worked, but
+	// "Present" alone hid that only half of the day was.
+	const half = member.half_day_marked ? ` · ${__("Half day")}` : ""
 	if (member.first_in || member.last_out) {
 		// A check-out after midnight says so (owner, 26 Sep 2026): it belongs
 		// to this work day, and "OUT 01:41" alone read as a missed check-out.
 		const out = fmt.punch(member.last_out)
 		return `${__("IN")} ${fmt.punch(member.first_in)} · ${__("OUT")} ${
 			member.out_next_day ? __("{0} (next day)", [out]) : out
-		}`
+		}${half}`
 	}
 	if (member.counted_on) {
 		return __("Worked past midnight · counted on {0}", [fmt.day(member.counted_on)])
@@ -91,5 +94,5 @@ export function memberLine(member, __, fmt) {
 		)}`
 	}
 	if (member.status === "Absent") return __("No punch · no leave filed")
-	return __(member.status)
+	return member.half_day_marked ? `${__(member.status)}${half}` : __(member.status)
 }
