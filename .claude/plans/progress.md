@@ -208,3 +208,6 @@ NEXT: (1) route announcements._push_to_users through push_body (same &amp; defec
 - 2026-10-05T09:54:50Z COMMIT: 9d6a5e062 fix(team): "Half day" was the first thing cut off on a phone → review+design dispatched
 - 2026-10-05T09:55:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-10-05T09:55:49Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-10-05T09:55:51Z COMMIT: 8cdbedec5 fix(team): an old draft attendance row could hide a day HR marked half → review dispatched
+- 2026-10-05T09:59:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-10-05T09:59:53Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 4 extra test file(s) ⟂5c6fe2548ee6

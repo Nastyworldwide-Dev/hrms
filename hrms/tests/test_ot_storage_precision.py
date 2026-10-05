@@ -124,5 +124,41 @@ class TestOTStoragePrecision(unittest.TestCase):
 			doc.validate_claimed_hours()
 
 
+class TestRefusalSaysTimeNotNineDecimals(unittest.TestCase):
+	"""The refusal named hours to nine places ("at most 8.876944444 hours"). People say 8h 52m."""
+
+	def test_hours_are_said_as_time(self):
+		from hrms.utils.ot_precision import hours_as_words
+
+		self.assertEqual(hours_as_words(8.876944444, floor=True), "8h 52m")
+		self.assertEqual(hours_as_words(8.876944444), "8h 53m")
+		self.assertEqual(hours_as_words(2), "2h 00m")
+		self.assertEqual(hours_as_words(0.75), "45m")
+		self.assertEqual(hours_as_words(0), "0m")
+		self.assertEqual(hours_as_words(None), "0m")
+
+	def test_a_cap_never_rounds_up(self):
+		from hrms.utils.ot_precision import hours_as_words
+
+		# 5h 59m 50s is 5h 59m of cap, not 6h: a rounded-up cap names time the check refuses
+		self.assertEqual(hours_as_words(5 + 59 / 60 + 50 / 3600, floor=True), "5h 59m")
+
+	def test_the_refusal_names_no_long_decimals(self):
+		doc = filing.ot_request.OTRequest(
+			dict(claimed_hours=9.5, punch_ot_hours=8.876944444, ot_date="2026-09-06")
+		)
+		# the stub's bold() and _() are mocks: give them their real, plain behaviour for this one read
+		with (
+			patch.object(filing.frappe, "bold", side_effect=lambda text: f"<b>{text}</b>"),
+			patch.object(filing.ot_request, "_", side_effect=lambda text: text),
+			self.assertRaises(filing.frappe.ValidationError) as caught,
+		):
+			doc.validate_claimed_hours()
+		message = str(caught.exception)
+		self.assertIn("8h 52m", message)
+		self.assertIn("9h 30m", message)
+		self.assertNotIn("8.876944444", message)
+
+
 if __name__ == "__main__":
 	unittest.main()

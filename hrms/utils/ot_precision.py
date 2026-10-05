@@ -24,3 +24,18 @@ def stored_ot_hours(value):
 			return Decimal(str(value or 0)).quantize(Decimal("0.000000001"), rounding=ROUND_HALF_UP)
 	except (InvalidOperation, ValueError):
 		frappe.throw(_("Overtime hours must be a finite number within the supported range."))
+
+
+def hours_as_words(value, floor=False) -> str:
+	"""Hours as a person says them: "8h 52m", "45m", "2h 00m". Never "8.876944444".
+
+	`floor` is for a CAP: rounding a cap up would name a figure the cap check refuses. A claim
+	rounds to the nearest minute, like the lists and the approver's screen.
+	"""
+	minutes = int(float(value or 0) * 60 + (1e-9 if floor else 0.5))
+	if minutes <= 0:
+		return "0m"
+	hours, rest = divmod(minutes, 60)
+	if not hours:
+		return f"{rest}m"
+	return f"{hours}h {rest:02d}m"  # same shape as the app's hoursAsTime: "2h 00m", "8h 02m"

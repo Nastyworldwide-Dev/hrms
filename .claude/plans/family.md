@@ -1,6 +1,7 @@
-CLASS: a lookup built into a dict keyed by person, fed by a query with no order, so when two rows exist for one person the one that wins is whichever the database listed last. HR's half day (a submitted Attendance) could lose to an older draft row saying Present.
-hrms/api/team.py:member_statuses same-root (fixed here: order_by docstatus asc, modified asc, so the submitted and latest row is the one the dict keeps)
-hrms/api/team.py:leaves dict not-affected — filtered to docstatus 1 and status Approved, one row per person per day by the overlap rule
-hrms/api/calendar.py:get_day not-affected — reads rows from member_statuses
-hrms/api/calendar.py:month view not-affected — reads Attendance directly per day, not through a person-keyed dict
-hrms/utils/team_status.py:derive_member_status not-affected — takes the status it is given
+CLASS: a person-facing sentence built from a stored float with no formatting, so the nine decimals the database keeps ("8.876944444") reach the screen. The refusal "Cannot claim ... at most 8.876944444 hours" named raw hours; the lists and the approver's screen already say "8h 52m".
+hrms/hr/doctype/ot_request/ot_request.py:validate_claimed_hours same-root (fixed here: both figures go through hours_as_words; the cap rounds DOWN, the claim to the nearest minute)
+hrms/utils/ot_precision.py:hours_as_words same-root (new: the one server-side "8h 52m" helper, same shape as the app's hoursAsTime)
+hrms/api/attendance_fix_days.py:361,380 ticket ot-decimals — "OT Request X 8.876944444 h" in HR's Fix Day screen and log (OD7, Low), next commit
+hrms/hr/doctype/replacement_leave_claim/replacement_leave_claim.py:86 ticket ot-decimals — "Cannot claim {0} day(s) ({1} hours)" prints hours unformatted, same class
+hrms/mixins/pwa_notifications.py:notify_* not-affected — no OT hours in any notice sentence (hunt checked)
+hrms/hr/doctype/ot_request/ot_request.py:validate_claimed_hours comparison not-affected — still compares at nine decimals (stored_ot_hours); only the TEXT changed

@@ -22,7 +22,7 @@ from hrms.utils.ot_calculation import (
 	get_ot_claim_capacity,
 	replacement_leave_days,
 )
-from hrms.utils.ot_precision import stored_ot_hours
+from hrms.utils.ot_precision import hours_as_words, stored_ot_hours
 
 logger = logging.getLogger(__name__)
 
@@ -251,10 +251,10 @@ class OTRequest(Document, PWANotificationsMixin):
 				reason = _explain_no_overtime(self.employee, self.ot_date)
 			frappe.throw(
 				_(
-					"Cannot claim {0} hours — your check-outs prove at most {1} hours of overtime for {2}."
+					"Cannot claim {0} — your check-outs prove at most {1} of overtime for {2}."
 				).format(
-					frappe.bold(self.claimed_hours),
-					frappe.bold(self.punch_ot_hours),
+					frappe.bold(hours_as_words(self.claimed_hours)),
+					frappe.bold(hours_as_words(self.punch_ot_hours, floor=True)),
 					frappe.bold(str(self.ot_date)),
 				)
 				+ (f"<br><br>{reason}" if reason else "")
