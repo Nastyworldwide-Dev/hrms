@@ -14,9 +14,11 @@ frappe.listview_settings["Expense Claim"] = {
 			return [__("Rejected"), "red", "approval_status,=,Rejected"];
 		}
 		if (doc.status === "Paid") return [__("Paid"), "green", "status,=,Paid"];
-		// submitted and approved, money not paid out yet
+		// submitted and approved, money not paid out yet. The click filter is the DECISION, not the money
+		// word: an approved claim with nothing sanctioned keeps the stored status "Submitted" (set_status),
+		// and a filter on "Unpaid" would not list it (design review of 3f761024f).
 		if (doc.approval_status === "Approved" || doc.status === "Unpaid") {
-			return [__("Approved · unpaid"), "blue", "status,=,Unpaid"];
+			return [__("Approved · unpaid"), "blue", "approval_status,=,Approved"];
 		}
 		// submitted with no decision recorded (an older row): waiting for the decision
 		return [__("Waiting"), "orange", "docstatus,=,1"];

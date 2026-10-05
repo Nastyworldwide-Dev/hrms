@@ -20,8 +20,9 @@ test("a claim nobody has decided says Waiting", () => {
 });
 
 test("approved but not paid says Approved · unpaid, the same words as Nadi", () => {
-	assert.deepStrictEqual(word({ docstatus: 1, status: "Unpaid", approval_status: "Approved" }), ["Approved · unpaid", "blue", "status,=,Unpaid"]);
-	assert.deepStrictEqual(word({ docstatus: 1, status: "Submitted", approval_status: "Approved" }), ["Approved · unpaid", "blue", "status,=,Unpaid"]);
+	assert.deepStrictEqual(word({ docstatus: 1, status: "Unpaid", approval_status: "Approved" }), ["Approved · unpaid", "blue", "approval_status,=,Approved"]);
+	// nothing sanctioned: set_status leaves the stored status "Submitted", and the pill must still list it
+	assert.deepStrictEqual(word({ docstatus: 1, status: "Submitted", approval_status: "Approved" }), ["Approved · unpaid", "blue", "approval_status,=,Approved"]);
 });
 
 test("paid says Paid", () => {
