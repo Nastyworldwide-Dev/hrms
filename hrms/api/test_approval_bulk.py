@@ -49,9 +49,9 @@ class TestCheckMany(unittest.TestCase):
 	def _check(self, items, actions, blocked=None, exists=True):
 		def decision_actions(doctype, name):
 			if name in (blocked or {}):
-				return {"actions": ["Rejected"], "modified": "m", "blocked": blocked[name]}
+				return {"actions": ["Rejected"], "modified": "2026-10-01 09:00:00", "blocked": blocked[name]}
 			if name in actions:
-				return {"actions": ["Approved", "Rejected"], "modified": "m"}
+				return {"actions": ["Approved", "Rejected"], "modified": "2026-10-01 09:00:00"}
 			return {"actions": [], "modified": None}
 
 		with (
@@ -74,6 +74,34 @@ class TestCheckMany(unittest.TestCase):
 		self.assertEqual(result["ready"], [])
 		self.assertEqual(result["refused"][0]["code"], "not_yours")
 
+	def test_a_request_edited_after_the_list_was_loaded_is_refused_as_changed(self):
+		# the approver saw version "v1"; the employee edited it since, the server now holds "v2".
+		# Returning v2 as the revision to approve would let the approval through for dates the
+		# approver never saw (reviewer, 5 Oct 2026: the check only covered check -> approve).
+		def decision_actions(doctype, name):
+			return {"actions": ["Approved", "Rejected"], "modified": "2026-10-02 10:00:00"}
+
+		with (
+			patch.object(approval, "get_decision_actions", side_effect=decision_actions),
+			patch.object(approval.frappe.db, "exists", return_value=True),
+		):
+			result = approval.check_many([item("A", modified="2026-10-01 09:00:00")])
+		self.assertEqual(result["ready"], [])
+		self.assertEqual(result["refused"][0]["code"], "changed")
+		self.assertIn("changed", result["refused"][0]["reason"].lower())
+
+	def test_a_request_unchanged_since_the_list_is_ready_with_the_revision_the_approver_saw(self):
+		def decision_actions(doctype, name):
+			return {"actions": ["Approved", "Rejected"], "modified": "2026-10-01 09:00:00.000000"}
+
+		with (
+			patch.object(approval, "get_decision_actions", side_effect=decision_actions),
+			patch.object(approval.frappe.db, "exists", return_value=True),
+		):
+			result = approval.check_many([item("A", modified="2026-10-01 09:00:00")])
+		self.assertEqual([r["name"] for r in result["ready"]], ["A"])
+		self.assertEqual(result["ready"][0]["modified"], "2026-10-01 09:00:00")
+
 	def test_a_missing_request_is_refused_not_an_error(self):
 		result = self._check([item("GONE")], actions={"GONE"}, exists=False)
 		self.assertEqual(result["refused"][0]["code"], "gone")
@@ -81,7 +109,9 @@ class TestCheckMany(unittest.TestCase):
 	def test_it_writes_nothing(self):
 		with (
 			patch.object(
-				approval, "get_decision_actions", return_value={"actions": ["Approved"], "modified": "m"}
+				approval,
+				"get_decision_actions",
+				return_value={"actions": ["Approved"], "modified": "2026-10-01 09:00:00"},
 			),
 			patch.object(approval.frappe.db, "exists", return_value=True),
 			patch.object(approval, "decide") as decide,
@@ -135,7 +165,6 @@ class TestCheckMany(unittest.TestCase):
 			approval.check_many([{"doctype": "Leave Application", "name": "A"}])
 		with self.assertRaises(frappe.ValidationError):
 			approval.decide_many([{"doctype": "Leave Application", "name": "A", "modified": None}])
-
 
 		with self.assertRaises(frappe.ValidationError):
 			approval.check_many([])

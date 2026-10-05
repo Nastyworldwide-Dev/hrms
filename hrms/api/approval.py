@@ -394,6 +394,7 @@ def decide(
 #: if HR needs more than this at once.
 BULK_CAP = 50
 
+
 def _bulk_items(items) -> list[dict]:
 	"""The batch as a list of {doctype, name, modified}, or a plain refusal.
 
@@ -433,8 +434,10 @@ def _bulk_items(items) -> list[dict]:
 		key=lambda row: (row["doctype"], row["name"]),
 	)
 
+
 def _refused(row: dict, code: str, reason: str) -> dict:
 	return {"doctype": row["doctype"], "name": row["name"], "code": code, "reason": reason}
+
 
 @frappe.whitelist(methods=["POST"])
 def check_many(items: str | list) -> dict:
@@ -454,13 +457,28 @@ def check_many(items: str | list) -> dict:
 			continue
 		answer = get_decision_actions(doctype, name)
 		if "Approved" in answer["actions"]:
-			ready.append({**row, "modified": answer["modified"]})
+			from frappe.utils import get_datetime
+
+			# The approver decides what THEY saw. Handing back the server's fresh revision would let
+			# a request the employee edited after the list loaded go through for dates the approver
+			# never saw: the check below would only cover the gap between check and approve.
+			if get_datetime(answer["modified"]) != get_datetime(row["modified"]):
+				refused.append(
+					_refused(
+						row,
+						"changed",
+						_("This request changed since you saw it. Reload the list and look again."),
+					)
+				)
+				continue
+			ready.append(row)
 		elif answer.get("blocked"):
 			refused.append(_refused(row, answer["blocked"]["code"], answer["blocked"]["message"]))
 		else:
 			refused.append(_refused(row, "not_yours", _("This request is not waiting on you.")))
 	logger.info("[approval] %s checked %d request(s): %d ready", frappe.session.user, len(rows), len(ready))
 	return {"ready": ready, "refused": refused}
+
 
 @frappe.whitelist(methods=["POST"])
 def decide_many(items: str | list) -> dict:
@@ -499,16 +517,16 @@ def decide_many(items: str | list) -> dict:
 			refused.append(_refused(row, "error", _("This one could not be approved. Open it to see why.")))
 		finally:
 			frappe.clear_messages()
-	logger.info(
-		"[approval] %s bulk approved %d of %d", frappe.session.user, len(approved), len(rows)
-	)
+	logger.info("[approval] %s bulk approved %d of %d", frappe.session.user, len(approved), len(rows))
 	return {"approved": approved, "refused": refused}
+
 
 def _plain(refusal) -> str:
 	"""The controller's own message, tags removed: shown as text, never markup."""
 	import re
 
 	return re.sub(r"<[^>]+>", "", str(refusal)).strip() or _("This can't be approved yet.")
+
 
 #: The prefix the employee's request sheet looks for. Kept here, the one place
 #: that writes it, and read back by hrms.api.get_rejection_reason.
