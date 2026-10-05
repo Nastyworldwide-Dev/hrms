@@ -24,7 +24,6 @@ from hrms.utils.approved_request_guard import (
 	is_own_request,
 	may_cancel,
 )
-from hrms.utils.offshift_punch_heal import _lost_transaction
 
 logger = logging.getLogger(__name__)
 
@@ -410,7 +409,10 @@ def _bulk_items(items) -> list[dict]:
 			frappe.throw(_("Pick at least one request."), frappe.ValidationError)
 	if not isinstance(items, list) or not items:
 		frappe.throw(_("Pick at least one request."), frappe.ValidationError)
-	if not all(isinstance(row, dict) and row.get("doctype") and row.get("name") for row in items):
+	if not all(
+		isinstance(row, dict) and isinstance(row.get("doctype"), str) and isinstance(row.get("name"), str)
+		for row in items
+	) or not all(row["doctype"] and row["name"] for row in items):
 		frappe.throw(_("Pick at least one request."), frappe.ValidationError)
 	if len(items) > BULK_CAP:
 		frappe.throw(
@@ -485,6 +487,8 @@ def decide_many(items: str | list) -> dict:
 			frappe.db.rollback(save_point=savepoint)
 			refused.append(_refused(row, "refused", _plain(refusal)))
 		except Exception as error:
+			from hrms.utils.offshift_punch_heal import _lost_transaction  # attendance tree: only here
+
 			if _lost_transaction(error):
 				# a deadlock or lock timeout rolled back the WHOLE transaction: carrying on would
 				# report approvals that no longer exist

@@ -102,6 +102,32 @@ class TestCheckMany(unittest.TestCase):
 			with self.assertRaises(frappe.ValidationError, msg=repr(bad)):
 				approval.check_many(bad)
 
+	def test_names_and_doctypes_must_be_text_or_the_sort_cannot_crash(self):
+		# reviewer 5 Oct: {"doctype": 5} / mixed int and str names made sorted() raise a 500
+		for bad in (
+			[{"doctype": 5, "name": "x", "modified": "m"}],
+			[{"doctype": "Leave Application", "name": 7, "modified": "m"}],
+			[
+				{"doctype": "Leave Application", "name": "A", "modified": "m"},
+				{"doctype": "Leave Application", "name": 9, "modified": "m"},
+			],
+		):
+			with self.assertRaises(frappe.ValidationError, msg=repr(bad)):
+				approval.check_many(bad)
+
+	def test_the_attendance_import_tree_is_not_loaded_with_every_approval_request(self):
+		# approval.py is imported by every PWA request; the lost-transaction helper lives in
+		# attendance code and is imported where it is used, as lone_in_closer does
+		import ast
+
+		tree = ast.parse(pathlib.Path(approval.__file__).read_text())
+		top = [
+			node.module
+			for node in tree.body
+			if isinstance(node, ast.ImportFrom) and node.module == "hrms.utils.offshift_punch_heal"
+		]
+		self.assertEqual(top, [])
+
 	def test_a_row_with_no_revision_is_refused_because_decide_skips_the_check_without_one(self):
 		# decide() compares `modified` only when it is given: a bulk approve of a request the
 		# approver never saw in its current form must not slip through (reviewer, 5 Oct 2026)

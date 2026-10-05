@@ -1,3 +1,9 @@
 # Ticket: roster.py hotspot (4 fixes/90d)
 roster.py re-derives "may this caller touch this row" per endpoint (insert_shift `may`, break_shift own_line, swap/schedule still plain Frappe checks). One helper: fence + own_line -> ignore_permissions, used by every write. Also swap_shift/delete_shift_schedule_assignment still refuse a supervisor's cross-company line (ceiling marker in insert_shift).
 Review b4e7adb81 note: _refuse_worked_day reads calendar day; safe direction only (a night OUT after midnight makes the NEXT day look worked = over-refuse; an IN is always on its own day), so no miss. Revisit if HR reports a wrong "Ask HR".
+
+## Update 5 Oct 2026 (change_shift_from, 12fff2dd5..e0f1f31ea)
+roster.py is now 11 fixes/90d. `change_shift_from` is ~100 lines in the endpoint: move the "what was worked" reads (Attendance, Employee Checkin by time, Employee Checkin by shift_start) and the write set into hrms/utils/shift_change.py as one tested helper; the endpoint stays a thin fence + call. Reviewer (3 passes) asked for it; no Critical found.
+
+# Ticket: approval.py hotspot (27 fixes/90d)
+decide / decide_many / get_decision_actions / _approve_would_refuse / _decision_access all re-derive "may this caller act on this request and would it be refused". decide_many (5 Oct 2026) deliberately calls decide() and adds no rule, so it stays safe, but each new caller needs the same savepoint + lost-transaction handling. One helper owning "run decide for one item inside a savepoint and classify the outcome" would serve decide_many and any future batch (reject, cancel). Also: after a savepoint rollback Frappe keeps the item's after_commit callbacks queued (frappe/database/database.py rollback(save_point=) does not reset them). Reviewed safe today (PWA push re-reads the row, email flush re-reads the queue, realtime is content-free) but day_remark callbacks were not confirmed to re-read state.
