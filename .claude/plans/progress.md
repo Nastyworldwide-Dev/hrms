@@ -208,3 +208,4 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T03:21:27Z COMPACT: context compacted — read the last NEXT above before continuing
 - 2026-10-06T03:26:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
 - 2026-10-06T03:26:50Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 10 extra test file(s) ⟂26261ccd9d8d
+- 2026-10-06T03:32:37Z EVIDENCE: 2 correct — mapped tests green (bun ) for 9 file(s) ⟂0e91782f6c7d

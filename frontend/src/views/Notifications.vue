@@ -16,6 +16,7 @@
 			</template>
 		</ShellHeader>
 		<ion-content class="ion-padding g-page__content">
+			<GPullRefresh @refresh="refresh" />
 			<div class="flex flex-col min-h-full w-full">
 				<div class="w-full max-w-content-column-lg mx-auto">
 					<div class="flex flex-col gap-3 p-4">
@@ -124,7 +125,7 @@ import { foldNotifications } from "@/utils/foldNotifications"
 import { siteTime, siteTimeZone } from "@/utils/siteTime"
 import { createResource, frappeRequest } from "frappe-ui"
 
-import { computed, inject, onMounted, ref, watch } from "vue"
+import { computed, defineAsyncComponent, inject, onMounted, ref, watch } from "vue"
 
 import { unreadNotificationsCount, notifications } from "@/data/notifications"
 
@@ -342,6 +343,18 @@ function loadMore() {
 	notifications.start = currentStart.value
 	notifications.pageLength = pageLength
 	notifications.list.fetch()
+}
+
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
+
+//: Pull to refresh reloads what this screen shows: the feed (every page already
+//: on screen) and the unread count over it (6 Oct 2026: a pull did nothing here).
+async function refresh(event) {
+	console.info("[Notifications] pull-to-refresh")
+	await Promise.allSettled([notifications.reload(), unreadNotificationsCount.reload()])
+	event.target?.complete?.()
 }
 </script>
 

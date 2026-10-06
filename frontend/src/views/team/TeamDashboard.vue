@@ -1,6 +1,7 @@
 <template>
 	<BaseLayout :pageTitle="__('Team')">
 		<template #body>
+			<GPullRefresh @refresh="refresh" />
 			<div
 				class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-4 lg:py-7"
 			>
@@ -185,7 +186,7 @@ import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GCalendar from "@/components/glass/GCalendar.vue"
 import GSelect from "@/components/glass/GSelect.vue"
-import { computed, inject, ref } from "vue"
+import { computed, defineAsyncComponent, inject, ref } from "vue"
 import { useRoute } from "vue-router"
 import { dateFromRoute } from "@/utils/dateFromRoute"
 import { clockTime } from "@/utils/daySheet"
@@ -267,6 +268,18 @@ function fetchDay() {
 	})
 }
 fetchDay()
+
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
+
+//: Pull to refresh reloads what Team shows (6 Oct 2026: a pull did nothing here).
+//: reload() repeats the last fetch, so the picked day and the picked manager stay.
+async function refresh(event) {
+	console.info("[TeamDashboard] pull-to-refresh")
+	await Promise.allSettled([teamStatus.reload(), teamManagers.reload()])
+	event.target?.complete?.()
+}
 
 function pickDay(day) {
 	selectedDate.value = firstOfMonth.value.date(day).format("YYYY-MM-DD")

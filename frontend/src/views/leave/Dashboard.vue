@@ -1,6 +1,7 @@
 <template>
 	<BaseLayout :pageTitle="__('Time off')">
 		<template #body>
+			<GPullRefresh @refresh="refresh" />
 			<!-- §20.3: one 720px column, left-aligned (7.3 ruling). Was
 			     lg:grid-cols-[1fr_280px] over the balance band and lg:grid-cols-2 over
 			     the lists, which stranded the primary action in an empty right column
@@ -61,12 +62,24 @@
 <script setup>
 import { ArrowRight } from "lucide-vue-next"
 import GButton from "@/components/glass/GButton.vue"
-import { markRaw } from "vue"
+import { defineAsyncComponent, markRaw } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import LeaveBalance from "@/components/LeaveBalance.vue"
 import RequestList from "@/components/RequestList.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
 
-import { myLeaves } from "@/data/leaves"
+import { leaveBalance, myLeaves } from "@/data/leaves"
+
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
+
+//: Pull to refresh reloads what Time off shows: the balances and the recent leave
+//: (6 Oct 2026: a pull did nothing here).
+async function refresh(event) {
+	console.info("[LeaveDashboard] pull-to-refresh")
+	await Promise.allSettled([leaveBalance.reload(), myLeaves.reload()])
+	event.target?.complete?.()
+}
 </script>

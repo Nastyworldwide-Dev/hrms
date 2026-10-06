@@ -1,7 +1,10 @@
-CLASS: a session that ends on its own (expired, signed out elsewhere) reloads the page onto Login with nothing said. sessionIsCurrent() sees the Guest cookie and reloads; any message shown on the old page is lost with it, so a Submit after expiry looked like "nothing happened" (AU-2).
-frontend/src/utils/personalCache.js:sessionIsCurrent same-root (the one place every request and focus/visibility check routes through when a session ends; leaves a one-shot sessionStorage mark only when this page HAD a user, now has none, and it is not a Log out)
-frontend/src/data/session.js:logout same-root (markLoggingOut before the logout call, so a deliberate Log out says nothing)
-frontend/src/views/Login.vue same-root (reads the mark once, shows "You were signed out. Sign in again to continue.")
-frontend/src/router/navigationGate.js not-affected — sends a Guest to Login; the reload from sessionIsCurrent arrives first and has already left the mark
-frontend/src/data/user.js, frontend/src/data/employees.js not-affected — push Login on AuthenticationError; same page, same reload path
-frontend/src/utils/loudRequest.js not-affected — the earlier in-page notice draft was dropped: the reload hides it (proved live 6 Oct)
+CLASS: a scrolling screen with no pull-to-refresh: the person pulls, nothing happens, and stale data stays until they leave the screen. Six screens had GPullRefresh; seven did not.
+frontend/src/views/Notifications.vue same-root (feed + unread count)
+frontend/src/views/team/TeamDashboard.vue same-root (team status + managers)
+frontend/src/views/team/TeamRoster.vue same-root (roster + managers)
+frontend/src/views/attendance/Dashboard.vue same-root (calendar.refresh + month dots + shifts)
+frontend/src/views/leave/Dashboard.vue same-root (balance + my leaves)
+frontend/src/views/issues/IssueList.vue same-root (my issues; sits in the hub's ion-content)
+frontend/src/views/helpdesk/HelpdeskHub.vue same-root (IT pill only, so one pull is never answered twice)
+frontend/src/views/helpdesk/HRIssueBoard.vue ticket S2-followup — HR users on the HR pill: board owns its issues privately; wire it next release
+frontend/src/views/Profile.vue, More.vue not-affected — plan ruling 5: skipped on purpose

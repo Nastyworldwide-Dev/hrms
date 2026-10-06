@@ -1,6 +1,7 @@
 <template>
 	<BaseLayout :pageTitle="__('Calendar')">
 		<template #body>
+			<GPullRefresh @refresh="refresh" />
 			<!-- The month, and the one thing each day needs (approved Calendar
 			     plan, docs/glass/plan/pages/01-calendar.md). The overtime card, the
 			     count strip and the three "start a request" rows are gone: the
@@ -32,9 +33,10 @@
 <script setup>
 import { personalCacheKey } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
-import { ref } from "vue"
+import { defineAsyncComponent, ref } from "vue"
 import { onIonViewWillEnter } from "@ionic/vue"
 import AttendanceCalendar from "@/components/AttendanceCalendar.vue"
+import { monthFlags } from "@/data/calendar"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
@@ -57,4 +59,18 @@ const shifts = createResource({
 	auto: true,
 	cache: personalCacheKey("hrms:shifts"),
 })
+
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
+
+//: Pull to refresh reloads what the Calendar shows (6 Oct 2026: a pull did nothing here).
+//: The calendar owns the month's days and exposes refresh(); the dots (monthFlags)
+//: and the shifts banner are read here.
+async function refresh(event) {
+	console.info("[AttendanceDashboard] pull-to-refresh")
+	calendar.value?.refresh?.()
+	await Promise.allSettled([monthFlags.reload(), shifts.reload()])
+	event.target?.complete?.()
+}
 </script>

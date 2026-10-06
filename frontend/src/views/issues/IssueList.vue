@@ -2,6 +2,7 @@
 	<!-- body only: the page chrome (header, HR / IT pills, Who to ask and the
 	     one "Report an issue" button) belongs to views/helpdesk/HelpdeskHub.vue -->
 	<div class="flex flex-col gap-4 px-4 pt-4 w-full max-w-content-column-lg mx-auto">
+		<GPullRefresh @refresh="refresh" />
 		<ResourceError :resource="myIssues" what="your HR issues" />
 		<HelpSplitList
 			:rows="myIssues.data || []"
@@ -18,7 +19,7 @@
 import { personalCacheKey } from "@/utils/personalCache"
 import { useRouter } from "vue-router"
 import { createListResource } from "frappe-ui"
-import { inject } from "vue"
+import { defineAsyncComponent, inject } from "vue"
 
 import HelpSplitList from "@/components/HelpSplitList.vue"
 import ResourceError from "@/components/ResourceError.vue"
@@ -43,4 +44,17 @@ const myIssues = createListResource({
 	auto: true,
 	cache: personalCacheKey("hrms:my_issues"),
 })
+
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
+
+//: Pull to refresh reloads the issues drawn here (6 Oct 2026: a pull did nothing).
+//: This list has no ion-content of its own: it sits in the help page's, whose own
+//: pull (HelpdeskHub) is drawn only for the IT pill, so a pull is never answered twice.
+async function refresh(event) {
+	console.info("[IssueList] pull-to-refresh")
+	await Promise.allSettled([myIssues.reload()])
+	event.target?.complete?.()
+}
 </script>

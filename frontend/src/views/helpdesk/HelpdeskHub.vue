@@ -1,6 +1,9 @@
 <template>
 	<BaseLayout :pageTitle="__('Help')">
 		<template #body>
+			<!-- The HR pill's lists draw their own pull (IssueList), so this one is for the IT pill:
+			     two refreshers in one page would answer one pull twice. -->
+			<GPullRefresh v-if="tab === IT_TAB" @refresh="refresh" />
 			<!-- ONE page, two pills (owner, 15 Sep 2026): HR Issues for everyone,
 			     IT Helpdesk where the Helpdesk app is installed. Each pill renders
 			     the list that used to be its own page; the page chrome is here. -->
@@ -37,7 +40,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted, ref, watch } from "vue"
+import { computed, defineAsyncComponent, inject, onMounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import BaseLayout from "@/components/BaseLayout.vue"
@@ -47,7 +50,7 @@ import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
-import { helpdeskAvailable } from "@/data/helpdesk"
+import { helpdeskAvailable, myTickets } from "@/data/helpdesk"
 import {
 	HR_TAB,
 	HUB_ROUTE_NAME,
@@ -58,6 +61,10 @@ import {
 } from "@/utils/helpdeskHub"
 import IssuesTab from "@/views/issues/IssuesTab.vue"
 import HelpdeskList from "./HelpdeskList.vue"
+
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
 
 const __ = inject("$translate")
 const route = useRoute()
@@ -143,6 +150,14 @@ watch(
 		syncQuery(next)
 	}
 )
+
+//: Pull to refresh on the IT pill reloads the tickets and whether the Helpdesk app is
+//: there at all (6 Oct 2026: a pull did nothing here).
+async function refresh(event) {
+	console.info("[HelpdeskHub] pull-to-refresh")
+	await Promise.allSettled([myTickets.reload(), helpdeskAvailable.reload()])
+	event.target?.complete?.()
+}
 
 // after mount, not in setup: a replace while the outlet is still mounting
 // this page would cancel the very navigation that is showing it

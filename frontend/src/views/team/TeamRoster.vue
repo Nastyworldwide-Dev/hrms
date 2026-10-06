@@ -1,6 +1,7 @@
 <template>
 	<BaseLayout :pageTitle="__('Team roster')">
 		<template #body>
+			<GPullRefresh @refresh="refresh" />
 			<div
 				class="flex flex-col gap-5 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-4 lg:py-7"
 			>
@@ -178,7 +179,7 @@
 <script setup>
 import { departmentLabel } from "@/utils/departmentLabel"
 import { ChevronLeft, ChevronRight } from "lucide-vue-next"
-import { computed, inject, reactive, ref, onMounted } from "vue"
+import { computed, defineAsyncComponent, inject, reactive, ref, onMounted } from "vue"
 import { gToast } from "@/components/glass/toast"
 import GSelect from "@/components/glass/GSelect.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
@@ -228,6 +229,17 @@ function load() {
 		end_date: weekStart.value.add(6, "day").format("YYYY-MM-DD"),
 		manager: selectedManager.value || undefined,
 	})
+}
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
+
+//: Pull to refresh reloads what the roster shows (6 Oct 2026: a pull did nothing here).
+//: reload() repeats the last load, so the week and the picked team stay.
+async function refresh(event) {
+	console.info("[TeamRoster] pull-to-refresh")
+	await Promise.allSettled([teamRoster.reload(), teamManagers.reload()])
+	event.target?.complete?.()
 }
 function changeWeek(n) {
 	weekStart.value = weekStart.value.add(n * 7, "day")
