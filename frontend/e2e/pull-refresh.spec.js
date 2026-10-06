@@ -12,6 +12,20 @@ const SCREENS = [
 	{ path: "/requests", expect: /get_list|request_counts|get_leave|get_expense|get_ot|get_shift|get_attendance/ },
 	{ path: "/approvals", expect: /approvals_list|get_approvals|remote_checkin/ },
 	{ path: "/announcements", expect: /announcements/ },
+	// the seven screens that had no pull-down (6 Oct 2026, alpha.35); each regex is a request only that
+	// screen's refresh makes after the 3.5 s settle
+	{ path: "/notifications", expect: /get_unread_notifications_count/ },
+	{ path: "/team", expect: /team\.get_team_status/ },
+	{ path: "/team/roster", expect: /team\.get_team_roster/ },
+	{ path: "/dashboard/attendance", expect: /get_month_flags|get_shifts|get_attendance_calendar_events/ },
+	{ path: "/dashboard/leaves", expect: /get_leave_applications|get_leave_balance_map/ },
+	// the HR pill of the help page: a staff user's own issues (IssueList). The list is read with
+	// frappe.client.get_list, so the match is that call
+	{ path: "/support?tab=hr", expect: /frappe\.client\.get_list/ },
+	// NOT in the list: the IT pill of the same page (HelpdeskHub's own pull, reloads helpdesk.list_tickets
+	// and helpdesk.is_available). The served test site has no Helpdesk app, so the page clamps ?tab=it back
+	// to the HR pill and the pull cannot be driven there; that wiring is pinned by
+	// src/views/__tests__/pull-refresh-screens.test.js only.
 ]
 
 // A person pulls about 100 px and lets go. (The first draft of this gate dragged 360 px: Ionic starts
