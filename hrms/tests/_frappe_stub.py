@@ -152,7 +152,7 @@ def _utils_module():
 			return value
 		if isinstance(value, datetime.timedelta):
 			return (datetime.datetime.min + value).time()
-		# ceiling: ISO strings only; upgrade when a test needs Frappe's dateutil fallback.
+		# ceiling: ISO strings only; upgrade: when a test needs Frappe's dateutil fallback.
 		return datetime.time.fromisoformat(value)
 
 	def add_to_date(value=None, years=0, months=0, weeks=0, days=0, hours=0, minutes=0, seconds=0, **kwargs):
