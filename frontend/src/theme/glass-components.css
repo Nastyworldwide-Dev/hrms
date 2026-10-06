@@ -4136,6 +4136,15 @@ ion-router-outlet {
 	gap: 4px;
 	padding: 12px 16px;
 }
+/* In a stacked form row (a flex column) the editor keeps its own height. The
+   row's "fill the trailing space" rule (.g-form-row > :not(...), flex: 1 1 0)
+   is meant for a side-by-side row; in a column a 0 basis collapsed the editor
+   to its 2 px border while its content spilled onto the row below (SOP sheet,
+   6 Oct 2026). That rule weighs 0,4,1 (its :not(svg) counts as a type), so
+   this one is 0,4,2 and comes later: it wins whatever the build order. */
+.g-form-row.g-form-row--stacked > div.g-texteditor:not(.g-form-row__label) {
+	flex: 0 0 auto;
+}
 .g-form-row--stacked .g-form-row__label {
 	max-width: none;
 }
@@ -5250,4 +5259,138 @@ ion-modal.g-mustread {
 .g-request-sheet .g-form-row__value .text-inkbase {
 	flex-grow: 0;
 	color: var(--g-ink2);
+}
+
+/* SOP body: the reader (SopDetail) and HR's "As staff see it" preview
+   (SopFormSheet) render it through .sop-prose, so staff and HR see one thing. */
+/* document-grade rendering for the Text Editor body — headings, lists,
+   tables and quotes read like a print format, not chat text */
+.sop-prose {
+	font-size: 13px;
+	line-height: 1.75;
+	color: var(--g-ink2);
+}
+.sop-prose h1,
+.sop-prose h2,
+.sop-prose h3,
+.sop-prose h4,
+.sop-prose h5,
+.sop-prose h6 {
+	font-family: var(--g-font-display);
+	font-weight: 800;
+	color: var(--g-ink);
+	margin: 22px 0 6px;
+	line-height: 1.3;
+}
+.sop-prose h1 {
+	font-size: 19px;
+	padding-bottom: 6px;
+	border-bottom: 2px solid var(--g-hair);
+}
+.sop-prose h2 {
+	font-size: 16px;
+}
+.sop-prose h3 {
+	font-size: 14.5px;
+}
+.sop-prose h4,
+.sop-prose h5,
+.sop-prose h6 {
+	font-size: 13px;
+	letter-spacing: 0.04em;
+}
+.sop-prose h1:first-child,
+.sop-prose h2:first-child,
+.sop-prose h3:first-child,
+.sop-prose p:first-child {
+	margin-top: 0;
+}
+.sop-prose p {
+	margin: 0 0 10px;
+}
+.sop-prose strong,
+.sop-prose b {
+	font-weight: 700;
+	color: var(--g-ink);
+}
+.sop-prose a {
+	color: var(--g-accent-ink);
+	text-decoration: underline;
+}
+.sop-prose ul,
+.sop-prose ol {
+	margin: 0 0 12px;
+	padding-left: 22px;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+.sop-prose ul {
+	list-style: square;
+}
+.sop-prose ol {
+	list-style: decimal;
+}
+.sop-prose li::marker {
+	color: var(--g-accent-ink);
+	font-weight: 700;
+}
+.sop-prose li > ul,
+.sop-prose li > ol {
+	margin: 5px 0 0;
+}
+.sop-prose blockquote {
+	margin: 0 0 12px;
+	padding: 6px 0 6px 14px;
+	border-left: 3px solid var(--g-accent-ink);
+	color: var(--g-ink2);
+}
+.sop-prose hr {
+	border: 0;
+	border-top: 2px solid var(--g-hair);
+	margin: 18px 0;
+}
+.sop-prose table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 4px 0 14px;
+	font-size: 12.5px;
+	display: block;
+	overflow-x: auto;
+}
+.sop-prose th {
+	font-family: var(--g-font-display);
+	font-weight: 800;
+	font-size: 11px;
+	letter-spacing: 0.05em;
+	text-align: left;
+	color: var(--g-ink);
+	border-bottom: 2px solid var(--g-ink);
+	padding: 7px 10px 7px 0;
+}
+.sop-prose td {
+	border-bottom: 1px solid var(--g-hair);
+	padding: 7px 10px 7px 0;
+	vertical-align: top;
+}
+.sop-prose img {
+	max-width: 100%;
+	height: auto;
+	margin: 4px 0 12px;
+}
+.sop-prose pre,
+.sop-prose code {
+	font-size: 12px;
+	background: var(--g-icon-bg);
+	padding: 2px 5px;
+}
+.sop-prose pre {
+	padding: 10px 12px;
+	overflow-x: auto;
+	margin: 0 0 12px;
+}
+
+.g-sop-preview {
+	min-height: 160px;
+	padding: 4px 0;
 }

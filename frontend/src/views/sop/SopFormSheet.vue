@@ -45,6 +45,7 @@
 				<p v-if="errors.department" class="g-form-footer g-field__error" role="alert">
 					{{ __("Pick a department for a department-scoped SOP.") }}
 				</p>
+				<p class="g-form-footer" aria-live="polite">{{ whoSees }}</p>
 			</section>
 
 			<section class="g-form-section">
@@ -65,8 +66,31 @@
 			<section class="g-form-section">
 				<div class="g-form-group">
 					<div class="g-form-row g-form-row--stacked">
-						<span class="g-form-row__label">{{ __("Content") }}</span>
-						<GTextarea v-model="form.content" :aria-label="__('Content')" :placeholder="__('Write the procedure…')" />
+						<span :id="contentLabelId" class="g-form-row__label">{{ __("Content") }}</span>
+						<GSegmented
+							v-model="mode"
+							:buttons="MODES.map((m) => ({ key: m.key, label: __(m.label) }))"
+							:label="__('Content view')"
+						/>
+						<!-- Stays mounted while previewing, so nothing typed is lost. -->
+						<div
+							v-show="mode === 'write'"
+							class="g-texteditor"
+							role="group"
+							:aria-labelledby="contentLabelId"
+						>
+							<TextEditor
+								:content="form.content"
+								@change="(html) => (form.content = html)"
+								:fixedMenu="true"
+								editor-class="prose-sm p-2 min-h-40"
+							/>
+						</div>
+						<!-- The reader's own door and class (SopDetail): what HR sees here is what staff get. -->
+						<div v-if="mode === 'preview'" class="g-sop-preview">
+							<div v-if="form.content" class="sop-prose" v-html="safeHtml(form.content)"></div>
+							<p v-else class="g-form-footer">{{ __("Nothing to show yet") }}</p>
+						</div>
 					</div>
 				</div>
 			</section>
@@ -99,6 +123,7 @@
 
 <script setup>
 import { departmentLabel } from "@/utils/departmentLabel"
+import { safeHtml } from "@/utils/safeHtml"
 import { Paperclip } from "lucide-vue-next"
 import { personalCacheKey } from "@/utils/personalCache"
 import GModal from "@/components/glass/GModal.vue"
@@ -108,11 +133,14 @@ import GInput from "@/components/glass/GInput.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
 import GSelect from "@/components/glass/GSelect.vue"
 import GSwitch from "@/components/glass/GSwitch.vue"
-import GTextarea from "@/components/glass/GTextarea.vue"
 import { createListResource, createResource } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
-import { computed, inject, reactive, ref, watch } from "vue"
+import { computed, defineAsyncComponent, inject, reactive, ref, useId, watch } from "vue"
 import { firstMessage } from "@/utils/loudRequest"
+
+// Loaded only when the sheet opens (alpha.12 C4, as FormField does): a static
+// import would pull the whole editor into every page's first download.
+const TextEditor = defineAsyncComponent(() => import("frappe-ui/src/components/TextEditor/TextEditor.vue"))
 
 const __ = inject("$translate")
 
@@ -138,6 +166,12 @@ const TOGGLES = [
 	},
 ]
 
+// i18n source strings: __("Write"), __("As staff see it")
+const MODES = [
+	{ key: "write", label: "Write" },
+	{ key: "preview", label: "As staff see it" },
+]
+
 const emptyForm = () => ({
 	title: "",
 	scope: "General",
@@ -150,9 +184,23 @@ const emptyForm = () => ({
 const form = reactive(emptyForm())
 const errors = reactive({ title: false, department: false })
 const saving = ref(false)
+const mode = ref("write")
+const contentLabelId = useId()
+// get_sop does not carry the company; it only narrows who sees a General SOP
+const sopCompany = ref("")
 const selectedFile = ref(null)
 const existingAttachment = ref(null)
 const attachmentCleared = ref(false)
+
+// One plain line under Scope: who will actually see this SOP.
+const whoSees = computed(() => {
+	if (form.scope === "Department") {
+		return form.department
+			? __("Only {0}", [departmentLabel(form.department)])
+			: __("Only the department you pick")
+	}
+	return sopCompany.value ? __("Everyone in {0}", [sopCompany.value]) : __("Everyone")
+})
 
 const attachmentName = computed(
 	() => selectedFile.value?.name || existingAttachment.value?.file_name || ""
@@ -177,12 +225,23 @@ const detail = createResource({
 			department: doc.department || "",
 			pinned: !!doc.pinned,
 			published: !!doc.published,
-			content: doc.content || "",
+			// an old plain-text SOP opens as paragraphs the editor can show
+			content: toHtml(doc.content),
 		})
 		existingAttachment.value = doc.attachment || null
 	},
 	onError(error) {
 		console.warn("[SOP] Failed to load for edit:", error)
+	},
+})
+
+const companyLookup = createResource({
+	url: "frappe.client.get_value",
+	onSuccess(row) {
+		sopCompany.value = row?.company || ""
+	},
+	onError(error) {
+		console.warn("[SOP] Could not read the SOP's company:", error)
 	},
 })
 
@@ -200,7 +259,16 @@ const prefill = () => {
 	selectedFile.value = null
 	existingAttachment.value = null
 	attachmentCleared.value = false
-	if (props.sopName) detail.fetch({ name: props.sopName })
+	mode.value = "write"
+	sopCompany.value = ""
+	if (props.sopName) {
+		detail.fetch({ name: props.sopName })
+		companyLookup.fetch({
+			doctype: "SOP Document",
+			fieldname: "company",
+			filters: { name: props.sopName },
+		})
+	}
 }
 
 //: Fresh form each time the sheet is asked to open (was ion-modal's willPresent).
@@ -234,8 +302,8 @@ const clearAttachment = () => {
 	}
 }
 
-// A textarea holds plain text but `content` is a Text Editor field rendered
-// with v-html — keep paragraph breaks instead of collapsing to one run-on line.
+// The editor works in HTML. Only a value with no tags at all (an SOP typed
+// before the editor existed) is wrapped, once, so its paragraph breaks survive.
 const escapeHtml = (text) =>
 	text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
@@ -246,6 +314,15 @@ const toHtml = (text) => {
 		.split(/\n{2,}/)
 		.map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`)
 		.join("")
+}
+
+// An emptied editor reports <p></p>, which is not "no content": the reader
+// would show a blank body instead of its empty state.
+const contentForSave = (html) => {
+	const value = toHtml(html)
+	const hasObject = /<(img|hr|table|video|iframe)\b/i.test(value)
+	const text = value.replace(/<[^>]*>/g, "").replace(/&nbsp;|\s/g, "")
+	return hasObject || text ? value : ""
 }
 
 // private file attached to the SOP: Frappe serves it to whoever passes
@@ -289,7 +366,7 @@ const save = async () => {
 			department: form.scope === "Department" ? form.department : "",
 			pinned: form.pinned ? 1 : 0,
 			published: form.published ? 1 : 0,
-			content: toHtml(form.content),
+			content: contentForSave(form.content),
 		}
 		if (attachmentCleared.value) values.attachment = ""
 
