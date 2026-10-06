@@ -10,6 +10,31 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.37] — Clear Screens — 2026-10-06
+
+Every screen says something plain, even when it cannot open.
+
+### Fixed
+- **"You can't open this."** A page you are not allowed to open says so,
+  with Back, instead of "Could not load, try again".
+- **Long names stay on one line** in request, approval and team rows on a
+  small phone. The full name is still read by screen readers. Rows that show
+  how many requests are waiting still show the whole count.
+- **Screen readers name every sheet and notice.** They heard only "dialog"
+  before, and now hear it once, with its title.
+- **Every message's close button** is named "Close" and is easy to tap
+  (44 px, was 20 px).
+
+### Under the hood
+- **One place decides that you were signed out.** Five places used to do
+  parts of it. Nothing changes for people; the next fix there is simpler.
+- **The screen-reader check passes on every screen** (0 serious findings);
+  its old list of known problems was out of date and is cleared.
+
+### Known limits
+- After "You can't open this", a second message "Something didn't load"
+  may also appear. Next release.
+
 ## [2.0.0-alpha.36] — Loose Ends — 2026-10-06
 
 Small fixes left from alpha.35, and a faster approvals list.
