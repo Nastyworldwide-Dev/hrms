@@ -10,6 +10,62 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.35] — Steady Nadi — 2026-10-06
+
+Fixes, speed and clean-up. Everything since alpha.34 ships here.
+
+### Added
+- **Approve many requests at once.** On Approvals, filter by type, tick
+  requests and approve them together. Each one is checked first; only
+  requests you can see on screen are ticked.
+- **HR can change a person's shift from a date**, from the roster or the
+  Shift Assignment form. Days the old ERP owns are left alone.
+- **Overtime is paid in half hours.** The claim form says so, and a typed
+  claim is cut down to the half hour. Open claims are cut on deploy; the
+  old figure is kept on the claim.
+
+### Fixed
+- **Signed out mid-use now says so.** When a session ends on its own, the
+  sign-in page says "You were signed out. Sign in again to continue."
+  Before, the app went to sign-in with no word.
+- **Pull down to refresh works on seven more screens:** Notifications,
+  Team, Roster, the attendance and leave calendars, Issues and the
+  Helpdesk IT tab. Pull-down and load-more-on-scroll also work again on the
+  real app.
+- **The Today line updates right after a check-in.**
+- **An app left open finds a new version after a deploy.** It checks on
+  launch and when you come back to it (at most every 30 minutes). The new
+  version still only takes over while the app is hidden.
+- **An employee sees why a request was rejected**, in the feed and on the
+  phone ("&" no longer shows as "&amp;").
+- **A request with no named approver reaches the approval line.**
+- **A decision always checks the version the approver saw.** If the
+  request changed, the approver is asked to reload.
+- **Request chips count only the request types the list shows.**
+- **Half day:** a day HR marked half shows "Half day" to the boss, and the
+  label is no longer cut off on a phone.
+- **Overtime wording:** refusals and the claim box show plain hours and
+  minutes, never nine decimals.
+- **Roster shift picker** lists every shift and keeps the chosen person.
+- **Desk uses Nadi's words** for request states (Waiting / Approved /
+  Rejected; claims: Approved · unpaid / Paid), and the "Approved · unpaid"
+  pill lists every such claim.
+
+### Security
+- **A shared phone stops getting the last person's notifications** after
+  they log out.
+- **A leave reason is read only by the approval line and HR.**
+- **A System Manager cannot decide another company's check-in** outside
+  its area.
+
+### Faster
+- **The leave list** reads the database once per page, not once per row.
+
+### Known limits
+- HR's issue board has no pull-down yet.
+- On the attendance calendar, "Refreshing…" can close a moment before the
+  month's days finish loading.
+
 ## [2.0.0-alpha.34] — Supervisors Can Delete and Update Shifts — 2026-10-03
 
 ### Fixed
