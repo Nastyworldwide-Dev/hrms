@@ -7,6 +7,7 @@ request is approved or not by its decision field; a cancelled one is neither.
 """
 
 import pathlib
+import re
 import sys
 import unittest
 from unittest.mock import patch
@@ -19,7 +20,7 @@ _frappe_stub.install()
 _erpnext_stub.install()
 import frappe
 
-from hrms.api import request_counts
+from hrms.api import approval, request_counts
 
 ROWS = {
 	"Leave Application": [
@@ -86,11 +87,11 @@ class TestOneTypeFailing(unittest.TestCase):
 		self.assertGreater(counts["all"], 0)
 
 
-class TestEveryDecidableRequestIsCounted(unittest.TestCase):
-	"""Compensatory Leave Request was missing from a hand-written list in
-	request_counts while approval.DECIDE_THEN_SUBMIT already had it, so the
-	employee's chips undercounted (6 Oct 2026). One list now: the counts read
-	their doctypes and decision fields from DECIDE_THEN_SUBMIT."""
+class TestTheChipsCountWhatTheListShows(unittest.TestCase):
+	"""The chips count the request types the Requests panel LISTS (6 Oct 2026). Compensatory Leave Request
+	has no list and no screen in the app, so counting it made "All" read higher than the rows a person can
+	open (review of 55b190300). The decision FIELD of each type comes from approval.DECIDE_THEN_SUBMIT,
+	the one table of decision fields, never a second copy."""
 
 	def _run(self, rows, fail=()):
 		asked = {}
@@ -107,43 +108,30 @@ class TestEveryDecidableRequestIsCounted(unittest.TestCase):
 		):
 			return request_counts.get_my_request_counts(), asked
 
-	def test_a_compensatory_leave_request_is_counted(self):
-		counts, _ = self._run(
+	def test_a_type_with_no_list_in_the_app_is_not_counted(self):
+		counts, asked = self._run(
 			{"Compensatory Leave Request": [{"docstatus": 1, "status": "Approved", "n": 2}]}
 		)
-		self.assertEqual(counts, {"all": 2, "waiting": 0, "approved": 2, "rejected": 0})
+		self.assertNotIn("Compensatory Leave Request", asked)
+		self.assertEqual(counts["all"], 0)
 
-	def test_a_rejected_and_a_waiting_compensatory_request_land_in_their_chips(self):
-		counts, _ = self._run(
-			{
-				"Compensatory Leave Request": [
-					{"docstatus": 0, "status": "Open", "n": 1},
-					{"docstatus": 1, "status": "Rejected", "n": 3},
-				]
-			}
-		)
-		self.assertEqual(counts, {"all": 4, "waiting": 1, "approved": 0, "rejected": 3})
-
-	def test_the_types_counted_are_the_types_approval_decides(self):
-		from hrms.api import approval
-
+	def test_the_types_counted_are_the_types_the_requests_panel_lists(self):
+		# frontend/src/data/requestLists.js REQUEST_LISTS: read the file, so the two cannot drift
+		js = (pathlib.Path(__file__).resolve().parents[2] / "frontend/src/data/requestLists.js").read_text()
+		block = js[js.index("export const REQUEST_LISTS = {") : js.index("}\n", js.index("export const REQUEST_LISTS = {"))]
+		listed = set(re.findall(r'^\t"([^"]+)":', block, re.M))
 		_, asked = self._run({})
-		self.assertEqual(set(asked), set(approval.DECIDE_THEN_SUBMIT))
+		self.assertEqual(set(asked), listed)
 
 	def test_each_type_is_grouped_by_the_decision_field_approval_names(self):
-		from hrms.api import approval
-
 		_, asked = self._run({})
-		for doctype, (field, _pending) in approval.DECIDE_THEN_SUBMIT.items():
-			self.assertIn(field, asked[doctype], doctype)
+		for doctype, fields in asked.items():
+			field, _pending = approval.DECIDE_THEN_SUBMIT[doctype]
+			self.assertIn(field, fields, doctype)
 
 	def test_a_failing_type_is_skipped_and_the_rest_are_still_counted(self):
-		counts, asked = self._run(
-			{
-				"Leave Application": [{"docstatus": 1, "status": "Approved", "n": 5}],
-				"Compensatory Leave Request": [{"docstatus": 1, "status": "Approved", "n": 9}],
-			},
-			fail=("Compensatory Leave Request",),
+		counts, _ = self._run(
+			{"Leave Application": [{"docstatus": 0, "status": "Open", "n": 3}]},
+			fail=("Expense Claim",),
 		)
-		self.assertIn("Compensatory Leave Request", asked)
-		self.assertEqual(counts, {"all": 5, "waiting": 0, "approved": 5, "rejected": 0})
+		self.assertEqual(counts["waiting"], 3)

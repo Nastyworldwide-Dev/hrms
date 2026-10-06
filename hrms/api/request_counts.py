@@ -20,13 +20,22 @@ from hrms.api.approval import DECIDE_THEN_SUBMIT
 
 logger = logging.getLogger(__name__)
 
-#: The decision field of each request type the panel lists, read from
-#: approval.DECIDE_THEN_SUBMIT (field = first of the pair; the pending value is
-#: not needed here). Compensatory Leave Request sat in one list and not the
-#: other, so its requests were missing from every chip (6 Oct 2026). One list
-#: now: a type added to DECIDE_THEN_SUBMIT is counted with no second edit.
-#: Nothing is excluded: the old hand list differed only by that one type.
-DECISION_FIELD = {doctype: pair[0] for doctype, pair in DECIDE_THEN_SUBMIT.items()}
+#: The request types the Requests panel LISTS (frontend/src/data/requestLists.js REQUEST_LISTS). The chips
+#: count what the rows under them show, so a type the app has no list or screen for is not counted:
+#: Compensatory Leave Request has neither, and counting it made "All" read higher than the rows a person
+#: could open (review of 55b190300, 6 Oct 2026). Add a type here only together with its list.
+LISTED_TYPES = (
+	"Leave Application",
+	"Expense Claim",
+	"Shift Request",
+	"Attendance Request",
+	"OT Request",
+	"Replacement Leave Claim",
+)
+
+#: Each listed type's decision field, read from approval.DECIDE_THEN_SUBMIT (the one table of decision
+#: fields): only the LIST of types is kept here, never a second copy of the fields.
+DECISION_FIELD = {doctype: DECIDE_THEN_SUBMIT[doctype][0] for doctype in LISTED_TYPES}
 
 
 def get_current_employee():
