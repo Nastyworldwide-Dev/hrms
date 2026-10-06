@@ -174,3 +174,26 @@ test("a write whose caller shows the server's reason is not toasted twice", asyn
 		assert.equal(toasts.length, 0, url)
 	}
 })
+
+// Owner ruling R4 (6 Oct): a submit made offline says so plainly, and nothing
+// is queued. The offline banner already shows the state; this is the
+// sentence every form puts after "Could not save this ...".
+const OFFLINE = new TypeError("Failed to fetch")
+
+test("an offline failure reads as plain words, not 'Failed to fetch'", () => {
+	assert.equal(firstMessage(OFFLINE), "You are offline. Nothing was sent and your form is kept.")
+	assert.equal(
+		firstMessage(new Error("NetworkError when attempting to fetch resource.")),
+		"You are offline. Nothing was sent and your form is kept."
+	)
+})
+
+test("a server refusal still reads as the server's sentence", () => {
+	assert.equal(firstMessage(PERMISSION_ERROR), "Insufficient Permission for Account")
+})
+
+test("an offline failure is not toasted as 'Something didn't load' on top", async () => {
+	const { loud, toasts } = harness(OFFLINE)
+	await assert.rejects(loud({ url: "/api/method/frappe.client.insert" }))
+	assert.equal(toasts.length, 0, "the banner and the form already say it")
+})

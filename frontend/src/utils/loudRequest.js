@@ -88,7 +88,19 @@ function endpointOf(options) {
 // link to a Desk page they cannot open.
 // `fallback` is the caller's own wording for a failure that carries no
 // server message at all (a network drop, a thrown TypeError).
+// A request the network never carried (offline, dropped connection). The browser
+// says "Failed to fetch" or "NetworkError ..."; a person needs to know nothing was
+// sent and what they typed is still there (owner ruling R4, 6 Oct 2026: a clear
+// failure, no queue). No server answer means no exc_type and no messages.
+const OFFLINE_SENTENCE = "You are offline. Nothing was sent and your form is kept."
+
+function isOffline(error) {
+	if (!error || error.exc_type || error.messages?.length) return false
+	return /failed to fetch|networkerror|network request failed|load failed/i.test(String(error.message || ""))
+}
+
 export function firstMessage(error, fallback = "Request failed") {
+	if (isOffline(error)) return OFFLINE_SENTENCE
 	const message = error?.messages?.[0] || error?.message || fallback
 	return String(message)
 		.replace(/<[^>]*>/g, "")
@@ -140,6 +152,8 @@ export function makeLoudRequest(request, { notify = gToast, now = () => Date.now
 			if (
 				!SILENT_EXCEPTIONS.has(error?.exc_type) &&
 				!SILENT_ENDPOINTS.has(endpoint) &&
+				// offline: the banner shows it and the form says "Nothing was sent"
+				!isOffline(error) &&
 				!isRepeat(endpoint, now())
 			) {
 				// Plain words only (audit F-6): the server's sentence names doctypes,
