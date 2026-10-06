@@ -136,7 +136,7 @@ import GSwitch from "@/components/glass/GSwitch.vue"
 import { createListResource, createResource } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
 import { computed, defineAsyncComponent, inject, reactive, ref, useId, watch } from "vue"
-import { firstMessage } from "@/utils/loudRequest"
+import { firstMessage, saveFailedSentence } from "@/utils/loudRequest"
 
 // Loaded only when the sheet opens (alpha.12 C4, as FormField does): a static
 // import would pull the whole editor into every page's first download.
@@ -449,7 +449,7 @@ const save = async () => {
 		console.warn("[SOP] Save failed:", error)
 		gToast({
 			title: __("Error"),
-			text: firstMessage(error, __("Could not save the SOP")),
+			text: saveFailedSentence(error, __("Could not save the SOP")),
 			variant: "error",
 		})
 	} finally {

@@ -88,19 +88,32 @@ function endpointOf(options) {
 // link to a Desk page they cannot open.
 // `fallback` is the caller's own wording for a failure that carries no
 // server message at all (a network drop, a thrown TypeError).
-// A request the network never carried (offline, dropped connection). The browser
-// says "Failed to fetch" or "NetworkError ..."; a person needs to know nothing was
-// sent and what they typed is still there (owner ruling R4, 6 Oct 2026: a clear
-// failure, no queue). No server answer means no exc_type and no messages.
-const OFFLINE_SENTENCE = "You are offline. Nothing was sent and your form is kept."
-
-function isOffline(error) {
+// A request that never got a server answer: the browser says "Failed to fetch"
+// (Chrome), "NetworkError ..." (Firefox) or "Load failed" (Safari). That is the
+// phone being offline OR the server being down/restarting, so the words depend
+// on navigator.onLine (owner ruling R4, 6 Oct 2026: a clear failure, no queue;
+// review: "offline" was wrong for a server that was simply unreachable).
+function noServerAnswer(error) {
 	if (!error || error.exc_type || error.messages?.length) return false
 	return /failed to fetch|networkerror|network request failed|load failed/i.test(String(error.message || ""))
 }
 
+function phoneOffline() {
+	return typeof navigator !== "undefined" && navigator.onLine === false
+}
+
+/** A form's save failed: what to say after "Could not save this …". Only form-save
+ *  sites use it, because only there is something typed still on screen. A request
+ *  can leave before the connection drops, so it says "may not have been sent". */
+export function saveFailedSentence(error, fallback) {
+	if (!noServerAnswer(error)) return firstMessage(error, fallback)
+	return phoneOffline()
+		? "You are offline, so it may not have been sent. What you typed is still here."
+		: "The server could not be reached, so it may not have been sent. What you typed is still here."
+}
+
 export function firstMessage(error, fallback = "Request failed") {
-	if (isOffline(error)) return OFFLINE_SENTENCE
+	if (noServerAnswer(error)) return phoneOffline() ? "No connection." : "Could not reach the server."
 	const message = error?.messages?.[0] || error?.message || fallback
 	return String(message)
 		.replace(/<[^>]*>/g, "")
@@ -152,8 +165,9 @@ export function makeLoudRequest(request, { notify = gToast, now = () => Date.now
 			if (
 				!SILENT_EXCEPTIONS.has(error?.exc_type) &&
 				!SILENT_ENDPOINTS.has(endpoint) &&
-				// offline: the banner shows it and the form says "Nothing was sent"
-				!isOffline(error) &&
+				// offline: the banner already says it (an unreachable server while online
+				// has no banner, so it still gets the toast)
+				!(noServerAnswer(error) && phoneOffline()) &&
 				!isRepeat(endpoint, now())
 			) {
 				// Plain words only (audit F-6): the server's sentence names doctypes,

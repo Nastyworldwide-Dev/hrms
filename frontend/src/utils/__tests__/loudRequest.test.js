@@ -17,8 +17,8 @@ const source = readFileSync(new URL("../loudRequest.js", import.meta.url), "utf8
 	'import { gToast } from "@/components/glass/toast"',
 	"const gToast = () => {}"
 )
-const { makeLoudRequest, firstMessage } = new Function(
-	`${source.replace(/export function/g, "function")}\nreturn { makeLoudRequest, firstMessage }`
+const { makeLoudRequest, firstMessage, saveFailedSentence } = new Function(
+	`${source.replace(/export function/g, "function")}\nreturn { makeLoudRequest, firstMessage, saveFailedSentence }`
 )()
 
 const PERMISSION_ERROR = {
@@ -175,25 +175,75 @@ test("a write whose caller shows the server's reason is not toasted twice", asyn
 	}
 })
 
-// Owner ruling R4 (6 Oct): a submit made offline says so plainly, and nothing
-// is queued. The offline banner already shows the state; this is the
-// sentence every form puts after "Could not save this ...".
-const OFFLINE = new TypeError("Failed to fetch")
+// Owner ruling R4 (6 Oct): a submit made offline says so plainly; nothing is
+// queued. Review of the first cut: "Failed to fetch" is ALSO a server that is
+// down or restarting while the phone is online, and "your form is kept" is
+// only true where a form is open. So: a network failure reads as a network
+// failure everywhere (firstMessage); the "form is kept" sentence belongs to the
+// form-save sites (saveFailedSentence); and the generic toast is held back only
+// when the phone really is offline (the banner already says it).
+const NO_NETWORK = new TypeError("Failed to fetch")
+const withOnline = (online, fn) => {
+	const had = Object.getOwnPropertyDescriptor(globalThis, "navigator")
+	Object.defineProperty(globalThis, "navigator", { value: { onLine: online }, configurable: true })
+	const restore = () => {
+		if (had) Object.defineProperty(globalThis, "navigator", had)
+		else delete globalThis.navigator
+	}
+	let result
+	try {
+		result = fn()
+	} catch (e) {
+		restore()
+		throw e
+	}
+	// an async check restores only after it has finished
+	if (result && typeof result.then === "function") return result.finally(restore)
+	restore()
+	return result
+}
 
-test("an offline failure reads as plain words, not 'Failed to fetch'", () => {
-	assert.equal(firstMessage(OFFLINE), "You are offline. Nothing was sent and your form is kept.")
-	assert.equal(
-		firstMessage(new Error("NetworkError when attempting to fetch resource.")),
-		"You are offline. Nothing was sent and your form is kept."
+test("a network failure reads as plain words everywhere, never 'Failed to fetch'", () => {
+	withOnline(false, () => assert.equal(firstMessage(NO_NETWORK), "No connection."))
+	withOnline(true, () => assert.equal(firstMessage(NO_NETWORK), "Could not reach the server."))
+	withOnline(false, () =>
+		assert.equal(firstMessage(new Error("NetworkError when attempting to fetch resource.")), "No connection.")
 	)
+	withOnline(false, () => assert.equal(firstMessage(new TypeError("Load failed")), "No connection."))
 })
 
 test("a server refusal still reads as the server's sentence", () => {
 	assert.equal(firstMessage(PERMISSION_ERROR), "Insufficient Permission for Account")
 })
 
-test("an offline failure is not toasted as 'Something didn't load' on top", async () => {
-	const { loud, toasts } = harness(OFFLINE)
-	await assert.rejects(loud({ url: "/api/method/frappe.client.insert" }))
-	assert.equal(toasts.length, 0, "the banner and the form already say it")
+test("a form save that never reached the server says the form is kept, and may not have been sent", () => {
+	withOnline(false, () =>
+		assert.equal(
+			saveFailedSentence(NO_NETWORK),
+			"You are offline, so it may not have been sent. What you typed is still here."
+		)
+	)
+	withOnline(true, () =>
+		assert.equal(
+			saveFailedSentence(NO_NETWORK),
+			"The server could not be reached, so it may not have been sent. What you typed is still here."
+		)
+	)
+	assert.equal(saveFailedSentence(PERMISSION_ERROR), "Insufficient Permission for Account")
+})
+
+test("offline: the generic toast is held back, the banner already says it", async () => {
+	await withOnline(false, async () => {
+		const { loud, toasts } = harness(NO_NETWORK)
+		await assert.rejects(loud({ url: "/api/method/frappe.client.insert" }))
+		assert.equal(toasts.length, 0)
+	})
+})
+
+test("online but the server unreachable: the toast still shows (no banner would)", async () => {
+	await withOnline(true, async () => {
+		const { loud, toasts } = harness(NO_NETWORK)
+		await assert.rejects(loud({ url: "/api/method/frappe.client.get_list" }))
+		assert.equal(toasts.length, 1)
+	})
 })

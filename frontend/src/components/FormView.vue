@@ -435,7 +435,7 @@ import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
 import { requestStatus } from "@/utils/requestStatus"
 import { formTitle } from "@/utils/formTitle"
-import { firstMessage } from "@/utils/loudRequest"
+import { firstMessage, saveFailedSentence } from "@/utils/loudRequest"
 import { formatCurrency } from "@/utils/formatters"
 import { useDownloadPDF } from "@/utils/commonUtils"
 
@@ -745,7 +745,7 @@ const docList = createListResource({
 			// holiday list). Dropping it left the employee with "unknown error".
 			gToast({
 				title: __("Error"),
-				text: __("Could not save this {0}. {1}", [__(props.noun), firstMessage(error)]),
+				text: __("Could not save this {0}. {1}", [__(props.noun), saveFailedSentence(error)]),
 				variant: "error",
 			})
 			console.log(`Error creating ${props.doctype}`, firstMessage(error))
@@ -767,7 +767,7 @@ const documentResource = createDocumentResource({
 		onError(error) {
 			gToast({
 				title: __("Error"),
-				text: __("Could not save this {0}. {1}", [__(props.noun), firstMessage(error)]),
+				text: __("Could not save this {0}. {1}", [__(props.noun), saveFailedSentence(error)]),
 				variant: "error",
 			})
 			console.log(`Error updating ${props.doctype}`, firstMessage(error))
@@ -810,7 +810,7 @@ const finalize = createResource({
 		console.warn(`[FormView] ${props.doctype} transition failed:`, error)
 		gToast({
 			title: __("Error"),
-			text: firstMessage(error, __("Could not save this {0}.", [__(props.noun)])),
+			text: saveFailedSentence(error, __("Could not save this {0}.", [__(props.noun)])),
 			variant: "error",
 		})
 	},
