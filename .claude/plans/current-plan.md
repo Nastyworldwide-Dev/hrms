@@ -1,54 +1,93 @@
-# Release 2.0.0-alpha.37 "Clear Screens" (planned and approved 6 Oct 2026)
+# Release 2.0.0-alpha.38 "Money and Waiting" (planned and approved 6 Oct 2026)
 
-Owner, 6 Oct: "plan for next release". Scope: Stage 4 of docs/glass/plan/2026-10-05-stabilise-nadi-plan.md
-(the screens' own standard), the hotspot ticket that is small enough to do safely, and the one gate
-problem that keeps costing time. Nothing that needs a ruling.
+Owner, 6 Oct: "plan for next release, what is the biggest one we need to do including my call. No push,
+anything regarding pipeline. We stay local."
+Reading of "stay local": pipeline work (humanless-pipeline, ~/.claude hooks) is committed locally and never
+pushed. The app release push waits for the owner's word too (asked in the reply).
+
+## Lenses (deep-analysis, short)
+- First principles: people must never be paid twice, and a request must never wait on someone who is away.
+- Assumptions: "approver on leave" stalls are reported by people, not measured; duplicates need a rule for
+  what "the same claim" is (same person, type, date, amount).
+- Experts: finance says block exact duplicates; HR says warn on near ones (two real taxis on one day happen).
+- Simple: a second identical claim is stopped like a second card swipe; a request whose approver is away
+  moves up the line after a set number of days.
+- Critique: reports fencing was deferred on 13 Sep; HR now sees all companies by ruling (23 Sep), so most
+  report exposure is closed by that ruling. Re-probe only for approver roles; not a blind 40-report rewrite.
+- Steps: rulings first, then money (E1), waiting (W1), notices (C1), then leftovers and pipeline.
 
 ## FLOW
-Same as alpha.35/36: Opus orchestrator briefs -> Sonnet implementer (xhigh) builds test-first, commits
-nothing -> orchestrator reviews, proves red/green (live browser for UI), commits one cause per commit ->
-reviewer -> next. Max 3 agents. Then bump + changelog, full suites, push branch, scripts/release.sh.
+Same as alpha.35-37: Opus orchestrator briefs -> Sonnet implementer (xhigh) builds test-first, commits nothing
+-> orchestrator reviews, proves red/green (live for UI), commits one cause per commit -> reviewer -> next.
+```mermaid
+graph LR
+  NadiForm[Nadi claim form] --> ExpenseClaim[expense_claim validate: E1]
+  Scheduler[hourly job: W1] --> ApprovalLine[approval line, 2 levels] --> Notice[PWA Notification]
+  Cancel[on_cancel hooks: C1] --> Notice
+  loudRequest[loudRequest seam: O1] --> Forms[every form]
+  ResourceError --> L1[detail parts]
+  H1[humanless-pipeline hooks] -.local only.-> ClaudeHooks[~/.claude/hooks links]
+```
 
-## SLICES
-B1  **Screen readers: the 16 serious findings on 9 screens** (design/a11y-baseline.json, counted once, not
-    light+dark): 8 form fields with no label, 5 wrong ARIA attributes, 1 unnamed button, 1 dialog with no
-    name, 1 tap target under 24 px. Screens: attendance-requests, expense-claims, leave-applications,
-    shift-assignments and issues detail; expense-claims, OT and replacement-leave new; invalid-employee.
-    Fix in the shared component where the finding comes from (one fix, many screens), not per screen.
-    DONE WHEN: design/gates/a11y.mjs on fresh.local reports 0 serious/critical on those screens and the
-    baseline file shrinks to empty for them; no visual change (screenshot diff on the 9 screens).
-B2  **"You can't open this" instead of a blank screen.** A detail page the person may not open (KPI detail
-    today renders nothing on a 403) says so in plain words with a way back. ResourceError learns the
-    no-access case once; every detail view already using it gets it free; KpiDetail starts using it.
-    DONE WHEN: unit test: a 403 resource -> "You can't open this." + Back; live: a staff user opening
-    another person's KPI sees the sentence (Playwright).
-B3  **Long names and reasons don't break rows at 360 px.** List item components truncate with an ellipsis
-    and keep the full text for screen readers. DONE WHEN: a 60-character Malaysian name renders on one line
-    in the request, approval and team rows at 360 px (Playwright screenshot), full text in aria-label.
-R1  **One owner for "the session ended"** (ticket docs/glass/tickets/2026-10-06-session-identity-hotspot.md):
-    five places decide it today. One function marks, clears the offline page and reloads; user.js,
-    employees.js, navigationGate.js and logout call it. DONE WHEN: grep finds `name: "Login"` only in the
-    router and that function; a test per caller; the alpha.35 live probe (session killed, tap) still shows
-    the banner.
+## THE BIGGEST ONE: E1 duplicate Expense Claim (money; ruling 1)
+Expense Claim has no duplicate guard (stabilise plan Stage 1.2). A slow network plus a second tap, or a
+re-file, can pay the same receipt twice. Rule (proposed): same employee + expense type + expense date +
+amount on a claim not Cancelled/Rejected = duplicate. Ruling 1 decides block or warn.
+Files: hrms/hr/doctype/expense_claim (validate) + the Nadi claim form. Test: red stub test filing the same
+claim twice; live: file twice in Nadi.
 
-## NEEDS OWNER YES
-P1  **The commit hook keeps sweeping other files into a commit** (3 times this week, each undone by hand,
-    nothing lost). Find where (pre-commit-lint stages `git add -u` on the commit's files; something else
-    adds the rest) and make a commit hold only the files it names. Pipeline repo change, test-first, like G1.
-T1  **Test-site accounts** on fresh.local only (never the live site): (a) set a password on the existing
-    test HR persona to check HR screens live; (b) make one test employee a Shift Supervisor with 2 reports,
-    so the Desk supervisor check (V1 from alpha.36) can finally run. Both were refused without your word.
+## NEEDS YOUR CALL (each one changes what gets built)
+R1  Duplicate expense claim: (a) block exact duplicates, warn near ones [recommended] (b) warn only (c) block only.
+R2  Approver on leave: (a) after N working days the request moves to the next level of the line, both told
+    [recommended, N=2] (b) it waits, the approver's manager is told (c) nothing changes.
+R3  Cancel after approval: (a) approver and HR are told, balance/attendance reverse as today [recommended]
+    (b) HR only (c) nobody (today, for most types).
+R4  Offline submit: (a) a clear "Not sent: you are offline. Your form is kept." and nothing queued
+    [recommended] (b) a real send-later queue (bigger, own release).
+R5  Reports (deferred 13 Sep): (a) probe only the approver roles' reports on real data, fix what leaks
+    [recommended] (b) still deferred.
+R6  Pipeline hooks (local only): (a) move the 25 hooks that point at the old /opt/keel copy onto the
+    pipeline repo, one at a time, each with its own tests, never pushed [recommended] (b) leave them.
+
+## SLICES (built after the rulings; one cause per commit; reviewed)
+E1  duplicate Expense Claim guard (per R1).
+W1  approver-away escalation (per R2): scheduled job + notice; uses the existing approval line (2 levels).
+C1  cancel-after-approval notices (per R3) for Leave, OT, Expense, Attendance Request, Shift Request.
+O1  offline submit says so (per R4): one seam (loudRequest) for every form.
+L1  leftovers from alpha.37: the second "Something didn't load" toast after "You can't open this";
+    4 parts blank on a failed load (RequestTimeline, ExpensesTable, ExpenseTaxesTable, MustReadNotice).
+P1  report probe (per R5): approver roles, real rows on fresh.local, rolled back.
+H1  pipeline hooks: ON HOLD (6 Oct, found while starting). /opt/keel is NOT an old copy of humanless-pipeline:
+    the two repos forked at 75e46ca and each has ~70 commits the other lacks (keel: usage cutover, learnings,
+    security push gate, key guard, Sep 21-Oct 5; pipeline: commit-scope, tdd paths, Sep 7-Oct 6). Re-linking a
+    hook to humanless-pipeline would DROP keel's newer work in that hook. Ruling R6 ("move them") assumed the
+    opposite. Needs a new owner call: which repo is the source of truth, then port the missing fixes INTO it.
+    The pre-commit-lint re-link of alpha.37 stays (pipeline's version is a superset there, reviewed).
+
+S1  **SOPs: HR writes them the way staff read them** (owner, 6 Oct: "make SOP works, visible to everyone as how
+    HR use it ... displayed correctly or at least HR configure the way it should be"). Probed 6 Oct on fresh.local
+    as staff, supervisor and HR: who sees what is CORRECT (staff: General + own department + own company; HR: all,
+    drafts too), lists and detail render headings, lists, bold, tables, private and public pictures.
+    BROKEN: HR's edit sheet in Nadi is a plain textarea fed the stored HTML, so HR sees raw code
+    ("<p>Private picture:</p><img src=...>") and a save from it keeps or mangles it; HR cannot add a heading,
+    list, bold or picture from Nadi at all; the preview of what staff will see is missing.
+    Fix: the edit sheet uses a rich editor (frappe-ui TextEditor, already installed, already in the tailwind
+    content list) with headings / lists / bold / link / picture, the same safeHtml allow-list on read; an
+    "As staff see it" preview; who-sees-it line under Scope ("Everyone in <company>" / "Only <department>").
+    DONE WHEN: HR edits an existing SOP in Nadi and sees formatted text, not code; saves; staff see the same
+    formatting (Playwright as HR then as staff); safeHtml unchanged; no new dependency.
+N1  **Near-duplicate expense warning in Nadi** (owner yes, 6 Oct): after save, the Nadi claim form shows the
+    server's orange warning (today only Desk shows it). One place: the form's save path reads frappe-ui's
+    message log. DONE WHEN: live, a same-day same-type claim shows the warning in Nadi.
+K1  **Pipeline: /opt/keel is the source of truth** (owner yes, 6 Oct). Port the humanless-pipeline-only fixes
+    (commit-scope staging, e2e spec skip, ceiling rot reads wrapped lines, tdd paths) INTO keel, one at a time
+    with its tests; then point ~/.claude/hooks at keel. LOCAL ONLY. Needs write access to /opt/keel (owner).
 
 ## NOT IN THIS RELEASE
-Rulings 1-5 (duplicate expense, approver on leave, cancel notices, offline queue, reports). Token debt
-(234) and hand-made controls (25): big, low harm, next. Android gate. hrms/api/__init__.py split (ticket).
+Token debt (234), hand-made controls (25), Android gate, send-later queue (if R4b), hrms/api/__init__.py split.
 
-## MOCKUP: NOT NEEDED (no new screen; B2 is one sentence in the existing error block, B3 is an ellipsis)
+## MOCKUP: NOT NEEDED (no new screen: one refusal sentence on an existing form, one notice line, one banner sentence)
 
 ## EXPECTED OUTPUT
-4 app commits (B1 may be 2-3: one per shared component), P1 in the pipeline repo, V1 report if T1 is yes;
-chore(release): 2.0.0-alpha.37. Suites green, a11y gate 0 serious on the 9 screens.
-
-## RISKS
-- B1 touches shared form components: the visual gate must show no change.
-- R1 touches the session path (hotspot): behaviour must stay exactly as alpha.36; the live probe is the proof.
+6-8 app commits + local pipeline commits; frontend + python stub suites green; live checks for E1 and O1.
+No push of anything until the owner says.
