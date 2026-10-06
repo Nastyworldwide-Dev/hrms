@@ -12,6 +12,10 @@
     destructive  boolean — label and well switch to --danger-ink
     chevron      boolean, default true — trailing chevron; hidden on rows that
                  do not navigate
+    wrap         boolean, default false — the label may wrap. Off by default: a
+                 label is a name or a title and stays ONE line with an ellipsis
+                 (the full text is in title=); on only for a row that is itself a
+                 sentence (an empty-state line), which must never be cut
     tappable     boolean, default true — renders <button> and takes focus;
                  false renders a plain <div> for read-only rows
   Slots:
@@ -38,7 +42,12 @@
 		</span>
 
 		<span class="g-row__body">
-			<span class="g-row__label">{{ label }}</span>
+			<span
+				class="g-row__label truncate min-w-0"
+				:class="{ 'whitespace-normal': wrap }"
+				:title="label"
+				>{{ label }}</span
+			>
 			<!-- the #sublabel slot lets a caller animate the second line
 			     (GRollNumber, alpha.13); the prop stays the plain default -->
 			<span v-if="sublabel || $slots.sublabel" class="g-row__sub"><slot name="sublabel">{{ sublabel }}</slot></span>
@@ -80,6 +89,7 @@ defineProps({
 	destructive: { type: Boolean, default: false },
 	chevron: { type: Boolean, default: true },
 	tappable: { type: Boolean, default: true },
+	wrap: { type: Boolean, default: false },
 })
 defineEmits(["click"])
 </script>

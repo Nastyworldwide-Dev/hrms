@@ -25,7 +25,7 @@
 			</GListRow>
 		</GListPanel>
 		<GListPanel v-else>
-			<GListRow :label="__('No public holidays ahead are listed yet.')" :tappable="false" />
+			<GListRow :label="__('No public holidays ahead are listed yet.')" :tappable="false" wrap />
 		</GListPanel>
 	</div>
 </template>

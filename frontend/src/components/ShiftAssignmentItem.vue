@@ -1,8 +1,11 @@
 <template>
 	<ListItem>
 		<template #left>
-			<div class="flex flex-col items-start gap-1">
-				<div class="text-button-label font-semibold text-inkbase">
+			<div class="flex flex-col items-start gap-1 min-w-0 max-w-full">
+				<div
+					class="text-button-label font-semibold text-inkbase truncate max-w-full"
+					:title="props.doc.shift_type"
+				>
 					{{ props.doc.shift_type }}
 				</div>
 				<div class="text-xs text-ink-600">
@@ -12,7 +15,7 @@
 						daysWords(props.doc.total_shift_days || getTotalShiftDays(props.doc))
 					}}</span>
 				</div>
-				<div v-if="props.doc.shift_location" class="text-xs text-ink-600 whitespace-nowrap">
+				<div v-if="props.doc.shift_location" class="text-xs text-ink-600 truncate max-w-full">
 					&#128205; {{ props.doc.shift_location }}
 				</div>
 			</div>

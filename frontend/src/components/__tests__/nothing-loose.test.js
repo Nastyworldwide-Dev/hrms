@@ -12,8 +12,8 @@ test("D4 Who to ask: an empty answer is a row in the group, under its header", (
 	const src = read("../WhoToAsk.vue")
 	assert.match(src, /<h2 class="g-form-section__title">\{\{ __\("Your manager"\) \}\}<\/h2>/)
 	assert.match(src, /<h2 class="g-form-section__title">\{\{ __\("HR"\) \}\}<\/h2>/)
-	assert.match(src, /<GListRow :label="NO_MANAGER" :tappable="false" \/>/)
-	assert.match(src, /<GListRow :label="NO_HR" :tappable="false" \/>/)
+	assert.match(src, /<GListRow :label="NO_MANAGER" :tappable="false" wrap \/>/)
+	assert.match(src, /<GListRow :label="NO_HR" :tappable="false" wrap \/>/)
 	assert.match(src, /const NO_MANAGER = __\("No manager is set for you\."\)/)
 	assert.match(src, /const NO_HR = __\("HR hasn't listed contacts yet\."\)/)
 	assert.doesNotMatch(src, /g-empty-line|class="g-eyebrow/)
@@ -100,7 +100,7 @@ test("D24 Notifications: each kind has its colour; one trailing mark per row", (
 test("D25 Public holidays: rows in one group; none-listed is a row", () => {
 	const src = read("../HolidayList.vue")
 	assert.match(src, /<GListPanel v-else-if="upcoming\.length">/)
-	assert.match(src, /<GListRow :label="__\('No public holidays ahead are listed yet\.'\)" :tappable="false" \/>/)
+	assert.match(src, /<GListRow :label="__\('No public holidays ahead are listed yet\.'\)" :tappable="false" wrap \/>/)
 })
 
 test("Time off's loading card is the shape of the answer (one card)", () => {

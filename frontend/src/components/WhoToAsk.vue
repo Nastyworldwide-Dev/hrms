@@ -13,7 +13,7 @@
 				<ContactCard v-if="manager.data" :contact="manager.data" />
 			</GListPanel>
 			<GListPanel v-else>
-				<GListRow :label="NO_MANAGER" :tappable="false" />
+				<GListRow :label="NO_MANAGER" :tappable="false" wrap />
 			</GListPanel>
 		</section>
 
@@ -27,7 +27,7 @@
 				<ContactCard v-for="contact in hrContacts.data || []" :key="contact.name" :contact="contact" />
 			</GListPanel>
 			<GListPanel v-else-if="!hrContacts.error">
-				<GListRow :label="NO_HR" :tappable="false" />
+				<GListRow :label="NO_HR" :tappable="false" wrap />
 			</GListPanel>
 		</section>
 	</div>

@@ -52,7 +52,7 @@
 						/>
 					</GListPanel>
 					<GListPanel v-else>
-						<GListRow :label="__('You didn\'t check in this day.')" :tappable="false" />
+						<GListRow :label="__('You didn\'t check in this day.')" :tappable="false" wrap />
 					</GListPanel>
 					<!-- Said once, under the taps (owner, 26 Sep 2026: "special
 					     wording so it's clear it was cleared out"). -->

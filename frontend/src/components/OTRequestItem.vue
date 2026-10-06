@@ -5,13 +5,16 @@
 		:employeeName="props.doc.employee_name"
 	>
 		<template #left>
-			<div class="flex flex-col items-start gap-1">
+			<div class="flex flex-col items-start gap-1 min-w-0 max-w-full">
 				<!-- The OUTCOME first, the input second (2.0 slice 2.2). An
 				     employee knows how long they stayed; what they opened this
 				     to find out is whether it became pay or a day off. So the
 				     row leads with that and carries the hours as the detail
 				     they belong to. -->
-				<div class="text-button-label font-semibold text-inkbase">
+				<div
+					class="text-button-label font-semibold text-inkbase truncate max-w-full"
+					:title="outcome"
+				>
 					{{ outcome }}
 				</div>
 				<div class="text-xs text-ink-600">

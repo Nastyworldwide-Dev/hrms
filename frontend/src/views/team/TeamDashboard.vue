@@ -108,7 +108,9 @@
 							>
 								<div class="g-team-row__main">
 									<span class="g-team-row__text">
-										<span class="g-team-row__name">{{ member.employee_name }}</span>
+										<span class="g-team-row__name" :title="member.employee_name">{{
+											member.employee_name
+										}}</span>
 										<span class="g-team-row__sub">
 											{{ [member.designation, summaryLine(member)].filter(Boolean).join(" · ") }}
 										</span>

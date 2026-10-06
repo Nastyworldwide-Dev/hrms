@@ -93,6 +93,7 @@
 							:label="__('Nothing is waiting on you.')"
 							:tint="TILE.neutral"
 							:tappable="false"
+							wrap
 						>
 							<template #icon>
 								<CircleCheckBig class="g-row-icon" />
