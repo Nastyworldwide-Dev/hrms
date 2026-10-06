@@ -1,4 +1,4 @@
-CLASS: a part of a screen that shows nothing when its data fails to load (alpha.37 L1 list): a blank reads as "there is nothing", not "it did not load".
-frontend/src/components/RequestTimeline.vue same-root (ResourceError in place)
-frontend/src/components/ExpensesTable.vue, ExpenseTaxesTable.vue same-root (ResourceError in place)
-frontend/src/components/MustReadNotice.vue same-root (a failed body: ResourceError, footer kept; a failed notice LIST: logged and nothing shown, because the notice cannot be dismissed and must never block the app)
+CLASS: a page that must leave at once waited instead: alpha.37 made every session-change reload wait for the offline page-copy clear, so when ANOTHER person signed in on the phone the old page stayed up (still showing the last person's data) until a promise settled; and logout's push hand-back made the logout request a tick later than the isolation test assumed.
+frontend/src/utils/personalCache.js:leavePage same-root (nothing to clear -> reload at once, as before alpha.37; only sessionEnded waits for its clear)
+frontend/tests/personal-cache-isolation.test.mjs same-root (the harness supplies handBackPhone and waits the tick logout's validate takes)
+frontend/tests/ (whole folder) ticket alpha.39 — the commit gate and the release run only src/**/__tests__; tests/*.mjs went red on 5 Oct (alpha.35) and 6 Oct (alpha.37) unseen

@@ -80,6 +80,9 @@ function browser(
 		employeeResource: { data: { name: user }, reset() {} },
 		userResource: { data: { name: user }, reset() {} },
 		router: { replace() {} },
+		// logout hands the phone's push token back first (utils/handBackPhone.js, 5 Oct 2026);
+		// this harness has no push, so the hand-back is a no-op and logout goes straight on
+		handBackPhone: async () => {},
 	})
 	vm.runInContext(
 		executable(source("node_modules/frappe-ui/src/resources/local.js")),
@@ -191,6 +194,8 @@ test("startup removes legacy personal keys while logout removes only the departi
 	)
 	a.run(executable(source("src/data/session.js")))
 	const logout = a.run("session.logout.fetch()")
+	// the logout request goes out after the awaited push hand-back (validate), a tick later
+	await tick()
 	a.context.document.cookie = "user_id=Guest"
 	a.requests.find(({ options }) => options.url === "logout").resolve({})
 	await logout

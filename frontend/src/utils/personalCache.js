@@ -95,10 +95,13 @@ export function sessionEnded() {
 	return true
 }
 
-function leavePage(before = Promise.resolve()) {
+function leavePage(before = null) {
 	invalidated = true
 	console.info("[personalCache] session changed; discarding this page's resources")
 	document.documentElement.style.visibility = "hidden"
+	// Nothing to wait for (another person signed in on this phone): reload at once,
+	// as before alpha.37. Waiting for the page-copy clear only when there is one.
+	if (!before) return window.location.reload()
 	before.finally(() => window.location.reload())
 }
 
