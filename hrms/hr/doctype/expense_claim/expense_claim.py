@@ -205,6 +205,22 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				)
 				row.sanctioned_amount = row.amount
 
+	def _expense_lines_changed(self) -> bool:
+		"""Did this save change any expense line (type, date or amount)? An old draft edited
+		to match a newer claim is a new claim in all but name."""
+		before = self.get_doc_before_save()
+		if not before:
+			return False
+
+		def lines(doc):
+			return sorted(
+				(row.expense_type, str(getdate(row.expense_date)), flt(row.amount, 2))
+				for row in doc.get("expenses")
+				if row.expense_type and row.expense_date
+			)
+
+		return lines(before) != lines(self)
+
 	def validate_no_duplicate_expenses(self):
 		"""Refuse an expense that is already claimed; warn about one that looks like it.
 
@@ -264,7 +280,11 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				and ec.docstatus != 2
 				and ifnull(ec.approval_status, '') != 'Rejected'
 				and ec.name not in (%(this)s, %(amended)s)
-				and (%(created)s = '' or ec.creation < %(created)s)
+				and (
+					%(created)s = ''
+					or ec.creation < %(created)s
+					or (ec.creation = %(created)s and ec.name < %(this)s)
+				)
 				and ecd.expense_date in %(dates)s
 			order by ec.creation, ec.name, ecd.idx
 			""",
@@ -273,8 +293,9 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				"this": self.name or "",
 				"amended": self.amended_from or "",
 				# only an EARLIER claim is the original: when two match, the later one is the duplicate,
-				# so the first can still be approved (a new claim has no creation yet: every claim is earlier)
-				"created": str(self.creation or "") if not self.is_new() else "",
+				# so the first can still be approved. Ties in the same second go by name. A new claim, or
+				# an old one whose lines were just changed, is compared with every claim.
+				"created": "" if self.is_new() or self._expense_lines_changed() else str(self.creation or ""),
 				"dates": tuple(sorted({date.isoformat() for _idx, _type, date, _amount in lines})),
 			},
 			as_dict=True,

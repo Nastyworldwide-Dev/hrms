@@ -94,6 +94,7 @@ class _Site:
 			"logger": MagicMock(),
 		}
 		self.check = _lift_method("validate_no_duplicate_expenses", self.ns)
+		self.lines_changed = _lift_method("_expense_lines_changed", self.ns)
 
 	@staticmethod
 	def _throw(msg, exc=None):
@@ -137,7 +138,7 @@ class _Site:
 			)
 			for i, (t, d, a) in enumerate(rows, 1)
 		]
-		return FakeDocument(
+		doc = FakeDocument(
 			"Expense Claim",
 			name=name,
 			employee=employee,
@@ -145,8 +146,12 @@ class _Site:
 			approval_status=fields.pop("approval_status", "Draft"),
 			expenses=lines,
 			precision=lambda *args: 2,
+			get_doc_before_save=fields.pop("get_doc_before_save", lambda: None),
 			**fields,
 		)
+		# the real helper, bound to this fake (the method under test calls self._expense_lines_changed())
+		doc._expense_lines_changed = lambda: self.lines_changed(doc)
+		return doc
 
 
 class TestDuplicateExpenseClaims(unittest.TestCase):
@@ -263,6 +268,35 @@ class TestDuplicateExpenseClaims(unittest.TestCase):
 		)
 		with self.assertRaises(ValidationError):
 			self.run_check(doc)
+
+	def test_an_old_draft_edited_to_copy_a_newer_claim_is_refused(self):
+		# review of the earlier-only fix: an older draft whose ROWS change is a new
+		# claim in all but name, so it is checked against every other live claim
+		self.site.file("HR-EXP-0002", [("Travel", "2026-10-01", 50.0)])  # the newer claim
+		before = self.site.claim([("Meals", "2026-09-01", 9.0)], name="HR-EXP-0001")  # what it was
+		doc = self.site.claim(
+			[("Travel", "2026-10-01", 50.0)],
+			name="HR-EXP-0001",
+			creation="2026-09-01 09:00:00",
+			get_doc_before_save=lambda: before,
+		)
+		with self.assertRaises(ValidationError):
+			self.run_check(doc)
+
+	def test_two_claims_made_in_the_same_second_still_see_each_other(self):
+		# review: a strict "earlier than" let two claims created in one second pass;
+		# ties are broken by name, so exactly one of the two is the original
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
+		created = self.site.db.execute(
+			"select creation from `tabExpense Claim` where name='HR-EXP-0001'"
+		).fetchone()[0]
+		later = self.site.claim([("Travel", "2026-10-01", 50.0)], name="HR-EXP-0002", creation=created)
+		with self.assertRaises(ValidationError):
+			self.run_check(later)
+		first = self.site.claim([("Travel", "2026-10-01", 50.0)], name="HR-EXP-0001", creation=created)
+		self.site.file("HR-EXP-0002", [("Travel", "2026-10-01", 50.0)])
+		self.site.db.execute("update `tabExpense Claim` set creation=? where name='HR-EXP-0002'", (created,))
+		self.run_check(first)  # the original (lower name) stays approvable
 
 	def test_rejecting_a_duplicate_is_never_blocked_by_the_rule(self):
 		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
