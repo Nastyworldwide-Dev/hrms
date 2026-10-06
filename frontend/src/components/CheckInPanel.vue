@@ -181,7 +181,7 @@
 		:approver-name="remoteRequest.approverName"
 		:reason="remoteRequest.reason"
 		@close="remoteDialogOpen = false"
-		@submitted="checkins.reload()"
+		@submitted="refreshAfterPunch()"
 	/>
 
 	<StrictRejectionDialog
@@ -201,12 +201,7 @@
 		:in-checkin-name="unresolvedStaleIn.data?.name || ''"
 		:in-checkin-time="unresolvedStaleIn.data?.time || ''"
 		@close="lateCheckoutOpen = false"
-		@submitted="
-			() => {
-				checkins.reload()
-				unresolvedStaleIn.reload()
-			}
-		"
+		@submitted="refreshAfterPunch()"
 	/>
 	<!-- After a successful check-in only (approved Home plan, H7). -->
 	<PushNotificationPrompt v-if="askForNotifications" />
@@ -250,6 +245,8 @@ import RemoteCheckinDialog from "@/components/RemoteCheckinDialog.vue"
 import StrictRejectionDialog from "@/components/StrictRejectionDialog.vue"
 import LateCheckoutDialog from "@/components/LateCheckoutDialog.vue"
 import { firstMessage } from "@/utils/loudRequest"
+import { nowResource } from "@/data/now"
+import { homeWeek } from "@/data/home"
 import { nearestSite } from "@/utils/nearestSite"
 
 const DOCTYPE = "Employee Checkin"
@@ -361,6 +358,17 @@ const checkins = createListResource({
 	orderBy: "time desc",
 })
 checkins.reload()
+
+// Everything on the Today card that a punch changes. The button read the punch list, but the status line
+// ("Done for today" / "Working") and the week line read other resources that nothing reloaded, so right after
+// a check-in the card said "Done for today" beside a "Check out" button until the page was reloaded
+// (reproduced live, 6 Oct 2026). ONE function, called by every path that saves a punch, so a path cannot
+// forget one. allSettled: one failing read must not stop the others.
+function refreshAfterPunch() {
+	checkins.reload()
+	unresolvedStaleIn.reload()
+	return Promise.allSettled([nowResource.reload(), homeWeek.reload()])
+}
 
 // Staff lockdown: desk create perms on Employee Checkin are stripped, so the
 // punch goes through a server-side endpoint (owner check + server clock).
@@ -1225,8 +1233,7 @@ const runSubmitLog = async (logType) => {
 			// banner / button state) reflect the log just inserted. The socket
 			// list_update handler also reloads, but it's unreliable on mobile
 			// (disconnected/backgrounded), so reload explicitly like the dialogs do.
-			checkins.reload()
-			unresolvedStaleIn.reload()
+			refreshAfterPunch()
 			if (generation !== geoGeneration) return
 			modalController.dismiss()
 
@@ -1309,7 +1316,7 @@ const runSubmitLog = async (logType) => {
 			// server actually holds. The tap id stays pending, so even a
 			// deliberate retry is a replay of this punch, never a new one.
 			lastSubmit.value = { action: logType, at: Date.now() }
-			checkins.reload()
+			refreshAfterPunch()
 			const messages = error?.messages?.length
 				? error.messages
 				: [__("{0} failed. Check your connection and try again.", [actionLabel])]
@@ -1433,8 +1440,7 @@ function onModalDismiss() {
 // tore down every OTHER component's list_update listener too — and is rejoined
 // on reconnect.
 useListUpdate(socket, DOCTYPE, () => {
-	checkins.reload()
-	unresolvedStaleIn.reload()
+	refreshAfterPunch()
 })
 
 onBeforeUnmount(() => {

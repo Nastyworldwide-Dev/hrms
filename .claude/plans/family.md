@@ -1,5 +1,7 @@
-CLASS: a pill whose click-through filter names a different word from the one it shows, so the filter misses rows the pill describes. The "Approved · unpaid" pill filtered on the stored money word Unpaid, but an approved claim with nothing sanctioned keeps the stored status Submitted (set_status), so clicking the pill did not list it (design review of 3f761024f).
-hrms/hr/doctype/expense_claim/expense_claim_list.js same-root (fixed here: the Approved · unpaid pill filters on approval_status = Approved)
-hrms/hr/doctype/expense_claim/expense_claim_list.js:Paid / Rejected pills not-affected — their stored words (Paid, Rejected) are exactly the ones the filter names
-hrms/public/js/request_status.bundle.js not-affected — filters on docstatus or the decision word, both stored as shown
-hrms/hr/doctype/remote_checkin_request/remote_checkin_request_list.js not-affected — Waiting filters on the stored Pending
+CLASS: one action, several readers of its result, and only some of them told. A saved punch reloaded the punch list, but the status line ("Done for today" / "Working") and the week line read other resources that nothing reloaded, so the Today card contradicted itself ("Done for today" beside a "Check out" button) until the page was reloaded. Reproduced in a real browser on the test site, 6 Oct 2026.
+frontend/src/components/CheckInPanel.vue:refreshAfterPunch same-root (new: ONE function that reloads the punch list, the stale-IN banner, the status line and the week line; allSettled so one failing read stops none)
+frontend/src/components/CheckInPanel.vue main punch / lost answer / RemoteCheckinDialog / LateCheckoutDialog / realtime list_update same-root (fixed here: all five paths call it)
+frontend/src/components/NowBar.vue not-affected — it reads nowResource, which the function now reloads
+frontend/src/components/HomeWeek.vue not-affected — reads homeWeek, same
+frontend/src/views/Home.vue:refresh not-affected — pull-down already reloads these; its own handler never ran (next commit)
+hrms/api/attendance_fix_day.py ticket stale-status-after-fix-day — HR's "Fix a day" probably leaves the same stale Today line for the employee; not reproduced

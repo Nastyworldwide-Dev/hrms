@@ -33,7 +33,8 @@ test("the duplicate guard arms on a successful punch and on a lost answer, never
 	const errorIdx = src.indexOf("onError(error) {", src.indexOf("await punchCheckin.submit("))
 	const punchBlock = src.slice(errorIdx, src.indexOf("\n\t\t},\n\t})", errorIdx))
 	assert.match(punchBlock, /lastSubmit\.value = \{ action: logType, at: Date\.now\(\) \}/)
-	assert.match(punchBlock, /checkins\.reload\(\)/)
+	// every refresh goes through ONE function, so no path can forget the status line (6 Oct 2026)
+	assert.match(punchBlock, /refreshAfterPunch\(\)/)
 })
 
 test("session staleness parses Frappe datetimes iOS-safely", () => {
@@ -86,7 +87,7 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 		"lastSubmit",
 		"logType",
 		"Date",
-		"checkins",
+		"refreshAfterPunch",
 		`return ({ ${punchBlock} } }).onError`
 	)(
 		1,
@@ -101,7 +102,7 @@ test("a failed punch frees the frozen button by resetting the camera", () => {
 		lastSubmit,
 		"IN",
 		{ now: () => 1234 },
-		{ reload: () => reloads++ }
+		() => reloads++
 	)
 	onError({})
 	// the answer was lost, not refused: the guard is armed and the log reloaded
@@ -149,10 +150,21 @@ test("the punch's own answer updates the label before the reload lands", () => {
 	// reversed. The punch response already carries the stored row, so use it.
 	const idx = src.indexOf("async onSuccess(doc) {")
 	assert.ok(idx > 0, "the punch success handler exists")
-	const body = src.slice(idx, src.indexOf("checkins.reload()", idx))
+	const body = src.slice(idx, src.indexOf("refreshAfterPunch()", idx))
 	assert.match(
 		body,
 		/lastKnownLog\.value = doc/,
 		"the stored punch must set the label before the reload is asked for"
 	)
+})
+
+test("every path that saves a punch refreshes through the one function, which covers status, week and list", () => {
+	const fn = src.slice(src.indexOf("function refreshAfterPunch()"), src.indexOf("// Staff lockdown"))
+	assert.match(fn, /checkins\.reload\(\)/)
+	assert.match(fn, /unresolvedStaleIn\.reload\(\)/)
+	assert.match(fn, /nowResource\.reload\(\)/)
+	assert.match(fn, /homeWeek\.reload\(\)/)
+	assert.match(fn, /Promise\.allSettled/, "one failing read must not stop the others")
+	// the punch, the lost answer, the two dialogs and the realtime update all use it
+	assert.ok((src.match(/refreshAfterPunch\(\)/g) || []).length >= 6)
 })

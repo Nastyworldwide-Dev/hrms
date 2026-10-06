@@ -23,7 +23,9 @@ function panel({ employee = "EMP", storage = new Map(), start = 1_800_000_000_00
 		requests = [],
 		notices = [],
 		unmount = []
-	const counters = { dismiss: 0, reload: 0 }
+	// reload: the punch list; statusReload / weekReload: the Today status line and the week line, which a
+	// punch must also refresh (reproduced live 6 Oct 2026: "Done for today" beside a "Check out" button)
+	const counters = { dismiss: 0, reload: 0, statusReload: 0, weekReload: 0 }
 	const resources = new Map()
 	const upload = { respond: null }
 	const timers = new Map()
@@ -117,6 +119,8 @@ function panel({ employee = "EMP", storage = new Map(), start = 1_800_000_000_00
 			}[name]),
 		onBeforeUnmount: (fn) => unmount.push(fn),
 		useListUpdate: () => {},
+		nowResource: { reload: async () => { counters.statusReload += 1 } },
+		homeWeek: { reload: async () => { counters.weekReload += 1 } },
 		useOnline: () => ({ value: true }),
 		modalController: {
 			dismiss: async () => {
@@ -446,6 +450,37 @@ test("an old successful POST refreshes confirmed punches without dismissing a ne
 	assert.equal(h.counters.dismiss, 0)
 	assert.equal(h.counters.reload, 2)
 	assert.equal(h.vm.lastSubmit.value.action, "IN")
+})
+
+// 6 Oct 2026, reproduced in a real browser: after a check-in the button said "Check out" but the status line
+// above it kept saying "Done for today" until the page was reloaded, because a punch reloaded only the punch
+// list. A saved punch must refresh the status line and the week line too.
+test("a saved punch refreshes the Today status line and the week line, not only the punch list", async () => {
+	const h = panel()
+	await h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	h.resources.get("hrms.api.remote_checkin.punch").submit = async (_payload, options) => {
+		await options.onSuccess({ name: "PUNCH-1", log_type: "IN" })
+	}
+	const before = { ...h.counters }
+	await h.vm.submitLog("IN")
+	assert.ok(h.counters.reload > before.reload, "the punch list reloads")
+	assert.equal(h.counters.statusReload - before.statusReload, 1, "the status line reloads once")
+	assert.equal(h.counters.weekReload - before.weekReload, 1, "the week line reloads once")
+})
+
+test("a punch whose answer was lost refreshes the status line too: the server may have stored it", async () => {
+	const h = panel()
+	await h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	h.resources.get("hrms.api.remote_checkin.punch").submit = async (_payload, options) => {
+		options.onError(new Error("Failed to fetch"))
+		throw new Error("Failed to fetch")
+	}
+	const before = { ...h.counters }
+	await h.vm.submitLog("IN")
+	assert.equal(h.counters.statusReload - before.statusReload, 1)
+	assert.equal(h.counters.weekReload - before.weekReload, 1)
 })
 
 // A retry after a lost response is the same tap, not a new one (audit E-H2).

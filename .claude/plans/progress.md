@@ -265,3 +265,5 @@ NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch
 - 2026-10-05T11:29:14Z COMMIT: 3f761024f fix(desk): an expense claim says Waiting / Approved · unpaid / Paid, like Nadi → review+design dispatched
 - 2026-10-05T11:30:32Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-10-05T11:30:35Z COMMIT: 6976d80c0 fix(desk): the "Approved · unpaid" pill listed too few claims when clicked → review+design dispatched
+- 2026-10-05T11:41:04Z COMMIT: 299b1c267 docs(plan): stabilise Nadi and keep Desk in good hands → review dispatched
+- 2026-10-06T01:35:51Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
