@@ -13,20 +13,33 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 
-const source = readFileSync(new URL("../loudRequest.js", import.meta.url), "utf8").replace(
-	'import { gToast } from "@/components/glass/toast"',
-	"const gToast = () => {}"
-)
+// The real isNoAccess (utils/sessionLost.js, no imports) rides along; the person's cookie is
+// the other boundary, so `signedIn` is a switch the tests flip.
+const session = { user: "a@x" }
+const noAccessSource = readFileSync(new URL("../sessionLost.js", import.meta.url), "utf8")
+const source = readFileSync(new URL("../loudRequest.js", import.meta.url), "utf8")
+	.replace('import { gToast } from "@/components/glass/toast"', "const gToast = () => {}")
+	.replace('import { isNoAccess } from "@/utils/sessionLost"', "")
+	.replace('import { sessionUser } from "@/utils/personalCache"', "")
 const { makeLoudRequest, firstMessage, saveFailedSentence } = new Function(
-	`${source.replace(/export function/g, "function")}\nreturn { makeLoudRequest, firstMessage, saveFailedSentence }`
-)()
+	"sessionUser",
+	`${noAccessSource.replace(/export function/g, "function")}\n${source.replace(/export function/g, "function")}\nreturn { makeLoudRequest, firstMessage, saveFailedSentence }`
+)(() => session.user)
 
 const PERMISSION_ERROR = {
 	exc_type: "PermissionError",
 	messages: ["Insufficient Permission for Account"],
 }
 
-function harness(error = PERMISSION_ERROR) {
+// The default failure is NOT a refusal: a PermissionError from a signed-in person is answered by the
+// screen (L1a, below) and never toasted, which would make every "this endpoint is silent" and "this
+// one still toasts" test here pass or fail for that reason alone.
+const LOAD_ERROR = {
+	exc_type: "OperationalError",
+	messages: ["Insufficient Permission for Account"],
+}
+
+function harness(error = LOAD_ERROR) {
 	const toasts = []
 	let clock = 0
 	const loud = makeLoudRequest(() => Promise.reject(error), {
@@ -117,7 +130,7 @@ test("ordinary checkout leaves its error to the sheet without a duplicate load t
 })
 
 test("silencing the toast does not swallow the rejection", async () => {
-	const { loud } = harness()
+	const { loud } = harness(PERMISSION_ERROR)
 	await assert.rejects(
 		() => loud({ url: "/api/method/frappe.desk.search.search_link" }),
 		(e) => e.exc_type === "PermissionError"
@@ -149,7 +162,7 @@ test("firstMessage is the one reader of a server refusal, shared with the forms"
 // A load toast now says one plain thing; the server's words go to the console.
 test("a failed load toasts plain words, never the server's sentence", async () => {
 	const raw = {
-		exc_type: "PermissionError",
+		exc_type: "ValidationError",
 		messages: ["User a@b.c does not have doctype access via role permission for document DocType"],
 	}
 	const { loud, toasts } = harness(raw)
@@ -168,7 +181,14 @@ test("a read whose screen shows its own error is not toasted a second time", asy
 })
 
 test("a write whose caller shows the server's reason is not toasted twice", async () => {
-	for (const url of ["hrms.api.upload_base64_file", "hrms.api.delete_attachment", "frappe.model.workflow.apply_workflow"]) {
+	for (const url of [
+		"hrms.api.upload_base64_file",
+		"hrms.api.delete_attachment",
+		"frappe.model.workflow.apply_workflow",
+		// TicketDetail.send toasts "Reply not sent" with the server's reason (L1a: the seam no
+		// longer speaks for a refusal, so the caller must, once, for every kind of failure)
+		"hrms.api.helpdesk.reply",
+	]) {
 		const { loud, toasts } = harness()
 		await assert.rejects(() => loud({ url: `/api/method/${url}` }))
 		assert.equal(toasts.length, 0, url)
@@ -246,4 +266,82 @@ test("online but the server unreachable: the toast still shows (no banner would)
 		await assert.rejects(loud({ url: "/api/method/frappe.client.get_list" }))
 		assert.equal(toasts.length, 1)
 	})
+})
+
+// L1a (alpha.38): "You can't open this." (ResourceError, alpha.37 B2) was followed by a second
+// toast, "Something didn't load. Try again in a moment." -- the same refusal reported twice, the
+// second one as a glitch that a retry could fix. The refusal belongs to the screen that owns it.
+// the repeat window is module state: every call here reads a fresh endpoint
+let n = 0
+const read = () => `/api/method/hrms.api.l1a_read_${++n}`
+
+const forbidden = (extra = {}) =>
+	Object.assign(new Error("x"), {
+		response: { status: 403 },
+		exc_type: "PermissionError",
+		messages: ["User a@x does not have permission to access this document"],
+		...extra,
+	})
+
+test("a refusal of this page, from a signed-in person, is not toasted on top of its own sentence", async () => {
+	for (const error of [forbidden(), Object.assign(new Error("x"), { exc_type: "PermissionError" })]) {
+		const { loud, toasts } = harness(error)
+		await assert.rejects(
+			() => loud({ url: read() }),
+			(received) => received === error,
+			"the rejection still reaches the resource, which draws 'You can't open this.'"
+		)
+		assert.deepEqual(toasts, [], "no second toast after 'You can't open this.'")
+	}
+})
+
+test("a 403 from a session that has ended still toasts: that screen is on its way to Login", async () => {
+	const saved = session.user
+	session.user = null
+	try {
+		const { loud, toasts } = harness(forbidden())
+		await assert.rejects(() => loud({ url: read() }))
+		assert.equal(toasts.length, 1)
+	} finally {
+		session.user = saved
+	}
+})
+
+test("a 401, or a Guest permission error, is never a refusal, even carrying a 403", async () => {
+	// (AuthenticationError and SessionExpired are already silent: the redirect to Login says it.)
+	for (const error of [
+		Object.assign(new Error("x"), { response: { status: 401 } }),
+		forbidden({ exc_type: "PermissionError:Guest" }),
+	]) {
+		const { loud, toasts } = harness(error)
+		await assert.rejects(() => loud({ url: read() }))
+		assert.equal(toasts.length, 1)
+	}
+})
+
+test("a server error or a missing document is not a refusal: it keeps the load toast", async () => {
+	for (const error of [
+		Object.assign(new Error("x"), { response: { status: 500 } }),
+		{ exc_type: "DoesNotExistError", messages: ["not found"] },
+	]) {
+		const { loud, toasts } = harness(error)
+		await assert.rejects(() => loud({ url: read() }))
+		assert.equal(toasts.length, 1)
+	}
+})
+
+test("a suppressed refusal does not use up the repeat window of the endpoint", async () => {
+	// 1 s apart, inside the 5 s window: only a REPORTED failure may start the window.
+	let clock = 0
+	const toasts = []
+	let error = forbidden()
+	const loud = makeLoudRequest(() => Promise.reject(error), {
+		notify: (t) => toasts.push(t),
+		now: () => (clock += 1000),
+	})
+	const url = read()
+	await assert.rejects(() => loud({ url }))
+	error = new Error("boom")
+	await assert.rejects(() => loud({ url }))
+	assert.equal(toasts.length, 1)
 })

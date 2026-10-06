@@ -1,4 +1,6 @@
 import { gToast } from "@/components/glass/toast"
+import { isNoAccess } from "@/utils/sessionLost"
+import { sessionUser } from "@/utils/personalCache"
 
 // Every request the PWA makes, made audible.
 //
@@ -72,6 +74,10 @@ const SILENT_ENDPOINTS = new Set([
 	"hrms.api.upload_base64_file",
 	"hrms.api.delete_attachment",
 	"frappe.model.workflow.apply_workflow",
+	// TicketDetail.send toasts "Reply not sent" with the server's reason. A refused
+	// reply (PermissionError) is no longer toasted here at all (L1a), so without its
+	// own toast the person would have heard nothing.
+	"hrms.api.helpdesk.reply",
 ])
 
 function endpointOf(options) {
@@ -168,6 +174,13 @@ export function makeLoudRequest(request, { notify = gToast, now = () => Date.now
 				// offline: the banner already says it (an unreachable server while online
 				// has no banner, so it still gets the toast)
 				!(noServerAnswer(error) && phoneOffline()) &&
+				// A refusal from a person who is still signed in ("this is not yours to
+				// open") is answered by the screen: ResourceError says "You can't open
+				// this." The generic toast on top of it read as a glitch to retry (L1a,
+				// alpha.38). Checked BEFORE isRepeat so a refusal never starts the
+				// window that would hide a later, real failure. A session that ended is
+				// not a refusal (isNoAccess) and is left exactly as it was.
+				!isNoAccess(error, { signedIn: Boolean(sessionUser()) }) &&
 				!isRepeat(endpoint, now())
 			) {
 				// Plain words only (audit F-6): the server's sentence names doctypes,

@@ -33,12 +33,15 @@ nodeModule.registerHooks?.({
 
 const { createResource } = await import("frappe-ui/src/resources/resources.js")
 
-const source = readFileSync(new URL("../utils/loudRequest.js", import.meta.url), "utf8").replace(
-	'import { gToast } from "@/components/glass/toast"',
-	"const gToast = () => {}"
-)
+// loudRequest also reads the real isNoAccess (no imports) and the user cookie (a boundary).
+const noAccessSource = readFileSync(new URL("../utils/sessionLost.js", import.meta.url), "utf8")
+const source = readFileSync(new URL("../utils/loudRequest.js", import.meta.url), "utf8")
+	.replace('import { gToast } from "@/components/glass/toast"', "const gToast = () => {}")
+	.replace('import { isNoAccess } from "@/utils/sessionLost"', "")
+	.replace('import { sessionUser } from "@/utils/personalCache"', "const sessionUser = () => \"a@x\"")
 const loudModule = new Function(
-	`${source.replace(/export function/g, "function")}
+	`${noAccessSource.replace(/export function/g, "function")}
+	${source.replace(/export function/g, "function")}
 	return {
 		makeLoudRequest,
 		swallowReportedRejection: typeof swallowReportedRejection === "function" ? swallowReportedRejection : null,

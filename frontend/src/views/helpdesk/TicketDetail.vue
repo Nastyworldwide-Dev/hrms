@@ -95,6 +95,8 @@ import ResourceError from "@/components/ResourceError.vue"
 import { myTickets, replyToTicket, ticketDetail } from "@/data/helpdesk"
 import { sessionUser } from "@/data/session"
 import { statusLabel, threadFromTicket } from "@/utils/helpdesk"
+import { gToast } from "@/components/glass/toast"
+import { firstMessage } from "@/utils/loudRequest"
 
 const props = defineProps({ id: { type: String, required: true } })
 const __ = inject("$translate")
@@ -136,6 +138,8 @@ async function send() {
 		myTickets.reload?.()
 	} catch (error) {
 		console.warn("[TicketDetail] reply failed:", error?.messages?.[0] || error)
+		// The seam no longer toasts a refusal (L1a), and this was the only word the person got.
+		gToast({ title: __("Reply not sent"), text: firstMessage(error), variant: "error" })
 	}
 }
 </script>

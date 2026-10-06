@@ -317,6 +317,13 @@
 				<GSkeleton width="24px" height="24px" radius="var(--g-radius-well)" />
 				<span class="text-caption">{{ __("Loading…") }}</span>
 			</div>
+			<!-- a refusal from a signed-in person: retrying cannot help, so no Try again
+			     (same words as ResourceError, alpha.37 B2) -->
+			<GEmptyState v-else-if="noAccess" :title="__('You can\'t open this.')" :body="__('It is not shared with you.')">
+				<template #action>
+					<GButton :label="__('Back')" @click="goBackOrHome(router)" />
+				</template>
+			</GEmptyState>
 			<GEmptyState
 				v-else
 				:title="__('Could not open this {0}', [__(props.noun)])"
@@ -436,6 +443,8 @@ import { canOfferCancel } from "@/utils/cancelRule"
 import { requestStatus } from "@/utils/requestStatus"
 import { formTitle } from "@/utils/formTitle"
 import { firstMessage, saveFailedSentence } from "@/utils/loudRequest"
+import { isNoAccess } from "@/utils/sessionLost"
+import { sessionUser } from "@/utils/personalCache"
 import { formatCurrency } from "@/utils/formatters"
 import { useDownloadPDF } from "@/utils/commonUtils"
 
@@ -792,6 +801,12 @@ const documentResource = createDocumentResource({
 		},
 	},
 })
+
+// A read refused while the person is still signed in: "You can't open this." (a session
+// that ended reloads onto Login instead; isNoAccess tells the two apart)
+const noAccess = computed(() =>
+	isNoAccess(documentResource.get.error, { signedIn: Boolean(sessionUser()) })
+)
 
 // docstatus is a TRANSITION, not a field: frappe.client.set_value refuses it
 // ("Cannot edit standard fields"), so Submit and Cancel sent through setValue
