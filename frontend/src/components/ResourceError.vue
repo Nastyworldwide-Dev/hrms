@@ -10,7 +10,7 @@
 		<span class="text-center">{{ message }}</span>
 		<div class="flex flex-row items-center gap-2">
 			<GButton
-				v-if="resource.reload"
+				v-if="resource.reload && !noAccess"
 				class="g-btn--compact"
 				:label="__('Try again')"
 				:pending-label="__('Trying…')"
@@ -51,6 +51,8 @@ import { computed, inject } from "vue"
 import GButton from "@/components/glass/GButton.vue"
 import { useRouter } from "vue-router"
 import { goBackOrHome } from "@/utils/navigation"
+import { isNoAccess } from "@/utils/sessionLost"
+import { sessionUser } from "@/utils/personalCache"
 
 const router = useRouter()
 
@@ -84,11 +86,21 @@ const request = computed(() => props.resource?.list ?? props.resource)
 const failed = computed(() => Boolean(request.value?.error))
 const loading = computed(() => Boolean(request.value?.loading))
 
-const message = computed(() =>
-	props.what
+// A refusal is not a failure to retry: the person is signed in and the server
+// said this is not theirs to open. Say that, once, in plain words (B2, alpha.37;
+// KPI detail and ticket/SOP/issue detail all answered "Could not load ... Try
+// again" to a 403, which reads as a glitch and invites a retry that cannot work).
+// A 403 from a session that has ended is NOT this case: see isNoAccess.
+const noAccess = computed(() =>
+	isNoAccess(request.value?.error, { signedIn: Boolean(sessionUser()) })
+)
+
+const message = computed(() => {
+	if (noAccess.value) return __("You can't open this.")
+	return props.what
 		? __("Could not load {0}.").replace("{0}", __(props.what))
 		: __("Could not load this.")
-)
+})
 
 function retry() {
 	console.info("[ResourceError] retrying", props.what || "resource")
