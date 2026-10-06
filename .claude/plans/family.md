@@ -1,5 +1,6 @@
-CLASS: two nested dialogs with the same name (Ionic's named wrapper + our inner role=dialog), announced twice; and a hard-coded English accessible name in a translated app.
-frontend/src/components/glass/GModal.vue same-root (inner .g-sheet is no longer a dialog; Ionic's wrapper is the one, named)
-frontend/src/components/MustReadNotice.vue same-root (same)
-frontend/patches/frappe-ui+0.1.105.patch same-root (toast Close goes through __() like GModal's Close)
-frontend/e2e/audit-crawl.spec.js, alpha6-audit.mjs, alpha6-journey.mjs not-affected — select ion-modal as well as [role=dialog]
+CLASS: "the session ended" decided in several places, each doing some of the steps (signed-out mark, offline page copy, reload) and forgetting the rest (ticket docs/glass/tickets/2026-10-06-session-identity-hotspot.md).
+frontend/src/utils/personalCache.js same-root (sessionEnded(): the one owner, once per page; sessionIsCurrent routes through it)
+frontend/src/data/user.js, employee.js, employees.js same-root (AuthenticationError -> sessionEnded, no router.push Login)
+frontend/src/router/navigationGate.js + main.js same-root (a page that HAD a user calls sessionEnded; a page that never had one still gets {name:"Login"})
+frontend/src/views/Login.vue same-root (no longer clears pages itself; sessionEnded did)
+frontend/src/data/session.js:logout not-affected — Log out is the person's own act: its own reload, no signed-out mark (markLoggingOut)

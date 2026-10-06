@@ -11,19 +11,27 @@
 import { isSessionLost } from "../utils/sessionLost.js"
 
 // Returns what vue-router's guard should return: undefined (go ahead), false
-// (stay), or a location to redirect to.
+// (stay), or a location to redirect to. `sessionEnded` is personalCache's: it
+// answers true when it took the page over (reload onto Login), false when this
+// page never had a user.
 export async function decideNavigation({
 	to,
 	session,
 	userResource,
 	employeeResource,
 	employeeGate,
+	sessionEnded,
 }) {
-	let isLoggedIn = session.isLoggedIn
+	const hadUser = session.isLoggedIn
+	let isLoggedIn = hadUser
 	if (isLoggedIn) {
 		const lost = await sessionEndedDuring(() => userResource.reload())
 		if (lost) isLoggedIn = false
 	}
+	// A page that HAD a user and lost it is not routed to Login from here: utils/personalCache.js
+	// sessionEnded() is the one owner (mark, offline page copy, reload), and `false` keeps this
+	// navigation still while the page reloads. A page that never had a user gets the redirect below.
+	if (!isLoggedIn && hadUser && sessionEnded()) return false
 
 	if (!isLoggedIn) {
 		// password reset page is outside the PWA scope
@@ -31,7 +39,9 @@ export async function decideNavigation({
 		return to.name === "Login" ? undefined : { name: "Login" }
 	}
 
-	if (await sessionEndedDuring(() => employeeResource.promise)) return { name: "Login" }
+	if (await sessionEndedDuring(() => employeeResource.promise)) {
+		return sessionEnded() ? false : { name: "Login" }
+	}
 
 	// No employee in hand (offline before the first read ever landed): no
 	// identity verdict is possible, so none is given.

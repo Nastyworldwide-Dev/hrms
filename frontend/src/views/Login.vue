@@ -170,13 +170,10 @@ import { createResource } from "frappe-ui"
 
 import { sendPasswordResetLink } from "@/utils/resetPassword"
 import { takeSignedOutNotice } from "@/utils/personalCache"
-import { clearCachedPages } from "@/utils/cachedPages"
 
+// The offline page copy of a session that ended on its own is cleared by sessionEnded() before the
+// reload that brought us here (utils/personalCache.js), so this page only reads the notice.
 const signedOut = takeSignedOutNotice()
-// A session that ended on its own never passed through Log out, so the last person's offline copy of the
-// page is still on this phone (AU-5). Not awaited: the form must not wait on Cache Storage, and
-// clearCachedPages swallows its own failure.
-if (signedOut) clearCachedPages()
 
 const email = ref(null)
 const password = ref(null)

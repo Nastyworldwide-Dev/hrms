@@ -1,6 +1,6 @@
 import { createResource } from "frappe-ui"
 import { reactive } from "vue"
-import router from "@/router"
+import { sessionEnded } from "@/utils/personalCache"
 import { employeeResource } from "./employee"
 
 let employeesByID = reactive({})
@@ -22,7 +22,7 @@ createResource({
 	},
 	onError(error) {
 		if (error && error.exc_type === "AuthenticationError") {
-			router.push({ name: "Login" })
+			sessionEnded()
 		}
 	},
 })

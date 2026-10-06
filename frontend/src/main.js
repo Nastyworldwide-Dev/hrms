@@ -25,6 +25,7 @@ import { employeeResource } from "@/data/employee"
 import dayjs from "@/utils/dayjs"
 import { lockPortraitOnPhones } from "@/utils/orientationLock"
 import { decideNavigation } from "@/router/navigationGate"
+import { sessionEnded } from "@/utils/personalCache"
 import getIonicConfig from "@/utils/ionicConfig"
 import { employeeGate } from "@/utils/identity"
 
@@ -218,5 +219,5 @@ router.isReady().then(async () => {
 // Who may go where. The decision lives in router/navigationGate.js, where it
 // is tested; only the server can end a session or reject an identity.
 router.beforeEach(async (to) =>
-	decideNavigation({ to, session, userResource, employeeResource, employeeGate })
+	decideNavigation({ to, session, userResource, employeeResource, employeeGate, sessionEnded })
 )

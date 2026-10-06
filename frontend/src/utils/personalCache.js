@@ -1,4 +1,5 @@
 import { keys, delMany } from "idb-keyval"
+import { clearCachedPages } from "./cachedPages.js"
 
 const PRIVATE_CACHE = "hrms:private:v1"
 const SESSION_EPOCH = "hrms:session-epoch"
@@ -47,20 +48,46 @@ export function announceSessionChange() {
 export function sessionIsCurrent() {
 	if (invalidated) return false
 	if (sessionUser() === pageUser && readSessionEpoch() === pageEpoch) return true
-	invalidated = true
-	// The reload lands on Login, so a message on this page is never seen (AU-2).
-	// Only a session that ended on its own: not Log out, not another person.
-	if (pageUser && !sessionUser() && !loggingOut) {
+	// Only a session that ended on its own is "signed out": not another person signing in.
+	if (pageUser && !sessionUser()) sessionEnded()
+	else leavePage()
+	return false
+}
+
+// The ONE owner of "the session ended" (R1, alpha.37; docs/glass/tickets/2026-10-06-session-identity-hotspot.md).
+// Everything that learns the server ended this login calls this and nothing routes to Login on its own:
+// the cookie watcher above, the user and employee reads, the navigation guard. Each of those used to
+// do some of the steps (the mark, the offline page copy, the reload) and forget the rest.
+// Once per page, however many of them notice at the same moment. A page that never had a user has no
+// session to end: nothing is reloaded and it answers false, so the router can send that page to Login.
+// Returns true when the page is on its way to Login.
+export function sessionEnded() {
+	if (invalidated) return true
+	if (!pageUser) {
+		console.info("[personalCache] no session on this page; nothing ended")
+		return false
+	}
+	// The reload lands on Login, so a message on this page is never seen (AU-2); Login reads the mark.
+	// Not for Log out, which is the person's own act.
+	if (!loggingOut) {
 		try {
 			sessionStorage.setItem(SIGNED_OUT, "1")
 		} catch {
 			console.warn("[personalCache] signed-out notice storage unavailable")
 		}
 	}
+	// the last person's offline copy of the page (a session that only expired never passed through
+	// Log out). Not awaited: a blocked Cache Storage must not keep the old page on screen.
+	clearCachedPages()
+	leavePage()
+	return true
+}
+
+function leavePage() {
+	invalidated = true
 	console.info("[personalCache] session changed; discarding this page's resources")
 	document.documentElement.style.visibility = "hidden"
 	window.location.reload()
-	return false
 }
 
 export function markLoggingOut() {

@@ -1,5 +1,4 @@
-import { personalCacheKey } from "@/utils/personalCache"
-import router from "@/router"
+import { personalCacheKey, sessionEnded } from "@/utils/personalCache"
 import { createResource } from "frappe-ui"
 
 export const employeeResource = createResource({
@@ -7,7 +6,7 @@ export const employeeResource = createResource({
 	cache: personalCacheKey("hrms:employee"),
 	onError(error) {
 		if (error && error.exc_type === "AuthenticationError") {
-			router.push("/login")
+			sessionEnded()
 		}
 	},
 })
