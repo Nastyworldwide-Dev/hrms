@@ -5,6 +5,8 @@ const SESSION_EPOCH = "hrms:session-epoch"
 const pageUser = sessionUser()
 const pageEpoch = readSessionEpoch()
 let invalidated = false
+let loggingOut = false
+const SIGNED_OUT = "hrms:signed-out"
 
 // Read identity without importing reactive session/resources: these keys are
 // needed while that import graph is still being initialized.
@@ -46,10 +48,34 @@ export function sessionIsCurrent() {
 	if (invalidated) return false
 	if (sessionUser() === pageUser && readSessionEpoch() === pageEpoch) return true
 	invalidated = true
+	// The reload lands on Login, so a message on this page is never seen (AU-2).
+	// Only a session that ended on its own: not Log out, not another person.
+	if (pageUser && !sessionUser() && !loggingOut) {
+		try {
+			sessionStorage.setItem(SIGNED_OUT, "1")
+		} catch {
+			console.warn("[personalCache] signed-out notice storage unavailable")
+		}
+	}
 	console.info("[personalCache] session changed; discarding this page's resources")
 	document.documentElement.style.visibility = "hidden"
 	window.location.reload()
 	return false
+}
+
+export function markLoggingOut() {
+	loggingOut = true
+}
+
+// Read once by the Login page: true when the last page lost its session.
+export function takeSignedOutNotice() {
+	try {
+		const signedOut = sessionStorage.getItem(SIGNED_OUT) === "1"
+		sessionStorage.removeItem(SIGNED_OUT)
+		return signedOut
+	} catch {
+		return false
+	}
 }
 
 // Which browser-store keys a logout removes. frappe-ui uses the default

@@ -204,3 +204,7 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T03:17:44Z COMMIT: 17136b06d fix(approvals): a decision without the revision the approver read skipped the check → review dispatched
 - 2026-10-06T03:18:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
 - 2026-10-06T03:18:21Z EVIDENCE: 3 works — blast radius green: 15 dependent(s), 12 extra test file(s) ⟂84fa3520acad
+- 2026-10-06T03:18:24Z COMMIT: 37b666465 perf(leave): the leave list read the database once per row for the reason check → review dispatched
+- 2026-10-06T03:21:27Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-10-06T03:26:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-06T03:26:50Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 10 extra test file(s) ⟂26261ccd9d8d

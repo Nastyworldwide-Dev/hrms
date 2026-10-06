@@ -1,5 +1,7 @@
-CLASS: a per-row permission question asked once per row instead of once per person. get_leave_applications asked may_read_leave_reason for every row: one Employee company read per row for HR, one routing check per row for an approver, so a 50-row list made 50+ database reads for answers that depend only on the person and the request's named approver.
-hrms/api/approval.py:may_read_leave_reasons same-root (new: the batch form: own employees and HR sight once, ONE get_all for the companies of the people listed, routing once per (employee, leave_approver))
-hrms/api/approval.py:may_read_leave_reason same-root (now the batch with one row, so the single and batch forms cannot drift)
-hrms/api/__init__.py:get_leave_applications same-root (uses the batch)
-hrms/api/approvals_list.py not-affected — asks for the rows routed to the caller, already filtered; calls the single form per row of a short list (ticket: switch to the batch if the approvals list grows)
+CLASS: a session that ends on its own (expired, signed out elsewhere) reloads the page onto Login with nothing said. sessionIsCurrent() sees the Guest cookie and reloads; any message shown on the old page is lost with it, so a Submit after expiry looked like "nothing happened" (AU-2).
+frontend/src/utils/personalCache.js:sessionIsCurrent same-root (the one place every request and focus/visibility check routes through when a session ends; leaves a one-shot sessionStorage mark only when this page HAD a user, now has none, and it is not a Log out)
+frontend/src/data/session.js:logout same-root (markLoggingOut before the logout call, so a deliberate Log out says nothing)
+frontend/src/views/Login.vue same-root (reads the mark once, shows "You were signed out. Sign in again to continue.")
+frontend/src/router/navigationGate.js not-affected — sends a Guest to Login; the reload from sessionIsCurrent arrives first and has already left the mark
+frontend/src/data/user.js, frontend/src/data/employees.js not-affected — push Login on AuthenticationError; same page, same reload path
+frontend/src/utils/loudRequest.js not-affected — the earlier in-page notice draft was dropped: the reload hides it (proved live 6 Oct)

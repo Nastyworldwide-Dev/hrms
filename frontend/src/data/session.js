@@ -3,7 +3,7 @@ import { createResource, call } from "frappe-ui"
 import { userResource } from "./user"
 import { employeeResource } from "./employee"
 import router from "@/router"
-import { announceSessionChange, clearPersonalCaches, sessionUser } from "@/utils/personalCache"
+import { announceSessionChange, clearPersonalCaches, markLoggingOut, sessionUser } from "@/utils/personalCache"
 import { clearCachedPages } from "@/utils/cachedPages"
 import { handBackPhone } from "@/utils/handBackPhone"
 
@@ -44,6 +44,7 @@ export const session = reactive({
 		// the logout call ends. It never returns a message, so it can never refuse the logout.
 		async validate() {
 			await handBackPhone(window.frappePushNotification)
+			markLoggingOut()
 		},
 		async onSuccess() {
 			announceSessionChange()

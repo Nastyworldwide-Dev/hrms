@@ -15,6 +15,10 @@
 						<p class="g-auth__subtitle">{{ __("Employee self-service portal") }}</p>
 					</div>
 
+					<GBanner v-if="signedOut" variant="warning">
+						{{ __("You were signed out. Sign in again to continue.") }}
+					</GBanner>
+
 					<form
 						v-if="!user_pass_login_disabled.data"
 						class="flex flex-col gap-stack-md"
@@ -159,11 +163,15 @@ import GModal from "@/components/glass/GModal.vue"
 import GProviderButton from "@/components/glass/GProviderButton.vue"
 import GPage from "@/components/glass/GPage.vue"
 import GButton from "@/components/glass/GButton.vue"
+import GBanner from "@/components/glass/GBanner.vue"
 import { IonContent } from "@ionic/vue"
 import { inject, reactive, ref } from "vue"
 import { createResource } from "frappe-ui"
 
 import { sendPasswordResetLink } from "@/utils/resetPassword"
+import { takeSignedOutNotice } from "@/utils/personalCache"
+
+const signedOut = takeSignedOutNotice()
 
 const email = ref(null)
 const password = ref(null)
