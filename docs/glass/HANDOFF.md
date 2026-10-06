@@ -1,14 +1,14 @@
 # HANDOFF
-prompt:   alpha.37 "Clear Screens" (Stage 4 screens standard + session refactor)
-status:   done
-commit:   0db6c24c6 on nz-glass (tag v2.0.0-alpha.37, GitHub Release created)
-files:    frontend/src/components/ResourceError.vue
-          frontend/src/components/glass/GListRow.vue (+7 request rows)
-          frontend/src/components/glass/GModal.vue, MustReadNotice.vue
-          frontend/patches/frappe-ui+0.1.105.patch (toast Close)
-          frontend/src/utils/personalCache.js (sessionEnded)
-          design/a11y-baseline.json (empty: 0 serious on 76 screen-themes)
-          docs/glass/audit/2026-10-06-shift-supervisor-desk.md
-verify:   after deploy: open someone else's record -> "You can't open this."; long name rows stay one line
-flags:    a second "Something didn't load" toast can follow the no-access sentence (alpha.38)
-next:     owner deploys alpha.35-37 together on Frappe Cloud
+prompt:   alpha.38 "Money and Waiting" (owner rulings R1-R5 + SOPs + leftovers)
+status:   done (K1 pipeline consolidation not started: needs write access to /opt/keel)
+commit:   b8137433b on nz-glass (tag v2.0.0-alpha.38, GitHub Release created)
+files:    hrms/hr/doctype/expense_claim/expense_claim.py (duplicate claims)
+          hrms/utils/approval_reminders.py (approver away)
+          hrms/utils/cancel_notice.py + hrms/hooks.py (cancel notices)
+          frontend/src/views/sop/SopFormSheet.vue (SOP editor)
+          frontend/src/utils/loudRequest.js (offline, refusal wording)
+          frontend/src/components/FormView.vue, ResourceError.vue, MustReadNotice.vue
+          docs/glass/audit/2026-10-06-*.md (supervisor Desk, approver reports)
+verify:   on the live site after the update: run migrate (refreshes the hook cache for cancel notices); file the same claim twice -> refused
+flags:    frontend/tests is run by no gate (went red twice unseen); humanless-pipeline commits stay local by owner ruling
+next:     owner puts alpha.35-38 live; then K1 (one pipeline copy, gate runs frontend/tests)
