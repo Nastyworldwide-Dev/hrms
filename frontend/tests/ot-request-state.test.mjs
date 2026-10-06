@@ -51,7 +51,10 @@ const claimHelpersSource =
 	"\n" +
 	read("../src/views/ot/claimEmptyReason.js")
 		.replace(/^import\s+[\s\S]*?from\s+["'][^"']+["']\s*\n/gm, "")
-		.replace(/^export /gm, "")
+		.replace(/^export /gm, "") +
+	"\n" +
+	// the box's starting value (5 Oct 2026: a raw 8.876944444 cap read as a stray number)
+	read("../src/views/ot/claimPrefill.js").replace(/^export /gm, "")
 const script = (path) =>
 	read(path).split("<script setup>")[1].split("</script>")[0]
 const executable = (text) =>
@@ -180,7 +183,9 @@ test("all response orders apply only the selected day cap to summary and model",
 			resolve(s.summaries()[i], i === 2 ? 1.234567891 : 8 + i)
 			await tick()
 		}
-		assert.equal(s.run("otRequest.value.claimed_hours"), 1.234567891)
+		// the BOX starts at the cap cut to two decimals (5 Oct 2026, prefillClaim: a raw 1.234567891
+		// read as a stray number); the stored cap behind it keeps every decimal
+		assert.equal(s.run("otRequest.value.claimed_hours"), 1.23)
 		assert.equal(s.run("otRequest.value.punch_ot_hours"), 1.234567891)
 		assert.equal(s.run("otSummary.value.data.punch_ot_hours"), 1.234567891)
 		s.stop()
@@ -298,7 +303,8 @@ test("actual FormView save refuses an unsettled OT summary and preserves mandato
 		s.set({ explanation: "Reason" })
 		vm.runInContext("saveForm()", context)
 		assert.equal(writes.length, 1)
-		assert.equal(writes[0].claimed_hours, cap)
+		// what is sent is what the box showed: the cap cut down to two decimals (never above it)
+		assert.equal(writes[0].claimed_hours, Math.floor(cap * 100 + 1e-9) / 100)
 		s.stop()
 	}
 })
@@ -518,10 +524,12 @@ test("storage-precision caps and intentionally lower claims survive editing and 
 		await tick()
 		resolve(s.summaries()[0], hours)
 		await tick()
-		assert.equal(s.run("otRequest.value.claimed_hours"), hours)
+		// the box opens on the cap cut to two decimals, and an unrelated edit keeps it there
+		const shown = Math.floor(hours * 100 + 1e-9) / 100
+		assert.equal(s.run("otRequest.value.claimed_hours"), shown)
 		s.set({ explanation: "Unrelated edit" })
 		await tick()
-		assert.equal(s.run("otRequest.value.claimed_hours"), hours)
+		assert.equal(s.run("otRequest.value.claimed_hours"), shown)
 		assert.equal(s.run("saveError.value"), "")
 		s.set({ claimed_hours: 0.01 })
 		s.run("loadSummary()")

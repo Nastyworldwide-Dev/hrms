@@ -467,6 +467,8 @@ watch(chips, (list) => {
 		kindFilter.value = ""
 })
 
+// The site's today (Asia/Kuala_Lumpur), declared before its first reader.
+const today = () => siteToday(new Date(), siteTimeZone())
 const headline = computed(() => banner(rows.value, today()))
 
 // Select mode: tick many, approve once. Check-ins stay one by one (approvalBulk.ONE_BY_ONE).
@@ -587,7 +589,6 @@ function rowLabel(req) {
 }
 
 // How long a request has waited, in words and as a tone (amber from 7 days, red from 14).
-const today = () => siteToday(new Date(), siteTimeZone())
 const waited = (row) => daysWaiting(row.modified, today())
 const tone = (row) => ageTone(waited(row))
 const ageWords = (row) => {

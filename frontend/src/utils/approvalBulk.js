@@ -14,7 +14,7 @@ export const RED_DAYS = 14
 
 //: Request types that are NOT decided in bulk: a check-in has its own sheet and
 //: path (Remote Checkin Request). They stay one by one.
-export const ONE_BY_ONE = ["Remote Checkin Request"]
+const ONE_BY_ONE = ["Remote Checkin Request"]
 
 //: A request can be ticked only when the approver can SEE a tick on it: select mode draws ticks on
 //: the Yours section only (Other teams are someone else's to decide first), and a check-in has its

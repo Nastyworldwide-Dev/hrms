@@ -11,7 +11,7 @@
 // subscribes a fresh one; the old registration is the relay's to expire.
 
 //: How long logout waits for the relay before it goes ahead without it.
-export const HAND_BACK_MS = 3000
+const HAND_BACK_MS = 3000
 
 const forgetHere = (push, storage) => {
 	try {
