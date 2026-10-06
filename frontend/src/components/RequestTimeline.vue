@@ -8,8 +8,9 @@
 
   Each step's mark is a shape AND a word, never colour alone (Apple
   accessibility: "distinct shapes or icons in addition to color").
-  Nothing is drawn until there is more than "Sent" to say, or the request
-  failed to load its history — a one-line timeline tells nobody anything.
+  Nothing is drawn until there is more than "Sent" to say — a one-line
+  timeline tells nobody anything. A history that FAILED to load is not "only
+  Sent": it says so, with Try again, in place (alpha.38 L1b).
 -->
 <template>
 	<section v-if="steps.length > 1" class="g-form-section">
@@ -30,6 +31,9 @@
 			</GListRow>
 		</GListPanel>
 	</section>
+	<section v-else-if="history.error" class="g-form-section">
+		<ResourceError :resource="history" what="this request's history" />
+	</section>
 </template>
 
 <script setup>
@@ -37,6 +41,7 @@ import { computed, inject } from "vue"
 import { createResource } from "frappe-ui"
 import { Check, Clock, Send, X, Ban } from "lucide-vue-next"
 
+import ResourceError from "@/components/ResourceError.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import { TILE } from "@/utils/iconTile"
@@ -64,7 +69,7 @@ const history = createResource({
 	params: { doctype: props.doctype, name: props.name },
 	auto: true,
 	onError(error) {
-		// The request itself is on screen; a missing history is not worth a banner.
+		// The request itself is on screen: no banner, but the section says it (ResourceError).
 		console.warn("[RequestTimeline] history unavailable:", props.doctype, error?.message)
 	},
 })

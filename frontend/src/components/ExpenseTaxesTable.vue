@@ -65,6 +65,12 @@
 				<div class="bg-ground w-full flex flex-col pb-5">
 					<div class="w-full flex flex-col items-center justify-center gap-5 p-4">
 						<div class="flex flex-col w-full space-y-4 expense-fields">
+							<!-- A failed load is not an empty form (alpha.38 L1b). -->
+							<ResourceError
+								v-if="taxesTableFields.error"
+								:resource="taxesTableFields"
+								what="the tax form"
+							/>
 							<FormField
 								v-for="field in taxesTableFields.data"
 								:key="field.fieldname"
@@ -115,6 +121,7 @@ import { computed, ref, watch, inject } from "vue"
 import FormField from "@/components/FormField.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GModal from "@/components/glass/GModal.vue"
+import ResourceError from "@/components/ResourceError.vue"
 
 import { formatCurrency } from "@/utils/formatters"
 import { useCurrencyConversion } from "@/composables/useCurrencyConversion"
@@ -196,6 +203,8 @@ const modalTitle = computed(() => {
 })
 
 const addButtonDisabled = computed(() => {
+	// no fields were read: nothing to add
+	if (taxesTableFields.error) return true
 	return taxesTableFields.data?.some((field) => {
 		if (field.reqd && !expenseTax.value[field.fieldname]) {
 			return true

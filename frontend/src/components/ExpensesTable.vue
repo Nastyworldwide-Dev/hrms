@@ -41,6 +41,18 @@
 		<div class="w-full flex flex-col pb-5">
 			<div class="w-full flex flex-col items-center justify-center gap-5 p-4 max-h-[80vh]">
 				<div class="w-full overflow-y-auto expense-fields">
+					<!-- A failed load is not an empty form (alpha.38 L1b): the sheet said
+					     nothing and "Add expense" then added a line with no fields. -->
+					<ResourceError
+						v-if="expensesTableFields.error"
+						:resource="expensesTableFields"
+						what="the expense form"
+					/>
+					<ResourceError
+						v-else-if="claimTypesResource.error"
+						:resource="claimTypesResource"
+						what="the expense types"
+					/>
 					<section
 						v-for="group in groupFields(expenseFields)"
 						:key="group.key"
@@ -100,6 +112,7 @@ import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
+import ResourceError from "@/components/ResourceError.vue"
 
 import { claimTypesByID, claimTypesResource } from "@/data/claims"
 import { formatCurrency } from "@/utils/formatters"
@@ -238,6 +251,8 @@ const modalTitle = computed(() => {
 })
 
 const addButtonDisabled = computed(() => {
+	// no fields were read: nothing to add
+	if (expensesTableFields.error) return true
 	return expensesTableFields.data?.some((field) => {
 		if (field.reqd && !expenseItem.value[field.fieldname]) {
 			return true

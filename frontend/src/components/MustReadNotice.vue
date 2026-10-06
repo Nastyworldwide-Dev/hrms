@@ -30,6 +30,10 @@
 				<div v-if="detail.loading && !body" class="g-mustread__loading">
 					<GSkeleton height="220px" />
 				</div>
+				<!-- The body failed to load: say so, with Try again, instead of an empty page
+				     under a confirm button. Nothing is blocked: the buttons below stay (an
+				     urgent notice has no other way out of this full-screen page). -->
+				<ResourceError v-else-if="detail.error" :resource="bodyResource" what="this notice" />
 				<div v-else class="prose-sm text-inkbase g-mustread__body" v-html="safeHtml(body)" />
 				<div ref="endMarker" class="g-mustread__end" aria-hidden="true" />
 			</div>
@@ -59,6 +63,7 @@ import { createResource } from "frappe-ui"
 
 import GButton from "@/components/glass/GButton.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
+import ResourceError from "@/components/ResourceError.vue"
 import { gToast } from "@/components/glass/toast"
 import { acknowledgeAnnouncement, reloadAnnouncements } from "@/data/announcements"
 import { sessionUser } from "@/data/session"
@@ -96,17 +101,28 @@ function watchEnd() {
 	observer.observe(endMarker.value)
 }
 
+async function openBody(name) {
+	console.info("[MustRead] opening", name)
+	await detail.fetch({ name })?.catch?.(() => {})
+	await nextTick()
+	scroller.value?.scrollTo?.({ top: 0 })
+	watchEnd()
+}
+
 watch(
 	() => current.value?.name,
-	async (name) => {
-		if (!name) return
-		console.info("[MustRead] opening", name)
-		await detail.fetch({ name })?.catch?.(() => {})
-		await nextTick()
-		scroller.value?.scrollTo?.({ top: 0 })
-		watchEnd()
+	(name) => {
+		if (name) return openBody(name)
 	}
 )
+
+//: What ResourceError draws and retries. Try again goes through openBody, not a bare
+//: reload, so "read to the end" is measured again on the body that finally arrived.
+const bodyResource = computed(() => ({
+	error: detail.error,
+	loading: detail.loading,
+	reload: () => (current.value ? openBody(current.value.name) : undefined),
+}))
 
 async function onConfirm() {
 	if (pending.value) return
@@ -135,6 +151,9 @@ function later() {
 }
 
 onMounted(() => {
+	// The list of notices failing shows NOTHING, on purpose: this page is full screen and cannot be
+	// dismissed, so an error state here would block the whole app for a read that is not the
+	// person's fault. The seam has logged the failure and toasted it once (utils/loudRequest.js).
 	if (sessionUser()) queue.fetch()?.catch?.(() => console.warn("[MustRead] queue unavailable"))
 })
 onBeforeUnmount(() => observer?.disconnect())
