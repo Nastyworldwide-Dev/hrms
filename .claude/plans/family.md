@@ -1,10 +1,5 @@
-CLASS: a safety check that runs only when the caller remembers to ask for it. decide() and finalize() compared the request's revision with the one the approver read ONLY when the caller passed it; a caller that left it out skipped the check, so a request edited after the approver read it could be approved unseen.
-hrms/api/approval.py:_check_review_revision same-root (fixed here: `required` refuses a missing or empty revision before any write)
-hrms/api/approval.py:decide same-root (passes required=True)
-hrms/api/approval.py:finalize same-root (passes required=True)
-hrms/api/approval.py:decide_many not-affected — _bulk_items already refuses a row without a revision up front, now noted
-hrms/api/correction_cancel.py:cancel_for_correction not-affected — HR's correction tool keeps the optional check by design
-frontend/src/components/RequestActionSheet.vue not-affected — sends expected_modified (currentRequest)
-frontend/src/components/FormView.vue not-affected — sends expected_modified to finalize
-hrms/public/js/utils/request_approval.js not-affected — sends expected_modified (Desk test 3/3)
-hrms/public/js/utils/approved_request_cancel.js not-affected — sends expected_modified
+CLASS: a per-row permission question asked once per row instead of once per person. get_leave_applications asked may_read_leave_reason for every row: one Employee company read per row for HR, one routing check per row for an approver, so a 50-row list made 50+ database reads for answers that depend only on the person and the request's named approver.
+hrms/api/approval.py:may_read_leave_reasons same-root (new: the batch form: own employees and HR sight once, ONE get_all for the companies of the people listed, routing once per (employee, leave_approver))
+hrms/api/approval.py:may_read_leave_reason same-root (now the batch with one row, so the single and batch forms cannot drift)
+hrms/api/__init__.py:get_leave_applications same-root (uses the batch)
+hrms/api/approvals_list.py not-affected — asks for the rows routed to the caller, already filtered; calls the single form per row of a short list (ticket: switch to the batch if the approvals list grows)

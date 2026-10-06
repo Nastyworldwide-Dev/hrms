@@ -188,21 +188,80 @@ def may_read_leave_reason(doc, user: str | None = None) -> bool:
 
 	Only Leave Application carries a private reason; every other type answers True, so a caller can
 	ask without checking the type first. ONE question, asked by every door that sends a reason.
+
+	The rule lives in `may_read_leave_reasons` (below); this is that rule for one request, so the
+	single and the list form cannot drift apart.
 	"""
-	if doc.get("doctype") != "Leave Application":
-		return True
+	return may_read_leave_reasons([doc], user)[0]
+
+
+def may_read_leave_reasons(docs, user: str | None = None) -> list[bool]:
+	"""`may_read_leave_reason` for a whole list: one answer per request, in the list's order.
+
+	A list of 50 requests used to ask the question 50 times, and each ask re-read the same facts:
+	who the reader is, their company fence, the filer's company, the filer's line. Those depend on
+	the READER and on the FILER, not on the request, so a list asks them once per person
+	(6 Oct 2026, alpha.35):
+
+	  * the reader's own employee and their HR sight, once;
+	  * the filers' companies, in ONE read for every distinct filer; the fence, once per company;
+	  * the routing question, once per (filer, named approver) — the only two things about a request
+	    that `_is_routed_approver` reads for a Leave Application (its `leave_approver` field and the
+	    employee's line). Add a request field to that function and it belongs in `routing_key` too.
+	"""
+	docs = list(docs)
+	leave = [doc for doc in docs if doc.get("doctype") == "Leave Application"]
+	if not leave:
+		return [True] * len(docs)
+
 	from hrms.hr.utils import sees_all_employee_data
 	from hrms.overrides.company_scope import company_visible
 	from hrms.utils.identity import own_employees
 
 	user = frappe.session.user if user is None else user
-	if doc.get("employee") in own_employees(user):
-		return True
-	if sees_all_employee_data(user):
-		company = frappe.db.get_value("Employee", doc.get("employee"), "company")
-		if company_visible(company, user):
-			return True
-	return bool(_is_routed_approver(doc, user, system_manager_counts=False))
+	mine = set(own_employees(user))
+	sees_all = sees_all_employee_data(user)
+
+	companies = {}
+	if sees_all:
+		filers = sorted({doc.get("employee") for doc in leave if doc.get("employee")} - mine)
+		if filers:
+			rows = frappe.get_all("Employee", filters={"name": ["in", filers]}, fields=["name", "company"])
+			companies = {row["name"]: row["company"] for row in rows}
+
+	approver_field = APPROVER_FIELD["Leave Application"]
+	inside_fence = {}
+	routed = {}
+	answers = []
+	for doc in docs:
+		if doc.get("doctype") != "Leave Application":
+			answers.append(True)
+			continue
+		employee = doc.get("employee")
+		if employee in mine:
+			answers.append(True)
+			continue
+		if sees_all:
+			company = companies.get(employee)
+			if company not in inside_fence:
+				inside_fence[company] = bool(company_visible(company, user))
+			if inside_fence[company]:
+				answers.append(True)
+				continue
+		# `company` is read off the request only when it names no employee
+		routing_key = (employee, doc.get(approver_field), None if employee else doc.get("company"))
+		if routing_key not in routed:
+			routed[routing_key] = bool(_is_routed_approver(doc, user, system_manager_counts=False))
+		answers.append(routed[routing_key])
+
+	logger.debug(
+		"[approval] leave reasons for %s: %d requests, %d people, %d routing questions",
+		user,
+		len(leave),
+		len({doc.get("employee") for doc in leave}),
+		len(routed),
+	)
+	return answers
 
 
 DECIDE_THEN_SUBMIT = {
