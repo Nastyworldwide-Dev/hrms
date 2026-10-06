@@ -1,5 +1,5 @@
-CLASS: a page that reloads to recover from a refusal the reload cannot fix (loop), and a reload that races the cleanup it depends on.
-frontend/src/utils/personalCache.js:sessionEnded same-root (one reload per still-signed-in cookie, then stay; reload waits for the page-copy clear, capped 2 s)
-frontend/src/router/navigationGate.js not-affected — calls sessionEnded; a false answer now keeps the navigation where it is instead of looping
-frontend/src/data/user.js, employee.js, employees.js not-affected — call sessionEnded once; the cap is inside it
-frontend/src/data/session.js:logout not-affected — its own reload after an awaited clearCachedPages
+CLASS: a request held by an approver who is away (owner ruling R2, 6 Oct): the backup was asked only after the normal 3 working days, however long the first approver was on leave.
+hrms/utils/approval_reminders.py:plan_reminders same-root (away first approver -> backup asked after 2 working days, both told)
+hrms/utils/approval_reminders.py:_waiting_requests same-root (first_away from ONE Leave Application read per run)
+hrms/api/approval.py:decide not-affected — the backup may already decide (alpha.20 line rule); this only asks them sooner
+hrms/hr/utils.py:get_designated_approvers not-affected — the line itself is unchanged
