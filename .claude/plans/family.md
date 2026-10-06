@@ -1,9 +1,6 @@
-CLASS: a fix pinned by a test that reads the SOURCE, so the test stays green while the running app is still wrong. On 28 Sep the pull-to-refresh and infinite-scroll listeners were rewritten as raw camelCase addEventListener calls and four tests pinned that text. @ionic/vue's wrapper renames every Ionic event to kebab-case, so the real element fires "ion-refresh" / "ion-scroll"; the handlers never ran. A real pull on the running app made zero requests (proved in a real browser on the test site, 6 Oct 2026, on all four screens that carry a pull).
-frontend/src/components/glass/GPullRefresh.vue same-root (fixed here: listens for both spellings, one refresh per pull)
-frontend/src/components/ListView.vue same-root (fixed here: infinite scroll listens for both spellings)
-frontend/e2e/pull-refresh.spec.js same-root (new, in the following test: commit: drags with real touch events on Home, Requests, Approvals and Announcements and asserts the data requests go out; fails with the old listener, 4 of 4)
-frontend/e2e/list-scroll.spec.js same-root (new, in the following test: commit: a real scroll reaches the list's handler; fails with the old listener)
-frontend/src/components/glass/__tests__/pull-refresh-events-real.test.js same-root (rewritten to pin both spellings and point at the real-browser gate)
-frontend/src/views/Notifications.vue ticket stabilise-plan-stage-1 — no pull-down at all (and 8 more screens, see docs/glass/plan/2026-10-05-stabilise-nadi-plan.md); next commit
-grep: any other raw addEventListener("ion...") in src — only these two exist (checked)
-frontend/src/components/__tests__/no-jump-placeholders.test.js not-affected — already failing on a clean HEAD ("an empty queue is the same row as its skeleton"): reads Approvals.vue wording from 29 Sep; left as it was, noted here so it is not mistaken for this change
+CLASS: a fix proven only by a test that reads the source. The behaviour (a real pull-down makes the screen reload; a real scroll loads more) is now pinned by two real-browser specs that drag and scroll with touch events on the running app and fail with the old listener (pull: 4 of 4 red; scroll: red) and pass with the fix. They run with `yarn test:e2e` against the test site, not in the commit gate (the gate runs spec files with bun, which cannot run Playwright).
+frontend/e2e/pull-refresh.spec.js same-root (new: real touch pull on Home, Requests, Approvals, Announcements; the handler runs once and the data requests go out)
+frontend/e2e/list-scroll.spec.js same-root (new: a real scroll on the Leave list reaches the list's scroll handler)
+frontend/src/components/glass/GPullRefresh.vue not-affected — fixed in 6253bdc45
+frontend/src/components/ListView.vue not-affected — fixed in 6253bdc45
+frontend/e2e/README.md ticket e2e-readme — lists the specs by the incident each catches; add these two
