@@ -6,7 +6,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { readFileSync } from "node:fs"
 import { compileScript, parse } from "@vue/compiler-sfc"
-import { computed, nextTick, reactive, ref, watch } from "vue"
+import { computed, defineAsyncComponent, nextTick, reactive, ref, watch } from "vue"
 
 import * as hub from "../../../utils/helpdeskHub.js"
 
@@ -32,6 +32,7 @@ function page({ query = {}, stored = null, available = true, fetchReturnsNothing
 	const bindings = {
 		...hub,
 		computed,
+		defineAsyncComponent,
 		inject: () => (text) => text,
 		onMounted: (fn) => mounted.push(fn),
 		ref,
