@@ -44,7 +44,25 @@ Not run (no brief cell needed a result beyond the above): swap_shift, break_shif
   returns 25 of 25). Shift Type has no company field (meta: only holiday_list), so there is nothing to fence by:
   it is a shared catalogue of shift times with no personal data, and supervisors need it to roster. OK, not a leak.
 
-## UNCLEAR lines (need owner ruling)
+## Owner rulings (6 Oct 2026)
+1. "Change a shift from a date" (roster.change_shift_from / preview_shift_change) stays **HR only**. The
+   refusal for supervisors is correct (hrms/api/roster.py:560, :598).
+2. Overtime decisions are **Nadi only** for managers. No Desk decide for a manager is correct.
+3. Remote Checkin Request: **tested** (below).
+
+## Remote Checkin Request (probed 6 Oct, real rows inside a savepoint, rolled back; 0 rows left)
+Rows made the way the app makes them (approver from resolve_approver). Supervisor = nadi.w0.manager.
+| Check | Team row (HR-EMP-00009) | Non-team row (HR-EMP-00007) |
+|---|---|---|
+| Desk list / has_permission read, write, delete | no | no |
+| Nadi queue (remote_checkin.list_pending_for_approver) | shown | hidden |
+| Nadi approvals list (approvals_list.get_waiting_for_me) | shown | hidden |
+| Nadi approve (remote_checkin.approve) | ALLOWED -> Approved | REFUSED "You are not the assigned approver" |
+Verdict: OK. The supervisor decides their team's out-of-area check-ins in Nadi and only there, the same
+shape as ruling 2. Desk shows them nothing for this doctype, which matches "Nadi only".
+Scripts: /tmp/v1/rcr.py, rcr2.py, rcr3.py.
+
+## UNCLEAR lines (answered above, kept for the record)
 - roster.change_shift_from / preview_shift_change refused for supervisors: hrms/api/roster.py:560 and :598 ("Only HR can change a person's shift from a date.").
 - OT Request decision on Desk for a manager: no write/submit via has_permission; matrix row "Overtime ... Manager (direct) see + decide" relies on ot_row_scope (hrms/overrides/ot_row_scope.py:52,90) and the PWA approval API, which this probe did not exercise.
 - Remote Checkin Request: zero rows on fresh.local.
