@@ -1,9 +1,17 @@
-# Clarify record — Release 1 (21 Sep 2026)
-Owner approved the three-release plan in chat ("you may go and finish release 1") after the rulings:
-- punches in / attendance out; nobody types hours or status; HR edits win, system recomputes
-- pairing: next punch closes the session (<20 h), one row on the IN's day; rejected mid-day punch = wall
-- correction tool on Employee Check-in page only (Release 2); no HR-owner flag (Release 2), stopgap in R1
-- no holiday list → skip, not Absent; HR User may see Holiday List + assignment
-- worker cleanup not a project; retire as touched
-Open: date range / people for the historical re-stamp → dry-run lists them (R1.4), no write without the owner's word.
+# Clarify record: release 2.0.0-alpha.35 (6 Oct 2026)
+
+Owner's words: "plan for next release to cover optimisation, tech debt and bug fixes this will be the release i
+will deploy including the past ones. once done planning, execute by spawning sonnet 5.5 xhigh as ur implementor."
+
+Q: Is execution approved without a second look at the plan? A: Yes, the owner said execute once planning is done.
+Q: Does "the release I will deploy" authorise pushing the branch and the release tag v2.0.0-alpha.35?
+   A: Yes: a release the owner deploys from Frappe Cloud must be on origin with its tag. The safety tag
+   safety/nz-glass-preintegration-20260902 stays LOCAL (owner, 5 Oct).
+Q: Version? A: 2.0.0-alpha.35, the next after the last tag v2.0.0-alpha.34 (frontend/package.json).
+Q: Scope items that need an owner ruling (duplicate expense, approver on leave, cancel notices, offline queue,
+   reports)? A: OUT. Listed in the plan's NOT IN THIS RELEASE.
+Q: Pull-down on Profile and More? A: Skipped (the plan's recommendation 5; owner did not object).
+Q: Deploy? A: Not by me. The owner deploys; I hand over a checklist.
+Q: Implementer model? A: implementer agent, model sonnet, effort xhigh is in its definition.
+
 BLOCKERS: 0

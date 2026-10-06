@@ -84,3 +84,66 @@ class TestOneTypeFailing(unittest.TestCase):
 		):
 			counts = request_counts.get_my_request_counts()
 		self.assertGreater(counts["all"], 0)
+
+
+class TestEveryDecidableRequestIsCounted(unittest.TestCase):
+	"""Compensatory Leave Request was missing from a hand-written list in
+	request_counts while approval.DECIDE_THEN_SUBMIT already had it, so the
+	employee's chips undercounted (6 Oct 2026). One list now: the counts read
+	their doctypes and decision fields from DECIDE_THEN_SUBMIT."""
+
+	def _run(self, rows, fail=()):
+		asked = {}
+
+		def get_all(doctype, filters=None, fields=None, group_by=None, **kw):
+			asked[doctype] = fields
+			if doctype in fail:
+				raise frappe.DoesNotExistError(f"DocType {doctype} not found")
+			return [frappe._dict(r) for r in rows.get(doctype, [])]
+
+		with (
+			patch.object(request_counts, "get_current_employee", return_value="HR-EMP-1"),
+			patch.object(frappe, "get_all", side_effect=get_all, create=True),
+		):
+			return request_counts.get_my_request_counts(), asked
+
+	def test_a_compensatory_leave_request_is_counted(self):
+		counts, _ = self._run(
+			{"Compensatory Leave Request": [{"docstatus": 1, "status": "Approved", "n": 2}]}
+		)
+		self.assertEqual(counts, {"all": 2, "waiting": 0, "approved": 2, "rejected": 0})
+
+	def test_a_rejected_and_a_waiting_compensatory_request_land_in_their_chips(self):
+		counts, _ = self._run(
+			{
+				"Compensatory Leave Request": [
+					{"docstatus": 0, "status": "Open", "n": 1},
+					{"docstatus": 1, "status": "Rejected", "n": 3},
+				]
+			}
+		)
+		self.assertEqual(counts, {"all": 4, "waiting": 1, "approved": 0, "rejected": 3})
+
+	def test_the_types_counted_are_the_types_approval_decides(self):
+		from hrms.api import approval
+
+		_, asked = self._run({})
+		self.assertEqual(set(asked), set(approval.DECIDE_THEN_SUBMIT))
+
+	def test_each_type_is_grouped_by_the_decision_field_approval_names(self):
+		from hrms.api import approval
+
+		_, asked = self._run({})
+		for doctype, (field, _pending) in approval.DECIDE_THEN_SUBMIT.items():
+			self.assertIn(field, asked[doctype], doctype)
+
+	def test_a_failing_type_is_skipped_and_the_rest_are_still_counted(self):
+		counts, asked = self._run(
+			{
+				"Leave Application": [{"docstatus": 1, "status": "Approved", "n": 5}],
+				"Compensatory Leave Request": [{"docstatus": 1, "status": "Approved", "n": 9}],
+			},
+			fail=("Compensatory Leave Request",),
+		)
+		self.assertIn("Compensatory Leave Request", asked)
+		self.assertEqual(counts, {"all": 5, "waiting": 0, "approved": 5, "rejected": 0})

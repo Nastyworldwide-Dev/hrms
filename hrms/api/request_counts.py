@@ -16,18 +16,17 @@ import logging
 
 import frappe
 
+from hrms.api.approval import DECIDE_THEN_SUBMIT
+
 logger = logging.getLogger(__name__)
 
-#: The decision field of each request type the panel lists. Same pairs as
-#: approval.DECIDE_THEN_SUBMIT, minus the pending value the chips don't need.
-DECISION_FIELD = {
-	"Leave Application": "status",
-	"Expense Claim": "approval_status",
-	"Shift Request": "status",
-	"Attendance Request": "status",
-	"OT Request": "status",
-	"Replacement Leave Claim": "status",
-}
+#: The decision field of each request type the panel lists, read from
+#: approval.DECIDE_THEN_SUBMIT (field = first of the pair; the pending value is
+#: not needed here). Compensatory Leave Request sat in one list and not the
+#: other, so its requests were missing from every chip (6 Oct 2026). One list
+#: now: a type added to DECIDE_THEN_SUBMIT is counted with no second edit.
+#: Nothing is excluded: the old hand list differed only by that one type.
+DECISION_FIELD = {doctype: pair[0] for doctype, pair in DECIDE_THEN_SUBMIT.items()}
 
 
 def get_current_employee():

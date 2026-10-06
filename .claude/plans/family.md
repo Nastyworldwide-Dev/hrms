@@ -1,4 +1,5 @@
-CLASS: a test that drives the thing harder than a person would, then fails on its own over-driving. The first pull gate dragged 360 px; Ionic starts the refresh at 120 px while the finger is still moving, the reload ended, and the rest of the drag began a SECOND pull, so /home and /approvals logged two refreshes every time. Not an app defect: three probes (touch, mouse, a fast release) each ran the handler once; only the long drag doubled it.
-frontend/e2e/pull-refresh.spec.js same-root (fixed here: a 100 px pull and release, like a finger; passes 3 of 3 runs, 4 of 4 red with the old listener)
-frontend/src/components/glass/GPullRefresh.vue not-affected — the 400 ms same-pull guard stays: it protects against both spellings of ONE gesture, not against a second gesture
-frontend/e2e/list-scroll.spec.js not-affected — passes, no long gesture
+CLASS: one list of request types written twice. request_counts carried its own hand list of request doctypes beside approval.DECIDE_THEN_SUBMIT; Compensatory Leave Request was in one and not the other, so the employee's Requests chips (all / waiting / approved / rejected) never counted it.
+hrms/api/request_counts.py:DECISION_FIELD same-root (fixed here: derived from approval.DECIDE_THEN_SUBMIT, field = first of the pair)
+hrms/api/approval.py:DECIDE_THEN_SUBMIT not-affected — the one list, unchanged
+frontend/src/utils/requestStatus.js:REQUEST_TYPES ticket one-request-type-list — the app's own copy of the same list (it does list Compensatory Leave Request, checked); a third copy, kept by hand
+hrms/api/approvals_list.py:KIND not-affected — labels per doctype for the approver screen, already includes Compensatory Leave Request
