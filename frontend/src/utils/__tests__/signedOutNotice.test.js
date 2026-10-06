@@ -41,6 +41,18 @@ test("a deliberate Log out leaves no mark", async () => {
 	assert.equal(takeSignedOutNotice(), false)
 })
 
+test("a Log out that failed cannot hide a later 'signed out' banner", async () => {
+	// Log out marks the page BEFORE its request (so the reload it ends with leaves no mark). If the
+	// request then fails the person is still signed in, and this page lives on marked: a session
+	// that ends later on its own must still say so. The logout resource clears the mark on error.
+	const { sessionIsCurrent, markLoggingOut, clearLoggingOut, takeSignedOutNotice } = await fresh()
+	markLoggingOut()
+	clearLoggingOut()
+	document.cookie = "user_id=Guest"
+	sessionIsCurrent()
+	assert.equal(takeSignedOutNotice(), true)
+})
+
 test("a page that never had a user leaves no mark", async () => {
 	document.cookie = "user_id=Guest"
 	const { sessionIsCurrent, takeSignedOutNotice } = await fresh()

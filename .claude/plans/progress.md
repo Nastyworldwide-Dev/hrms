@@ -215,3 +215,6 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T04:24:59Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-10-06T04:25:05Z COMMIT: e089c3d3d fix(issues): HR pulling down on the issue board did nothing → review+design dispatched
 - 2026-10-06T04:25:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-06T04:25:20Z COMMIT: 397c34910 fix(attendance): the calendar pull closed before the month had loaded → review+design dispatched
+- 2026-10-06T04:25:33Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-10-06T04:25:33Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 10 extra test file(s) ⟂26261ccd9d8d

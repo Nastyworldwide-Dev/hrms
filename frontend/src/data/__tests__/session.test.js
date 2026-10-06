@@ -18,3 +18,11 @@ test("logging out unsubscribes this phone for the person leaving, before the coo
 		"code only: the comment explains why"
 	)
 })
+
+test("a Log out that fails clears its mark, so a later expired session still says 'signed out'", () => {
+	const session = readFileSync(fileURLToPath(new URL("../session.js", import.meta.url)), "utf8")
+	const logout = session.slice(session.indexOf("logout: createResource"))
+	// the mark is set in validate(), before the request; frappe-ui runs onError for a failed request
+	assert.match(logout, /onError\(\) \{\s*clearLoggingOut\(\)/)
+	assert.match(session, /import \{[^}]*\bclearLoggingOut\b[^}]*\} from "@\/utils\/personalCache"/)
+})

@@ -3,7 +3,13 @@ import { createResource, call } from "frappe-ui"
 import { userResource } from "./user"
 import { employeeResource } from "./employee"
 import router from "@/router"
-import { announceSessionChange, clearPersonalCaches, markLoggingOut, sessionUser } from "@/utils/personalCache"
+import {
+	announceSessionChange,
+	clearLoggingOut,
+	clearPersonalCaches,
+	markLoggingOut,
+	sessionUser,
+} from "@/utils/personalCache"
 import { clearCachedPages } from "@/utils/cachedPages"
 import { handBackPhone } from "@/utils/handBackPhone"
 
@@ -45,6 +51,11 @@ export const session = reactive({
 		async validate() {
 			await handBackPhone(window.frappePushNotification)
 			markLoggingOut()
+		},
+		// the request (or the hand-back) failed: the person is still signed in, so this page is no
+		// longer "logging out" and a session that ends later on its own must still say so
+		onError() {
+			clearLoggingOut()
 		},
 		async onSuccess() {
 			announceSessionChange()

@@ -67,6 +67,11 @@ export function markLoggingOut() {
 	loggingOut = true
 }
 
+// A Log out that failed leaves the person signed in on this page: a later session end is not theirs.
+export function clearLoggingOut() {
+	loggingOut = false
+}
+
 // Read once by the Login page: true when the last page lost its session.
 export function takeSignedOutNotice() {
 	try {
