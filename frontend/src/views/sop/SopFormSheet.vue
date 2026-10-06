@@ -82,7 +82,7 @@
 							<TextEditor
 								:content="form.content"
 								@change="(html) => (form.content = html)"
-								:fixedMenu="true"
+								:fixedMenu="TOOLBAR"
 								editor-class="prose-sm p-2 min-h-40"
 							/>
 						</div>
@@ -141,6 +141,24 @@ import { firstMessage } from "@/utils/loudRequest"
 // Loaded only when the sheet opens (alpha.12 C4, as FormField does): a static
 // import would pull the whole editor into every page's first download.
 const TextEditor = defineAsyncComponent(() => import("frappe-ui/src/components/TextEditor/TextEditor.vue"))
+
+// What staff can actually read. No Image or Video: the editor stores those inside
+// the text as data:, which the reader's safeHtml removes, so staff saw an empty
+// picture (review of S1, 6 Oct). A picture goes through "Add a file" below, a
+// private file attached to the SOP.
+const TOOLBAR = [
+	["Heading 1", "Heading 2", "Heading 3"],
+	"Paragraph",
+	"Separator",
+	"Bold",
+	"Italic",
+	"Separator",
+	"Bullet List",
+	"Numbered List",
+	"Separator",
+	"Link",
+	"Blockquote",
+]
 
 const __ = inject("$translate")
 

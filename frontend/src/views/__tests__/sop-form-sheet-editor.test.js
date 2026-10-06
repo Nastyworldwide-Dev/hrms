@@ -126,7 +126,7 @@ test("the editor is wired as FormField wires it: async import, change, fixed men
 	const editor = template.match(/<TextEditor[\s\S]*?\/>/)?.[0] || ""
 	assert.match(editor, /:content="form\.content"/)
 	assert.match(editor, /@change="[^"]*form\.content = /, "an edit writes the HTML back into the form")
-	assert.match(editor, /:fixedMenu="true"/)
+	assert.match(editor, /:fixedMenu="TOOLBAR"/) // a fixed menu, with the sheet's own buttons
 	assert.match(template, /<div[^>]*class="g-texteditor"[^>]*>\s*<TextEditor/, "inside the Glass wrapper")
 })
 
@@ -281,4 +281,18 @@ test("an empty editor (<p></p>) is saved as empty, so the reader shows its empty
 	vm.form.content = "<p></p>"
 	await vm.save()
 	assert.equal(inserts[0].content, "")
+})
+
+// Review of S1 (6 Oct): the editor's Image and Video buttons store the file
+// inside the text as data:, which safeHtml strips, so staff saw an empty
+// picture. The toolbar offers only what staff will see; pictures go through
+// "Add a file", which uploads a private file attached to the SOP.
+test("the editor toolbar offers no Image or Video button", () => {
+	const src = read("SopFormSheet.vue")
+	assert.match(src, /:fixedMenu="TOOLBAR"/, "the sheet passes its own toolbar")
+	const block = src.match(/const TOOLBAR = \[[\s\S]*?\n\]/)?.[0] ?? ""
+	assert.ok(block, "TOOLBAR is defined")
+	assert.match(block, /"Bold"/)
+	assert.match(block, /"Numbered List"/)
+	assert.doesNotMatch(block, /"Image"|"Video"/)
 })
