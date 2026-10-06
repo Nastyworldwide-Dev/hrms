@@ -327,7 +327,7 @@ class TestFinalizeCancelByTheApprover(unittest.TestCase):
 			patch.object(approval, "_request_read_allowed", return_value=True),
 			patch.object(approval, "_is_routed_approver", return_value=routed),
 		):
-			approval.finalize(doc.doctype, doc.name, 2)
+			approval.finalize(doc.doctype, doc.name, 2, expected_modified=doc.modified)
 		return doc
 
 	def test_a_routed_approver_without_cancel_permission_is_elevated_and_cancels(self):
@@ -650,7 +650,7 @@ class TestRejectionCarriesAReason(unittest.TestCase):
 			patch.object(frappe, "session", frappe._dict(user=self.APPROVER)),
 			patch.object(approval, "_decision_access", return_value="routed"),
 		):
-			approval.decide(doc.doctype, doc.name, status, reason=reason)
+			approval.decide(doc.doctype, doc.name, status, expected_modified=doc.modified, reason=reason)
 		return doc, inserted
 
 	def test_rejecting_without_a_reason_is_refused(self):
@@ -779,3 +779,116 @@ class TestDecideHandsTheReasonToTheNotification(unittest.TestCase):
 		submit = code.index("doc.submit()")
 		self.assertLess(flag, submit)
 		self.assertIn('status == "Rejected"', code[max(0, flag - 160) : flag])
+
+class TestADecisionAlwaysCarriesTheRevisionTheApproverSaw(unittest.TestCase):
+	"""6 Oct 2026 (alpha.35). decide() compared the revision only when the caller sent one, so a
+	caller that left it out approved a request that had changed after the approver read it.
+	Every production caller already sends it (the PWA sheet, the form view, the Desk buttons,
+	the bulk approve), so a missing or empty value is now a refusal: it means the screen did not
+	load the request fully. finalize() takes the same rule."""
+
+	APPROVER = "manager@example.com"
+	SEEN = "2026-10-06 09:00:00"
+
+	@classmethod
+	def setUpClass(cls):
+		import sys
+		from unittest.mock import MagicMock, patch
+
+		sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests"))
+		import _erpnext_stub
+		import _frappe_stub
+
+		_frappe_stub.install()
+		_erpnext_stub.install()
+		import frappe
+
+		from hrms.api import approval
+
+		cls.frappe, cls.approval, cls.MagicMock, cls.patch = frappe, approval, MagicMock, patch
+
+	def _doc(self, docstatus, status):
+		frappe = self.frappe
+		doc = frappe._dict(
+			doctype="Leave Application",
+			name="HR-LAP-0003",
+			docstatus=docstatus,
+			status=status,
+			employee="HR-EMP-STAFF",
+			modified=self.SEEN,
+			flags=frappe._dict(),
+		)
+		doc.writes = []
+		doc.get = lambda key, default=None: doc[key] if key in doc else default
+		doc.set = lambda key, value: (doc.writes.append(("set", key)), doc.__setitem__(key, value))
+		doc.submit = lambda: (doc.writes.append(("submit",)), doc.update(docstatus=1))
+		doc.cancel = lambda: (doc.writes.append(("cancel",)), doc.update(docstatus=2))
+		doc.check_permission = lambda ptype: None
+		doc.add_comment = lambda comment_type, text: doc.writes.append(("comment", text))
+		return doc
+
+	def _patched(self, doc, user):
+		frappe, approval, patch = self.frappe, self.approval, self.patch
+		db = self.MagicMock()
+		db.exists.return_value = True
+		db.get_value.return_value = 0
+		return (
+			patch.object(frappe, "db", db),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch.object(frappe, "has_permission", return_value=True, create=True),
+			patch.object(frappe, "session", frappe._dict(user=user)),
+			patch.object(approval, "_decision_access", return_value="routed"),
+			patch.object(approval, "_request_read_allowed", return_value=True),
+		)
+
+	def _decide(self, expected_modified):
+		doc = self._doc(docstatus=0, status="Open")
+		a, b, c, d, e, f = self._patched(doc, self.APPROVER)
+		with a, b, c, d, e, f:
+			self.approval.decide(doc.doctype, doc.name, "Approved", expected_modified=expected_modified)
+		return doc
+
+	def _finalize(self, expected_modified):
+		doc = self._doc(docstatus=1, status="Approved")
+		a, b, c, d, e, f = self._patched(doc, self.APPROVER)
+		with a, b, c, d, e, f:
+			self.approval.finalize(doc.doctype, doc.name, 2, expected_modified=expected_modified)
+		return doc
+
+	def test_decide_without_a_revision_is_refused_and_writes_nothing(self):
+		for missing in (None, "", self):  # self = the argument left out altogether
+			doc = self._doc(docstatus=0, status="Open")
+			args = {} if missing is self else {"expected_modified": missing}
+			a, b, c, d, e, f = self._patched(doc, self.APPROVER)
+			with a, b, c, d, e, f:
+				with self.assertRaisesRegex(self.frappe.ValidationError, "not loaded fully"):
+					self.approval.decide(doc.doctype, doc.name, "Approved", **args)
+			self.assertEqual(doc.writes, [], f"nothing may be written when the revision is {missing!r}")
+			self.assertEqual((doc.docstatus, doc.status), (0, "Open"))
+
+	def test_decide_with_a_stale_revision_still_says_it_changed(self):
+		with self.assertRaisesRegex(self.frappe.TimestampMismatchError, "changed since you reviewed"):
+			self._decide("2026-10-06 08:00:00")
+
+	def test_decide_with_the_revision_the_approver_saw_decides(self):
+		doc = self._decide(self.SEEN)
+		self.assertEqual((doc.status, doc.docstatus), ("Approved", 1))
+		self.assertEqual(doc.writes, [("set", "status"), ("submit",)])
+
+	def test_finalize_without_a_revision_is_refused_and_writes_nothing(self):
+		for missing in (None, "", self):
+			doc = self._doc(docstatus=1, status="Approved")
+			args = {} if missing is self else {"expected_modified": missing}
+			a, b, c, d, e, f = self._patched(doc, self.APPROVER)
+			with a, b, c, d, e, f:
+				with self.assertRaisesRegex(self.frappe.ValidationError, "not loaded fully"):
+					self.approval.finalize(doc.doctype, doc.name, 2, **args)
+			self.assertEqual(doc.writes, [])
+			self.assertEqual(doc.docstatus, 1)
+
+	def test_finalize_with_a_stale_revision_still_says_it_changed(self):
+		with self.assertRaisesRegex(self.frappe.TimestampMismatchError, "changed since you reviewed"):
+			self._finalize("2026-10-06 08:00:00")
+
+	def test_finalize_with_the_revision_the_approver_saw_cancels(self):
+		self.assertEqual(self._finalize(self.SEEN).docstatus, 2)

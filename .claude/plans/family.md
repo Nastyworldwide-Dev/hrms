@@ -1,6 +1,10 @@
-CLASS: an update that only arrives when nobody is looking for it. A new build was APPLIED only while the app is hidden (owner rule 30 Sep: no popup, never under a form), but nothing ASKED for one: the browser looks for a new sw.js on a page load and about once a day, so a phone that keeps Nadi in memory could run an old build for days after a deploy.
-frontend/src/data/swRegistration.js:setRegistration same-root (fixed here: asks at launch)
-frontend/src/data/swRegistration.js:onVisibilityChange same-root (fixed here: asks when the app comes back, at most once per 30 minutes; a failed ask is one console line)
-frontend/src/data/swRegistration.js:applyWhenHidden not-affected — a found build still waits for the app to be out of sight
-frontend/src/main.js:register not-affected — registers once and hands the registration over, unchanged
-frontend/src/router/stale-chunk.js not-affected — the reload-on-missing-chunk rescue stays as the safety net
+CLASS: a safety check that runs only when the caller remembers to ask for it. decide() and finalize() compared the request's revision with the one the approver read ONLY when the caller passed it; a caller that left it out skipped the check, so a request edited after the approver read it could be approved unseen.
+hrms/api/approval.py:_check_review_revision same-root (fixed here: `required` refuses a missing or empty revision before any write)
+hrms/api/approval.py:decide same-root (passes required=True)
+hrms/api/approval.py:finalize same-root (passes required=True)
+hrms/api/approval.py:decide_many not-affected — _bulk_items already refuses a row without a revision up front, now noted
+hrms/api/correction_cancel.py:cancel_for_correction not-affected — HR's correction tool keeps the optional check by design
+frontend/src/components/RequestActionSheet.vue not-affected — sends expected_modified (currentRequest)
+frontend/src/components/FormView.vue not-affected — sends expected_modified to finalize
+hrms/public/js/utils/request_approval.js not-affected — sends expected_modified (Desk test 3/3)
+hrms/public/js/utils/approved_request_cancel.js not-affected — sends expected_modified

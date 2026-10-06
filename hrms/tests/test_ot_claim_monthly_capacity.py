@@ -74,6 +74,13 @@ class DecisionDocument(filing.ot_request.OTRequest):
 	def set(self, field, value):
 		setattr(self, field, value)
 
+	# a real Document carries `flags`; decide() puts the rejection reason there before submit (f5941bed4)
+	@property
+	def flags(self):
+		if "_flags" not in self.__dict__:
+			self.__dict__["_flags"] = frappe._dict()
+		return self.__dict__["_flags"]
+
 	# on_submit stamps Approved On (38f6087ba) straight to the row
 	def db_set(self, field, value, **kwargs):
 		setattr(self, field, value)
@@ -203,6 +210,7 @@ class TestClaimCapacity(unittest.TestCase):
 				doctype="OT Request",
 				status=saved_status,
 				docstatus=0,
+				modified="2026-10-06 09:00:00",
 				punch_ot_hours=claim_hours,
 				employee="EMP-SYNTHETIC",
 				ot_date=DAY,
@@ -243,6 +251,10 @@ class TestClaimCapacity(unittest.TestCase):
 				},
 			),
 			patch.object(ot, "_classify_day", return_value="normal"),
+			# This file tests the monthly CAP at fine precision (0.267 h claims). The half-hour cut of a typed
+			# claim (66f0ed539, 5 Oct 2026) is tested in test_ot_storage_precision.py; here it would refuse
+			# every fractional claim before the cap is ever reached.
+			patch.object(filing.ot_request.OTRequest, "band_typed_claim", lambda self: None),
 			patch.object(ot, "_per_day_ot_hours", side_effect=worked),
 			patch.object(
 				ot, "_per_day_contributions", side_effect=lambda *a: ot._contributions_from_maps(*worked(*a))
@@ -264,7 +276,9 @@ class TestClaimCapacity(unittest.TestCase):
 				):
 					# da51cd501: decide refuses a rejection without a reason, so rejections carry one.
 					reason = "synthetic reason" if decision == "Rejected" else None
-					state = approval.decide("OT Request", doc.name, decision, reason=reason)
+					state = approval.decide(
+						"OT Request", doc.name, decision, expected_modified=doc.modified, reason=reason
+					)
 					self_guard.assert_called_once_with(doc)
 					if decision == "Rejected":
 						# Evidence is needed to approve; a refusal is recordable without it.

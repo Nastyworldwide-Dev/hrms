@@ -42,6 +42,8 @@ from hrms.mixins.pwa_notifications import PWANotificationsMixin
 
 D = "Compensatory Leave Request"
 STAFF, STAFF_USER = "HR-EMP-STAFF", "staff@example.com"
+# the revision the approver read; decide() refuses a decision that does not name it (6 Oct 2026)
+SEEN = "2026-09-15 10:00:00"
 MANAGER, MANAGER_USER = "HR-EMP-MGR", "manager@example.com"
 LEAVE_APPROVER = "approver@example.com"
 CONTROLLER = (
@@ -159,7 +161,7 @@ class TestTheApproverDecidesLikeALeaveApplication(unittest.TestCase):
 			docstatus=0,
 			status="Open",
 			employee=STAFF,
-			modified="2026-09-15 10:00:00",
+			modified=SEEN,
 			flags=frappe._dict(),
 		)
 		doc.check_permission = lambda ptype: None
@@ -190,7 +192,7 @@ class TestTheApproverDecidesLikeALeaveApplication(unittest.TestCase):
 
 	def test_the_routed_approver_rejects_elevated_and_nothing_else_changes(self):
 		doc, state = self._run(
-			MANAGER_USER, lambda dt, n: approval.decide(dt, n, "Rejected", reason="Cover is short that week")
+			MANAGER_USER, lambda dt, n: approval.decide(dt, n, "Rejected", expected_modified=SEEN, reason="Cover is short that week")
 		)
 		self.assertEqual((doc.status, doc.docstatus), ("Rejected", 1))
 		self.assertEqual(state["status"], "Rejected")
@@ -198,7 +200,7 @@ class TestTheApproverDecidesLikeALeaveApplication(unittest.TestCase):
 		self.assertIs(doc.flags_at_submit.get("ignore_permissions"), True)
 
 	def test_the_routed_approver_approves(self):
-		doc, _ = self._run(MANAGER_USER, lambda dt, n: approval.decide(dt, n, "Approved"))
+		doc, _ = self._run(MANAGER_USER, lambda dt, n: approval.decide(dt, n, "Approved", expected_modified=SEEN))
 		self.assertEqual((doc.status, doc.docstatus), ("Approved", 1))
 
 	def test_the_employee_is_offered_nothing_and_cannot_decide_their_own(self):
@@ -206,16 +208,16 @@ class TestTheApproverDecidesLikeALeaveApplication(unittest.TestCase):
 		self.assertEqual(answer["actions"], [])
 		for status in ("Approved", "Rejected"):
 			with self.subTest(status=status), self.assertRaises(frappe.PermissionError):
-				self._run(STAFF_USER, lambda dt, n, s=status: approval.decide(dt, n, s))
+				self._run(STAFF_USER, lambda dt, n, s=status: approval.decide(dt, n, s, expected_modified=SEEN))
 
 	def test_someone_not_routed_is_refused(self):
 		with self.assertRaises(frappe.PermissionError):
-			self._run("stranger@example.com", lambda dt, n: approval.decide(dt, n, "Rejected"), routed=False)
+			self._run("stranger@example.com", lambda dt, n: approval.decide(dt, n, "Rejected", expected_modified=SEEN), routed=False)
 
 	def test_a_holder_of_submit_permission_is_not_elevated(self):
 		doc, _ = self._run(
 			"hr@example.com",
-			lambda dt, n: approval.decide(dt, n, "Rejected", reason="Cover is short that week"),
+			lambda dt, n: approval.decide(dt, n, "Rejected", expected_modified=SEEN, reason="Cover is short that week"),
 			native=True,
 		)
 		self.assertEqual(doc.docstatus, 1)

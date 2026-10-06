@@ -129,6 +129,7 @@ class TestDecisionAccess(unittest.TestCase):
 		return approval.can_decide(self.doc.doctype, self.doc.name)
 
 	def decide(self, **kwargs):
+		kwargs.setdefault("expected_modified", self.doc.modified)
 		return approval.decide(self.doc.doctype, self.doc.name, "Approved", **kwargs)
 
 	def test_native_read_denial_is_not_advertised_or_elevated(self):
@@ -258,7 +259,7 @@ class TestDecisionAccess(unittest.TestCase):
 					read=boundary != "read", companies=["B"] if boundary == "company" else ["A"]
 				)
 				with self.assertRaises(frappe.PermissionError):
-					approval.finalize(self.doc.doctype, self.doc.name, action)
+					approval.finalize(self.doc.doctype, self.doc.name, action, expected_modified=self.doc.modified)
 		self.assertEqual(self.submissions, 0)
 
 	def test_finalize_preserves_six_types_and_distinct_self_cancellation(self):
@@ -269,24 +270,24 @@ class TestDecisionAccess(unittest.TestCase):
 				self.set_doctype(dt)
 				self.doc.docstatus = 1
 				self.doc.cancel = lambda: setattr(self.doc, "docstatus", 2)
-				self.assertEqual(approval.finalize(dt, self.doc.name, 2)["docstatus"], 2)
+				self.assertEqual(approval.finalize(dt, self.doc.name, 2, expected_modified=self.doc.modified)["docstatus"], 2)
 		frappe.session.user = HR_A
 		for dt in approval.DECIDE_THEN_SUBMIT:
 			with self.subTest(doctype=dt):
 				self.set_doctype(dt)
 				setattr(self.doc, approval.DECIDE_THEN_SUBMIT[dt][0], "Approved")
-				self.assertEqual(approval.finalize(dt, self.doc.name, 1)["docstatus"], 1)
+				self.assertEqual(approval.finalize(dt, self.doc.name, 1, expected_modified=self.doc.modified)["docstatus"], 1)
 
 	def test_finalize_submission_obeys_workflow_and_self_policy(self):
 		frappe.session.user = STAFF
 		self.users[STAFF]["roles"] = ["Employee", "HR Manager"]
 		self.doc.status = "Approved"
 		with self.assertRaises(frappe.PermissionError):
-			approval.finalize(self.doc.doctype, self.doc.name, 1)
+			approval.finalize(self.doc.doctype, self.doc.name, 1, expected_modified=self.doc.modified)
 		frappe.session.user = HR_A
 		self.workflow = "Synthetic Workflow"
 		with self.assertRaises(frappe.PermissionError):
-			approval.finalize(self.doc.doctype, self.doc.name, 1)
+			approval.finalize(self.doc.doctype, self.doc.name, 1, expected_modified=self.doc.modified)
 
 	def test_configured_leave_self_rejection_remains_available(self):
 		frappe.session.user = STAFF

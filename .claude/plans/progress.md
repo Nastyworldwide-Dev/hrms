@@ -295,3 +295,6 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T03:10:08Z COMMIT: 17de8474d fix(pwa): an app kept open never looked for a new build after a deploy → review+design dispatched
 - 2026-10-06T03:10:54Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
 - 2026-10-06T03:10:54Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-10-06T03:10:57Z COMMIT: 7036458ff fix(pwa): an app kept open never looked for a new build after a deploy → review+design dispatched
+- 2026-10-06T03:17:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
+- 2026-10-06T03:17:42Z EVIDENCE: 3 works — blast radius green: 15 dependent(s), 12 extra test file(s) ⟂84fa3520acad

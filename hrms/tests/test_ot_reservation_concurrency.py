@@ -163,7 +163,12 @@ class TestTwoApprovalsSerializeOnTheEmployee(unittest.TestCase):
 			frappe.set_user("Administrator")
 			frappe.local.synthetic_hold = hold
 			try:
-				approval.decide("OT Request", self.names[index], "Approved")
+				approval.decide(
+					"OT Request",
+					self.names[index],
+					"Approved",
+					expected_modified=frappe.db.get_value("OT Request", self.names[index], "modified"),
+				)
 				frappe.db.commit()
 				outcomes[index] = ("approved", time.monotonic())
 			except Exception as exc:  # the refusal is the expected outcome for the loser

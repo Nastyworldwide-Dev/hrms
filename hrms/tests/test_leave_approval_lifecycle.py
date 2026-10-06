@@ -62,6 +62,10 @@ def unfence(user: str) -> None:
 	frappe.clear_cache(user=user)
 
 
+def seen(name: str):
+	"""The revision the approver read: decide() refuses a decision that does not name it (6 Oct 2026)."""
+	return frappe.db.get_value("Leave Application", name, "modified")
+
 def state(name: str) -> dict:
 	"""Everything that matters, in one read. A test that checks only `status`
 	is the reason this defect survived."""
@@ -148,7 +152,7 @@ class TestLeaveDecisionReachesFinalState(_LeaveLifecycleCase):
 		name = self.draft()
 		frappe.set_user(APPROVER)
 
-		result = decide("Leave Application", name, "Approved")
+		result = decide("Leave Application", name, "Approved", expected_modified=seen(name))
 
 		self.assertEqual(result["docstatus"], 1)
 		self.assertEqual(result["status"], "Approved")
@@ -166,7 +170,7 @@ class TestLeaveDecisionReachesFinalState(_LeaveLifecycleCase):
 		"""
 		name = self.draft()
 		frappe.set_user(APPROVER)
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 
 		frappe.set_user(HR_MANAGER)
 		doc = frappe.get_doc("Leave Application", name)
@@ -176,7 +180,7 @@ class TestLeaveDecisionReachesFinalState(_LeaveLifecycleCase):
 		)
 		self.assertEqual(doc.docstatus, 1)
 
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		self.assertEqual(state(name)["ledger"], 1)
 
 	def test_rejection_also_reaches_the_final_state(self):
@@ -185,7 +189,7 @@ class TestLeaveDecisionReachesFinalState(_LeaveLifecycleCase):
 		name = self.draft(6)
 		frappe.set_user(APPROVER)
 
-		decide("Leave Application", name, "Rejected")
+		decide("Leave Application", name, "Rejected", expected_modified=seen(name))
 
 		self.assertEqual(
 			state(name), {"docstatus": 1, "status": "Rejected", "leave_approver": APPROVER, "ledger": 0}
@@ -194,7 +198,7 @@ class TestLeaveDecisionReachesFinalState(_LeaveLifecycleCase):
 	def test_approval_writes_exactly_one_ledger_effect(self):
 		name = self.draft(7)
 		frappe.set_user(APPROVER)
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 
 		entries = frappe.get_all(
 			"Leave Ledger Entry",
@@ -208,7 +212,7 @@ class TestLeaveDecisionReachesFinalState(_LeaveLifecycleCase):
 	def test_no_decided_draft_survives_the_transition(self):
 		name = self.draft(8)
 		frappe.set_user(APPROVER)
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 
 		frappe.set_user("Administrator")
 		self.assertEqual(report_half_transitioned("Leave Application")["Leave Application"]["count"], 0)
@@ -219,8 +223,8 @@ class TestIdempotencyAndRetries(_LeaveLifecycleCase):
 		name = self.draft()
 		frappe.set_user(APPROVER)
 
-		first = decide("Leave Application", name, "Approved")
-		second = decide("Leave Application", name, "Approved")
+		first = decide("Leave Application", name, "Approved", expected_modified=seen(name))
+		second = decide("Leave Application", name, "Approved", expected_modified=seen(name))
 
 		self.assertEqual(first, second)
 		self.assertEqual(state(name)["ledger"], 1, "a retry duplicated the ledger effect")
@@ -229,7 +233,7 @@ class TestIdempotencyAndRetries(_LeaveLifecycleCase):
 		name = self.draft(9)
 		frappe.set_user(APPROVER)
 		for _ in range(3):
-			decide("Leave Application", name, "Approved")
+			decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		self.assertEqual(state(name)["ledger"], 1)
 
 	def test_reversing_a_decision_is_refused(self):
@@ -237,16 +241,16 @@ class TestIdempotencyAndRetries(_LeaveLifecycleCase):
 		its own ledger reversal — not a second decision."""
 		name = self.draft(10)
 		frappe.set_user(APPROVER)
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 
 		with self.assertRaises(frappe.ValidationError):
-			decide("Leave Application", name, "Rejected")
+			decide("Leave Application", name, "Rejected", expected_modified=seen(name))
 		self.assertEqual(state(name)["status"], "Approved")
 
 	def test_a_cancelled_request_cannot_be_decided(self):
 		name = self.draft(11)
 		frappe.set_user(APPROVER)
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		# An approved leave is never cancelled in the app
 		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
 		frappe.flags.in_patch = True
@@ -256,7 +260,7 @@ class TestIdempotencyAndRetries(_LeaveLifecycleCase):
 			frappe.flags.in_patch = False
 
 		with self.assertRaises(frappe.ValidationError):
-			decide("Leave Application", name, "Approved")
+			decide("Leave Application", name, "Approved", expected_modified=seen(name))
 
 
 class TestAuthorization(_LeaveLifecycleCase):
@@ -264,7 +268,7 @@ class TestAuthorization(_LeaveLifecycleCase):
 		name = self.draft()
 		frappe.set_user(EMPLOYEE)
 		with self.assertRaises((frappe.PermissionError, frappe.ValidationError)):
-			decide("Leave Application", name, "Approved")
+			decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		self.assertEqual(state(name)["docstatus"], 0)
 
 	def test_unrelated_approver_is_denied(self):
@@ -273,7 +277,7 @@ class TestAuthorization(_LeaveLifecycleCase):
 		name = self.draft(6)
 		frappe.set_user(OUTSIDER)
 		with self.assertRaises(frappe.PermissionError):
-			decide("Leave Application", name, "Approved")
+			decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		self.assertEqual(
 			state(name), {"docstatus": 0, "status": "Open", "leave_approver": APPROVER, "ledger": 0}
 		)
@@ -284,13 +288,13 @@ class TestAuthorization(_LeaveLifecycleCase):
 		name = self.draft(7)
 		frappe.set_user(SYS_MANAGER)
 		with self.assertRaises(frappe.PermissionError):
-			decide("Leave Application", name, "Approved")
+			decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		self.assertEqual(state(name)["docstatus"], 0)
 
 	def test_hr_user_may_decide(self):
 		name = self.draft(8)
 		frappe.set_user(HR_USER)
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		self.assertEqual(
 			state(name), {"docstatus": 1, "status": "Approved", "leave_approver": APPROVER, "ledger": 1}
 		)
@@ -298,13 +302,13 @@ class TestAuthorization(_LeaveLifecycleCase):
 	def test_hr_manager_may_decide(self):
 		name = self.draft(9)
 		frappe.set_user(HR_MANAGER)
-		decide("Leave Application", name, "Rejected")
+		decide("Leave Application", name, "Rejected", expected_modified=seen(name))
 		self.assertEqual(state(name)["docstatus"], 1)
 
 	def test_administrator_may_decide(self):
 		name = self.draft(10)
 		frappe.set_user("Administrator")
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		self.assertEqual(state(name)["docstatus"], 1)
 
 	def test_cross_company_hr_user_is_denied(self):
@@ -335,7 +339,7 @@ class TestAuthorization(_LeaveLifecycleCase):
 
 		frappe.set_user(foreign)
 		with self.assertRaises((frappe.PermissionError, frappe.ValidationError)):
-			decide("Leave Application", name, "Approved")
+			decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		self.assertEqual(state(name)["docstatus"], 0)
 
 	def test_an_arbitrary_doctype_cannot_be_driven_through_decide(self):
@@ -373,7 +377,7 @@ class TestTransactionality(_LeaveLifecycleCase):
 			side_effect=RuntimeError("ledger unavailable"),
 		):
 			with self.assertRaises(RuntimeError):
-				decide("Leave Application", name, "Approved")
+				decide("Leave Application", name, "Approved", expected_modified=seen(name))
 
 		# what Frappe does to a request that raised: roll the whole thing back
 		frappe.db.rollback(save_point="before_decide")
@@ -387,7 +391,7 @@ class TestTransactionality(_LeaveLifecycleCase):
 	def test_cancellation_reverses_the_ledger(self):
 		name = self.draft(6)
 		frappe.set_user(APPROVER)
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		self.assertEqual(state(name)["ledger"], 1)
 
 		# The app refuses: an approved leave is never cancelled
@@ -420,7 +424,7 @@ class TestTransactionality(_LeaveLifecycleCase):
 		the amendment has to be decided on its own merits."""
 		name = self.draft(7)
 		frappe.set_user(APPROVER)
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		# An approved leave is never cancelled in the app
 		# (hrms.utils.approved_request_guard); this simulates an admin data patch.
 		frappe.flags.in_patch = True
@@ -464,7 +468,7 @@ class TestMirroredEmployee(_LeaveLifecycleCase):
 
 		frappe.set_user(APPROVER)
 		with self.assertRaises(frappe.PermissionError):
-			decide("Leave Application", name, "Approved")
+			decide("Leave Application", name, "Approved", expected_modified=seen(name))
 
 		self.assertEqual(
 			state(name), {"docstatus": 0, "status": "Open", "leave_approver": APPROVER, "ledger": 0}
@@ -507,7 +511,7 @@ class TestHalfTransitionedReport(_LeaveLifecycleCase):
 
 		# and `decide` finishes it in one call, with one ledger effect
 		frappe.set_user(APPROVER)
-		decide("Leave Application", name, "Approved")
+		decide("Leave Application", name, "Approved", expected_modified=seen(name))
 		self.assertEqual(
 			state(name), {"docstatus": 1, "status": "Approved", "leave_approver": APPROVER, "ledger": 1}
 		)

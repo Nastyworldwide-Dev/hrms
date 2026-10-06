@@ -395,7 +395,7 @@ def decide(
 
 	if current != DECIDE_THEN_SUBMIT[doctype][1]:
 		frappe.throw(_("This request is no longer awaiting a decision."), frappe.ValidationError)
-	_check_review_revision(doc, expected_modified)
+	_check_review_revision(doc, expected_modified, required=True)
 	# After every access and state check, so an unauthorised caller still gets
 	# PermissionError and a settled request still says so (review of da51cd501).
 	reason = (reason or "").strip()
@@ -459,8 +459,8 @@ def _bulk_items(items) -> list[dict]:
 			frappe.ValidationError,
 		)
 	if not all(row.get("modified") for row in items):
-		# decide() compares the revision only when it is given: without one a request edited after
-		# the approver last saw it would go through unread
+		# decide() now refuses a missing revision itself; this refuses the whole bundle up front
+		# rather than one refusal per row
 		frappe.throw(_("Reload the list and try again."), frappe.ValidationError)
 	# one fixed order, whatever order the phone sent: two approvers ticking the same requests in
 	# opposite orders would otherwise lock them in opposite orders and deadlock
@@ -618,10 +618,20 @@ def get_rejection_reason(doctype: str, name: str) -> str | None:
 	return None
 
 
-def _check_review_revision(doc, expected_modified: str | None) -> None:
-	"""A fresh action must target the persisted values actually reviewed."""
+def _check_review_revision(doc, expected_modified: str | None, required: bool = False) -> None:
+	"""A fresh action must target the persisted values actually reviewed.
+
+	`required` is for a DECISION (decide, finalize): 6 Oct 2026, a caller that left the revision
+	out skipped this check altogether, so a request edited after the approver read it could be
+	approved unseen. Every screen already sends it, so a missing or empty one now means the
+	request was not loaded fully, and nothing is written. cancel_for_correction keeps the old
+	optional behaviour: it is HR's correction tool, not an approver's decision.
+	"""
 	from frappe.utils import get_datetime
 
+	if required and not expected_modified:
+		logger.info("[approval] decision without a reviewed revision refused for %s", doc.doctype)
+		frappe.throw(_("This request was not loaded fully. Reload and try again."), frappe.ValidationError)
 	if expected_modified is not None and get_datetime(doc.modified) != get_datetime(expected_modified):
 		logger.info("[approval] stale reviewed revision refused for %s", doc.doctype)
 		frappe.throw(
@@ -958,7 +968,7 @@ def finalize(doctype: str, name: str, docstatus: int, expected_modified: str | N
 
 	if doc.docstatus == 2:
 		frappe.throw(_("{0} has been cancelled.").format(_(doctype)), frappe.ValidationError)
-	_check_review_revision(doc, expected_modified)
+	_check_review_revision(doc, expected_modified, required=True)
 	# The real transition: validate -> before_submit -> on_submit (or the cancel
 	# chain). Any failure raises and the whole request rolls back; there is no
 	# path that half-moves the document.
