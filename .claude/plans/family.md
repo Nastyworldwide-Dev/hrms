@@ -1,4 +1,4 @@
-CLASS: an Ionic overlay whose own role=dialog wrapper has no name (axe aria-dialog-name, serious): Ionic names it only from the ion-modal host's aria-label.
-frontend/src/components/glass/GModal.vue same-root (host gets :aria-label="title"; every GModal sheet in the app)
-frontend/src/components/glass/GActionSheet.vue not-affected — ion-action-sheet names itself from its header
-frontend/src/views/*: raw <ion-modal> not-affected — grep finds none outside GModal (callers were moved onto it)
+CLASS: an Ionic overlay whose own role=dialog wrapper has no name (axe aria-dialog-name): Ionic names it only from the ion-modal host's aria-label.
+frontend/src/components/glass/GModal.vue same-root (fixed in the previous commit)
+frontend/src/components/MustReadNotice.vue same-root (the one other raw ion-modal; its name sat on the inner div only)
+frontend/src/components/glass/__tests__/sheet-dialog-has-a-name.test.js same-root (invariant: every raw ion-modal in src carries :aria-label)

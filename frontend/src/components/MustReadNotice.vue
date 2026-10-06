@@ -18,6 +18,7 @@
 		:can-dismiss="false"
 		:backdrop-dismiss="false"
 		:handle="false"
+		:aria-label="current?.title || undefined"
 	>
 		<div v-if="current" class="g-mustread__page" role="dialog" aria-modal="true" :aria-label="current.title">
 			<header class="g-mustread__bar">
