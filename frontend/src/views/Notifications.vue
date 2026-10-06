@@ -40,6 +40,7 @@
 									<GListRow
 										:class="{ 'n-unread': fold.unread }"
 										:label="foldLabel(fold)"
+										wrap
 										:sublabel="fold.lead.meta"
 										:tint="tileFor(fold.lead.reference_document_type)"
 										:chevron="fold.members.length === 1 ? fold.lead.navigable && !fold.unread : false"
@@ -63,6 +64,7 @@
 											:key="item.name"
 											class="n-member"
 											:label="item.line.title"
+											wrap
 											:sublabel="item.meta"
 											:chevron="item.navigable"
 											@click="open(item)"

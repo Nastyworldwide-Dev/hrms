@@ -93,3 +93,14 @@ test("a row that IS a sentence (an empty-state line) opts out with `wrap`: it is
 		assert.match(tag + tagEnd, /\bwrap\b/, `${sentence} keeps wrapping`)
 	}
 })
+
+// Review of the B3 commit: a row that is a SUMMARY (a count, a notification
+// sentence) must not be cut, or the number that says how much is waiting goes.
+test("summary rows wrap: the per-person count on Approvals, the notification lines", () => {
+	const approvals = readFileSync(new URL("../../views/Approvals.vue", import.meta.url), "utf8")
+	const notes = readFileSync(new URL("../../views/Notifications.vue", import.meta.url), "utf8")
+	for (const m of approvals.matchAll(/:label="personLine\(person, __\)"\s*\n\s*(\S+)/g))
+		assert.equal(m[1], "wrap", "a per-person count row on Approvals wraps")
+	assert.match(notes, /:label="foldLabel\(fold\)"\s*\n\s*wrap/)
+	assert.match(notes, /:label="item\.line\.title"\s*\n\s*wrap/)
+})

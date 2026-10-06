@@ -160,6 +160,7 @@
 											<GListRow
 												v-else
 												:label="personLine(person, __)"
+												wrap
 												:sublabel="personWhen(person)"
 												@click="openPerson(person)"
 											>
@@ -219,6 +220,7 @@
 										v-for="person in shown(team.key, team.people).rows"
 										:key="person.key"
 										:label="personLine(person, __)"
+										wrap
 										:sublabel="`${__(person.kind)} · ${personWhen(person)}`"
 										@click="openPerson(person)"
 									/>
