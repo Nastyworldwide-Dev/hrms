@@ -223,3 +223,7 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T04:25:52Z COMMIT: c6d8abb4d fix(login): an expired session left the last page copy on the phone → review+security+design dispatched
 - 2026-10-06T04:26:17Z COMMIT: ee75de979 test(e2e): the pull-refresh gate covers the seven screens that lacked it → review+design dispatched
 - 2026-10-06T04:27:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
+- 2026-10-06T04:27:08Z COMMIT: 9cc7d3563 test(checkin): the no-selfie guard test read the indent, not the guard → review dispatched
+- 2026-10-06T04:30:07Z COMMIT: 1ef5b3271 docs(audit): the Shift Supervisor Desk probe has no supervisor to run as → review dispatched
+- 2026-10-06T04:32:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-06T04:32:42Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916

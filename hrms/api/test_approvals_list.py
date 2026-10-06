@@ -8,7 +8,7 @@ a row the approver cannot decide, or hide one Home counted.
 import pathlib
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests"))
 import _erpnext_stub
@@ -69,7 +69,12 @@ class TestApprovalsList(unittest.TestCase):
 			patch.object(frappe, "get_doc", side_effect=lambda dt, name: DOCS[(dt, name)]),
 			patch.object(approvals_list, "_is_routed_approver", side_effect=lambda doc: doc.name != "LA-2"),
 			patch.object(approvals_list, "_request_read_allowed", side_effect=readable, create=True),
-			patch.object(approvals_list, "may_read_leave_reason", side_effect=reason_readable, create=True),
+			patch.object(
+				approvals_list,
+				"may_read_leave_reasons",
+				side_effect=lambda docs, user=None: [reason_readable(doc) for doc in docs],
+				create=True,
+			),
 			patch.object(approvals_list, "_types_on_site", return_value=["Leave Application", "OT Request"]),
 		):
 			return approvals_list.get_waiting_for_me()
@@ -168,7 +173,12 @@ class TestRemoteCheckinsJoinTheList(unittest.TestCase):
 			patch.object(frappe, "get_doc", side_effect=lambda dt, name: DOCS[(dt, name)]),
 			patch.object(approvals_list, "_is_routed_approver", side_effect=lambda doc: doc.name != "LA-2"),
 			patch.object(approvals_list, "_request_read_allowed", side_effect=lambda doc: True),
-			patch.object(approvals_list, "may_read_leave_reason", return_value=True, create=True),
+			patch.object(
+				approvals_list,
+				"may_read_leave_reasons",
+				side_effect=lambda docs, user=None: [True] * len(list(docs)),
+				create=True,
+			),
 			patch.object(approvals_list, "_types_on_site", return_value=["Leave Application"]),
 			patch.object(approvals_list, "_remote_checkins", side_effect=remote),
 		):
@@ -419,7 +429,12 @@ def grouped_patches(user=CALLER, own=(CALLER_EMPLOYEE,), routed=lambda doc: True
 		patch.object(approvals_list, "own_employees", return_value=list(own)),
 		patch.object(approvals_list, "_is_routed_approver", side_effect=routed),
 		patch.object(approvals_list, "_request_read_allowed", side_effect=lambda doc: True),
-		patch.object(approvals_list, "may_read_leave_reason", return_value=True, create=True),
+		patch.object(
+			approvals_list,
+			"may_read_leave_reasons",
+			side_effect=lambda docs, user=None: [True] * len(list(docs)),
+			create=True,
+		),
 		patch.object(
 			approvals_list,
 			"_types_on_site",
@@ -546,3 +561,113 @@ class TestHalfDaySessionOnTheApproverRow(unittest.TestCase):
 			doctype="Leave Application", leave_type="Annual Leave", total_leave_days=0.5, half_day=1
 		)
 		self.assertEqual(approvals_list._row(doc)["detail"], "Annual Leave · 0.5 days")
+
+
+# --- One reason check per page, not per row (6 Oct 2026, alpha.36 slice O1) ---------------------
+# `_row` asked `may_read_leave_reason(doc)` for every leave request: one routing/company check per
+# row. `approval.may_read_leave_reasons` is the same rule for a list (alpha.35); the page hands it
+# the whole leave list once and each row its own answer.
+
+READER = "boss@example.com"
+READER_EMPLOYEE = "E-BOSS"
+
+BATCH_LEAVE_DOCS = {
+	("Leave Application", f"LA-{i}"): frappe._dict(
+		doctype="Leave Application",
+		name=f"LA-{i}",
+		employee=employee,
+		employee_name=employee,
+		leave_type="Annual Leave",
+		leave_approver=approver,
+		description=f"reason {i}",
+		modified=f"2026-09-1{i} 10:00:00",
+	)
+	for i, (employee, approver) in enumerate(
+		[
+			(READER_EMPLOYEE, "someone@example.com"),  # the reader's own request
+			("E-TEAM", READER),  # the reader is on its approval line
+			("E-STRANGER", "other@example.com"),  # managed by a stranger, reader not on the line
+			("E-TEAM", READER),
+			("E-STRANGER", "other@example.com"),
+			(READER_EMPLOYEE, "someone@example.com"),
+		]
+	)
+}
+BATCH_OT_DOCS = {
+	("OT Request", "OT-1"): frappe._dict(
+		doctype="OT Request",
+		name="OT-1",
+		employee="E-TEAM",
+		employee_name="Ria",
+		claimed_hours=1,
+		explanation="Stock count",
+		modified="2026-09-05 09:00:00",
+	)
+}
+
+
+class TestTheReasonsAreAskedInOneBatch(unittest.TestCase):
+	#: what the 5 Oct 2026 ruling says the reader may read, row order = LA-0 .. LA-5
+	RULED = (True, True, False, True, False, True)
+
+	def _list(self, batch, single, types=("Leave Application",)):
+		docs = {**BATCH_LEAVE_DOCS, **BATCH_OT_DOCS}
+		with (
+			patch.object(
+				frappe, "get_all", side_effect=lambda dt, **kw: [n for (d, n) in docs if d == dt], create=True
+			),
+			patch.object(frappe, "get_doc", side_effect=lambda dt, name: docs[(dt, name)]),
+			patch.object(frappe, "session", frappe._dict(user=READER)),
+			patch.object(frappe.db, "get_value", return_value={}),
+			patch.object(approvals_list, "own_employees", return_value=[READER_EMPLOYEE]),
+			patch.object(approvals_list, "_is_routed_approver", return_value=True),
+			patch.object(approvals_list, "_request_read_allowed", return_value=True),
+			patch.object(approvals_list, "may_read_leave_reasons", batch, create=True),
+			patch.object(approvals_list, "may_read_leave_reason", single),
+			patch.object(approvals_list, "_types_on_site", return_value=list(types)),
+			patch.object(approvals_list, "_remote_checkins", return_value=[]),
+		):
+			return {row["name"]: row for row in approvals_list.get_waiting_for_me()["rows"]}
+
+	def test_a_page_of_leave_rows_asks_the_batch_once_and_the_single_form_never(self):
+		batch = MagicMock(side_effect=lambda docs, user=None: [True] * len(list(docs)))
+		single = MagicMock(return_value=True)
+		rows = self._list(batch, single)
+		self.assertEqual(len(rows), 6)
+		self.assertEqual(batch.call_count, 1, "one batch per page, however many rows")
+		self.assertEqual(single.call_count, 0, "the per-row question is the N+1 this removes")
+		asked = [doc.name for doc in batch.call_args.args[0]]
+		self.assertEqual(sorted(asked), [f"LA-{i}" for i in range(6)])
+
+	def test_other_request_types_do_not_ask_for_a_leave_reason(self):
+		batch = MagicMock(side_effect=lambda docs, user=None: [True] * len(list(docs)))
+		single = MagicMock(return_value=True)
+		rows = self._list(batch, single, types=("Leave Application", "OT Request"))
+		self.assertEqual(batch.call_count, 1, "only the leave list is asked")
+		self.assertEqual(single.call_count, 0)
+		self.assertEqual(rows["OT-1"]["reason"], "Stock count")  # the overtime reason is not gated
+
+	def test_each_row_keeps_or_blanks_its_reason_as_the_rule_says(self):
+		from hrms.api import approval
+
+		# the REAL rule, through its real seams; the per-row form must not be the one consulted
+		def refused(*a, **k):
+			raise AssertionError("the page asked the per-row form")
+
+		with (
+			patch("hrms.utils.identity.own_employees", return_value=[READER_EMPLOYEE]),
+			patch("hrms.hr.utils.sees_all_employee_data", return_value=False),
+			patch("hrms.overrides.company_scope.company_visible", return_value=False),
+			patch.object(
+				approval,
+				"_is_routed_approver",
+				side_effect=lambda doc, user=None, **k: doc.get("leave_approver") == user,
+			),
+			patch.object(approval.frappe, "session", frappe._dict(user=READER)),
+		):
+			rows = self._list(approval.may_read_leave_reasons, refused)
+			docs = [BATCH_LEAVE_DOCS[("Leave Application", f"LA-{i}")] for i in range(6)]
+			single_answers = [approval.may_read_leave_reason(doc, READER) for doc in docs]
+		self.assertEqual(single_answers, list(self.RULED))
+		kept = [rows[f"LA-{i}"]["reason"] for i in range(6)]
+		self.assertEqual(kept, [f"reason {i}" if ok else "" for i, ok in enumerate(self.RULED)])

@@ -25,6 +25,7 @@ from hrms.api.approval import (
 	_is_routed_approver,
 	_request_read_allowed,
 	may_read_leave_reason,
+	may_read_leave_reasons,
 )
 from hrms.utils.identity import normalize_login, own_employees
 
@@ -144,8 +145,13 @@ def _placement(doctype: str, doc, me: dict, cache: dict) -> dict:
 	}
 
 
-def _row(doc, me: dict | None = None, cache: dict | None = None) -> dict:
-	"""What an approver needs to decide, in plain words. No raw field names."""
+def _row(doc, me: dict | None = None, cache: dict | None = None, may_read_reason: bool | None = None) -> dict:
+	"""What an approver needs to decide, in plain words. No raw field names.
+
+	`may_read_reason` is a leave request's answer to "may the caller read the reason?" when the
+	caller already asked for the whole list at once (`get_waiting_for_me`). None asks here, for
+	this one request.
+	"""
 	kind = KIND.get(doc.doctype, doc.doctype)
 	when, detail, reason = "", "", ""
 	if doc.doctype == "Leave Application":
@@ -158,7 +164,9 @@ def _row(doc, me: dict | None = None, cache: dict | None = None) -> dict:
 		)
 		# the approver sees it (they cannot decide without knowing why); the helper is the one
 		# place that says who else may (owner ruling, 5 Oct 2026)
-		reason = (doc.get("description") or "") if may_read_leave_reason(doc) else ""
+		if may_read_reason is None:
+			may_read_reason = may_read_leave_reason(doc)
+		reason = (doc.get("description") or "") if may_read_reason else ""
 	elif doc.doctype == "OT Request":
 		when = _day(doc.get("ot_date"))
 		detail = _hours(doc.get("claimed_hours"))
@@ -333,7 +341,14 @@ def get_waiting_for_me() -> dict:
 			logger.exception("[approvals_list] %s failed; skipped", doctype)
 			continue
 		capped = capped or hit_cap
-		rows.extend(_row(doc, me, cache) for doc in mine)
+		if doctype == "Leave Application":
+			# the reason rule is asked once for the page's leave list, not once per row (6 Oct 2026)
+			readable = may_read_leave_reasons(mine)
+			rows.extend(
+				_row(doc, me, cache, may_read_reason=ok) for doc, ok in zip(mine, readable, strict=True)
+			)
+		else:
+			rows.extend(_row(doc, me, cache) for doc in mine)
 	try:
 		rows.extend(_remote_row(req, me, cache) for req in _remote_checkins())
 	except Exception:
