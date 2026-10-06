@@ -256,11 +256,12 @@ const calendarEvents = computed(() => monthResource(firstOfMonth.value))
 // A processed day never reached a calendar that was already open: the hourly
 // job's Attendance appeared only after a full reload. Reload the month on
 // show whenever an Attendance row changes, and on demand (view re-entry, the
-// error banner's Try again).
+// error banner's Try again). Returns the reload so a caller (the Calendar's pull
+// down) can wait for the month; a failure is logged here and resolves.
 function refresh() {
 	const key = firstOfMonth.value.format("YYYY-MM")
 	console.info("[AttendanceCalendar] refreshing", key)
-	calendarEvents.value
+	return calendarEvents.value
 		.reload()
 		?.catch?.(() => console.warn("[AttendanceCalendar] refresh failed", key))
 }

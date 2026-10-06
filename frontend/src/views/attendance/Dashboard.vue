@@ -66,11 +66,10 @@ const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPull
 
 //: Pull to refresh reloads what the Calendar shows (6 Oct 2026: a pull did nothing here).
 //: The calendar owns the month's days and exposes refresh(); the dots (monthFlags)
-//: and the shifts banner are read here.
+//: and the shifts banner are read here. The pull stays open until the month has answered too.
 async function refresh(event) {
 	console.info("[AttendanceDashboard] pull-to-refresh")
-	calendar.value?.refresh?.()
-	await Promise.allSettled([monthFlags.reload(), shifts.reload()])
+	await Promise.allSettled([calendar.value?.refresh?.(), monthFlags.reload(), shifts.reload()])
 	event.target?.complete?.()
 }
 </script>
