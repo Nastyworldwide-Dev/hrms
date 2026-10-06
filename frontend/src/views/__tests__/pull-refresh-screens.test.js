@@ -34,6 +34,8 @@ const SCREENS = [
 		"[IssueList]",
 		["myIssues.reload()"],
 	],
+	// HR's board (IssuesTab shows it instead of IssueList for HR roles): its root div opens the content
+	["issues/HRIssueBoard.vue", "<div>", "[HRIssueBoard]", ["issues.reload()"]],
 	["helpdesk/HelpdeskHub.vue", BODY, "[HelpdeskHub]", ["myTickets.reload()", "helpdeskAvailable.reload()"]],
 ]
 
@@ -76,4 +78,8 @@ test("the HR and IT pills never draw two refreshers on one page", () => {
 	const hub = read("helpdesk/HelpdeskHub.vue")
 	assert.match(hub, /<GPullRefresh v-if="tab === IT_TAB" @refresh="refresh" \/>/)
 	assert.match(read("issues/IssueList.vue"), /<GPullRefresh @refresh="refresh" \/>/)
+	// HR's board replaces IssueList (v-if / v-else in IssuesTab), so the HR pill still draws one
+	assert.match(read("issues/HRIssueBoard.vue"), /<GPullRefresh @refresh="refresh" \/>/)
+	const tab = read("issues/IssuesTab.vue")
+	assert.match(tab, /<HRIssueBoard v-if="isHR" \/>\s*<IssueList v-else \/>/)
 })

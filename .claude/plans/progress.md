@@ -212,3 +212,4 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T03:32:41Z COMMIT: 3e6df44b1 fix(pwa): pulling down did nothing on seven screens → review+design dispatched
 - 2026-10-06T03:40:02Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
 - 2026-10-06T03:40:09Z COMMIT: 873ceee08 test(helpdesk): the hub test could not build the page after pull-down landed → review+design dispatched
+- 2026-10-06T04:24:59Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1

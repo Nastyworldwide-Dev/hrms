@@ -4,6 +4,7 @@
 	     2026. Who sees this board is unchanged: IssuesTab.vue picks it by role,
 	     and server row scope is the real fence. -->
 	<div>
+		<GPullRefresh @refresh="refresh" />
 		<div class="flex flex-col w-full pt-2 pb-8">
 			<!-- same column as the pill row above it (centred, = px-4 + lg:px-3) -->
 			<div class="w-full max-w-content-column-lg mx-auto lg:px-3">
@@ -158,7 +159,7 @@ import GSelect from "@/components/glass/GSelect.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"
 import { createListResource, createResource } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
-import { computed, inject, ref } from "vue"
+import { computed, defineAsyncComponent, inject, ref } from "vue"
 
 import { ISSUE_STATUSES, countByStatus, filterIssues } from "@/utils/issueBoard"
 import { firstMessage } from "@/utils/loudRequest"
@@ -212,6 +213,19 @@ const statusButtons = computed(() =>
 		label: `${__(status)} (${counts.value?.[status] ?? 0})`,
 	}))
 )
+
+//: Loaded on first use, not in the first download (alpha.13: Ionic's
+//: refresher is 41 KB, and nobody pulls before the page has drawn).
+const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
+
+//: Pull to refresh reloads the board (6 Oct 2026: a pull did nothing here). Like IssueList,
+//: this board has no ion-content of its own: it sits in the help page's, whose own pull
+//: (HelpdeskHub) is drawn only for the IT pill, so a pull is never answered twice.
+async function refresh(event) {
+	console.info("[HRIssueBoard] pull-to-refresh")
+	await Promise.allSettled([issues.reload()])
+	event.target?.complete?.()
+}
 
 const counts = computed(() => countByStatus(issues.data))
 const visibleIssues = computed(() =>
