@@ -10,6 +10,45 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.38] — Money and Waiting — 2026-10-06
+
+The same expense can't be paid twice, nothing waits on someone who is away,
+and HR can write SOPs the way staff read them.
+
+### Added
+- **The same expense can't be claimed twice.** A claim with the same type,
+  date and amount as one you already filed is refused, and says which claim it
+  is. The same type and day with another amount saves, with a warning ("You
+  already claimed a Taxi on 3 Oct in ..."), on Desk and in Nadi.
+- **A request does not wait on someone who is away.** If the first approver is
+  on approved leave, the next approver on the line is asked after 2 working
+  days, and both are told. A half day off does not count as away.
+- **Cancelling an approved request tells its approvers and HR**, with the
+  request's own dates. Balances and attendance go back as before.
+- **SOPs: HR writes them the way staff read them.** A proper editor (headings,
+  bold, lists, links, quotes), a line saying who will see it ("Everyone",
+  "Only Production"), and an "As staff see it" preview. Pictures go through
+  "Add a file".
+
+### Fixed
+- **Offline, a form says so plainly:** "You are offline, so it may not have
+  been sent. What you typed is still here." A server that can't be reached
+  says that instead.
+- **A record you may not open says "You can't open this."** with Back, not
+  "check your connection and try again".
+- **Four parts no longer go blank when they fail to load:** a request's
+  history, expense lines, expense taxes and a must-read notice. A must-read
+  whose text did not load can't be confirmed unseen.
+- **Another person signing in on the same phone** reloads the old page at once
+  again (alpha.37 had made it wait a moment).
+- **Each person gets one reminder a morning**, even when they are both an
+  approver and a backup.
+
+### Checked, nothing to change
+- What a Shift Supervisor can do on Desk, and remote check-ins (decided in
+  Nadi, own team only).
+- Approver roles see no report rows outside their scope.
+
 ## [2.0.0-alpha.37] — Clear Screens — 2026-10-06
 
 Every screen says something plain, even when it cannot open.
