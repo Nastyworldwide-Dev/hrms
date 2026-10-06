@@ -9,7 +9,7 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.model.workflow import get_workflow_name
 from frappe.query_builder.functions import Sum
-from frappe.utils import cstr, flt, get_link_to_form, today
+from frappe.utils import cstr, flt, fmt_money, formatdate, get_link_to_form, getdate, today
 
 import erpnext
 from erpnext.accounts.doctype.repost_accounting_ledger.repost_accounting_ledger import (
@@ -66,6 +66,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self.set_sanctioned_amount_default()
 		self.validate_sanctioned_amount()
 		self.calculate_total_amount()
+		self.validate_no_duplicate_expenses()
 		self.validate_advances()
 		self.set_expense_account(validate=True)
 		self.set_default_accounting_dimension()
@@ -203,6 +204,108 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 					"[expense_claim] %s: sanctioned_amount defaulted to amount %s", self.name, row.amount
 				)
 				row.sanctioned_amount = row.amount
+
+	def validate_no_duplicate_expenses(self):
+		"""Refuse an expense that is already claimed; warn about one that looks like it.
+
+		Owner ruling R1 (6 Oct 2026): block exact duplicates, warn on near ones.
+		Exact = same expense type, date and amount as a line of this claim or of
+		another LIVE claim of the same employee (not cancelled, not Rejected).
+		Near = same type and date, different amount: saved, with a warning. The
+		claim this one amends is not a duplicate of it. One query covers every
+		line, whatever the number of lines.
+
+		A claim that is itself Rejected or cancelled is not checked, so an
+		approver can always reject a duplicate that was filed before this rule.
+		"""
+		if self.docstatus == 2 or self.approval_status in ("Rejected", "Cancelled"):
+			return
+
+		precision = self.precision("amount", "expenses")
+		lines = [
+			(row.idx, row.expense_type, getdate(row.expense_date), flt(row.amount, precision))
+			for row in self.get("expenses")
+			if row.expense_type and row.expense_date
+		]
+		# an unreadable date is Frappe's own error to raise; it is not a duplicate
+		lines = [line for line in lines if line[2]]
+		if not lines:
+			return
+
+		claimed = {}
+		for idx, expense_type, date, amount in lines:
+			if (expense_type, date, amount) in claimed:
+				logger.info(
+					"[expense_claim] %s: refused, row %s repeats row %s",
+					self.name,
+					idx,
+					claimed[(expense_type, date, amount)],
+				)
+				frappe.throw(
+					_(
+						"Rows {0} and {1} are the same expense ({2}, {3}, {4}). Remove one, or change the description and amount."
+					).format(
+						claimed[(expense_type, date, amount)],
+						idx,
+						expense_type,
+						formatdate(date),
+						fmt_money(amount, precision),
+					)
+				)
+			claimed[(expense_type, date, amount)] = idx
+
+		others = frappe.db.sql(
+			"""
+			select ec.name, ecd.expense_type, ecd.expense_date, ecd.amount
+			from `tabExpense Claim` ec
+			join `tabExpense Claim Detail` ecd
+				on ecd.parent = ec.name and ecd.parenttype = 'Expense Claim' and ecd.parentfield = 'expenses'
+			where ec.employee = %(employee)s
+				and ec.docstatus != 2
+				and ifnull(ec.approval_status, '') != 'Rejected'
+				and ec.name not in (%(this)s, %(amended)s)
+				and ecd.expense_date in %(dates)s
+			order by ec.creation, ec.name, ecd.idx
+			""",
+			{
+				"employee": self.employee,
+				"this": self.name or "",
+				"amended": self.amended_from or "",
+				"dates": tuple(sorted({date.isoformat() for _idx, _type, date, _amount in lines})),
+			},
+			as_dict=True,
+		)
+
+		near = {}
+		for other in others:
+			date = getdate(other.expense_date)
+			amount = flt(other.amount, precision)
+			if (other.expense_type, date, amount) in claimed:
+				logger.info("[expense_claim] %s: refused, same expense as %s", self.name, other.name)
+				frappe.throw(
+					_(
+						"This expense is already claimed on {0} ({1}, {2}, {3}). If it is a different expense, change the description and amount, or ask HR."
+					).format(
+						get_link_to_form("Expense Claim", other.name),
+						other.expense_type,
+						formatdate(date),
+						fmt_money(amount, precision),
+					)
+				)
+			if any(t == other.expense_type and d == date for _idx, t, d, _amount in lines):
+				near.setdefault((other.expense_type, date, other.name), None)
+
+		if near:
+			logger.info("[expense_claim] %s: warned of %s near duplicate(s)", self.name, len(near))
+			frappe.msgprint(
+				"<br>".join(
+					_("You already claimed a {0} on {1} in {2}. Check it is not the same expense.").format(
+						expense_type, formatdate(date), get_link_to_form("Expense Claim", name)
+					)
+					for expense_type, date, name in near
+				),
+				indicator="orange",
+			)
 
 	def validate_for_self_approval(self):
 		"""The Desk twin of `hrms.api.approval._decision_access` — see the
