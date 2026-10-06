@@ -50,6 +50,7 @@
 		:handle="false"
 		:is-open="isOpen"
 		:can-dismiss="dismissible"
+		:aria-label="title || undefined"
 		@willPresent="onWillPresent"
 		@willDismiss="onWillDismiss"
 		@didPresent="onDidPresent"

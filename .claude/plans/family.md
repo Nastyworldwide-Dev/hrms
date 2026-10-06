@@ -1,7 +1,4 @@
-CLASS: a list row whose name or reason wraps onto several lines on a small phone, pushing the row tall and breaking the list's rhythm (long Malaysian names, long reasons at 360 px).
-frontend/src/components/glass/GListRow.vue same-root (label truncates with min-w-0, full text in title; `wrap` prop for sentence rows)
-frontend/src/components/ListItem.vue same-root
-frontend/src/components/{AttendanceRequest,ExpenseClaim,LeaveRequest,OTRequest,ReplacementLeaveClaim,ShiftAssignment,ShiftRequest}Item.vue same-root (the 7 request rows)
-frontend/src/views/team/TeamDashboard.vue same-root (name carries title=)
-frontend/src/views/Approvals.vue, components/DaySheet.vue, HolidayList.vue, WhoToAsk.vue same-root (`wrap` on rows that are sentences, not names)
-frontend/src/views/Notifications.vue, More.vue, Profile.vue not-affected — use GListRow; truncate by default now, checked by eye before release
+CLASS: an Ionic overlay whose own role=dialog wrapper has no name (axe aria-dialog-name, serious): Ionic names it only from the ion-modal host's aria-label.
+frontend/src/components/glass/GModal.vue same-root (host gets :aria-label="title"; every GModal sheet in the app)
+frontend/src/components/glass/GActionSheet.vue not-affected — ion-action-sheet names itself from its header
+frontend/src/views/*: raw <ion-modal> not-affected — grep finds none outside GModal (callers were moved onto it)
