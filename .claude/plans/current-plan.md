@@ -1,55 +1,54 @@
-# Release 2.0.0-alpha.36 "Loose Ends" (planned 6 Oct 2026)
+# Release 2.0.0-alpha.37 "Clear Screens" (planned and approved 6 Oct 2026)
 
-Owner, 6 Oct: "plan alpha.36 with the small leftovers and any part can be inside it."
-Scope: the alpha.35 leftovers plus small, safe parts of the stabilise plan
-(docs/glass/plan/2026-10-05-stabilise-nadi-plan.md). Nothing that needs a ruling.
+Owner, 6 Oct: "plan for next release". Scope: Stage 4 of docs/glass/plan/2026-10-05-stabilise-nadi-plan.md
+(the screens' own standard), the hotspot ticket that is small enough to do safely, and the one gate
+problem that keeps costing time. Nothing that needs a ruling.
 
 ## FLOW
-Orchestrator (Opus) writes each slice brief -> implementer (Sonnet, xhigh) builds it test-first, commits
-nothing -> orchestrator reviews, runs gates, proves red/green (live browser for UI), commits one cause per
-commit -> reviewer -> next slice. Max 3 agents. Then bump + changelog, full suites, push branch,
-scripts/release.sh. Owner deploys.
+Same as alpha.35/36: Opus orchestrator briefs -> Sonnet implementer (xhigh) builds test-first, commits
+nothing -> orchestrator reviews, proves red/green (live browser for UI), commits one cause per commit ->
+reviewer -> next. Max 3 agents. Then bump + changelog, full suites, push branch, scripts/release.sh.
 
 ## SLICES
-A1  **HR's issue board gets pull-down.** HRIssueBoard.vue (HR users on Help -> HR pill) reloads `issues`
-    (+ `detail` if open). Same lazy GPullRefresh. DONE WHEN: unit test pins the wiring; live pull as an HR
-    user reloads the board list (Playwright, real request named).
-A2  **Attendance pull waits for the month.** AttendanceCalendar.refresh() returns its reload promise;
-    attendance/Dashboard awaits it, so "Refreshing..." closes after the days load. DONE WHEN: unit test:
-    complete() is called only after the calendar reload resolves.
-A3  **A failed Log out cannot hide a later "signed out" banner.** session.logout resets the logging-out mark
-    on error. DONE WHEN: test: logout fails -> session ends on its own -> mark is set.
-A4  **Saved pages cleared when a session ends on its own (AU-5).** Login clears the offline page copy when
-    it shows the "signed out" banner (it is already cleared on login/logout). DONE WHEN: test: banner shown
-    -> clearCachedPages called once; plain visit -> not called.
-O1  **Approvals list reads leave reasons in one batch.** approvals_list uses may_read_leave_reasons (built
-    in alpha.35) instead of one check per row. DONE WHEN: same answers for owner/HR/approver/stranger; read
-    count no longer grows per row (test counts calls).
-D1  **Shortcut notes name their trigger.** 22 `ceiling:` notes with no `upgrade:` get one, or the note is
-    removed if the shortcut is gone. Comments only. DONE WHEN: grep finds none without `upgrade:`.
-D2  **Hotspot tickets filed:** session.js + personalCache.js (5 and 3 fixes in 90 days) and
-    hrms/api/__init__.py. Tickets only, no refactor. DONE WHEN: two ticket files under docs/glass/tickets.
-V1  **Shift Supervisor Desk check (report only).** Probe as a real Supervisor on fresh.local: Employee
-    Checkin, Attendance, Fix Day, Roster, each request list: open / create / edit / delete. Output a table in
-    docs/glass/audit/. Fixes go to alpha.37. DONE WHEN: table with every cell filled, each from a real request.
+B1  **Screen readers: the 16 serious findings on 9 screens** (design/a11y-baseline.json, counted once, not
+    light+dark): 8 form fields with no label, 5 wrong ARIA attributes, 1 unnamed button, 1 dialog with no
+    name, 1 tap target under 24 px. Screens: attendance-requests, expense-claims, leave-applications,
+    shift-assignments and issues detail; expense-claims, OT and replacement-leave new; invalid-employee.
+    Fix in the shared component where the finding comes from (one fix, many screens), not per screen.
+    DONE WHEN: design/gates/a11y.mjs on fresh.local reports 0 serious/critical on those screens and the
+    baseline file shrinks to empty for them; no visual change (screenshot diff on the 9 screens).
+B2  **"You can't open this" instead of a blank screen.** A detail page the person may not open (KPI detail
+    today renders nothing on a 403) says so in plain words with a way back. ResourceError learns the
+    no-access case once; every detail view already using it gets it free; KpiDetail starts using it.
+    DONE WHEN: unit test: a 403 resource -> "You can't open this." + Back; live: a staff user opening
+    another person's KPI sees the sentence (Playwright).
+B3  **Long names and reasons don't break rows at 360 px.** List item components truncate with an ellipsis
+    and keep the full text for screen readers. DONE WHEN: a 60-character Malaysian name renders on one line
+    in the request, approval and team rows at 360 px (Playwright screenshot), full text in aria-label.
+R1  **One owner for "the session ended"** (ticket docs/glass/tickets/2026-10-06-session-identity-hotspot.md):
+    five places decide it today. One function marks, clears the offline page and reloads; user.js,
+    employees.js, navigationGate.js and logout call it. DONE WHEN: grep finds `name: "Login"` only in the
+    router and that function; a test per caller; the alpha.35 live probe (session killed, tap) still shows
+    the banner.
 
-## NEEDS OWNER YES (pipeline, not app code)
-G1  The commit gate runs Playwright e2e specs with bun, so they always fail. Change: skip frontend/e2e/*.spec.js
-    in the bun runner (Playwright runs them on the test site instead). Then land the 7-screen pull-refresh spec
-    (copy at /tmp/wip_s2spec/). Harness change -> measured with evals/ab.sh per CLAUDE.md.
-G2  Add .claude/.no-release-gate in this repo so the release check stops asking to push the local safety tag.
+## NEEDS OWNER YES
+P1  **The commit hook keeps sweeping other files into a commit** (3 times this week, each undone by hand,
+    nothing lost). Find where (pre-commit-lint stages `git add -u` on the commit's files; something else
+    adds the rest) and make a commit hold only the files it names. Pipeline repo change, test-first, like G1.
+T1  **Test-site accounts** on fresh.local only (never the live site): (a) set a password on the existing
+    test HR persona to check HR screens live; (b) make one test employee a Shift Supervisor with 2 reports,
+    so the Desk supervisor check (V1 from alpha.36) can finally run. Both were refused without your word.
 
 ## NOT IN THIS RELEASE
-Rulings 1-5 (duplicate expense, approver on leave, cancel notices, offline queue, reports). Screen-reader
-fixes (32), token debt (234), hand-made controls (25), "no access" screens, Android gate, amend-after-approval
-trace. Remote check-in list: checked 6 Oct, one indicator rule only, nothing to merge.
+Rulings 1-5 (duplicate expense, approver on leave, cancel notices, offline queue, reports). Token debt
+(234) and hand-made controls (25): big, low harm, next. Android gate. hrms/api/__init__.py split (ticket).
 
-## MOCKUP: NOT NEEDED (no new screen: one existing pull indicator on one more screen)
+## MOCKUP: NOT NEEDED (no new screen; B2 is one sentence in the existing error block, B3 is an ellipsis)
 
 ## EXPECTED OUTPUT
-8 commits (A1-A4, O1, D1, D2, V1 report), each reviewed; then chore(release): 2.0.0-alpha.36 with a plain
-changelog. Frontend + Python stub suites green, build OK, pull-refresh live on the HR board.
+4 app commits (B1 may be 2-3: one per shared component), P1 in the pipeline repo, V1 report if T1 is yes;
+chore(release): 2.0.0-alpha.37. Suites green, a11y gate 0 serious on the 9 screens.
 
 ## RISKS
-- A4 touches the login path: clear runs only when the banner shows; a failed clear never blocks sign-in.
-- O1 changes who reads leave reasons in the approvals list: the test compares old vs new answers.
+- B1 touches shared form components: the visual gate must show no change.
+- R1 touches the session path (hotspot): behaviour must stay exactly as alpha.36; the live probe is the proof.
