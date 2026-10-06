@@ -14,13 +14,17 @@ const SCREENS = [
 	{ path: "/announcements", expect: /announcements/ },
 ]
 
+// A person pulls about 100 px and lets go. (The first draft of this gate dragged 360 px: Ionic starts
+// refreshing once the pull passes pullMax, 120 px, while the finger is still moving; the reload ends quickly
+// and the rest of the long drag began a SECOND pull. That is the test's gesture, not the app.)
 async function pullDown(page, ctx) {
 	const cdp = await ctx.newCDPSession(page)
 	await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 195, y: 200, id: 1 }] })
-	for (let i = 1; i <= 24; i++) {
-		await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 195, y: 200 + i * 15, id: 1 }] })
+	for (let i = 1; i <= 10; i++) {
+		await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 195, y: 200 + i * 10, id: 1 }] })
 		await page.waitForTimeout(30)
 	}
+	await page.waitForTimeout(150)
 	await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })
 }
 
