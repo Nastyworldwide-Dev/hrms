@@ -9,3 +9,5 @@ e2e/test-results/
 e2e/playwright-report/
 test-results/
 playwright-report/
+# The audit crawl's raw log (CRAWL_OUT default, e2e/audit-crawl.spec.js): a run artifact, never source
+e2e/.audit-crawl.json

@@ -22,7 +22,10 @@ test("an empty queue is the same row as its skeleton, not a loose line", () => {
 	// the block); the Approvals page still says so, as one row.
 	for (const [file, words] of [["../../views/Approvals.vue", "Nothing is waiting on you."]]) {
 		const src = read(file)
-		assert.match(src, new RegExp(`<GListRow :label='__\\("${words.replace(".", "\\.")}"\\)'`), file)
+		// the words on ONE row, whatever quote style the template uses (it changed, and this test went red
+		// for a quote, not for a loose line, 6 Oct 2026)
+		const escaped = words.replace(".", "\\.")
+		assert.match(src, new RegExp(`<GListRow[^>]*:label=["']__\\(["']${escaped}["']\\)["']`), file)
 		assert.doesNotMatch(src, /class="g-empty-line/, `${file}: no loose empty line`)
 	}
 	// a summary line and two rows: the size of a one-request queue, 29 Sep 2026
