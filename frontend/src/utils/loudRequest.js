@@ -85,7 +85,7 @@ const SILENT_ENDPOINTS = new Set([
 // after the request settles, so the check waits one frame before deciding.
 function noAccessDrawn(options) {
 	if (options?.noAccessShown) return true
-	return typeof document !== "undefined" && Boolean(document.querySelector?.("[data-no-access]"))
+	return typeof document !== "undefined" && Boolean(document.querySelector?.(":not(.ion-page-hidden) [data-no-access]"))
 }
 
 function endpointOf(options) {

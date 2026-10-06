@@ -368,12 +368,27 @@ test("a suppressed refusal does not use up the repeat window of the endpoint", a
 })
 
 test("a screen that has drawn 'You can't open this.' (data-no-access) is not toasted over", async () => {
-	globalThis.document = { querySelector: (sel) => (sel === "[data-no-access]" ? {} : null) }
+	globalThis.document = { querySelector: (sel) => (sel.endsWith("[data-no-access]") ? {} : null) }
 	try {
 		const { loud, toasts } = harness(forbidden())
 		await assert.rejects(() => loud({ url: read() }))
 		await new Promise((r) => setTimeout(r, 5))
 		assert.deepEqual(toasts, [])
+	} finally {
+		delete globalThis.document
+	}
+})
+
+test("a 'You can't open this.' left on a hidden page does not silence the current one", async () => {
+	// Ionic keeps earlier pages mounted (class ion-page-hidden); only the visible page counts
+	let asked = ""
+	globalThis.document = { querySelector: (sel) => ((asked = sel), null) }
+	try {
+		const { loud, toasts } = harness(forbidden())
+		await assert.rejects(() => loud({ url: read() }))
+		await new Promise((r) => setTimeout(r, 5))
+		assert.match(asked, /:not\(\.ion-page-hidden\)/, "the check skips hidden pages")
+		assert.equal(toasts.length, 1)
 	} finally {
 		delete globalThis.document
 	}
