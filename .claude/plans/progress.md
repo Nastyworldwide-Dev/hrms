@@ -221,3 +221,5 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T04:25:38Z COMMIT: 666d6007b fix(session): a failed Log out could hide a later "you were signed out" → review+security+design dispatched
 - 2026-10-06T04:25:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-10-06T04:25:52Z COMMIT: c6d8abb4d fix(login): an expired session left the last page copy on the phone → review+security+design dispatched
+- 2026-10-06T04:26:17Z COMMIT: ee75de979 test(e2e): the pull-refresh gate covers the seven screens that lacked it → review+design dispatched
+- 2026-10-06T04:27:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd

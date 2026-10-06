@@ -73,7 +73,9 @@ class ItHangsOnThePunchCase(unittest.TestCase):
 		self.assertIn("'attached_to_name': punch", attach)
 
 	def test_a_punch_with_no_selfie_attaches_nothing(self):
-		self.assertIn("if selfie_image:\n        _attach_selfie_to_punch", body("punch"))
+		# the attach sits directly under an `if selfie_image:` (at whatever depth the
+		# punch's branches put it: the duplicate-tap path of 21 Sep moved it one level in)
+		self.assertRegex(body("punch"), r"if selfie_image:\n\s+_attach_selfie_to_punch")
 
 	def test_a_url_with_no_file_behind_it_is_logged_not_raised(self):
 		attach = body("_attach_selfie_to_punch")
