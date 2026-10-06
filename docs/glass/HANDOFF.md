@@ -1,15 +1,15 @@
 # HANDOFF
-prompt:   alpha.35 release (optimisation, tech debt, bug fixes)
+prompt:   alpha.36 "Loose Ends" (alpha.35 leftovers + small fixes)
 status:   done
-commit:   aed2062eb on nz-glass (tag v2.0.0-alpha.35, GitHub Release created)
-files:    frontend/src/utils/personalCache.js
+commit:   5e0c6fdd0 on nz-glass (tag v2.0.0-alpha.36, GitHub Release created)
+files:    frontend/src/views/issues/HRIssueBoard.vue
+          frontend/src/components/AttendanceCalendar.vue
+          frontend/src/utils/personalCache.js
+          frontend/src/data/session.js
           frontend/src/views/Login.vue
-          frontend/src/views/{Notifications,team/*,attendance/Dashboard,leave/Dashboard,issues/IssueList,helpdesk/HelpdeskHub}.vue
-          frontend/src/data/swRegistration.js
-          hrms/api/approval.py
-          hrms/api/request_counts.py
+          hrms/api/approvals_list.py
+          docs/glass/tickets/ (2 refactor tickets)
           docs/glass/CHANGELOG.md
-          frontend/package.json
-verify:   after deploy: You -> About shows 2.0.0-alpha.35; pull down on Notifications reloads
-flags:    pull-refresh.spec.js for the 7 screens left out (owner ruling); HR issue board has no pull yet
-next:     owner deploys on Frappe Cloud, then runs the phone checklist
+verify:   after deploy: You -> About shows 2.0.0-alpha.36; as HR, pull down on Help -> HR issue board reloads
+flags:    V1 supervisor Desk probe blocked (no supervisor with a team on fresh.local); HR pull not checked live
+next:     owner deploys alpha.35 + alpha.36 together on Frappe Cloud

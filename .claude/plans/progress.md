@@ -228,3 +228,8 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T04:32:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-10-06T04:32:42Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
 - 2026-10-06T04:32:50Z COMMIT: d21f3dad9 perf(approvals): the approvals list asked the leave-reason rule once per row → review dispatched
+- 2026-10-06T04:34:26Z COMMIT: 5e0c6fdd0 chore(release): 2.0.0-alpha.36 Loose Ends → review+deps dispatched
+
+- 2026-10-06 alpha.36 "Loose Ends" released: tag v2.0.0-alpha.36. A1-A4, O1, D1 (pipeline-health reads wrapped upgrade:), D2 tickets, G1 (pre-commit-test leaves e2e specs to Playwright; humanless-pipeline 6777dcb, local), G2 (.no-release-gate).
+DEAD END: V1 supervisor probe: fresh.local has no Shift Supervisor with reports; setting a test password was refused.
+NEXT: owner deploys; seed a supervisor on fresh.local (owner call) then run /tmp/slices/alpha36-V1.md; humanless-pipeline commits 6777dcb + 0639d1a are local, push on owner word; bench (evals/ab.sh) not run.
