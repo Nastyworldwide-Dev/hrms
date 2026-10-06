@@ -243,6 +243,27 @@ class TestDuplicateExpenseClaims(unittest.TestCase):
 		self.run_check(self.site.claim([("Meals", "2026-10-01", 50.0), ("Travel", "2026-10-02", 50.0)]))
 		self.assertEqual(self.site.messages, [])
 
+	def test_the_first_claim_can_still_be_approved_when_a_later_copy_exists(self):
+		# found live on fresh.local, 6 Oct: a copy filed before this rule (or by
+		# Desk) made the ORIGINAL unapprovable. The later one is the duplicate.
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)], docstatus=0)  # the original, first
+		self.site.file("HR-EXP-0002", [("Travel", "2026-10-01", 50.0)], docstatus=0)  # the copy, later
+		doc = self.site.claim(
+			[("Travel", "2026-10-01", 50.0)],
+			name="HR-EXP-0001",
+			approval_status="Approved",
+			creation="2026-10-01 09:00:00",
+		)
+		self.run_check(doc)  # no refusal
+
+	def test_the_later_copy_is_still_refused(self):
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
+		doc = self.site.claim(
+			[("Travel", "2026-10-01", 50.0)], name="HR-EXP-0002", creation="2026-10-09 09:00:00"
+		)
+		with self.assertRaises(ValidationError):
+			self.run_check(doc)
+
 	def test_rejecting_a_duplicate_is_never_blocked_by_the_rule(self):
 		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
 		doc = self.site.claim([("Travel", "2026-10-01", 50.0)], approval_status="Rejected")

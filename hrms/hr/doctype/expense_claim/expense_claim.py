@@ -264,6 +264,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				and ec.docstatus != 2
 				and ifnull(ec.approval_status, '') != 'Rejected'
 				and ec.name not in (%(this)s, %(amended)s)
+				and (%(created)s = '' or ec.creation < %(created)s)
 				and ecd.expense_date in %(dates)s
 			order by ec.creation, ec.name, ecd.idx
 			""",
@@ -271,6 +272,9 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				"employee": self.employee,
 				"this": self.name or "",
 				"amended": self.amended_from or "",
+				# only an EARLIER claim is the original: when two match, the later one is the duplicate,
+				# so the first can still be approved (a new claim has no creation yet: every claim is earlier)
+				"created": str(self.creation or "") if not self.is_new() else "",
 				"dates": tuple(sorted({date.isoformat() for _idx, _type, date, _amount in lines})),
 			},
 			as_dict=True,
