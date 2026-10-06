@@ -506,7 +506,7 @@ const props = defineProps({
 		default: false,
 	},
 })
-const emit = defineEmits(["validateForm", "update:modelValue", "formReloaded"])
+const emit = defineEmits(["validateForm", "update:modelValue", "formReloaded", "created"])
 const router = useRouter()
 const { downloadPDF } = useDownloadPDF()
 
@@ -730,6 +730,9 @@ const docList = createListResource({
 				text: __("Your {0} was created.", [__(props.noun)]),
 				variant: "success",
 			})
+			// The form that owns this doctype may have more to say about the new
+			// document (a near-duplicate expense warning); it is not waited for.
+			emit("created", data)
 			await uploadAllAttachments(data.doctype, data.name, fileAttachments.value)
 
 			router.replace({

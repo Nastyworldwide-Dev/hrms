@@ -236,17 +236,11 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		A claim that is itself Rejected or cancelled is not checked, so an
 		approver can always reject a duplicate that was filed before this rule.
 		"""
-		if self.docstatus == 2 or self.approval_status in ("Rejected", "Cancelled"):
+		if not self._checks_for_duplicates():
 			return
 
 		precision = self.precision("amount", "expenses")
-		lines = [
-			(row.idx, row.expense_type, getdate(row.expense_date), flt(row.amount, precision))
-			for row in self.get("expenses")
-			if row.expense_type and row.expense_date
-		]
-		# an unreadable date is Frappe's own error to raise; it is not a duplicate
-		lines = [line for line in lines if line[2]]
+		lines = self._dated_expense_lines(precision)
 		if not lines:
 			return
 
@@ -272,7 +266,77 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				)
 			claimed[(expense_type, date, amount)] = idx
 
-		others = frappe.db.sql(
+		others = self._other_claim_lines(lines)
+
+		# Which claim is the original? An unchanged line of this claim only clashes with an EARLIER
+		# claim (same second: the lower name), so the first claim can still be approved when a later
+		# copy exists. A new or edited line clashes with every claim.
+		fresh = self._new_expense_lines(precision)
+		mine_created = str(self.creation or "")
+
+		def earlier(other):
+			theirs = str(other.creation or "")
+			return theirs < mine_created or (theirs == mine_created and other.name < (self.name or ""))
+
+		for other in others:
+			date = getdate(other.expense_date)
+			amount = flt(other.amount, precision)
+			key = (other.expense_type, date, amount)
+			if key in claimed and (key in fresh or earlier(other)):
+				logger.info("[expense_claim] %s: refused, same expense as %s", self.name, other.name)
+				frappe.throw(
+					_(
+						"This expense is already claimed on {0} ({1}, {2}, {3}). If it is a different expense, change the description and amount, or ask HR."
+					).format(
+						get_link_to_form("Expense Claim", other.name),
+						other.expense_type,
+						formatdate(date),
+						fmt_money(amount, precision),
+					)
+				)
+
+		near = near_duplicate_claims(others, lines)
+		if near:
+			logger.info("[expense_claim] %s: warned of %s near duplicate(s)", self.name, len(near))
+			frappe.msgprint(
+				"<br>".join(
+					near_duplicate_sentences(near, lambda name: get_link_to_form("Expense Claim", name))
+				),
+				indicator="orange",
+			)
+
+	def near_duplicate_notes(self) -> list[str]:
+		"""The warning `validate_no_duplicate_expenses` shows, for a claim already saved.
+
+		Nadi never shows a msgprint (frappe-ui drops `_server_messages` on a
+		successful request), so `hrms.api.near_duplicate_expenses` asks for the
+		same sentences here, by the same rule and in plain text (the claim is
+		named, not linked to a Desk page an employee cannot open).
+		"""
+		if not self._checks_for_duplicates():
+			return []
+		lines = self._dated_expense_lines(self.precision("amount", "expenses"))
+		if not lines:
+			return []
+		return near_duplicate_sentences(near_duplicate_claims(self._other_claim_lines(lines), lines))
+
+	def _checks_for_duplicates(self) -> bool:
+		"""A claim that is itself Rejected or cancelled is not checked (see validate_no_duplicate_expenses)."""
+		return not (self.docstatus == 2 or self.approval_status in ("Rejected", "Cancelled"))
+
+	def _dated_expense_lines(self, precision) -> list[tuple]:
+		"""(idx, type, date, amount) of each line that has a type and a readable date."""
+		lines = [
+			(row.idx, row.expense_type, getdate(row.expense_date), flt(row.amount, precision))
+			for row in self.get("expenses")
+			if row.expense_type and row.expense_date
+		]
+		# an unreadable date is Frappe's own error to raise; it is not a duplicate
+		return [line for line in lines if line[2]]
+
+	def _other_claim_lines(self, lines) -> list:
+		"""Every expense line of this employee's other live claims on the dates of `lines`: ONE query."""
+		return frappe.db.sql(
 			"""
 			select ec.name, ec.creation, ecd.expense_type, ecd.expense_date, ecd.amount
 			from `tabExpense Claim` ec
@@ -293,48 +357,6 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			},
 			as_dict=True,
 		)
-
-		# Which claim is the original? An unchanged line of this claim only clashes with an EARLIER
-		# claim (same second: the lower name), so the first claim can still be approved when a later
-		# copy exists. A new or edited line clashes with every claim.
-		fresh = self._new_expense_lines(precision)
-		mine_created = str(self.creation or "")
-
-		def earlier(other):
-			theirs = str(other.creation or "")
-			return theirs < mine_created or (theirs == mine_created and other.name < (self.name or ""))
-
-		near = {}
-		for other in others:
-			date = getdate(other.expense_date)
-			amount = flt(other.amount, precision)
-			key = (other.expense_type, date, amount)
-			if key in claimed and (key in fresh or earlier(other)):
-				logger.info("[expense_claim] %s: refused, same expense as %s", self.name, other.name)
-				frappe.throw(
-					_(
-						"This expense is already claimed on {0} ({1}, {2}, {3}). If it is a different expense, change the description and amount, or ask HR."
-					).format(
-						get_link_to_form("Expense Claim", other.name),
-						other.expense_type,
-						formatdate(date),
-						fmt_money(amount, precision),
-					)
-				)
-			if any(t == other.expense_type and d == date for _idx, t, d, _amount in lines):
-				near.setdefault((other.expense_type, date, other.name), None)
-
-		if near:
-			logger.info("[expense_claim] %s: warned of %s near duplicate(s)", self.name, len(near))
-			frappe.msgprint(
-				"<br>".join(
-					_("You already claimed a {0} on {1} in {2}. Check it is not the same expense.").format(
-						expense_type, formatdate(date), get_link_to_form("Expense Claim", name)
-					)
-					for expense_type, date, name in near
-				),
-				indicator="orange",
-			)
 
 	def validate_for_self_approval(self):
 		"""The Desk twin of `hrms.api.approval._decision_access` — see the
@@ -772,6 +794,26 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 					"account"
 				]
 
+
+def near_duplicate_claims(others, lines) -> list[tuple]:
+	"""(expense type, date, claim name) of each claim in `others` that holds a line of the same
+	type and date as one of `lines`, whatever its amount; each once, in the order of `others`."""
+	wanted = {(expense_type, date) for _idx, expense_type, date, _amount in lines}
+	near = {}
+	for other in others:
+		date = getdate(other.expense_date)
+		if (other.expense_type, date) in wanted:
+			near.setdefault((other.expense_type, date, other.name), None)
+	return list(near)
+
+def near_duplicate_sentences(near, link=lambda name: name) -> list[str]:
+	"""One plain sentence per near duplicate; `link` turns a claim name into what is shown for it."""
+	return [
+		_("You already claimed a {0} on {1} in {2}. Check it is not the same expense.").format(
+			expense_type, formatdate(date), link(name)
+		)
+		for expense_type, date, name in near
+	]
 
 def update_reimbursed_amount(doc):
 	total_amount_reimbursed = get_total_reimbursed_amount(doc)

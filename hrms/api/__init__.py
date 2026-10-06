@@ -1545,6 +1545,21 @@ def get_expense_claim_summary(employee: str | None = None) -> dict:
 	return summary
 
 
+@frappe.whitelist(methods=["GET", "POST"])
+def near_duplicate_expenses(name: str) -> list[str]:
+	"""The "you already claimed a ... Check it is not the same expense" sentences for ONE saved claim.
+
+	Saving a claim msgprints this warning, and Nadi never shows it: frappe-ui drops
+	`_server_messages` on a successful request. After a create the PWA asks here
+	and toasts each sentence. The rule is ExpenseClaim's own (`near_duplicate_notes`,
+	the one `validate` uses), so Desk and Nadi cannot disagree.
+
+	Fenced by read permission on the claim: the sentences name the employee's other
+	claims, dates and expense types, so only someone who may open this claim gets them.
+	"""
+	frappe.has_permission("Expense Claim", ptype="read", doc=name, throw=True)
+	return frappe.get_doc("Expense Claim", name).near_duplicate_notes()
+
 def configured_expense_claim_types(types: list, account_rows: list, company: str | None) -> list:
 	"""Only the types an employee of `company` can actually save a claim with.
 

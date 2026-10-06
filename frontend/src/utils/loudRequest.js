@@ -59,6 +59,10 @@ const SILENT_ENDPOINTS = new Set([
 	"hrms.api.approval.decide",
 	// Same sheet, same onActionError, for the plain submit/cancel transition.
 	"hrms.api.approval.finalize",
+	// The claim is already saved and its create toast shown; a warning that
+	// could not be fetched is logged by utils/nearDuplicateWarning.js, not
+	// reported as a page that failed to load.
+	"hrms.api.near_duplicate_expenses",
 	// Home's Announcements block shows its own "didn't load" banner in place;
 	// the toast on top was the same failure reported twice (audit F-6).
 	"hrms.api.announcements.home_announcements",

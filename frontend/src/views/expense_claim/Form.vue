@@ -15,6 +15,7 @@
 				@validateForm="validateForm"
 				:showDownloadPDFButton="true"
 				@formReloaded="onFormReloaded"
+				@created="onCreated"
 			>
 				<!-- Child Tables -->
 				<template #expenses="{ isFormReadOnly }">
@@ -49,6 +50,8 @@ import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"
 import { computed, ref, watch, inject } from "vue"
 
+import { gToast } from "@/components/glass/toast"
+import { warnOfNearDuplicates } from "@/utils/nearDuplicateWarning"
 import FormView from "@/components/FormView.vue"
 import ExpensesTable from "@/components/ExpensesTable.vue"
 import ExpenseTaxesTable from "@/components/ExpenseTaxesTable.vue"
@@ -59,6 +62,7 @@ const dayjs = inject("$dayjs")
 const today = dayjs().format("YYYY-MM-DD")
 const isReadOnly = ref(false)
 
+const __ = inject("$translate")
 const sessionEmployee = inject("$employee")
 const currEmployee = ref(sessionEmployee.data?.name)
 const employeeCompany = ref(sessionEmployee.data?.company)
@@ -113,6 +117,20 @@ formFields.reload()
 // resources & helper functions
 function onFormReloaded() {
 	// Advances are not managed in the employee flow; nothing to reload here.
+}
+
+// The server warns about a claim that looks like another (same type and day,
+// another amount) but frappe-ui drops that message on a successful save, so ask
+// for it once the claim exists. A refused (exact) copy never gets here: it is an
+// error toast from the insert itself.
+const nearDuplicates = createResource({ url: "hrms.api.near_duplicate_expenses" })
+
+function onCreated(doc) {
+	warnOfNearDuplicates(doc.name, {
+		ask: (name) => nearDuplicates.submit({ name }),
+		notify: gToast,
+		__,
+	})
 }
 
 const expenseApproverDetails = createResource({

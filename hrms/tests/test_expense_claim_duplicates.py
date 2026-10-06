@@ -17,6 +17,7 @@ are exercised, not assumed. Expected values come from the ruling, not the code.
 
 import ast
 import datetime
+import functools
 import pathlib
 import re
 import sqlite3
@@ -51,6 +52,15 @@ def _lift_method(name, namespace):
 	exec(compile(ast.Module(body=[fn], type_ignores=[]), str(SOURCE), "exec"), namespace)
 	return namespace[name]
 
+
+def _lift_function(name, namespace):
+	fn = next(
+		(n for n in ast.parse(SOURCE.read_text()).body if isinstance(n, ast.FunctionDef) and n.name == name),
+		None,
+	)
+	assert fn is not None, f"{name} is missing from expense_claim.py"
+	exec(compile(ast.Module(body=[fn], type_ignores=[]), str(SOURCE), "exec"), namespace)
+	return namespace[name]
 
 def _getdate(value):
 	if isinstance(value, datetime.date):
@@ -95,6 +105,18 @@ class _Site:
 		}
 		self.check = _lift_method("validate_no_duplicate_expenses", self.ns)
 		self.new_lines = _lift_method("_new_expense_lines", self.ns)
+		# the one rule, shared by the save check above and the Nadi read below
+		_lift_function("near_duplicate_claims", self.ns)
+		_lift_function("near_duplicate_sentences", self.ns)
+		self.methods = {
+			name: _lift_method(name, self.ns)
+			for name in (
+				"_checks_for_duplicates",
+				"_dated_expense_lines",
+				"_other_claim_lines",
+				"near_duplicate_notes",
+			)
+		}
 
 	@staticmethod
 	def _throw(msg, exc=None):
@@ -151,6 +173,8 @@ class _Site:
 		)
 		# the real helper, bound to this fake (the method under test calls self._new_expense_lines())
 		doc._new_expense_lines = lambda precision: self.new_lines(doc, precision)
+		for name, method in self.methods.items():
+			setattr(doc, name, functools.partial(method, doc))
 		return doc
 
 
@@ -382,6 +406,85 @@ class TestDuplicateExpenseClaims(unittest.TestCase):
 		self.assertIn("validate_no_duplicate_expenses", calls)
 		self.assertLess(calls.index("calculate_total_amount"), calls.index("validate_no_duplicate_expenses"))
 
+
+class TestNearDuplicateNotes(unittest.TestCase):
+	"""The Nadi read: the warning validate shows, for a claim already saved.
+
+	Nadi never shows a msgprint (frappe-ui drops _server_messages on success), so
+	hrms.api.near_duplicate_expenses asks the same rule for the saved claim.
+	"""
+
+	def setUp(self):
+		self.site = _Site()
+
+	def test_a_near_copy_is_named_in_plain_words(self):
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
+		notes = self.site.claim([("Travel", "2026-10-01", 55.0)]).near_duplicate_notes()
+		self.assertEqual(
+			notes,
+			["You already claimed a Travel on 01-10-2026 in HR-EXP-0001. Check it is not the same expense."],
+		)
+
+	def test_the_read_answers_with_what_the_save_warning_says(self):
+		# one rule, not two: same claims, same wording, whichever way it is asked
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
+		self.site.file("HR-EXP-0002", [("Meals", "2026-10-02", 12.0), ("Travel", "2026-10-01", 60.0)])
+		doc = self.site.claim([("Travel", "2026-10-01", 55.0), ("Meals", "2026-10-02", 13.0)])
+		self.run_check(doc)
+		shown = self.site.messages[0][0].split("<br>")
+		self.assertEqual(doc.near_duplicate_notes(), shown)
+		self.assertEqual(len(shown), 3)
+
+	def run_check(self, doc):
+		return self.site.check(doc)
+
+	def test_nothing_to_say_is_an_empty_list(self):
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
+		self.assertEqual(self.site.claim([("Meals", "2026-10-01", 55.0)]).near_duplicate_notes(), [])
+		self.assertEqual(self.site.claim([]).near_duplicate_notes(), [])
+
+	def test_the_claim_itself_and_the_one_it_amends_are_not_named(self):
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
+		self.site.file("HR-EXP-0002", [("Travel", "2026-10-01", 55.0)])  # the saved claim's own rows
+		doc = self.site.claim(
+			[("Travel", "2026-10-01", 55.0)], name="HR-EXP-0002", amended_from="HR-EXP-0001"
+		)
+		self.assertEqual(doc.near_duplicate_notes(), [])
+
+	def test_someone_elses_claim_and_a_dead_claim_are_not_named(self):
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)], employee=OTHER_EMPLOYEE)
+		self.site.file("HR-EXP-0002", [("Travel", "2026-10-01", 50.0)], approval_status="Rejected")
+		self.site.file("HR-EXP-0003", [("Travel", "2026-10-01", 50.0)], docstatus=2)
+		self.assertEqual(self.site.claim([("Travel", "2026-10-01", 55.0)]).near_duplicate_notes(), [])
+
+	def test_a_rejected_or_cancelled_claim_is_not_looked_up_at_all(self):
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
+		for fields in ({"approval_status": "Rejected"}, {"docstatus": 2}):
+			self.assertEqual(
+				self.site.claim([("Travel", "2026-10-01", 55.0)], **fields).near_duplicate_notes(), []
+			)
+		self.assertEqual(self.site.reads, 0)
+
+	def test_a_ten_row_claim_costs_one_database_read(self):
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-03", 9.0)])
+		rows = [("Travel", f"2026-10-{day:02d}", 10.0 + day) for day in range(1, 11)]
+		self.assertEqual(len(self.site.claim(rows).near_duplicate_notes()), 1)
+		self.assertEqual(self.site.reads, 1)
+
+	def test_save_check_and_read_share_the_one_rule(self):
+		tree = _class()
+		calls = {
+			name: {
+				n.func.attr if isinstance(n.func, ast.Attribute) else n.func.id
+				for n in ast.walk(fn)
+				if isinstance(n, ast.Call) and isinstance(n.func, (ast.Attribute, ast.Name))
+			}
+			for name, fn in ((f.name, f) for f in tree.body if isinstance(f, ast.FunctionDef))
+			if name in ("validate_no_duplicate_expenses", "near_duplicate_notes")
+		}
+		for shared in ("_other_claim_lines", "near_duplicate_claims", "near_duplicate_sentences"):
+			self.assertIn(shared, calls["validate_no_duplicate_expenses"])
+			self.assertIn(shared, calls["near_duplicate_notes"])
 
 if __name__ == "__main__":
 	unittest.main()
