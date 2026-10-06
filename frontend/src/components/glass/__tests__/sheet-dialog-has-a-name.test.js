@@ -37,3 +37,15 @@ test("no other raw ion-modal is left unnamed", async () => {
 		assert.match(tag, /:aria-label=/, `${file} renders an unnamed ion-modal`)
 	}
 })
+
+// Review of the naming commits: Ionic already draws role=dialog (now named).
+// An inner role=dialog with the same name made a screen reader announce the
+// sheet twice ("Title, dialog. Title, dialog."). One dialog per sheet.
+test("the sheet body is not a second dialog", () => {
+	const inner = src.match(/<div class="g-sheet"[^>]*>/)?.[0] ?? ""
+	assert.ok(inner, "GModal still renders .g-sheet")
+	assert.doesNotMatch(inner, /role="dialog"|aria-modal/)
+	const page = notice.match(/<div v-if="current" class="g-mustread__page"[^>]*>/)?.[0] ?? ""
+	assert.ok(page, "MustReadNotice still renders its page")
+	assert.doesNotMatch(page, /role="dialog"|aria-modal/)
+})

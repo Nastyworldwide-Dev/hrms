@@ -20,7 +20,7 @@
 		:handle="false"
 		:aria-label="current?.title || undefined"
 	>
-		<div v-if="current" class="g-mustread__page" role="dialog" aria-modal="true" :aria-label="current.title">
+		<div v-if="current" class="g-mustread__page">
 			<header class="g-mustread__bar">
 				<span class="g-mustread__tag">{{ current.urgent ? __("Urgent · must read") : __("Must read") }}</span>
 			</header>

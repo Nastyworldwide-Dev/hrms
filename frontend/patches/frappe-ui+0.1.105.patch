@@ -17,7 +17,7 @@ index 0eefcd0..b2875c4 100644
    },
    beforeDestroy() {
 diff --git a/node_modules/frappe-ui/src/components/Toast.vue b/node_modules/frappe-ui/src/components/Toast.vue
-index e7c16f6..39796a2 100644
+index e7c16f6..a471970 100644
 --- a/node_modules/frappe-ui/src/components/Toast.vue
 +++ b/node_modules/frappe-ui/src/components/Toast.vue
 @@ -20,8 +20,13 @@
@@ -30,7 +30,7 @@ index e7c16f6..39796a2 100644
            <button
 -            class="grid h-5 w-5 place-items-center rounded hover:bg-surface-gray-2"
 +            type="button"
-+            aria-label="Close"
++            :aria-label="__('Close')"
 +            class="-m-3 grid min-h-11 min-w-11 place-items-center rounded hover:bg-surface-gray-2"
              @click="$emit('close')"
            >

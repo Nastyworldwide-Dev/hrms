@@ -17,7 +17,8 @@ const close = toast.match(/<button\b[\s\S]*?@click="\$emit\('close'\)"[\s\S]*?>/
 
 test("the toast close button has a name a screen reader says", () => {
 	assert.ok(close, "Toast.vue still has its close button")
-	assert.match(close, /aria-label="Close"/)
+	// through the app's translation, like GModal's own Close (review, 6 Oct)
+	assert.match(close, /:aria-label="__\('Close'\)"/)
 })
 
 test("its tap area is at least 44 px while the X stays the same size", () => {
@@ -29,5 +30,5 @@ test("its tap area is at least 44 px while the X stays the same size", () => {
 test("the patch file carries the change, so a fresh install gets it", () => {
 	const patch = readFileSync(fileURLToPath(new URL("../../../../patches/frappe-ui+0.1.105.patch", import.meta.url)), "utf8")
 	assert.match(patch, /\+\+\+ b\/node_modules\/frappe-ui\/src\/components\/Toast\.vue/)
-	assert.match(patch, /\+\s+aria-label="Close"/)
+	assert.match(patch, /\+\s+:aria-label="__\('Close'\)"/)
 })

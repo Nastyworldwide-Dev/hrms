@@ -56,7 +56,7 @@
 		@didPresent="onDidPresent"
 		@didDismiss="onDidDismiss"
 	>
-		<div class="g-sheet" role="dialog" aria-modal="true" :aria-label="title || undefined">
+		<div class="g-sheet">
 			<div class="g-sheet__head">
 				<span class="g-sheet__grabber" aria-hidden="true" />
 				<!-- HIG Sheets (iOS): Close on the LEADING edge, the sheet's own
