@@ -133,3 +133,12 @@ test("TicketDetail: a refused reply says why itself, since the seam stays quiet 
 	assert.match(send, /gToast\(\{ title: __\("Reply not sent"\), text: firstMessage\(error\), variant: "error" \}\)/)
 	assert.match(read("../../utils/loudRequest.js"), /"hrms\.api\.helpdesk\.reply"/)
 })
+
+test("MustReadNotice never records a notice whose text did not load", () => {
+	const src = readFileSync(new URL("../MustReadNotice.vue", import.meta.url), "utf8")
+	const confirm = src.match(/async function onConfirm\(\) \{[\s\S]*?\n\}/)?.[0] ?? ""
+	const guard = confirm.indexOf("detail.error")
+	assert.ok(guard > 0, "onConfirm checks for a failed load")
+	assert.ok(guard < confirm.indexOf("reachedEnd"), "before anything else can run")
+	assert.match(src, /failed: Boolean\(detail\.error\)/, "the button says it cannot confirm yet")
+})

@@ -319,7 +319,12 @@
 			</div>
 			<!-- a refusal from a signed-in person: retrying cannot help, so no Try again
 			     (same words as ResourceError, alpha.37 B2) -->
-			<GEmptyState v-else-if="noAccess" :title="__('You can\'t open this.')" :body="__('It is not shared with you.')">
+			<GEmptyState
+				v-else-if="noAccess"
+				data-no-access
+				:title="__('You can\'t open this.')"
+				:body="__('It is not shared with you.')"
+			>
 				<template #action>
 					<GButton :label="__('Back')" @click="goBackOrHome(router)" />
 				</template>

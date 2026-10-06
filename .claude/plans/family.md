@@ -1,4 +1,5 @@
-CLASS: a page that must leave at once waited instead: alpha.37 made every session-change reload wait for the offline page-copy clear, so when ANOTHER person signed in on the phone the old page stayed up (still showing the last person's data) until a promise settled; and logout's push hand-back made the logout request a tick later than the isolation test assumed.
-frontend/src/utils/personalCache.js:leavePage same-root (nothing to clear -> reload at once, as before alpha.37; only sessionEnded waits for its clear)
-frontend/tests/personal-cache-isolation.test.mjs same-root (the harness supplies handBackPhone and waits the tick logout's validate takes)
-frontend/tests/ (whole folder) ticket alpha.39 — the commit gate and the release run only src/**/__tests__; tests/*.mjs went red on 5 Oct (alpha.35) and 6 Oct (alpha.37) unseen
+CLASS: holding back a message for every case when only some screens say it themselves: (1) a refused read was silent on any screen without its own "You can't open this."; (2) a must-read whose text failed to load could still be confirmed, because its end marker was on screen.
+frontend/src/utils/loudRequest.js same-root (a signed-in refusal: toast "You can't open this." unless the screen drew it — data-no-access — checked a frame later; never starts the repeat window)
+frontend/src/components/FormView.vue, ResourceError.vue same-root (mark data-no-access where they draw the sentence)
+frontend/src/utils/mustRead.js + components/MustReadNotice.vue same-root (failed text -> "Load it to confirm"; onConfirm retries the load, never records)
+frontend/src/components/ExpensesTable.vue ticket alpha.39 — addButtonDisabled ignores claimTypesResource.error (review suggestion)

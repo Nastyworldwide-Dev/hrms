@@ -82,7 +82,9 @@ const body = computed(() => (detail.data?.name === current.value?.name ? detail.
 
 const reachedEnd = ref(false)
 const pending = ref(false)
-const state = computed(() => confirmState({ reachedEnd: reachedEnd.value, pending: pending.value }))
+const state = computed(() =>
+	confirmState({ reachedEnd: reachedEnd.value, pending: pending.value, failed: Boolean(detail.error) })
+)
 
 const scroller = ref(null)
 const endMarker = ref(null)
@@ -126,6 +128,8 @@ const bodyResource = computed(() => ({
 
 async function onConfirm() {
 	if (pending.value) return
+	// the text did not load: Try again is on screen; never record an unseen notice as read
+	if (detail.error) return bodyResource.value.reload()
 	if (!reachedEnd.value) {
 		// Never a dead button: it takes the reader to the end.
 		endMarker.value?.scrollIntoView?.({ behavior: "smooth", block: "end" })

@@ -80,6 +80,14 @@ const SILENT_ENDPOINTS = new Set([
 	"hrms.api.helpdesk.reply",
 ])
 
+// A refusal the screen draws itself ("You can't open this." in FormView / ResourceError,
+// both marked data-no-access): no toast goes on top of its sentence. The screen renders
+// after the request settles, so the check waits one frame before deciding.
+function noAccessDrawn(options) {
+	if (options?.noAccessShown) return true
+	return typeof document !== "undefined" && Boolean(document.querySelector?.("[data-no-access]"))
+}
+
 function endpointOf(options) {
 	const url = options?.url || "unknown endpoint"
 	return url.replace(/^\/api\/method\//, "")
@@ -168,21 +176,27 @@ export function makeLoudRequest(request, { notify = gToast, now = () => Date.now
 			// screen is blank" into a named endpoint in one step.
 			console.error("[request] failed:", endpoint, error?.exc_type || "", firstMessage(error))
 
-			if (
-				!SILENT_EXCEPTIONS.has(error?.exc_type) &&
-				!SILENT_ENDPOINTS.has(endpoint) &&
+			const silenced =
+				SILENT_EXCEPTIONS.has(error?.exc_type) ||
+				SILENT_ENDPOINTS.has(endpoint) ||
 				// offline: the banner already says it (an unreachable server while online
 				// has no banner, so it still gets the toast)
-				!(noServerAnswer(error) && phoneOffline()) &&
-				// A refusal from a person who is still signed in ("this is not yours to
-				// open") is answered by the screen: ResourceError says "You can't open
-				// this." The generic toast on top of it read as a glitch to retry (L1a,
-				// alpha.38). Checked BEFORE isRepeat so a refusal never starts the
-				// window that would hide a later, real failure. A session that ended is
-				// not a refusal (isNoAccess) and is left exactly as it was.
-				!isNoAccess(error, { signedIn: Boolean(sessionUser()) }) &&
-				!isRepeat(endpoint, now())
-			) {
+				(noServerAnswer(error) && phoneOffline())
+			if (!silenced && isNoAccess(error, { signedIn: Boolean(sessionUser()) })) {
+				// A refusal from a person still signed in ("this is not yours to open"). A screen
+				// that draws "You can't open this." itself (FormView, ResourceError: data-no-access)
+				// gets no toast on top; any other screen gets that plain sentence as a toast, never
+				// "didn't load ... try again" (L1a and its review, alpha.38). Decided after a frame,
+				// once the screen has drawn. A refusal never uses up the repeat window, so a later
+				// real failure on the same endpoint is still reported. A session that ENDED is not
+				// a refusal (isNoAccess) and goes on to the generic path, then the reload to Login.
+				const later =
+					typeof requestAnimationFrame === "function" ? requestAnimationFrame : (fn) => setTimeout(fn, 0)
+				later(() => {
+					if (!noAccessDrawn(options))
+						notify({ title: "You can't open this.", text: "It is not shared with you.", variant: "error" })
+				})
+			} else if (!silenced && !isRepeat(endpoint, now())) {
 				// Plain words only (audit F-6): the server's sentence names doctypes,
 				// roles and e-mail addresses. It is in the console line above; the
 				// screen that owns the data shows its own "didn't load" in place.

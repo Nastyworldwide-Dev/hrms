@@ -5,6 +5,7 @@
 	<div
 		v-if="failed"
 		role="alert"
+		:data-no-access="noAccess || undefined"
 		class="flex flex-col items-center gap-2 p-5 text-card-title text-ink-600"
 	>
 		<span class="text-center">{{ message }}</span>

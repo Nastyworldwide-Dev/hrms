@@ -31,3 +31,16 @@ test("confirm says why it is waiting until the end is reached", () => {
 		label: "Recording…",
 	})
 })
+
+// Review of alpha.38 L1 (6 Oct): when a notice's TEXT failed to load, the end marker
+// was still on screen, so Confirm enabled and a person could record "I have read
+// this" for a notice they never saw. Nothing to read means nothing to confirm.
+test("a notice whose text did not load cannot be confirmed", () => {
+	const s = confirmState({ reachedEnd: true, pending: false, failed: true })
+	assert.equal(s.ready, false)
+	assert.equal(s.label, "Load it to confirm")
+})
+
+test("a loaded notice read to the end can still be confirmed", () => {
+	assert.equal(confirmState({ reachedEnd: true, pending: false, failed: false }).ready, true)
+})

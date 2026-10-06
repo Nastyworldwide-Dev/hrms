@@ -8,8 +8,10 @@ export function nextMustRead(queue, snoozed) {
 
 //: The confirm button stays focusable before the end is reached (a disabled
 //: button hides the reason from VoiceOver); it says why and scrolls on tap.
-export function confirmState({ reachedEnd, pending }) {
+export function confirmState({ reachedEnd, pending, failed = false }) {
 	if (pending) return { ready: false, label: "Recording…" }
+	// the text did not load: nothing was read, so nothing can be confirmed
+	if (failed) return { ready: false, label: "Load it to confirm" }
 	if (!reachedEnd) return { ready: false, label: "Read to the end to confirm" }
 	return { ready: true, label: "I have read this" }
 }

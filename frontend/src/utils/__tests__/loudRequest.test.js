@@ -287,12 +287,33 @@ test("a refusal of this page, from a signed-in person, is not toasted on top of 
 	for (const error of [forbidden(), Object.assign(new Error("x"), { exc_type: "PermissionError" })]) {
 		const { loud, toasts } = harness(error)
 		await assert.rejects(
-			() => loud({ url: read() }),
+			() => loud({ url: read(), noAccessShown: true }),
 			(received) => received === error,
 			"the rejection still reaches the resource, which draws 'You can't open this.'"
 		)
+		await new Promise((r) => setTimeout(r, 5))
 		assert.deepEqual(toasts, [], "no second toast after 'You can't open this.'")
 	}
+})
+
+// Review of L1a: holding back EVERY signed-in refusal left screens that draw nothing of their own
+// silent. A refusal still gets a voice: the plain "You can't open this." toast, never the
+// glitch-like "Something didn't load. Try again". Screens that draw the sentence themselves
+// (FormView, ResourceError) set `noAccessShown` on the request and get no toast on top.
+test("a refusal on a screen that does not draw its own sentence says 'You can't open this.'", async () => {
+	const { loud, toasts } = harness(forbidden())
+	await assert.rejects(() => loud({ url: read() }))
+	await new Promise((r) => setTimeout(r, 5)) // the decision waits one frame for the screen to draw
+	assert.equal(toasts.length, 1)
+	assert.equal(toasts[0].title, "You can't open this.")
+	assert.doesNotMatch(JSON.stringify(toasts[0]), /Try again|didn't load/)
+})
+
+test("a screen that draws the sentence itself gets no toast on top", async () => {
+	const { loud, toasts } = harness(forbidden())
+	await assert.rejects(() => loud({ url: read(), noAccessShown: true }))
+	await new Promise((r) => setTimeout(r, 5))
+	assert.deepEqual(toasts, [])
 })
 
 test("a 403 from a session that has ended still toasts: that screen is on its way to Login", async () => {
@@ -344,4 +365,16 @@ test("a suppressed refusal does not use up the repeat window of the endpoint", a
 	error = new Error("boom")
 	await assert.rejects(() => loud({ url }))
 	assert.equal(toasts.length, 1)
+})
+
+test("a screen that has drawn 'You can't open this.' (data-no-access) is not toasted over", async () => {
+	globalThis.document = { querySelector: (sel) => (sel === "[data-no-access]" ? {} : null) }
+	try {
+		const { loud, toasts } = harness(forbidden())
+		await assert.rejects(() => loud({ url: read() }))
+		await new Promise((r) => setTimeout(r, 5))
+		assert.deepEqual(toasts, [])
+	} finally {
+		delete globalThis.document
+	}
 })
