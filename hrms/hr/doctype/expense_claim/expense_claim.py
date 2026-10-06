@@ -205,21 +205,23 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				)
 				row.sanctioned_amount = row.amount
 
-	def _expense_lines_changed(self) -> bool:
-		"""Did this save change any expense line (type, date or amount)? An old draft edited
-		to match a newer claim is a new claim in all but name."""
-		before = self.get_doc_before_save()
-		if not before:
-			return False
+	def _new_expense_lines(self, precision) -> set:
+		"""The (type, date, amount) lines this save adds or changes. On a new claim that is every
+		line. An unchanged line keeps its place in time: it is the original against later copies,
+		while a line just added or edited is compared with every claim (an old draft edited to
+		copy a newer claim is a new expense in all but name)."""
+		# a claim with no stored copy (new, or saved by code that skipped the load) has only new lines
+		before = None if self.is_new() else self.get_doc_before_save()
 
-		def lines(doc):
-			return sorted(
-				(row.expense_type, str(getdate(row.expense_date)), flt(row.amount, 2))
+		def keys(doc):
+			return {
+				(row.expense_type, getdate(row.expense_date), flt(row.amount, precision))
 				for row in doc.get("expenses")
-				if row.expense_type and row.expense_date
-			)
+				if row.expense_type and row.expense_date and getdate(row.expense_date)
+			}
 
-		return lines(before) != lines(self)
+		mine = keys(self)
+		return mine - keys(before) if before else mine
 
 	def validate_no_duplicate_expenses(self):
 		"""Refuse an expense that is already claimed; warn about one that looks like it.
@@ -272,7 +274,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 		others = frappe.db.sql(
 			"""
-			select ec.name, ecd.expense_type, ecd.expense_date, ecd.amount
+			select ec.name, ec.creation, ecd.expense_type, ecd.expense_date, ecd.amount
 			from `tabExpense Claim` ec
 			join `tabExpense Claim Detail` ecd
 				on ecd.parent = ec.name and ecd.parenttype = 'Expense Claim' and ecd.parentfield = 'expenses'
@@ -280,11 +282,6 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				and ec.docstatus != 2
 				and ifnull(ec.approval_status, '') != 'Rejected'
 				and ec.name not in (%(this)s, %(amended)s)
-				and (
-					%(created)s = ''
-					or ec.creation < %(created)s
-					or (ec.creation = %(created)s and ec.name < %(this)s)
-				)
 				and ecd.expense_date in %(dates)s
 			order by ec.creation, ec.name, ecd.idx
 			""",
@@ -292,20 +289,27 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				"employee": self.employee,
 				"this": self.name or "",
 				"amended": self.amended_from or "",
-				# only an EARLIER claim is the original: when two match, the later one is the duplicate,
-				# so the first can still be approved. Ties in the same second go by name. A new claim, or
-				# an old one whose lines were just changed, is compared with every claim.
-				"created": "" if self.is_new() or self._expense_lines_changed() else str(self.creation or ""),
 				"dates": tuple(sorted({date.isoformat() for _idx, _type, date, _amount in lines})),
 			},
 			as_dict=True,
 		)
 
+		# Which claim is the original? An unchanged line of this claim only clashes with an EARLIER
+		# claim (same second: the lower name), so the first claim can still be approved when a later
+		# copy exists. A new or edited line clashes with every claim.
+		fresh = self._new_expense_lines(precision)
+		mine_created = str(self.creation or "")
+
+		def earlier(other):
+			theirs = str(other.creation or "")
+			return theirs < mine_created or (theirs == mine_created and other.name < (self.name or ""))
+
 		near = {}
 		for other in others:
 			date = getdate(other.expense_date)
 			amount = flt(other.amount, precision)
-			if (other.expense_type, date, amount) in claimed:
+			key = (other.expense_type, date, amount)
+			if key in claimed and (key in fresh or earlier(other)):
 				logger.info("[expense_claim] %s: refused, same expense as %s", self.name, other.name)
 				frappe.throw(
 					_(

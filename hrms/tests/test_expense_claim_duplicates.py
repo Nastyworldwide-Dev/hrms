@@ -94,7 +94,7 @@ class _Site:
 			"logger": MagicMock(),
 		}
 		self.check = _lift_method("validate_no_duplicate_expenses", self.ns)
-		self.lines_changed = _lift_method("_expense_lines_changed", self.ns)
+		self.new_lines = _lift_method("_new_expense_lines", self.ns)
 
 	@staticmethod
 	def _throw(msg, exc=None):
@@ -149,8 +149,8 @@ class _Site:
 			get_doc_before_save=fields.pop("get_doc_before_save", lambda: None),
 			**fields,
 		)
-		# the real helper, bound to this fake (the method under test calls self._expense_lines_changed())
-		doc._expense_lines_changed = lambda: self.lines_changed(doc)
+		# the real helper, bound to this fake (the method under test calls self._new_expense_lines())
+		doc._new_expense_lines = lambda precision: self.new_lines(doc, precision)
 		return doc
 
 
@@ -253,11 +253,13 @@ class TestDuplicateExpenseClaims(unittest.TestCase):
 		# Desk) made the ORIGINAL unapprovable. The later one is the duplicate.
 		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)], docstatus=0)  # the original, first
 		self.site.file("HR-EXP-0002", [("Travel", "2026-10-01", 50.0)], docstatus=0)  # the copy, later
+		stored = self.site.claim([("Travel", "2026-10-01", 50.0)], name="HR-EXP-0001")  # its lines, unchanged
 		doc = self.site.claim(
 			[("Travel", "2026-10-01", 50.0)],
 			name="HR-EXP-0001",
 			approval_status="Approved",
 			creation="2026-10-01 09:00:00",
+			get_doc_before_save=lambda: stored,
 		)
 		self.run_check(doc)  # no refusal
 
@@ -293,10 +295,48 @@ class TestDuplicateExpenseClaims(unittest.TestCase):
 		later = self.site.claim([("Travel", "2026-10-01", 50.0)], name="HR-EXP-0002", creation=created)
 		with self.assertRaises(ValidationError):
 			self.run_check(later)
-		first = self.site.claim([("Travel", "2026-10-01", 50.0)], name="HR-EXP-0001", creation=created)
+		stored = self.site.claim([("Travel", "2026-10-01", 50.0)], name="HR-EXP-0001")
+		first = self.site.claim(
+			[("Travel", "2026-10-01", 50.0)],
+			name="HR-EXP-0001",
+			creation=created,
+			get_doc_before_save=lambda: stored,
+		)
 		self.site.file("HR-EXP-0002", [("Travel", "2026-10-01", 50.0)])
 		self.site.db.execute("update `tabExpense Claim` set creation=? where name='HR-EXP-0002'", (created,))
 		self.run_check(first)  # the original (lower name) stays approvable
+
+	def test_adding_a_receipt_to_the_original_is_not_refused_for_its_old_line(self):
+		# final review of E1: original draft A, a later copy B of its first line;
+		# A gets a second receipt. Only the NEW line is compared with every claim;
+		# A's old line is still only compared with earlier claims.
+		self.site.file("HR-EXP-0002", [("Travel", "2026-10-01", 50.0)])  # the later copy B
+		self.site.db.execute(
+			"update `tabExpense Claim` set creation='2026-10-09 09:00:00' where name='HR-EXP-0002'"
+		)
+		before = self.site.claim([("Travel", "2026-10-01", 50.0)], name="HR-EXP-0001")
+		doc = self.site.claim(
+			[("Travel", "2026-10-01", 50.0), ("Meals", "2026-10-01", 12.0)],
+			name="HR-EXP-0001",
+			creation="2026-10-01 09:00:00",
+			get_doc_before_save=lambda: before,
+		)
+		self.run_check(doc)  # no refusal
+
+	def test_a_changed_line_that_copies_a_later_claim_is_still_refused(self):
+		self.site.file("HR-EXP-0002", [("Meals", "2026-10-01", 12.0)])  # later claim
+		self.site.db.execute(
+			"update `tabExpense Claim` set creation='2026-10-09 09:00:00' where name='HR-EXP-0002'"
+		)
+		before = self.site.claim([("Travel", "2026-10-01", 50.0)], name="HR-EXP-0001")
+		doc = self.site.claim(
+			[("Travel", "2026-10-01", 50.0), ("Meals", "2026-10-01", 12.0)],
+			name="HR-EXP-0001",
+			creation="2026-10-01 09:00:00",
+			get_doc_before_save=lambda: before,
+		)
+		with self.assertRaises(ValidationError):
+			self.run_check(doc)
 
 	def test_rejecting_a_duplicate_is_never_blocked_by_the_rule(self):
 		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
