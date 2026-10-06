@@ -87,11 +87,15 @@ class _Site:
 		)
 		self.reads = 0
 		self.messages = []
+		self.allowed = None  # None = the saver may open every claim
 		self._created = 0
 		frappe = SimpleNamespace(
 			ValidationError=ValidationError,
 			throw=self._throw,
 			msgprint=lambda msg, **kw: self.messages.append((msg, kw)),
+			has_permission=lambda doctype, ptype="read", doc=None, **kw: (
+				self.allowed is None or doc in self.allowed
+			),
 			db=SimpleNamespace(sql=self._sql),
 		)
 		self.ns = {
@@ -362,6 +366,17 @@ class TestDuplicateExpenseClaims(unittest.TestCase):
 		)
 		with self.assertRaises(ValidationError):
 			self.run_check(doc)
+
+	def test_the_save_warning_names_only_claims_the_saver_may_open(self):
+		# security review of N1: an approver saving on Desk saw the names of the
+		# employee's other claims in the orange warning; the same filter as Nadi's
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
+		self.site.file("HR-EXP-0007", [("Travel", "2026-10-01", 70.0)])
+		self.site.allowed = {"HR-EXP-0001"}
+		self.run_check(self.site.claim([("Travel", "2026-10-01", 55.0)]))
+		shown = self.site.messages[0][0]
+		self.assertIn("HR-EXP-0001", shown)
+		self.assertNotIn("HR-EXP-0007", shown)
 
 	def test_rejecting_a_duplicate_is_never_blocked_by_the_rule(self):
 		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])

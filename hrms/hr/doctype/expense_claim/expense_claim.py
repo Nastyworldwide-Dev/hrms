@@ -295,7 +295,13 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 					)
 				)
 
-		near = near_duplicate_claims(others, lines)
+		# name only claims the person saving may open: an approver saving on Desk must not
+		# learn the names of the employee's claims routed to someone else (alpha.38 review)
+		near = [
+			n
+			for n in near_duplicate_claims(others, lines)
+			if frappe.has_permission("Expense Claim", ptype="read", doc=n[2])
+		]
 		if near:
 			logger.info("[expense_claim] %s: warned of %s near duplicate(s)", self.name, len(near))
 			frappe.msgprint(
