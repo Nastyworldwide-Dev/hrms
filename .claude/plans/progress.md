@@ -283,3 +283,15 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T02:10:59Z COMMIT: d20fc621d docs(plan): note the list second-page gap and the 6 Oct real-browser findings → review dispatched
 - 2026-10-06T03:02:37Z PLAN: approved ae107bc4bd38 — # Release 2.0.0-alpha.35 "Steady Nadi" (6 Oct 2026)
 - 2026-10-06T03:04:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-06T03:04:57Z COMMIT: 55b190300 fix(requests): the request chips never counted compensatory leave → review dispatched
+- 2026-10-06T03:05:19Z COMMIT: f96f1f53e test(placeholders): the empty-queue test failed on quote style, not on the row → review+design dispatched
+- 2026-10-06T03:08:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-06T03:08:11Z COMMIT: ef5509251 fix(requests): the chips would count compensatory leave the list never shows → review dispatched
+- 2026-10-06T03:09:22Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-06T03:09:23Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-10-06T03:09:28Z COMMIT: 4ab2dd0a3 fix(pwa): an app kept open never looked for a new build after a deploy → review+design dispatched
+- 2026-10-06T03:09:58Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-06T03:09:58Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-10-06T03:10:08Z COMMIT: 17de8474d fix(pwa): an app kept open never looked for a new build after a deploy → review+design dispatched
+- 2026-10-06T03:10:54Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-06T03:10:54Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
