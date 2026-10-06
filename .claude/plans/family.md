@@ -1,5 +1,4 @@
-CLASS: truncating a row that is a summary, not a name: the count ("· 3 requests") or the notification sentence is what is cut.
-frontend/src/views/Approvals.vue same-root (both personLine rows wrap; the count is not shown elsewhere)
-frontend/src/views/Notifications.vue same-root (fold line and member line wrap)
-frontend/src/views/More.vue, Profile.vue not-affected — short titles (review of B3)
-frontend/src/components/*Item.vue, views/team/TeamDashboard.vue not-affected — names; they stay one line by design
+CLASS: an icon-only button with no name and a 20 px hit area (axe button-name critical + target-size), in vendor code every screen reaches through a toast.
+frontend/patches/frappe-ui+0.1.105.patch same-root (Toast.vue close: aria-label="Close", 44 px min hit area, -m-3 so the toast keeps its size; applied by postinstall patch-package)
+frontend/src/components/glass/toast.js not-affected — wraps frappe-ui toast, renders no button
+frontend/src/components/glass/GIconButton.vue not-affected — requires a label (its own test)
