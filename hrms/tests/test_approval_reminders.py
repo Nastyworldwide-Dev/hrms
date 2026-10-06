@@ -180,6 +180,45 @@ class TestAnApproverWhoIsAwayDoesNotHoldARequest(unittest.TestCase):
 		self.assertNotIn("away", to(out, "here@x")[0]["message"])
 
 
+class TestOneMessagePerPersonPerDay(unittest.TestCase):
+	"""Owner rule (29 Sep): one summary per person per day, never a ping per
+	request. A person who owns one request and is the backup on another got
+	TWO notifications (review of W1, 6 Oct; older than W1, made likelier by it)."""
+
+	def test_an_owner_who_is_also_a_backup_gets_one_message_with_both(self):
+		out = plan(
+			req("R1", 1, first="mid@x", backup="director@x"),  # mid@x owns this one
+			req("R2", 3, first="senior@x", backup="mid@x", who="Siti"),  # and backs up this one
+		)
+		self.assertEqual(len(to(out, "mid@x")), 1)
+		message = to(out, "mid@x")[0]["message"]
+		self.assertIn("Ali's leave is waiting for you.", message)
+		self.assertIn("Siti", message)
+
+	def test_every_person_appears_once(self):
+		out = plan(
+			req("R1", 3, first="a@x", backup="b@x"),
+			req("R2", 3, first="b@x", backup="a@x", who="Siti"),
+		)
+		users = [m["to"] for m in out]
+		self.assertEqual(sorted(users), sorted(set(users)))
+
+
+class TestHalfDayLeaveIsNotAway(unittest.TestCase):
+	"""Review of W1: someone on a half day is at work for the other half and can
+	decide; only a full day off counts as away."""
+
+	def test_half_day_rows_are_not_read_as_away(self):
+		from unittest.mock import patch
+
+		import hrms.utils.approval_reminders as ar
+
+		with patch.object(ar.frappe, "get_all", return_value=[]) as get_all:
+			ar._away_approvers("2026-10-06")
+		filters = get_all.call_args.kwargs["filters"]
+		self.assertEqual(filters.get("half_day"), 0)
+
+
 class TestWaitingRequestsReadsLeaveOnce(unittest.TestCase):
 	"""`first_away` for every waiting request comes from ONE Leave Application
 	read, not one query per request."""

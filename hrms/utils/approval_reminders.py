@@ -77,13 +77,16 @@ def plan_reminders(requests: list[dict], settings: dict) -> list[dict]:
 		else:
 			owner_waiting.setdefault(r["first"], []).append(r)
 
+	# One message per person: someone who owns one request and backs up another
+	# hears both in the same summary, never two notifications.
 	out = []
-	for user in sorted(set(owner_waiting) | set(owner_helped)):
-		out.append(
-			{"to": user, "message": _owner_words(owner_waiting.get(user, []), owner_helped.get(user, []))}
-		)
-	for user in sorted(backup_asked):
-		out.append({"to": user, "message": _backup_words(backup_asked[user])})
+	for user in sorted(set(owner_waiting) | set(owner_helped) | set(backup_asked)):
+		parts = []
+		if user in owner_waiting or user in owner_helped:
+			parts.append(_owner_words(owner_waiting.get(user, []), owner_helped.get(user, [])))
+		if user in backup_asked:
+			parts.append(_backup_words(backup_asked[user]))
+		out.append({"to": user, "message": " ".join(parts)})
 	return out
 
 
@@ -178,6 +181,8 @@ def _away_approvers(today) -> set[str]:
 		filters={
 			"docstatus": 1,
 			"status": "Approved",
+			# a half day off still leaves half a day at work to decide in
+			"half_day": 0,
 			"from_date": ["<=", today],
 			"to_date": [">=", today],
 		},
