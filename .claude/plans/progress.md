@@ -218,3 +218,5 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T04:25:20Z COMMIT: 397c34910 fix(attendance): the calendar pull closed before the month had loaded → review+design dispatched
 - 2026-10-06T04:25:33Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
 - 2026-10-06T04:25:33Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 10 extra test file(s) ⟂26261ccd9d8d
+- 2026-10-06T04:25:38Z COMMIT: 666d6007b fix(session): a failed Log out could hide a later "you were signed out" → review+security+design dispatched
+- 2026-10-06T04:25:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1

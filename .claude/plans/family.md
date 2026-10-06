@@ -1,5 +1,4 @@
-CLASS: a "logging out" flag that outlives a failed Log out, so a later real session end is taken for a deliberate one and the "signed out" banner is never shown.
-frontend/src/utils/personalCache.js same-root (clearLoggingOut beside markLoggingOut; the flag has one owner)
-frontend/src/data/session.js:logout same-root (onError clears the flag)
-frontend/src/data/session.js:login/otp not-affected — never set the flag
-frontend/src/data/user.js, employees.js, router/navigationGate.js ticket docs/glass/tickets/2026-10-06-session-identity-hotspot.md — five places decide "session ended"; one owner proposed there
+CLASS: the last person's offline page copy outlives a session that ended on its own (AU-5): it is cleared on login and logout only.
+frontend/src/views/Login.vue same-root (clears it when the "signed out" banner shows, the one place that knows the session ended on its own)
+frontend/src/data/session.js:handleLogin, logout not-affected — already clear it
+frontend/public/sw.js not-affected — serves the copy; clearing it is the app's job
