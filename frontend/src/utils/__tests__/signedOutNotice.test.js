@@ -15,6 +15,8 @@ globalThis.sessionStorage = {
 	removeItem: (k) => store.delete(k),
 }
 globalThis.indexedDB = undefined
+// an offline page store that answers at once (bun ships its own `caches`, which this test must not depend on)
+globalThis.caches = { delete: async () => true }
 
 const fresh = async () => import(`../personalCache.js?${Math.random()}`)
 
@@ -28,6 +30,7 @@ test("a session that ends on its own leaves one 'signed out' mark for Login", as
 	const { sessionIsCurrent, takeSignedOutNotice } = await fresh()
 	document.cookie = "user_id=Guest"
 	assert.equal(sessionIsCurrent(), false)
+	for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0)) // the reload waits for the page-copy clear
 	assert.equal(reloads, 1)
 	assert.equal(takeSignedOutNotice(), true)
 	assert.equal(takeSignedOutNotice(), false, "shown once, then gone")

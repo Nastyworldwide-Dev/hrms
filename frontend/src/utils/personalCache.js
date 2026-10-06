@@ -8,6 +8,9 @@ const pageEpoch = readSessionEpoch()
 let invalidated = false
 let loggingOut = false
 const SIGNED_OUT = "hrms:signed-out"
+const RELOADED_FOR = "hrms:session-ended-reload"
+// ceiling: 2 s wait for Cache Storage before the reload; upgrade: raise it if a slow phone ever keeps the old page copy
+const CLEAR_CAP_MS = 2000
 
 // Read identity without importing reactive session/resources: these keys are
 // needed while that import graph is still being initialized.
@@ -67,6 +70,15 @@ export function sessionEnded() {
 		console.info("[personalCache] no session on this page; nothing ended")
 		return false
 	}
+	// A refusal while the cookie still names this person is not an expiry the reload can fix: the
+	// reloaded page would get the same refusal and reload again. One reload per cookie, then stay.
+	// (A real expiry turns the cookie to Guest, so the next page has no user and cannot loop.)
+	const stillSignedIn = sessionUser() === pageUser
+	if (stillSignedIn && readOnce(RELOADED_FOR) === pageUser) {
+		console.warn("[personalCache] refused again with the same login; not reloading in a loop")
+		return false
+	}
+	if (stillSignedIn) writeOnce(RELOADED_FOR, pageUser)
 	// The reload lands on Login, so a message on this page is never seen (AU-2); Login reads the mark.
 	// Not for Log out, which is the person's own act.
 	if (!loggingOut) {
@@ -77,17 +89,33 @@ export function sessionEnded() {
 		}
 	}
 	// the last person's offline copy of the page (a session that only expired never passed through
-	// Log out). Not awaited: a blocked Cache Storage must not keep the old page on screen.
-	clearCachedPages()
-	leavePage()
+	// Log out). The page is hidden at once; the reload waits for the clear, capped, so a stuck Cache
+	// Storage cannot keep the old page alive (review of R1: an unawaited clear could lose the race).
+	leavePage(Promise.race([clearCachedPages(), new Promise((r) => setTimeout(r, CLEAR_CAP_MS))]))
 	return true
 }
 
-function leavePage() {
+function leavePage(before = Promise.resolve()) {
 	invalidated = true
 	console.info("[personalCache] session changed; discarding this page's resources")
 	document.documentElement.style.visibility = "hidden"
-	window.location.reload()
+	before.finally(() => window.location.reload())
+}
+
+function readOnce(key) {
+	try {
+		return sessionStorage.getItem(key)
+	} catch {
+		return null
+	}
+}
+
+function writeOnce(key, value) {
+	try {
+		sessionStorage.setItem(key, value)
+	} catch {
+		console.warn("[personalCache] reload guard storage unavailable")
+	}
 }
 
 export function markLoggingOut() {

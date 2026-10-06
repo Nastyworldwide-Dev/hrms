@@ -1,6 +1,5 @@
-CLASS: "the session ended" decided in several places, each doing some of the steps (signed-out mark, offline page copy, reload) and forgetting the rest (ticket docs/glass/tickets/2026-10-06-session-identity-hotspot.md).
-frontend/src/utils/personalCache.js same-root (sessionEnded(): the one owner, once per page; sessionIsCurrent routes through it)
-frontend/src/data/user.js, employee.js, employees.js same-root (AuthenticationError -> sessionEnded, no router.push Login)
-frontend/src/router/navigationGate.js + main.js same-root (a page that HAD a user calls sessionEnded; a page that never had one still gets {name:"Login"})
-frontend/src/views/Login.vue same-root (no longer clears pages itself; sessionEnded did)
-frontend/src/data/session.js:logout not-affected — Log out is the person's own act: its own reload, no signed-out mark (markLoggingOut)
+CLASS: a page that reloads to recover from a refusal the reload cannot fix (loop), and a reload that races the cleanup it depends on.
+frontend/src/utils/personalCache.js:sessionEnded same-root (one reload per still-signed-in cookie, then stay; reload waits for the page-copy clear, capped 2 s)
+frontend/src/router/navigationGate.js not-affected — calls sessionEnded; a false answer now keeps the navigation where it is instead of looping
+frontend/src/data/user.js, employee.js, employees.js not-affected — call sessionEnded once; the cap is inside it
+frontend/src/data/session.js:logout not-affected — its own reload after an awaited clearCachedPages
