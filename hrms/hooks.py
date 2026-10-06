@@ -528,7 +528,10 @@ doc_events = {
 	# which is how the out-of-radius handler was lost in the v16 port.
 	"Leave Application": {
 		"on_submit": "hrms.telemetry.on_leave_application_submit",
-		"on_cancel": "hrms.overrides.day_remark_hooks.remark_request_days",
+		"on_cancel": [
+			"hrms.overrides.day_remark_hooks.remark_request_days",
+			"hrms.utils.cancel_notice.notify_cancelled",
+		],
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
 		"validate": [
 			"hrms.sync.write_block.block_mirrored_writes",
@@ -551,14 +554,17 @@ doc_events = {
 	# existing key where there is one.
 	"Expense Claim": {
 		"on_submit": "hrms.telemetry.on_expense_claim_submit",
+		"on_cancel": "hrms.utils.cancel_notice.notify_cancelled",
 		"validate": "hrms.utils.decision_field_guard.validate",
 		"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved",
 	},
 	"OT Request": {
+		"on_cancel": "hrms.utils.cancel_notice.notify_cancelled",
 		"validate": "hrms.utils.decision_field_guard.validate",
 		"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved",
 	},
 	"Replacement Leave Claim": {
+		"on_cancel": "hrms.utils.cancel_notice.notify_cancelled",
 		"validate": "hrms.utils.decision_field_guard.validate",
 		"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved",
 	},
@@ -571,7 +577,10 @@ doc_events = {
 	# source instance owns.
 	"Attendance Request": {
 		"on_submit": "hrms.telemetry.on_attendance_request_submit",
-		"on_cancel": "hrms.overrides.day_remark_hooks.remark_request_days",
+		"on_cancel": [
+			"hrms.overrides.day_remark_hooks.remark_request_days",
+			"hrms.utils.cancel_notice.notify_cancelled",
+		],
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
 		"validate": [
 			"hrms.sync.write_block.block_mirrored_writes",
@@ -588,6 +597,7 @@ doc_events = {
 	},
 	"Shift Request": {
 		"on_submit": "hrms.telemetry.on_shift_request_submit",
+		"on_cancel": "hrms.utils.cancel_notice.notify_cancelled",
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
 		"validate": [
 			"hrms.sync.write_block.block_mirrored_writes",
@@ -605,6 +615,7 @@ doc_events = {
 	# Not mirrored itself (no row guard), but its on_submit adds days to a Leave
 	# Allocation and its on_cancel takes them back — mirrored balances either way.
 	"Compensatory Leave Request": {
+		"on_cancel": "hrms.utils.cancel_notice.notify_cancelled",
 		"validate": "hrms.utils.decision_field_guard.validate",
 		"before_submit": "hrms.sync.write_block.block_transactions_for_mirrored_employee",
 		"before_cancel": [

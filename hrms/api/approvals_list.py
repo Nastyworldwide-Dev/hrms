@@ -153,9 +153,8 @@ def _row(doc, me: dict | None = None, cache: dict | None = None, may_read_reason
 	this one request.
 	"""
 	kind = KIND.get(doc.doctype, doc.doctype)
-	when, detail, reason = "", "", ""
+	when, detail, reason = request_when(doc), "", ""
 	if doc.doctype == "Leave Application":
-		when = _range(doc.get("from_date"), doc.get("to_date"))
 		# Which half, when the request says (owner, 25 Sep 2026): the approver
 		# decides knowing whether the person is out in the morning or afternoon.
 		session = doc.get("half_day_session") if doc.get("half_day") else ""
@@ -168,25 +167,20 @@ def _row(doc, me: dict | None = None, cache: dict | None = None, may_read_reason
 			may_read_reason = may_read_leave_reason(doc)
 		reason = (doc.get("description") or "") if may_read_reason else ""
 	elif doc.doctype == "OT Request":
-		when = _day(doc.get("ot_date"))
 		detail = _hours(doc.get("claimed_hours"))
 		reason = doc.get("explanation") or ""
 	elif doc.doctype == "Expense Claim":
 		detail = f"{frappe.utils.fmt_money(doc.get('grand_total') or doc.get('total_claimed_amount') or 0)}"
 		reason = doc.get("remark") or ""
 	elif doc.doctype == "Shift Request":
-		when = _range(doc.get("from_date"), doc.get("to_date"))
 		detail = doc.get("shift_type") or ""
 	elif doc.doctype == "Attendance Request":
-		when = _range(doc.get("from_date"), doc.get("to_date"))
 		detail = doc.get("reason") or ""
 		reason = doc.get("explanation") or ""
 	elif doc.doctype == "Replacement Leave Claim":
-		when = f"{date.fromisoformat(str(doc.bank_month)[:10]):%B %Y}" if doc.get("bank_month") else ""
 		detail = _days(doc.get("claimed_days"))
 		reason = doc.get("explanation") or ""
 	elif doc.doctype == "Compensatory Leave Request":
-		when = _range(doc.get("work_from_date"), doc.get("work_end_date"))
 		detail = doc.get("leave_type") or ""
 		reason = doc.get("reason") or ""
 	return {
@@ -274,6 +268,20 @@ def _moment(value) -> str:
 def _range(start, end) -> str:
 	start, end = _day(start), _day(end)
 	return start if not end or end == start else f"{start} – {end}"
+
+
+def request_when(doc) -> str:
+	"""The days a request is about, in the Home title's words ('Tue 15 Sep' to 'Thu 17 Sep').
+	One rule for every place that names a request: the approvals list and the cancel notice."""
+	if doc.doctype == "OT Request":
+		return _day(doc.get("ot_date"))
+	if doc.doctype in ("Leave Application", "Shift Request", "Attendance Request"):
+		return _range(doc.get("from_date"), doc.get("to_date"))
+	if doc.doctype == "Replacement Leave Claim":
+		return f"{date.fromisoformat(str(doc.bank_month)[:10]):%B %Y}" if doc.get("bank_month") else ""
+	if doc.doctype == "Compensatory Leave Request":
+		return _range(doc.get("work_from_date"), doc.get("work_end_date"))
+	return ""
 
 
 #: Candidates read per page, and the most read per type in one call. The cap
