@@ -10,6 +10,27 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.36] — Loose Ends — 2026-10-06
+
+Small fixes left from alpha.35, and a faster approvals list.
+
+### Fixed
+- **HR can pull down to refresh the issue board** on Help.
+- **The attendance calendar's "Refreshing..." stays until the month has
+  loaded.** Before, it closed while the days were still loading.
+- **A failed Log out no longer hides a later "You were signed out".**
+- **An expired session clears the last person's offline page copy** from
+  the phone, as logging in and out already did.
+
+### Faster
+- **The approvals list** checks who may read a leave reason once per page,
+  not once per request.
+
+### Known limits
+- HR's pull-down on the issue board is checked by tests, not yet on a phone.
+- What a Shift Supervisor can do on Desk is not yet checked: the test site
+  has no supervisor with a team.
+
 ## [2.0.0-alpha.35] — Steady Nadi — 2026-10-06
 
 Fixes, speed and clean-up. Everything since alpha.34 ships here.

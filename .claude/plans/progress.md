@@ -227,3 +227,4 @@ NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), 
 - 2026-10-06T04:30:07Z COMMIT: 1ef5b3271 docs(audit): the Shift Supervisor Desk probe has no supervisor to run as → review dispatched
 - 2026-10-06T04:32:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
 - 2026-10-06T04:32:42Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
+- 2026-10-06T04:32:50Z COMMIT: d21f3dad9 perf(approvals): the approvals list asked the leave-reason rule once per row → review dispatched
