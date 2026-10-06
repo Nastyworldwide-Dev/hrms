@@ -175,21 +175,34 @@ def _working_days_between(employee: str, start, end) -> int:
 
 def _away_approvers(today) -> set[str]:
 	"""Logins of everyone on approved leave today. ONE read for the whole run,
-	however many requests wait; compared lower-case, as logins are."""
+	however many requests wait; compared lower-case, as logins are. A half day
+	off TODAY is not away (half the day is still at work); a long leave whose
+	half day falls on another date is away today."""
 	rows = frappe.get_all(
 		"Leave Application",
 		filters={
 			"docstatus": 1,
 			"status": "Approved",
-			# a half day off still leaves half a day at work to decide in
-			"half_day": 0,
 			"from_date": ["<=", today],
 			"to_date": [">=", today],
 		},
-		fields=["employee.user_id as user_id"],
+		fields=["employee.user_id as user_id", "half_day", "half_day_date", "from_date", "to_date"],
 		limit_page_length=0,
 	)
-	return {r.user_id.lower() for r in rows if r.user_id}
+	day = str(getdate(today))
+	away = set()
+	for r in rows:
+		if not r.user_id:
+			continue
+		if r.get("half_day"):
+			# a one-day half day may leave half_day_date empty: its only day is the half
+			half = r.get("half_day_date") or (
+				r.get("from_date") if r.get("from_date") == r.get("to_date") else None
+			)
+			if half and str(getdate(half)) == day:
+				continue
+		away.add(r.user_id.lower())
+	return away
 
 
 def _waiting_requests() -> list[dict]:

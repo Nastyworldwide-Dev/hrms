@@ -208,15 +208,35 @@ class TestHalfDayLeaveIsNotAway(unittest.TestCase):
 	"""Review of W1: someone on a half day is at work for the other half and can
 	decide; only a full day off counts as away."""
 
-	def test_half_day_rows_are_not_read_as_away(self):
+	def _away(self, rows, today="2026-10-06"):
 		from unittest.mock import patch
 
 		import hrms.utils.approval_reminders as ar
 
-		with patch.object(ar.frappe, "get_all", return_value=[]) as get_all:
-			ar._away_approvers("2026-10-06")
-		filters = get_all.call_args.kwargs["filters"]
-		self.assertEqual(filters.get("half_day"), 0)
+		with patch.object(ar.frappe, "get_all", return_value=[ar.frappe._dict(r) for r in rows]) as get_all:
+			away = ar._away_approvers(today)
+		self.assertEqual(get_all.call_count, 1, "still one read")
+		return away
+
+	def test_a_half_day_today_is_not_away(self):
+		row = {"user_id": "a@x", "half_day": 1, "half_day_date": "2026-10-06"}
+		self.assertEqual(self._away([row]), set())
+
+	def test_a_long_leave_with_its_half_day_on_another_date_is_away_today(self):
+		# review of the first fix: filtering half_day = 0 dropped the whole of a
+		# five-day leave whose LAST day was a half day
+		row = {"user_id": "a@x", "half_day": 1, "half_day_date": "2026-10-09"}
+		self.assertEqual(self._away([row]), {"a@x"})
+
+	def test_a_one_day_half_day_with_no_date_set_is_not_away(self):
+		row = {
+			"user_id": "a@x",
+			"half_day": 1,
+			"half_day_date": None,
+			"from_date": "2026-10-06",
+			"to_date": "2026-10-06",
+		}
+		self.assertEqual(self._away([row]), set())
 
 
 class TestWaitingRequestsReadsLeaveOnce(unittest.TestCase):
