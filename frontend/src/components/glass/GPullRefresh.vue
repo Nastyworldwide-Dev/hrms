@@ -67,7 +67,19 @@ function onStart() {
 	refreshing.value = false
 }
 
+// ONE refresh per pull even when the element dispatches both spellings (they are two events, in the same
+// instant). A second pull is a second gesture, always longer than this.
+const SAME_PULL_MS = 400
+let lastRefreshAt = 0
+const PULL_EVENTS = [
+	[["ion-start", "ionStart"], onStart],
+	[["ion-refresh", "ionRefresh"], onRefresh],
+]
+
 function onRefresh(event) {
+	const now = Date.now()
+	if (now - lastRefreshAt < SAME_PULL_MS) return
+	lastRefreshAt = now
 	refreshing.value = true
 	console.info("[GPullRefresh] refresh started")
 	clearTimeout(capTimer)
@@ -88,14 +100,16 @@ onMounted(() => {
 		console.warn("[GPullRefresh] ion-refresher element not found; refresh is inert")
 		return
 	}
-	el.addEventListener("ionStart", onStart)
-	el.addEventListener("ionRefresh", onRefresh)
+	// The names the RUNNING element fires. @ionic/vue's wrapper renames every Ionic event to kebab-case
+	// ("ion-refresh"), so the camelCase listener written on 28 Sep never received anything: the pull animated
+	// and nothing reloaded (proved live in a real browser, 6 Oct 2026; e2e/pull-refresh.spec.js). The raw
+	// camelCase names stay registered too, for an Ionic that dispatches them as authored.
+	for (const [names, handler] of PULL_EVENTS) for (const name of names) el.addEventListener(name, handler)
 })
 
 onBeforeUnmount(() => {
 	const el = nativeEl()
-	el?.removeEventListener("ionStart", onStart)
-	el?.removeEventListener("ionRefresh", onRefresh)
+	if (el) for (const [names, handler] of PULL_EVENTS) for (const name of names) el.removeEventListener(name, handler)
 	clearTimeout(capTimer)
 })
 </script>

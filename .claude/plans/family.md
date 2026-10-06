@@ -1,5 +1,9 @@
-CLASS: a refresh that fans out per event. Every employee's punch reaches every open app through list_update; each used to reload two reads and now reloads four (3a54590cd), so a burst (HR fixing many punches, a shift starting) times the number of open apps could hit the server in the tens of thousands within seconds (review of 3a54590cd, worst case 50 x 200).
-frontend/src/components/CheckInPanel.vue:useListUpdate same-root (fixed here: the realtime path waits a second and runs once per burst)
-frontend/src/components/CheckInPanel.vue:refreshAfterPunch same-root — the person's OWN punch still calls it directly, immediate, never through the debounce
-frontend/src/composables/realtime.js:useListUpdate ticket realtime-fanout — the helper has no debounce or per-employee filter for any caller (ListView, RequestPanel register several); checked here only for CheckInPanel
-frontend/src/components/ListView.vue not-affected — its list_update handler reloads one list, unchanged
+CLASS: a fix pinned by a test that reads the SOURCE, so the test stays green while the running app is still wrong. On 28 Sep the pull-to-refresh and infinite-scroll listeners were rewritten as raw camelCase addEventListener calls and four tests pinned that text. @ionic/vue's wrapper renames every Ionic event to kebab-case, so the real element fires "ion-refresh" / "ion-scroll"; the handlers never ran. A real pull on the running app made zero requests (proved in a real browser on the test site, 6 Oct 2026, on all four screens that carry a pull).
+frontend/src/components/glass/GPullRefresh.vue same-root (fixed here: listens for both spellings, one refresh per pull)
+frontend/src/components/ListView.vue same-root (fixed here: infinite scroll listens for both spellings)
+frontend/e2e/pull-refresh.spec.js same-root (new, in the following test: commit: drags with real touch events on Home, Requests, Approvals and Announcements and asserts the data requests go out; fails with the old listener, 4 of 4)
+frontend/e2e/list-scroll.spec.js same-root (new, in the following test: commit: a real scroll reaches the list's handler; fails with the old listener)
+frontend/src/components/glass/__tests__/pull-refresh-events-real.test.js same-root (rewritten to pin both spellings and point at the real-browser gate)
+frontend/src/views/Notifications.vue ticket stabilise-plan-stage-1 — no pull-down at all (and 8 more screens, see docs/glass/plan/2026-10-05-stabilise-nadi-plan.md); next commit
+grep: any other raw addEventListener("ion...") in src — only these two exist (checked)
+frontend/src/components/__tests__/no-jump-placeholders.test.js not-affected — already failing on a clean HEAD ("an empty queue is the same row as its skeleton"): reads Approvals.vue wording from 29 Sep; left as it was, noted here so it is not mistaken for this change

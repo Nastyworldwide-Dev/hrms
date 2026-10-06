@@ -269,3 +269,4 @@ NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch
 - 2026-10-06T01:35:51Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
 - 2026-10-06T01:35:54Z COMMIT: 3a54590cd fix(checkin): the Today status line stayed stale after a punch → review+design dispatched
 - 2026-10-06T01:37:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-06T01:37:52Z COMMIT: 18026f349 fix(checkin): a burst of other people's punches would reload four reads each → review+design dispatched

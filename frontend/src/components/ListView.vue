@@ -594,6 +594,10 @@ onMounted(async () => {
 
 	const scrollEl = content.value?.$el
 	if (scrollEl) {
+		// BOTH spellings: @ionic/vue's wrapper renames Ionic events to kebab-case ("ion-scroll"), so the
+		// camelCase-only listener of 28 Sep never received anything on the running app (live, 6 Oct 2026;
+		// same cause as GPullRefresh). handleScroll is debounced, so two spellings of one scroll run once.
+		scrollEl.addEventListener("ion-scroll", handleScroll)
 		scrollEl.addEventListener("ionScroll", handleScroll)
 	} else {
 		console.warn("[ListView] ion-content element not found; infinite scroll is inert")
@@ -613,6 +617,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+	content.value?.$el?.removeEventListener("ion-scroll", handleScroll)
 	content.value?.$el?.removeEventListener("ionScroll", handleScroll)
 })
 </script>
