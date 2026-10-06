@@ -1558,7 +1558,10 @@ def near_duplicate_expenses(name: str) -> list[str]:
 	claims, dates and expense types, so only someone who may open this claim gets them.
 	"""
 	frappe.has_permission("Expense Claim", ptype="read", doc=name, throw=True)
-	return frappe.get_doc("Expense Claim", name).near_duplicate_notes()
+	return frappe.get_doc("Expense Claim", name).near_duplicate_notes(
+		# only claims the caller may open are named (review of alpha.38 N1)
+		may_open=lambda other: bool(frappe.has_permission("Expense Claim", ptype="read", doc=other))
+	)
 
 def configured_expense_claim_types(types: list, account_rows: list, company: str | None) -> list:
 	"""Only the types an employee of `company` can actually save a claim with.

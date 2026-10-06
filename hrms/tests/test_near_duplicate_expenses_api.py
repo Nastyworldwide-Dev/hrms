@@ -30,6 +30,7 @@ import frappe
 
 SENTENCE = "You already claimed a Travel on 01-10-2026 in HR-EXP-0001. Check it is not the same expense."
 
+
 class TestNearDuplicateExpensesEndpoint(unittest.TestCase):
 	def endpoint(self):
 		import hrms.api as api
@@ -46,7 +47,29 @@ class TestNearDuplicateExpensesEndpoint(unittest.TestCase):
 			self.assertEqual(self.endpoint()("HR-EXP-0002"), [SENTENCE])
 		has_permission.assert_called_once_with("Expense Claim", ptype="read", doc="HR-EXP-0002", throw=True)
 		get_doc.assert_called_once_with("Expense Claim", "HR-EXP-0002")
-		claim.near_duplicate_notes.assert_called_once_with()
+		claim.near_duplicate_notes.assert_called_once()
+
+	def test_it_names_only_the_other_claims_the_caller_may_open(self):
+		# review of N1 (6 Oct): an approver of THIS claim must not learn the names
+		# of the employee's other claims that are routed to someone else
+		claim = MagicMock()
+		claim.near_duplicate_notes.return_value = [SENTENCE]
+		allowed = {"HR-EXP-0002": True, "HR-EXP-0001": True, "HR-EXP-0007": False}
+
+		def has_permission(doctype, ptype="read", doc=None, throw=False, **kwargs):
+			ok = allowed.get(doc, False)
+			if throw and not ok:
+				raise frappe.PermissionError(doc)
+			return ok
+
+		with (
+			patch.object(frappe, "has_permission", side_effect=has_permission),
+			patch.object(frappe, "get_doc", return_value=claim),
+		):
+			self.endpoint()("HR-EXP-0002")
+			may_open = claim.near_duplicate_notes.call_args.kwargs["may_open"]
+			self.assertTrue(may_open("HR-EXP-0001"))
+			self.assertFalse(may_open("HR-EXP-0007"))
 
 	def test_a_claim_with_nothing_near_it_answers_an_empty_list(self):
 		claim = MagicMock()
@@ -71,6 +94,7 @@ class TestNearDuplicateExpensesEndpoint(unittest.TestCase):
 			with self.assertRaises(frappe.DoesNotExistError):
 				self.endpoint()("HR-EXP-9999")
 		get_doc.assert_not_called()
+
 
 if __name__ == "__main__":
 	unittest.main()

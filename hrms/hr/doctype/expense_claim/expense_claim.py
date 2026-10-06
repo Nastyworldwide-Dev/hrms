@@ -305,20 +305,23 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				indicator="orange",
 			)
 
-	def near_duplicate_notes(self) -> list[str]:
+	def near_duplicate_notes(self, may_open=lambda name: True) -> list[str]:
 		"""The warning `validate_no_duplicate_expenses` shows, for a claim already saved.
 
 		Nadi never shows a msgprint (frappe-ui drops `_server_messages` on a
 		successful request), so `hrms.api.near_duplicate_expenses` asks for the
 		same sentences here, by the same rule and in plain text (the claim is
-		named, not linked to a Desk page an employee cannot open).
+		named, not linked to a Desk page an employee cannot open). `may_open`
+		keeps out a claim the caller may not open: an approver of this claim
+		does not learn the names of claims routed to someone else.
 		"""
 		if not self._checks_for_duplicates():
 			return []
 		lines = self._dated_expense_lines(self.precision("amount", "expenses"))
 		if not lines:
 			return []
-		return near_duplicate_sentences(near_duplicate_claims(self._other_claim_lines(lines), lines))
+		near = near_duplicate_claims(self._other_claim_lines(lines), lines)
+		return near_duplicate_sentences([n for n in near if may_open(n[2])])
 
 	def _checks_for_duplicates(self) -> bool:
 		"""A claim that is itself Rejected or cancelled is not checked (see validate_no_duplicate_expenses)."""

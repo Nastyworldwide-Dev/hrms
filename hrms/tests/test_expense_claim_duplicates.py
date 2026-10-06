@@ -62,6 +62,7 @@ def _lift_function(name, namespace):
 	exec(compile(ast.Module(body=[fn], type_ignores=[]), str(SOURCE), "exec"), namespace)
 	return namespace[name]
 
+
 def _getdate(value):
 	if isinstance(value, datetime.date):
 		return value
@@ -438,6 +439,16 @@ class TestNearDuplicateNotes(unittest.TestCase):
 	def run_check(self, doc):
 		return self.site.check(doc)
 
+	def test_a_claim_the_caller_may_not_open_is_not_named(self):
+		# review of N1: the Nadi read names only claims the caller may open
+		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
+		self.site.file("HR-EXP-0007", [("Travel", "2026-10-01", 70.0)])
+		doc = self.site.claim([("Travel", "2026-10-01", 55.0)])
+		notes = doc.near_duplicate_notes(may_open=lambda name: name != "HR-EXP-0007")
+		self.assertEqual(len(notes), 1)
+		self.assertIn("HR-EXP-0001", notes[0])
+		self.assertNotIn("HR-EXP-0007", " ".join(notes))
+
 	def test_nothing_to_say_is_an_empty_list(self):
 		self.site.file("HR-EXP-0001", [("Travel", "2026-10-01", 50.0)])
 		self.assertEqual(self.site.claim([("Meals", "2026-10-01", 55.0)]).near_duplicate_notes(), [])
@@ -485,6 +496,7 @@ class TestNearDuplicateNotes(unittest.TestCase):
 		for shared in ("_other_claim_lines", "near_duplicate_claims", "near_duplicate_sentences"):
 			self.assertIn(shared, calls["validate_no_duplicate_expenses"])
 			self.assertIn(shared, calls["near_duplicate_notes"])
+
 
 if __name__ == "__main__":
 	unittest.main()

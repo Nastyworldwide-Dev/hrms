@@ -1,4 +1,3 @@
-CLASS: an editor button that makes content the reader removes: Image/Video store the file inside the text as data:, safeHtml strips data: URLs, so staff saw an empty picture.
-frontend/src/views/sop/SopFormSheet.vue same-root (own TOOLBAR without Image/Video; pictures go through "Add a file", a private File on the SOP)
-frontend/src/components/FormField.vue ticket alpha.39 — its Text Editor keeps the default menu (Image included) for other doctypes; same class wherever that HTML is read through safeHtml
-frontend/src/utils/safeHtml.js not-affected — stripping data: is correct
+CLASS: a read that names records the caller may not open: the near-duplicate notes named every same-day claim of the employee, so an approver of one claim learned the names of claims routed to someone else.
+hrms/hr/doctype/expense_claim/expense_claim.py:near_duplicate_notes same-root (may_open filter; the save-time warning keeps the default, the employee owns all their claims)
+hrms/api/__init__.py:near_duplicate_expenses same-root (may_open = read permission per named claim)
