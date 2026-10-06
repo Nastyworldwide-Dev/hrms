@@ -267,3 +267,5 @@ NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch
 - 2026-10-05T11:30:35Z COMMIT: 6976d80c0 fix(desk): the "Approved · unpaid" pill listed too few claims when clicked → review+design dispatched
 - 2026-10-05T11:41:04Z COMMIT: 299b1c267 docs(plan): stabilise Nadi and keep Desk in good hands → review dispatched
 - 2026-10-06T01:35:51Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-06T01:35:54Z COMMIT: 3a54590cd fix(checkin): the Today status line stayed stale after a punch → review+design dispatched
+- 2026-10-06T01:37:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833

@@ -218,7 +218,7 @@ import GModal from "@/components/glass/GModal.vue"
 import { useOnline } from "@/composables/useOnline"
 import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
 import GButton from "@/components/glass/GButton.vue"
-import { createResource, createListResource } from "frappe-ui"
+import { createResource, createListResource, debounce } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
 import { computed, inject, nextTick, ref, shallowRef, watch, onBeforeUnmount } from "vue"
 import { useListUpdate } from "@/composables/realtime"
@@ -1439,8 +1439,14 @@ function onModalDismiss() {
 // handler is detached BY REFERENCE on unmount — a bare socket.off("list_update")
 // tore down every OTHER component's list_update listener too — and is rejoined
 // on reconnect.
+// A list_update reaches EVERY open app for any employee's punch (HR fixing a burst of punches, a shift
+// starting). Each one used to reload two reads; now it reloads four, so the realtime path waits a second and
+// runs once for a burst. The person's OWN punch calls refreshAfterPunch() directly and stays immediate
+// (review of 3a54590cd).
+const REALTIME_REFRESH_MS = 1000
+const refreshFromRealtime = debounce(() => refreshAfterPunch(), REALTIME_REFRESH_MS)
 useListUpdate(socket, DOCTYPE, () => {
-	refreshAfterPunch()
+	refreshFromRealtime()
 })
 
 onBeforeUnmount(() => {

@@ -168,3 +168,14 @@ test("every path that saves a punch refreshes through the one function, which co
 	// the punch, the lost answer, the two dialogs and the realtime update all use it
 	assert.ok((src.match(/refreshAfterPunch\(\)/g) || []).length >= 6)
 })
+
+test("the realtime path is debounced; the person's own punch is not", () => {
+	// every employee's punch reaches every open app, and each refresh is now four reads: a burst must run once
+	assert.match(src, /const refreshFromRealtime = debounce\(\(\) => refreshAfterPunch\(\), REALTIME_REFRESH_MS\)/)
+	assert.match(src, /useListUpdate\(socket, DOCTYPE, \(\) => \{\s*refreshFromRealtime\(\)\s*\}\)/)
+	// the punch's own success path calls the function directly, never through the debounce
+	const idx = src.indexOf("async onSuccess(doc) {")
+	const body = src.slice(idx, idx + 1500)
+	assert.match(body, /refreshAfterPunch\(\)/)
+	assert.doesNotMatch(body, /refreshFromRealtime/)
+})

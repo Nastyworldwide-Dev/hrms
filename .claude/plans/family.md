@@ -1,7 +1,5 @@
-CLASS: one action, several readers of its result, and only some of them told. A saved punch reloaded the punch list, but the status line ("Done for today" / "Working") and the week line read other resources that nothing reloaded, so the Today card contradicted itself ("Done for today" beside a "Check out" button) until the page was reloaded. Reproduced in a real browser on the test site, 6 Oct 2026.
-frontend/src/components/CheckInPanel.vue:refreshAfterPunch same-root (new: ONE function that reloads the punch list, the stale-IN banner, the status line and the week line; allSettled so one failing read stops none)
-frontend/src/components/CheckInPanel.vue main punch / lost answer / RemoteCheckinDialog / LateCheckoutDialog / realtime list_update same-root (fixed here: all five paths call it)
-frontend/src/components/NowBar.vue not-affected — it reads nowResource, which the function now reloads
-frontend/src/components/HomeWeek.vue not-affected — reads homeWeek, same
-frontend/src/views/Home.vue:refresh not-affected — pull-down already reloads these; its own handler never ran (next commit)
-hrms/api/attendance_fix_day.py ticket stale-status-after-fix-day — HR's "Fix a day" probably leaves the same stale Today line for the employee; not reproduced
+CLASS: a refresh that fans out per event. Every employee's punch reaches every open app through list_update; each used to reload two reads and now reloads four (3a54590cd), so a burst (HR fixing many punches, a shift starting) times the number of open apps could hit the server in the tens of thousands within seconds (review of 3a54590cd, worst case 50 x 200).
+frontend/src/components/CheckInPanel.vue:useListUpdate same-root (fixed here: the realtime path waits a second and runs once per burst)
+frontend/src/components/CheckInPanel.vue:refreshAfterPunch same-root — the person's OWN punch still calls it directly, immediate, never through the debounce
+frontend/src/composables/realtime.js:useListUpdate ticket realtime-fanout — the helper has no debounce or per-employee filter for any caller (ListView, RequestPanel register several); checked here only for CheckInPanel
+frontend/src/components/ListView.vue not-affected — its list_update handler reloads one list, unchanged

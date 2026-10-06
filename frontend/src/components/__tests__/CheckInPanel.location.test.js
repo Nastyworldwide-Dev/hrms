@@ -119,6 +119,8 @@ function panel({ employee = "EMP", storage = new Map(), start = 1_800_000_000_00
 			}[name]),
 		onBeforeUnmount: (fn) => unmount.push(fn),
 		useListUpdate: () => {},
+		// the realtime refresh is debounced in the component; here it runs at once so its effect can be counted
+		debounce: (fn) => fn,
 		nowResource: { reload: async () => { counters.statusReload += 1 } },
 		homeWeek: { reload: async () => { counters.weekReload += 1 } },
 		useOnline: () => ({ value: true }),
