@@ -1531,61 +1531,6 @@ onBeforeUnmount(() => {
 	color: var(--g-on-media-frame);
 }
 
-/* Live "you are here" pin — solid blue dot with a pulsing outer ring. */
-.user-pin {
-	position: relative;
-	width: 22px;
-	height: 22px;
-}
-.user-pin-dot {
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	width: 14px;
-	height: 14px;
-	margin: -7px 0 0 -7px;
-	border-radius: 50%;
-	background: #2563eb;
-	border: 2px solid #ffffff;
-	box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4);
-}
-.user-pin-ring {
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	width: 22px;
-	height: 22px;
-	margin: -11px 0 0 -11px;
-	border-radius: 50%;
-	border: 2px solid rgba(37, 99, 235, 0.6);
-	animation: user-pin-pulse 2s ease-out infinite;
-}
-@keyframes user-pin-pulse {
-	0% {
-		transform: scale(0.8);
-		opacity: 0.9;
-	}
-	100% {
-		transform: scale(2.2);
-		opacity: 0;
-	}
-}
-
-/* Shift-location label sitting above its pin. */
-.shift-loc-tooltip {
-	background: #111827 !important;
-	color: #f9fafb !important;
-	border: none !important;
-	font-size: 11px !important;
-	font-weight: 600 !important;
-	padding: 2px 6px !important;
-	border-radius: 4px !important;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
-}
-.shift-loc-tooltip:before {
-	display: none !important;
-}
-
 /* On tablet/desktop the check-in sheet presents as a centered dialog.
    Centering comes from the global modal-sheet rule in modernist.css —
    adding transforms here double-centers and pushes the dialog off-screen.

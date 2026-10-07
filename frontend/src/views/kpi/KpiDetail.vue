@@ -25,7 +25,7 @@
 			v-if="heading"
 			ref="headingEl"
 			tabindex="-1"
-			class="font-sans font-bold text-screen-title kpi-detail__heading"
+			class="font-sans font-bold text-screen-title kpi-detail__heading g-focusable"
 		>
 			{{ heading }}
 		</h2>
@@ -290,13 +290,3 @@ const trendPoints = computed(() =>
 	trend.value.map((p, i) => `${trendX(i)},${trendY(p.total_score)}`).join(" ")
 )
 </script>
-
-<style scoped>
-/* The heading is focused PROGRAMMATICALLY when the detail replaces the list, to
-   carry a keyboard user and a screen reader across a swap that has no route
-   change. A ring there would look like a control the user had tabbed to. Real
-   keyboard focus still paints — :focus-visible is untouched. */
-.kpi-detail__heading:focus {
-	outline: none;
-}
-</style>

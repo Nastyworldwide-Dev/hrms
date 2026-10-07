@@ -49,7 +49,7 @@
 								:href="attachment.file_url"
 								target="_blank"
 								rel="noopener"
-								class="relative flex-none inline-flex h-icon-xl w-icon-xl items-center justify-center border border-accent-ink text-accent-ink no-underline before:absolute before:-inset-2 before:content-['']"
+								class="relative flex-none inline-flex h-icon-xl w-icon-xl items-center justify-center border border-accent-ink text-accent-ink no-underline before:absolute before:-inset-2"
 								:title="__('Download')"
 								:aria-label="__('Download')"
 							>

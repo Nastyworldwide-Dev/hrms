@@ -1,54 +1,13 @@
 {
-	"components/AttendanceCalendar.vue": {
-		"arbitrary": 1
-	},
-	"components/BottomTabs.vue": {
-		"arbitrary": 2
-	},
-	"components/CheckInPanel.vue": {
-		"rawPalette": 5,
-		"hex": 4,
-		"colorfn": 3,
-		"arbitrary": 4
-	},
-	"components/CustomIonModal.vue": {
-		"arbitrary": 1
-	},
-	"components/ExpenseTaxesTable.vue": {
-		"rawPalette": 2
-	},
 	"components/ExpensesTable.vue": {
-		"rawPalette": 2,
-		"arbitrary": 1
-	},
-	"components/FormField.vue": {
-		"rawPalette": 1,
-		"arbitrary": 2
-	},
-	"components/FormView.vue": {
-		"rawPalette": 8
-	},
-	"components/InstallPrompt.vue": {
-		"arbitrary": 1
-	},
-	"components/ListFiltersActionSheet.vue": {
 		"arbitrary": 1
 	},
 	"components/PdfInlineViewer.vue": {
 		"colorfn": 1,
 		"arbitrary": 1
 	},
-	"components/PushNotificationPrompt.vue": {
-		"rawPalette": 2
-	},
 	"components/SideNav.vue": {
-		"arbitrary": 14
-	},
-	"composables/index.js": {
-		"rawPalette": 2
-	},
-	"composables/workflow.js": {
-		"rawPalette": 2
+		"arbitrary": 1
 	},
 	"theme/__tests__/contrast.test.js": {
 		"hex": 2
@@ -58,12 +17,6 @@
 	},
 	"theme/variables.css": {
 		"hex": 47
-	},
-	"utils/commonUtils.js": {
-		"rawPalette": 2
-	},
-	"utils/loudRequest.js": {
-		"rawPalette": 1
 	},
 	"views/AppSettings.vue": {
 		"rawPalette": 4,

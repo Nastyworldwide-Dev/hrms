@@ -7,11 +7,10 @@ http://ionicframework.com/docs/theming/ */
 /** Ionic CSS Variables **/
 
 :root {
-	--ion-background-color: #f3f2f2;
-	--ion-font-family: "Archivo", system-ui, sans-serif;
-	--ion-text-color: #201e1d;
-	--ion-tab-bar-color-selected: #0b313a;
-	--ion-tab-bar-background-focused: #e2e2e2;
+	/* --ion-background-color, --ion-text-color, --ion-font-family and the two
+	   --ion-tab-bar-* colours live in glass.variables.css (generated from the
+	   Glass tokens, loaded after this file, both themes). The copies that were
+	   here were overridden everywhere and carried 4 hex of the old palette. */
 
 	/** primary **/
 	--ion-color-primary: #0b313a;
@@ -24,7 +23,7 @@ http://ionicframework.com/docs/theming/ */
 	/** secondary **/
 	--ion-color-secondary: #3dc2ff;
 	--ion-color-secondary-rgb: 61, 194, 255;
-	--ion-color-secondary-contrast: #ffffff;
+	--ion-color-secondary-contrast: var(--g-tile-on-tile);
 	--ion-color-secondary-contrast-rgb: 255, 255, 255;
 	--ion-color-secondary-shade: #36abe0;
 	--ion-color-secondary-tint: #50c8ff;
@@ -32,7 +31,7 @@ http://ionicframework.com/docs/theming/ */
 	/** tertiary **/
 	--ion-color-tertiary: #5260ff;
 	--ion-color-tertiary-rgb: 82, 96, 255;
-	--ion-color-tertiary-contrast: #ffffff;
+	--ion-color-tertiary-contrast: var(--g-tile-on-tile);
 	--ion-color-tertiary-contrast-rgb: 255, 255, 255;
 	--ion-color-tertiary-shade: #4854e0;
 	--ion-color-tertiary-tint: #6370ff;
@@ -40,7 +39,7 @@ http://ionicframework.com/docs/theming/ */
 	/** success **/
 	--ion-color-success: #1a9a74;
 	--ion-color-success-rgb: 26, 154, 116;
-	--ion-color-success-contrast: #ffffff;
+	--ion-color-success-contrast: var(--g-tile-on-tile);
 	--ion-color-success-contrast-rgb: 255, 255, 255;
 	--ion-color-success-shade: #178766;
 	--ion-color-success-tint: #31a482;
@@ -56,7 +55,7 @@ http://ionicframework.com/docs/theming/ */
 	/** danger **/
 	--ion-color-danger: #eb445a;
 	--ion-color-danger-rgb: 235, 68, 90;
-	--ion-color-danger-contrast: #ffffff;
+	--ion-color-danger-contrast: var(--g-tile-on-tile);
 	--ion-color-danger-contrast-rgb: 255, 255, 255;
 	--ion-color-danger-shade: #cf3c4f;
 	--ion-color-danger-tint: #ed576b;
@@ -64,7 +63,7 @@ http://ionicframework.com/docs/theming/ */
 	/** dark **/
 	--ion-color-dark: #222428;
 	--ion-color-dark-rgb: 34, 36, 40;
-	--ion-color-dark-contrast: #ffffff;
+	--ion-color-dark-contrast: var(--g-tile-on-tile);
 	--ion-color-dark-contrast-rgb: 255, 255, 255;
 	--ion-color-dark-shade: #1e2023;
 	--ion-color-dark-tint: #383a3e;
@@ -72,7 +71,7 @@ http://ionicframework.com/docs/theming/ */
 	/** medium **/
 	--ion-color-medium: #92949c;
 	--ion-color-medium-rgb: 146, 148, 156;
-	--ion-color-medium-contrast: #ffffff;
+	--ion-color-medium-contrast: var(--g-tile-on-tile);
 	--ion-color-medium-contrast-rgb: 255, 255, 255;
 	--ion-color-medium-shade: #808289;
 	--ion-color-medium-tint: #9d9fa6;
@@ -88,9 +87,6 @@ http://ionicframework.com/docs/theming/ */
 
 /* Dark theme (html.dark set by src/data/theme.js) — mirrors modernist.css */
 .dark {
-	--ion-background-color: #191817;
-	--ion-text-color: #f3f2f2;
-	--ion-tab-bar-color-selected: #a1eec9;
 	--ion-color-primary: #a1eec9;
 	--ion-color-primary-rgb: 161, 238, 201;
 	--ion-color-primary-contrast: #191817;

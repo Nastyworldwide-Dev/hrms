@@ -289,3 +289,5 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T08:56:51Z COMMIT: c149ae609 fix(pwa): Android Back with a sheet open also left the page → review+design dispatched
 - 2026-10-07T09:11:26Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
 - 2026-10-07T09:11:26Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-10-07T09:11:30Z COMMIT: d7e728d11 fix(pwa): after Back closed a sheet, focus fell to the page instead of its opener → review+design dispatched
+2026-10-07T09:27:17Z EVIDENCE: 2 correct — S8: lint 47 total 0 new (baseline was stale: 234 -> 47, most debt cleared earlier); frontend suite 1599/1599; GATES_NO_SITE=1 yarn gates rc 0. 5 looks right — S8a 75 captures 390x844 light+dark: 72 identical, 2 AA-only (18px, 5px), 1 not comparable (server 500); S8b 18 captures: 16 identical, 2 dark differ 6/4 px.

@@ -364,7 +364,11 @@
 					     nobody, and an empty table directly under a hero counting the
 					     whole company reads as a contradiction rather than a fact. -->
 					<div v-if="!teamResource.error && !(atTreeRoot && !teamRows.length)">
-						<h2 ref="scoresHeadingEl" tabindex="-1" class="g-eyebrow mb-2.5 kpi-scores-heading">
+						<h2
+							ref="scoresHeadingEl"
+							tabindex="-1"
+							class="g-eyebrow mb-2.5 kpi-scores-heading g-focusable"
+						>
 							{{ isManagerTier ? __("Scores") : __("People here") }}
 						</h2>
 						<GDataTable
@@ -817,12 +821,6 @@ const teamRows = computed(() =>
 
 <style scoped>
 /* Modernist filter selects: surface fill, hairline border, square. */
-/* Programmatic focus target when the detail closes — no ring, same reasoning
-   as KpiDetail's heading. */
-.kpi-scores-heading:focus {
-	outline: none;
-}
-
 .kpi-filter {
 	background-color: var(--g-glass-fill-fallback);
 	border: 1px solid var(--g-hair);
