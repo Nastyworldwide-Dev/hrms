@@ -131,7 +131,7 @@ test("TicketDetail: a refused reply says why itself, since the seam stays quiet 
 	const src = code(read("../../views/helpdesk/TicketDetail.vue"))
 	const send = src.slice(src.indexOf("async function send()"))
 	assert.match(send, /gToast\(\{ title: __\("Reply not sent"\), text: firstMessage\(error\), variant: "error" \}\)/)
-	assert.match(read("../../utils/loudRequest.js"), /"hrms\.api\.helpdesk\.reply"/)
+	assert.match(read("../../utils/requestFailure.js"), /"hrms\.api\.helpdesk\.reply"/)
 })
 
 test("MustReadNotice never records a notice whose text did not load", () => {

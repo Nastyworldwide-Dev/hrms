@@ -33,20 +33,16 @@ nodeModule.registerHooks?.({
 
 const { createResource } = await import("frappe-ui/src/resources/resources.js")
 
-// loudRequest also reads the real isNoAccess (no imports) and the user cookie (a boundary).
-const noAccessSource = readFileSync(new URL("../utils/sessionLost.js", import.meta.url), "utf8")
-const source = readFileSync(new URL("../utils/loudRequest.js", import.meta.url), "utf8")
-	.replace('import { gToast } from "@/components/glass/toast"', "const gToast = () => {}")
-	.replace('import { isNoAccess } from "@/utils/sessionLost"', "")
-	.replace('import { sessionUser } from "@/utils/personalCache"', "const sessionUser = () => \"a@x\"")
-const loudModule = new Function(
-	`${noAccessSource.replace(/export function/g, "function")}
-	${source.replace(/export function/g, "function")}
-	return {
-		makeLoudRequest,
-		swallowReportedRejection: typeof swallowReportedRejection === "function" ? swallowReportedRejection : null,
-	}`
-)()
+// The real request seam: requestFailure.js is what loudRequest.js wires the toast and the cookie
+// into, and it imports nothing a plain runner cannot load.
+const { makeFailureReporter, swallowReportedRejection } = await import(
+	"../utils/requestFailure.js"
+)
+const loudModule = {
+	makeLoudRequest: (request, options) =>
+		makeFailureReporter(request, { signedIn: () => true, now: () => Date.now(), ...options }),
+	swallowReportedRejection,
+}
 
 const NOT_FOUND = { exc_type: "DoesNotExistError", messages: ["SOP Document SOP-X not found"] }
 const quiet = { error() {} }

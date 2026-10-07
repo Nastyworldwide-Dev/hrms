@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url"
 const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8")
 const form = read("../Form.vue")
 const formView = read("../../../components/FormView.vue")
-const loud = read("../../../utils/loudRequest.js")
+const loud = read("../../../utils/requestFailure.js")
 
 test("FormView announces the document it just created", () => {
 	assert.match(formView, /defineEmits\(\[[^\]]*"created"/)
