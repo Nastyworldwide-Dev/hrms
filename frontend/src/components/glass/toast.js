@@ -54,5 +54,12 @@ export function gToast({ title, text = "", variant = "info", position = "top-cen
 	// than by patching the vendor component, which a dependency bump undoes.
 	// An error interrupts; a success waits its turn.
 	announce([title, text].filter(Boolean).join(". "), variant === "error" ? "assertive" : "polite")
-	return toast({ title, text, position, ...mapped })
+	// frappe-ui's Toast renders `text` with v-html. Every message passes through here, so this is
+	// the one place that makes it text: a "<" in it is shown, never parsed as markup.
+	return toast({ title, text: escapeHtml(text), position, ...mapped })
+}
+
+const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }
+function escapeHtml(value) {
+	return String(value ?? "").replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch])
 }

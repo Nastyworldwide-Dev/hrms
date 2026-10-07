@@ -137,15 +137,13 @@ export function firstMessage(error, fallback = "Request failed") {
 	const message = error?.messages?.[0] || error?.message || fallback
 	return (
 		String(message)
-			// a break between parts stays a space ("Line one<br>Line two"); inline tags just go
+			// a break between parts stays a space ("Line one<br>Line two"); inline tags just go.
+			// Only a real tag — "<" then a tag name, a closing "/", or a comment — is stripped, so a
+			// comparison ("must be < 8", "a<b and c>d", "x <= 5") stays as written. Making the text
+			// safe for the v-html toast is the toast's job (glass/toast.js escapes it), not this one's.
 			.replace(/<br\s*\/?>|<\/(p|li|div)>/gi, " ")
-			// only a "<" that starts a tag (a letter, /, ! or ?) is markup: strip those, closed or
-			// cut off at the end. Any other < or > is a comparison ("must be < 8") and is said in
-			// words, so it is never read as HTML by the v-html toast and never read as a quote mark.
-			.replace(/<[a-z!/?][^>]*>/gi, "")
-			.replace(/<[a-z!/?][^>]*$/i, "")
-			.replace(/\s*<\s*/g, " less than ")
-			.replace(/\s*>\s*/g, " more than ")
+			.replace(/<!--[\s\S]*?(-->|$)/g, "")
+			.replace(/<\/?[a-z][a-z0-9-]*(\s[^<>]*)?\/?>/gi, "")
 			.replace(/\s+/g, " ")
 			.trim()
 	)

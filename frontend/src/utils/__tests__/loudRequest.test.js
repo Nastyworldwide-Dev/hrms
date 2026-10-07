@@ -140,28 +140,21 @@ test("silencing the toast does not swallow the rejection", async () => {
 	)
 })
 
-test("a comparison in a refusal is kept and said in words", () => {
-	// reviews of 96ac1b8e1: stripping from any "<" cut "Hours must be < 8" to "Hours must be",
-	// and a bare ">" became a quote mark a screen reader skips
-	assert.equal(firstMessage({ messages: ["Hours must be < 8"] }), "Hours must be less than 8")
-	assert.equal(firstMessage({ messages: ["Hours must be > 0"] }), "Hours must be more than 0")
-	assert.equal(firstMessage({ messages: ["a < b and c > d"] }), "a less than b and c more than d")
-	assert.equal(firstMessage({ messages: ["Qty<5"] }), "Qty less than 5")
-})
-
-test("a refusal with an unclosed tag never reaches the toast as markup", () => {
-	// review of f94179f64: "<[^>]*>" only strips a tag that closes, and the toast renders with
-	// v-html, so a "<img src=x onerror=..." with no ">" passed straight through
-	for (const raw of [
-		"Refused <img src=x onerror=alert(1)",
-		"<script",
-		"a < b and c > d",
-		"x <b",
+test("a comparison in a refusal is kept as written; only real tags are stripped", () => {
+	// reviews of 96ac1b8e1 and f35e2b982: the text was cut or garbled around < and >. Safety for
+	// the v-html toast now lives in glass/toast.js (it escapes); this reader only makes words.
+	// ceiling: "a<b and c>d" is a well-formed <b> tag to any parser, so it is stripped; upgrade:
+	// stop stripping here altogether once every caller renders as text (toast.js already does).
+	for (const [raw, out] of [
+		["Hours must be < 8", "Hours must be < 8"],
+		["Hours must be > 0", "Hours must be > 0"],
+		["x <= 5 and y >= 2", "x <= 5 and y >= 2"],
+		["Go -> next", "Go -> next"],
+		["Ask <b>HR</b> now", "Ask HR now"],
+		["<!-- note -->Refused", "Refused"],
 	]) {
-		const out = firstMessage({ messages: [raw] })
-		assert.ok(!out.includes("<"), `${raw} -> ${out}`)
+		assert.equal(firstMessage({ messages: [raw] }), out, raw)
 	}
-	assert.equal(firstMessage({ messages: ["Refused <img src=x onerror=alert(1)"] }), "Refused")
 })
 
 test("a server refusal split by <br>, paragraphs or list items keeps a space between its parts", () => {

@@ -267,3 +267,6 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T08:12:13Z COMMIT: 2c4353b69 test(roster): pin that Desk names each request state with Nadi's word → review+design dispatched
 - 2026-10-07T08:13:39Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-10-07T08:13:40Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 1 extra test file(s) ⟂b7fff5e7f6e0
+- 2026-10-07T08:13:44Z COMMIT: f35e2b982 fix(pwa): a refusal with "<" in it lost everything after the comparison → review+design dispatched
+- 2026-10-07T08:18:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-10-07T08:18:45Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 2 extra test file(s) ⟂cf4a11809724

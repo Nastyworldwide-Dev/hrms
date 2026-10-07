@@ -131,14 +131,51 @@ test("an unknown variant falls back to info rather than throwing", async () => {
 // "Something didn't load" banners. iOS shows one; the same message again
 // within a few seconds is the same news.
 test("the same message twice in a row shows once", async () => {
-	const { gToast, __resetRecent } = await import("../src/components/glass/toast.js")
+	const { gToast, __resetRecent } = await import(
+		"../src/components/glass/toast.js"
+	)
 	__resetRecent()
 	shown.length = 0
-	gToast({ title: "Something didn't load", text: "Try again", variant: "error" })
-	gToast({ title: "Something didn't load", text: "Try again", variant: "error" })
+	gToast({
+		title: "Something didn't load",
+		text: "Try again",
+		variant: "error",
+	})
+	gToast({
+		title: "Something didn't load",
+		text: "Try again",
+		variant: "error",
+	})
 	gToast({ title: "Saved", variant: "success" })
 	assert.deepEqual(
 		shown.map((s) => s.title),
 		["Something didn't load", "Saved"]
+	)
+})
+
+test("the visible toast shows its text as text, never as markup", async () => {
+	// frappe-ui's Toast renders `text` with v-html. Every message reaches it through this wrapper,
+	// so escaping here makes "Hours must be < 8" and a server string with "<img onerror>" both
+	// show as typed, whatever cleaned them before (reviews of f35e2b982).
+	const { gToast } = await import("../src/components/glass/toast.js")
+	gToast({
+		title: "Could not save",
+		text: 'Hours must be < 8 & <img src=x onerror="1">',
+		variant: "error",
+	})
+	const visible = shown.at(-1).text
+	assert.ok(!/<[a-z]/i.test(visible), visible)
+	assert.equal(
+		visible,
+		"Hours must be &lt; 8 &amp; &lt;img src=x onerror=&quot;1&quot;&gt;"
+	)
+	// the screen reader hears the words, not the escapes
+	await Promise.resolve()
+	const region = created.find(
+		(el) => el.getAttribute("aria-live") === "assertive"
+	)
+	assert.equal(
+		region.textContent,
+		'Could not save. Hours must be < 8 & <img src=x onerror="1">'
 	)
 })
