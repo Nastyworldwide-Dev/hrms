@@ -19,3 +19,4 @@ decide / decide_many / get_decision_actions / _approve_would_refuse / _decision_
 - db_set / db.set_value paths skip Frappe's docstatus check: update_shift_assignment guards it now;
   insert_shift's neighbour merge (db.set_value, docstatus != 2) still includes drafts.
 - The no-shift Day Type message is written twice (set_day_type and RosterDay.validate): one helper. Schedule this ticket before the next roster.py fix.
+- The "did the Day Type change" decision (old_day_type, markers cleared) in update_shift_assignment belongs inside the planned helper too (review of 28fd9beeb).

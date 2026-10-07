@@ -241,6 +241,15 @@ class TestUpdateShiftAssignmentReMarksWorkedDays(_Base):
 		self.update(day_type="Off Day")
 		self.remark.assert_not_called()
 
+	def test_the_same_word_still_re_marks_when_it_clears_a_day_marker(self):
+		# the marker was the day's word: clearing it re-prices that day, so the worked days re-mark
+		self.doc = edit._assignment(day_type="Off Day")
+		self.store.worked = {"2026-10-07"}
+		self.store.mark("EMP-1", "2026-10-07", "Rest Day")
+		self.update(day_type="Off Day")
+		self.assertEqual(self.store.dates("EMP-1"), [])
+		self.assertEqual(self.remarked(), ["2026-10-07"])
+
 	def test_re_sending_the_day_type_it_already_has_re_marks_nothing(self):
 		# review of 142d3eb8e: a same-word re-send re-marked every worked day since the start,
 		# with HR's authority, over hand-keyed attendance on days that did not change
