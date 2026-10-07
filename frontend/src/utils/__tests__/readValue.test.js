@@ -27,3 +27,12 @@ test("yes/no and dates are unchanged", () => {
 	assert.equal(readValue("Date", "2026-09-14", date), "date:2026-09-14")
 	assert.equal(readValue("Date", "", date), "")
 })
+
+// A sent OT request's "Approved on" sat in a greyed date-time box reading
+// "09/24/2026, 05:58:21 PM" (visual baseline, 7 Oct 2026): a read-only
+// date-time reads as words like every other row, on the site clock.
+test("a read-only date-time is written out, not a disabled box", () => {
+	const at = (v) => `at:${v}`
+	assert.equal(readValue("Datetime", "2026-09-24 17:58:21", date, at), "at:2026-09-24 17:58:21")
+	assert.equal(readValue("Datetime", "", date, at), "")
+})

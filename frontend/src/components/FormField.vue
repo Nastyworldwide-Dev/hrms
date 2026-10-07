@@ -26,7 +26,7 @@
 		     word, a date is written out, a number is plain (hours rounded),
 		     not a disabled switch, picker or number box. -->
 		<span
-			v-if="isReadOnly && ['Check', 'Date', 'Float', 'Int'].includes(props.fieldtype)"
+			v-if="isReadOnly && ['Check', 'Date', 'Datetime', 'Float', 'Int'].includes(props.fieldtype)"
 			class="g-form-row__value"
 		>
 			{{ readValue }}
@@ -318,7 +318,13 @@ const isReadOnly = computed(() => {
 
 //: The plain words for a read-only yes/no, date or number (alpha.7 B1).
 const readValue = computed(() => {
-	const words = plainValue(props.fieldtype, props.modelValue, (v) => dayjs(v).format("D MMM YYYY"))
+	const words = plainValue(
+		props.fieldtype,
+		props.modelValue,
+		(v) => dayjs(v).format("D MMM YYYY"),
+		// the stored value is already on the site clock; read as written, no device shift
+		(v) => dayjs(v).format("D MMM YYYY, h:mm a")
+	)
 	return props.fieldtype === "Check" ? __(words) : words
 })
 

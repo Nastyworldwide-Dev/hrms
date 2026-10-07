@@ -21,7 +21,7 @@ const has = (sel) => {
 
 test("a read-only row is marked, and yes/no and dates are plain words", () => {
 	assert.match(field, /'g-form-row--readonly': isReadOnly/)
-	assert.match(field, /v-if="isReadOnly && \['Check', 'Date', 'Float', 'Int'\]\.includes\(props\.fieldtype\)"/)
+	assert.match(field, /v-if="isReadOnly && \['Check', 'Date', 'Datetime', 'Float', 'Int'\]\.includes\(props\.fieldtype\)"/)
 	assert.match(field, /class="g-form-row__value"/)
 })
 
