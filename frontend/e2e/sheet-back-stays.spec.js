@@ -78,6 +78,52 @@ test("Back with a sheet open closes the sheet and stays on the page", async ({ b
 	await expect(page.locator(".ion-page[inert]")).toHaveCount(0)
 })
 
+test("the page under the sheet is the same page after Back: not re-made, scroll and focus kept", async ({
+	browser,
+}) => {
+	// design review of c149ae609: the stay is a redirect onto the same route, which could re-create
+	// the Ionic view and reset scroll or drop focus to <body>
+	const page = await newPage(browser)
+	await page.goto(`${BASE}/hrms/home`)
+	await page.locator("ion-tab-button[id='tab-button-/dashboard/attendance']").click()
+	await expect(page).toHaveURL(/dashboard\/attendance/)
+	await settle(page)
+	// a marker on the live page element and a scroll offset: both survive only if the page does
+	await page.evaluate(() => {
+		const top = [...document.querySelectorAll(".ion-page:not(.ion-page-hidden)")].at(-1)
+		top.dataset.backProbe = "kept"
+		const scroller = top.querySelector("ion-content")?.shadowRoot?.querySelector(".inner-scroll")
+		if (scroller) scroller.scrollTop = 120
+	})
+	const scrolledBefore = await page.evaluate(() => {
+		const top = document.querySelector("[data-back-probe]")
+		return (
+			top.querySelector("ion-content")?.shadowRoot?.querySelector(".inner-scroll")?.scrollTop ?? 0
+		)
+	})
+	const opener = page.locator(".g-cal__day:not(.g-cal__day--empty)").first()
+	await opener.focus()
+	await opener.press("Enter")
+	await expect(page.locator("ion-modal.g-modal.show-modal")).toHaveCount(1)
+	await page.waitForTimeout(600)
+	await page.goBack()
+	await expect(page.locator("ion-modal.g-modal.show-modal")).toHaveCount(0)
+	await settle(page)
+	const after = await page.evaluate(() => {
+		const top = document.querySelector("[data-back-probe]")
+		return {
+			kept: !!top && !top.classList.contains("ion-page-hidden"),
+			scroll:
+				top?.querySelector("ion-content")?.shadowRoot?.querySelector(".inner-scroll")?.scrollTop ??
+				-1,
+			focusOnBody: document.activeElement === document.body,
+		}
+	})
+	expect(after.kept, "the same page element is still the page on top").toBe(true)
+	expect(after.scroll, "the scroll position is kept").toBe(scrolledBefore)
+	expect(after.focusOnBody, "focus is not dropped to the page body").toBe(false)
+})
+
 test("after that Back the next navigation renders, and Back then goes to the page before", async ({
 	browser,
 }) => {

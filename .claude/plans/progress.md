@@ -286,3 +286,6 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T08:56:42Z EVIDENCE: 3 works — S5 sheet e2e on fresh.local: sheet-back-stays 4, sheet-closes 5, sheet-leaves-with-page 3, sheet-is-tappable 3 green; repeat-each=2: 30/30 green (load ~16-22). Red on the old guard: back-stays 1+2 (worker).
 - 2026-10-07T08:56:44Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
 - 2026-10-07T08:56:44Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-10-07T08:56:51Z COMMIT: c149ae609 fix(pwa): Android Back with a sheet open also left the page → review+design dispatched
+- 2026-10-07T09:11:26Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-07T09:11:26Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10

@@ -48,3 +48,13 @@ test("the NotFound view it points at exists", () => {
 		readFileSync(fileURLToPath(new URL("../../views/NotFound.vue", import.meta.url)))
 	)
 })
+
+test("the focus release skips a navigation that stays on the same page", () => {
+	// Back with a sheet open is redirected onto the page being left (sheetGuard.js). The blur ran
+	// on that redirect too and threw away the focus GModal had just returned to the opener, so it
+	// fell to <body> where Escape kept it on the control (measured on fresh.local, 7 Oct 2026).
+	const hook = source.slice(source.indexOf("router.beforeEach((to, from)"), source.indexOf("router.onError"))
+	assert.match(hook, /if \(to\.path === from\.path\) return/)
+	assert.match(hook, /document\.activeElement\?\.blur\?\.\(\)/)
+})
+
