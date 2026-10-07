@@ -226,3 +226,5 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T06:44:17Z COMMIT: fe2e61dad feat(team): a day HR marked off shows as off on Home, the day sheet and Team → review dispatched
 - 2026-10-07T06:47:37Z COMMIT: d62b512bc docs(plans): Team status ticket records the day-marker follow-ups → review dispatched
 2026-10-07T07:04:22Z NEXT: owner to decide (1) Desk-form shift on a marked day clears the marker (hand-made only, not splits)? (2) release fe2e61dad as alpha.40 now or hold. 2 commits ahead of origin, not pushed.
+- 2026-10-07T07:04:30Z COMMIT: ea22880ec docs(plans): next step waits on two owner calls → review dispatched
+2026-10-07T07:05:06Z NEXT: owner decides Desk-form shift on a marked day + alpha.40 release of fe2e61dad; 3 commits unpushed.
