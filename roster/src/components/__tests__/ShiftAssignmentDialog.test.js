@@ -81,6 +81,17 @@ const save = async ({ shiftChanged = false, status = "Active", end_date = "2026-
 	return { calls, toasts, emitted }
 }
 
+test("an end date before the day being changed is refused before anything is saved", async () => {
+	// review of 9f59dae7e: the end date saved, then the day change failed ("Cannot break shift
+	// after end date") and the toast blamed the day change, leaving a half-save
+	const r = await save({ shiftChanged: true, end_date: "2026-10-10" })
+	assert.deepEqual(r.calls, [])
+	assert.equal(r.toasts.length, 1)
+	assert.equal(r.toasts[0][0], "error")
+	assert.match(r.toasts[0][1], /end date.*before.*2026-10-15/i)
+	assert.deepEqual(r.emitted, [])
+})
+
 test("a shift change plus an end-date or status change is no longer refused", () => {
 	assert.doesNotMatch(view, /one at a time/)
 })
