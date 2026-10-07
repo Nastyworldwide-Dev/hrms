@@ -14,3 +14,12 @@ lint/usage/contrast/surfaces/tokens/scale/motion/a11y OK; visual, coherence, ios
 
 Upgrade trigger: before alpha.42 is tagged. CI skips these four gates (GATES_NO_SITE), so only a local
 served run sees them.
+
+## ios gate, full run (finished after the tag, 7 Oct)
+- ios-consistency 1 (above). scroll-and-shift 6: /approvals (via /remote-approvals) — "Requests you've already
+  answered" and "Check-ins you've already..." rows move 136px while loading; /issues and /hr/issues — empty state
+  ("Nothing open") moves 16px. page-audit T9 7 vs known 6 (phone + desktop): line height 12/18 and 15/23 on
+  /home, /dashboard/attendance, /dashboard/expense-claims, /team, /approvals, /invalid-employee, expense detail.
+- Not alpha.41: its Approvals diff is 4 colour lines (no layout); issues screens untouched. Not proven on an
+  alpha.40 build (a scratch checkout was refused); confirm when fixing. sheet-consistency, sheet-shift, states
+  and device-journey audits: 0 findings.
