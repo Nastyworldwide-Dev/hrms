@@ -332,6 +332,9 @@ def create_shift_assignment(
 	assignment.shift_schedule_assignment = shift_schedule_assignment
 	if day_type:
 		assignment.day_type = day_type
+	# a shift made in code (split, swap, schedule, bulk) keeps the day marks; the roster
+	# endpoints clear them themselves when the shift is the newer word
+	assignment.flags.keep_day_markers = True
 	assignment.save()
 	assignment.submit()
 	return assignment

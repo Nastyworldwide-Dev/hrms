@@ -228,3 +228,8 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T07:04:22Z NEXT: owner to decide (1) Desk-form shift on a marked day clears the marker (hand-made only, not splits)? (2) release fe2e61dad as alpha.40 now or hold. 2 commits ahead of origin, not pushed.
 - 2026-10-07T07:04:30Z COMMIT: ea22880ec docs(plans): next step waits on two owner calls → review dispatched
 2026-10-07T07:05:06Z NEXT: owner decides Desk-form shift on a marked day + alpha.40 release of fe2e61dad; 3 commits unpushed.
+- 2026-10-07T07:05:09Z COMMIT: ec4a3f4ec docs(plans): session end, NEXT recorded → review dispatched
+2026-10-07T07:21:58Z EVIDENCE: 2 correct — shift_assignment_hooks 11/11 (red on HEAD: 6); 39 related files, only pre-existing failures (restamp 5, attendance_health 1).
+2026-10-07T07:21:58Z EVIDENCE: 3 works — bench fresh.local (rolled back, hook cache cleared): Desk-form shift on 4 Nov removes only that mark; a roster split over a marked 10 Nov keeps it; no circular import.
+- 2026-10-07T07:22:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-10-07T07:22:02Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916

@@ -26,6 +26,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate, now_datetime
 
+from hrms.api.roster import _clear_day_markers as clear_day_markers
 from hrms.hr.doctype.shift_assignment.shift_assignment import refuse_overlapping_assignments
 from hrms.utils.shift_resolution import superseded_assignments
 from hrms.utils.timezone import employee_now
@@ -70,6 +71,16 @@ def close_superseded_assignments(doc, method=None):
 		)
 		logger.info("[shift_assignment] %s ended on %s, superseded by %s", name, end_date, doc.name)
 	refuse_overlapping_assignments(doc)
+
+
+def clear_day_markers_on_submit(doc, method=None):
+	"""A shift HR submits by hand (the Desk form) over days marked Off / Rest / Public Holiday is
+	the newer word on those days, so their Roster Day marks go (owner, 7 Oct 2026; last word
+	wins). Shifts made in code — roster splits and swaps, schedules, the bulk tool — come through
+	create_shift_assignment, which sets `keep_day_markers`: a split must never wipe a mark."""
+	if doc.status != "Active" or getattr(doc.flags, "keep_day_markers", False):
+		return
+	clear_day_markers(doc.employee, doc.start_date, doc.end_date)
 
 
 def queue_restamp(doc, method=None):

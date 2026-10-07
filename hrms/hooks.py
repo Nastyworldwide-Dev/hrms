@@ -494,6 +494,8 @@ doc_events = {
 			# The roster is the source of the shift stamp: submit, cancel and an
 			# end_date edit each queue one re-stamp of the range's punches.
 			"hrms.overrides.shift_assignment_hooks.queue_restamp",
+			# a shift HR submits by hand over a marked day off replaces the mark (7 Oct 2026)
+			"hrms.overrides.shift_assignment_hooks.clear_day_markers_on_submit",
 		],
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",
 		"on_update_after_submit": "hrms.overrides.shift_assignment_hooks.queue_restamp",

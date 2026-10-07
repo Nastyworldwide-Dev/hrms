@@ -90,5 +90,46 @@ class TestClose(unittest.TestCase):
 		self.assertIn("superseded_assignments", {n.id for n in ast.walk(fn) if isinstance(n, ast.Name)})
 
 
+
+
+class TestAHandMadeShiftClearsTheDayMarks(unittest.TestCase):
+	"""Owner, 7 Oct 2026: a shift HR submits in the Desk form over a day marked Off is the newer
+	word, so the mark goes. Shifts made in code (roster splits, schedules, the bulk tool) go
+	through create_shift_assignment, which tags them to keep the marks."""
+
+	def _run(self, doc):
+		with patch.object(hooks, "clear_day_markers") as clear:
+			hooks.clear_day_markers_on_submit(doc)
+		return clear
+
+	def test_a_desk_submit_clears_the_marks_in_its_dates(self):
+		doc = _doc(start_date=date(2026, 10, 8), end_date=date(2026, 10, 10), flags=SimpleNamespace())
+		self._run(doc).assert_called_once_with("HR-EMP-00014", date(2026, 10, 8), date(2026, 10, 10))
+
+	def test_an_open_ended_desk_submit_clears_from_its_start(self):
+		doc = _doc(start_date=date(2026, 10, 8), end_date=None, flags=SimpleNamespace())
+		self._run(doc).assert_called_once_with("HR-EMP-00014", date(2026, 10, 8), None)
+
+	def test_a_shift_made_in_code_keeps_the_marks(self):
+		doc = _doc(flags=SimpleNamespace(keep_day_markers=True))
+		self._run(doc).assert_not_called()
+
+	def test_an_inactive_shift_keeps_the_marks(self):
+		doc = _doc(status="Inactive", flags=SimpleNamespace())
+		self._run(doc).assert_not_called()
+
+	def test_the_hook_is_wired_on_submit(self):
+		hooks_py = (pathlib.Path(hooks.__file__).resolve().parents[1] / "hooks.py").read_text()
+		block = hooks_py[hooks_py.index('"Shift Assignment": {') :]
+		block = block[: block.index("},")]
+		self.assertIn("hrms.overrides.shift_assignment_hooks.clear_day_markers_on_submit", block)
+
+	def test_create_shift_assignment_tags_its_shifts_to_keep_the_marks(self):
+		from hrms.hr.doctype.shift_assignment_tool import shift_assignment_tool as tool
+
+		source = pathlib.Path(tool.__file__).read_text()
+		body = source[source.index("def create_shift_assignment(") :]
+		self.assertIn("assignment.flags.keep_day_markers = True", body[: body.index("assignment.submit()")])
+
 if __name__ == "__main__":
 	unittest.main()
