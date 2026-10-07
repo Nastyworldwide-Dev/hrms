@@ -203,3 +203,11 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T04:24:27Z EVIDENCE: 5 looks right — live as HR (390px): 20-21 Oct marked Off with no shift show "O" and aria "No shift, Off day"; 22 Oct blank; tap prefills Day type Off Day. Bench: supervisor get_day_markers returns own line only, an outsider marker hidden. Test data removed.
 - 2026-10-07T04:24:32Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
 - 2026-10-07T04:24:32Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-10-07T04:24:35Z COMMIT: d93c4ab49 feat(roster): the roster shows a day off with no shift, and a swap keeps Day Types → review+design dispatched
+- 2026-10-07T04:26:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-07T04:26:51Z COMMIT: ebe7a3e26 fix(roster): a no-shift day off read twice in Nadi and had no name in Desk → review+design dispatched
+- 2026-10-07T04:27:56Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-07T04:27:57Z COMMIT: b5c7edd91 test(roster): pin that clearing a day marker still re-marks the worked day → review dispatched
+- 2026-10-07T04:29:56Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-10-07T04:29:58Z COMMIT: 89b29f186 fix(roster): a shift dragged onto a marked day off still paid as a day off → review dispatched
+2026-10-07T04:30:54Z NEXT: alpha.39 built and reviewed (bd8ac1e1d..89b29f186), not pushed. Waiting on owner: (1) push + release; (2) should day sheet / Team status read Roster Day markers (ticket-team-py-member-statuses.md). Desk month view + drag-swap not checked live.
