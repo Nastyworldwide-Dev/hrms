@@ -78,6 +78,7 @@
 								</span>
 								<span
 									v-if="dayTypeMark(member, day)"
+									aria-hidden="true"
 									class="text-caption font-semibold text-accent-ink"
 								>
 									{{ dayTypeMark(member, day) }}

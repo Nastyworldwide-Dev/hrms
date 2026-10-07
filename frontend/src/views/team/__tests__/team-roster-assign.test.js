@@ -62,6 +62,8 @@ test("a day type change alone wakes Change shift", () => {
 test("the day cell marks a set day type", () => {
 	assert.match(view, /"Public Holiday": "PH"/)
 	assert.match(view, /v-if="dayTypeMark\(member, day\)"/)
+	// the cell's own label names the Day Type; the letter is not read twice
+	assert.match(view, /v-if="dayTypeMark\(member, day\)"\s+aria-hidden="true"/)
 })
 
 test("a screen reader hears the day type too", () => {

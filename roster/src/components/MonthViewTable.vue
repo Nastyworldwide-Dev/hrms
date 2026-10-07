@@ -243,10 +243,9 @@
 									!events.data?.[employee.name]?.[day.date] &&
 									dayMarkers[employee.name]?.[day.date]
 								"
-								class="text-center font-semibold text-gray-500"
-								:title="dayMarkers[employee.name][day.date]"
+								class="text-center font-semibold"
 							>
-								{{ DAY_TYPE_MARKS[dayMarkers[employee.name][day.date]] }}
+								{{ dayMarkers[employee.name][day.date] }}
 							</div>
 
 							<!-- Add Shift -->
@@ -378,11 +377,6 @@ const hoveredCell = ref({
 });
 const dropCell = ref({ employee: "", date: "", shift: "" });
 // Roster Day markers by employee and date, shown on a day with no shift
-const DAY_TYPE_MARKS: Record<string, string> = {
-	"Rest Day": "R",
-	"Off Day": "O",
-	"Public Holiday": "PH",
-};
 const dayMarkers = ref<Record<string, Record<string, string>>>({});
 
 const daysOfMonth = computed(() => {
