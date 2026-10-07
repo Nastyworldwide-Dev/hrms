@@ -47,7 +47,7 @@ import frappe
 
 from hrms.api import approval, remote_checkin
 from hrms.hr import utils as hr_utils
-from hrms.overrides import approval_row_scope, company_scope, ot_row_scope
+from hrms.overrides import approval_row_scope, company_scope, employee_owned_row_scope, ot_row_scope
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -452,6 +452,32 @@ class TestApprovalRowScope(_RowScopeCases, unittest.TestCase):
 class TestOtRowScope(_RowScopeCases, unittest.TestCase):
 	scope = ot_row_scope
 	doctype = "OT Request"
+
+
+class TestAttendanceRequestRowScope(_RowScopeCases, unittest.TestCase):
+	"""On Duty rides employee_owned_row_scope, whose HR branch returned before the line was
+	asked (Frappe review of 40d3760a3)."""
+
+	scope = employee_owned_row_scope
+	doctype = "Attendance Request"
+
+	def _patched(self, *, fence, routed=()):
+		base = [p for p in super()._patched(fence=fence, routed=routed) if p.attribute != "_unrestricted"]
+		return (
+			*base,
+			patch.object(employee_owned_row_scope, "_is_hr", return_value=True),
+			patch.object(employee_owned_row_scope, "_is_administrator", return_value=False),
+			patch.object(employee_owned_row_scope, "_rostered_by", return_value=[]),
+			patch.object(employee_owned_row_scope, "_supervised_reads", return_value=[]),
+			patch.object(employee_owned_row_scope, "allowed_companies", side_effect=_fence(fence)),
+			patch.object(
+				employee_owned_row_scope, "company_visible", side_effect=company_scope.company_visible
+			),
+		)
+
+	def test_fenced_hr_gets_a_company_condition_on_the_list(self):
+		# Attendance Request carries its own `company`; the condition names the fenced company
+		self.assertIn(f"'{CO_B}'", self._conditions({HR: [CO_B]}))
 
 
 class TestEveryRequestDoctypeIgnoresUserPermissionsOnCompany(unittest.TestCase):

@@ -254,11 +254,16 @@ def get_permission_query_conditions(doctype: str, user: str | None = None) -> st
 	if _is_administrator(user):
 		return ""
 
+	conditions = []
 	if _is_hr(user):
 		# broad, but never outside the company / source-instance fence
-		return _company_condition(doctype, user)
+		fence = _company_condition(doctype, user)
+		if not fence or doctype not in TEAM_REVIEWED_DOCTYPES:
+			return fence
+		# A fenced HR user keeps the requests whose approval line they are on, in any
+		# company (HR, 7 Oct 2026: "regardless of company"), as approval_row_scope does.
+		conditions.append(fence)
 
-	conditions = []
 	visible = _own_employees(user)
 	if doctype in TEAM_REVIEWED_DOCTYPES:
 		# get_employees_routed_to already includes the reporting line
@@ -295,6 +300,10 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 		# and stays open for group HR, whose fence is empty
 		companies = _row_companies(doc, doctype) or {None}
 		allowed = all(company_visible(company, user) for company in companies)
+		if not allowed and ptype == "read" and doctype in TEAM_REVIEWED_DOCTYPES:
+			# outside the fence by company, on it by routing: the line reads, as for anyone
+			routed = set(get_employees_routed_to(user))
+			allowed = bool(routed) and any(doc.get(field) in routed for field in owner_fields)
 		if not allowed:
 			logger.info(
 				"[employee_owned_row_scope] HR user %s denied %s on %s %s — %s outside company fence",
