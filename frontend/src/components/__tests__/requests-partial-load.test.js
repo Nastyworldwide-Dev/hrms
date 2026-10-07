@@ -10,21 +10,18 @@ const panel = readFileSync(fileURLToPath(new URL("../RequestPanel.vue", import.m
 const template = panel.slice(panel.indexOf("<template>"), panel.indexOf("</template>\n\n<script"))
 const script = panel.slice(panel.indexOf("<script"))
 
-test("a list that failed while others have rows is said, not hidden", () => {
-	// whitespace-blind: the formatter decides where the line breaks
+test("the line is wired to the shared rule and retries in place", () => {
+	// the rule itself is tested by behaviour in utils/__tests__/partlyLoaded.test.js
 	const flat = script.replace(/\s+/g, "")
 	assert.ok(
-		flat.includes(
-			"constpartlyLoaded=computed(()=>lastFive.value.length>0&&MY_REQUEST_LISTS.some((list)=>list.error))"
-		),
-		"partlyLoaded is: rows shown AND one list failed"
+		flat.includes("partlyLoaded(lastFive.value.length,MY_REQUEST_LISTS)"),
+		"uses the shared rule"
 	)
-	const line = template.match(/<p[^>]*v-if="partlyLoaded"[^>]*>[\s\S]*?<\/p>/)?.[0]
-	assert.ok(line, "a line shown only when partly loaded")
-	assert.match(line, /role="status"/)
-	assert.match(line, /Some requests didn't load\./)
-	assert.match(line, /@click="lastFiveResource\.reload\(\)"/)
-	assert.match(line, /Try again/)
+	const region = template.match(/<div role="status">[\s\S]*?<\/div>/)?.[0]
+	assert.ok(region, "the live region is always in the page")
+	assert.match(region, /v-if="isPartlyLoaded"/)
+	assert.match(region, /Some requests didn't load\./)
+	assert.match(region, /@click="retryLastFive"/)
 })
 
 test("the old ceiling note is gone with the gap it named", () => {

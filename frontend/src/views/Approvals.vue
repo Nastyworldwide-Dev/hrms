@@ -697,7 +697,7 @@ async function refresh(event) {
 	place-items: center;
 	width: 22px;
 	height: 22px;
-	border: 2px solid var(--g-ink3);
+	border: 2px solid var(--g-ink2);
 	border-radius: 999px;
 }
 .g-approvals__tick--on {

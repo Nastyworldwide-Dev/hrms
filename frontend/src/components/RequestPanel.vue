@@ -22,12 +22,16 @@
 		</RequestList>
 		<!-- Five good rows are shown, not hidden behind one list's error, but the person is told
 		     a kind of request may be missing (alpha.41 S7). -->
-		<p v-if="partlyLoaded" class="text-caption text-ink-600 mt-2" role="status">
-			{{ __("Some requests didn't load.") }}
-			<button type="button" class="g-seclink g-focusable" @click="lastFiveResource.reload()">
-				{{ __("Try again") }}
-			</button>
-		</p>
+		<!-- The live region is always in the page and only its text changes: a region added
+		     together with its text is often not announced (review of 63d347a20). -->
+		<div role="status">
+			<p v-if="isPartlyLoaded" class="text-caption text-ink-600 mt-2">
+				{{ __("Some requests didn't load.") }}
+				<button type="button" class="g-seclink g-focusable underline" @click="retryLastFive">
+					{{ __("Try again") }}
+				</button>
+			</p>
+		</div>
 	</div>
 
 	<GModal :is-open="allOpen" :title="__('All your requests')" @did-dismiss="allOpen = false">
@@ -129,6 +133,7 @@ import GSegmented from "@/components/glass/GSegmented.vue"
 import { lastRequests, opensOnAnswered } from "@/utils/requestsPage"
 import RequestList from "@/components/RequestList.vue"
 import { myRequestCounts } from "@/data/requestCounts"
+import { partlyLoaded } from "@/utils/partlyLoaded"
 import { requestStatus } from "@/utils/requestStatus"
 
 import { historyShiftRequests, myAttendanceRequests, myShiftRequests } from "@/data/attendance"
@@ -277,10 +282,19 @@ const lastFiveResource = reactive({
 	reload: () => reloadLists(MY_REQUEST_LISTS, "last five retry"),
 })
 
-//: Rows on screen while one of the six lists failed: the list is incomplete and says so.
-const partlyLoaded = computed(
-	() => lastFive.value.length > 0 && MY_REQUEST_LISTS.some((list) => list.error)
-)
+//: Rows on screen while one of the six lists failed: the list is incomplete and says so. A list
+//: being retried keeps the line until its retry settles (utils/partlyLoaded.js).
+const isPartlyLoaded = computed(() => partlyLoaded(lastFive.value.length, MY_REQUEST_LISTS))
+
+async function retryLastFive() {
+	const failed = MY_REQUEST_LISTS.filter((list) => list.error)
+	failed.forEach((list) => (list.retrying = true))
+	try {
+		await lastFiveResource.reload()
+	} finally {
+		failed.forEach((list) => (list.retrying = false))
+	}
+}
 
 // Attendance Request, OT Request and Replacement Leave Claim are all
 // docstatus-driven (no status/approver field), so the history trail — which is
