@@ -87,8 +87,12 @@ test("the re-base rule, run: relative entries move, absolute ones stay", () => {
 })
 
 // Review of 6a1f33315: phones installed before alpha.12 keep the old worker
-// (scope /assets/hrms/frontend/) and a push token tied to it.
-const main = readFileSync(fileURLToPath(new URL("../main.js", import.meta.url)), "utf8")
+// (scope /assets/hrms/frontend/) and a push token tied to it. That code lives in
+// utils/serviceWorker.js (main.js calls registerAppWorker once; alpha.41 S12).
+const main = readFileSync(
+	fileURLToPath(new URL("../utils/serviceWorker.js", import.meta.url)),
+	"utf8"
+)
 
 test("the pre-alpha.12 worker is retired once the app-root worker registers", () => {
 	assert.match(main, /const OLD_WORKER_SCOPE = "\/assets\/hrms\/frontend\/"/)
@@ -136,4 +140,12 @@ test("a window that cannot be moved still gets the page opened", () => {
 	const handler = body.slice(0, body.indexOf("\n})\n") + 4)
 	assert.match(handler, /\.navigate\(url\)[\s\S]*?\.catch\(\(\) => clients\.openWindow\(url\)\)/)
 	assert.match(handler, /sameOrigin/, "another site's link is opened, not navigated into")
+})
+
+test("main.js registers the app worker once, after the router is ready, and holds none of its code", () => {
+	const boot = readFileSync(fileURLToPath(new URL("../main.js", import.meta.url)), "utf8")
+	assert.match(boot, /import \{ registerAppWorker \} from "@\/utils\/serviceWorker"/)
+	assert.equal((boot.match(/registerAppWorker\(\)/g) || []).length, 1)
+	assert.ok(boot.indexOf("router.isReady()") < boot.indexOf("registerAppWorker()"))
+	assert.doesNotMatch(boot, /serviceWorker\.register|OLD_WORKER_SCOPE|PUSH_CONFIG_KEY|workerURL/)
 })
