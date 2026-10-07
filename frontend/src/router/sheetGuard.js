@@ -24,6 +24,8 @@
 // upgrade: when @ionic/vue-router clears its pop info on a failed navigation,
 // return false here for every Back instead, and drop the redirect.
 
+import { samePage } from "./samePage.js"
+
 //: A sheet whose dismiss is refused (canDismiss, a pending save) must not hang
 //: every navigation after it.
 const MAX_DISMISSALS = 5
@@ -46,7 +48,7 @@ export function closeSheetsOnLeave(router, overlays) {
 	router.beforeEach(async (to, from) => {
 		const isBack = backTo !== null && to.fullPath === backTo
 		if (isBack) backTo = null
-		if (to.path === from.path) return
+		if (samePage(to, from)) return
 		let closed = false
 		for (let i = 0; i < MAX_DISMISSALS; i++) {
 			const top = await overlays.getTop()

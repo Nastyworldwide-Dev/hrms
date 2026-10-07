@@ -49,12 +49,16 @@ test("the NotFound view it points at exists", () => {
 	)
 })
 
-test("the focus release skips a navigation that stays on the same page", () => {
-	// Back with a sheet open is redirected onto the page being left (sheetGuard.js). The blur ran
-	// on that redirect too and threw away the focus GModal had just returned to the opener, so it
-	// fell to <body> where Escape kept it on the control (measured on fresh.local, 7 Oct 2026).
-	const hook = source.slice(source.indexOf("router.beforeEach((to, from)"), source.indexOf("router.onError"))
-	assert.match(hook, /if \(to\.path === from\.path\) return/)
-	assert.match(hook, /document\.activeElement\?\.blur\?\.\(\)/)
+test("the focus release is wired onto the router, after the sheet guard", () => {
+	// What the release does (and that it skips a navigation that stays on the page) is run in
+	// focusRelease.test.js; this only proves index.js still registers it.
+	assert.match(source, /import \{ releaseFocusOnLeave \} from "\.\/focusRelease"/)
+	const sheets = source.indexOf("closeSheetsOnLeave(router")
+	const focus = source.indexOf("releaseFocusOnLeave(router)")
+	assert.ok(sheets !== -1 && focus > sheets, "registered once, after closeSheetsOnLeave")
+	assert.doesNotMatch(
+		source,
+		/document\.activeElement/,
+		"the blur lives in focusRelease.js, not here"
+	)
 })
-
