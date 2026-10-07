@@ -256,3 +256,5 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T02:20:46Z EVIDENCE: 3 works — 29 pay/roster stub files green; test_shift_supervisor_rosters_own_team 1 fail is pre-existing on HEAD (Attendance row fence), not D1.
 - 2026-10-07T02:20:58Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 11 file(s) ⟂a204f4f4a3bd
 - 2026-10-07T02:20:58Z EVIDENCE: 3 works — blast radius green: 19 dependent(s), 11 extra test file(s) ⟂145db77564d9
+- 2026-10-07T02:21:03Z COMMIT: ee44ec9fc feat(roster): HR can mark a day Off with no shift → review dispatched
+2026-10-07T02:21:52Z NEXT: D1b (Nadi Assign shift optional, worker writing .claude/tmp/d1b-result.md) -> review diff, vitest red/green, live on fresh.local as HR, commit; read D1 review of ee44ec9fc; then D2 edit-in-place.
