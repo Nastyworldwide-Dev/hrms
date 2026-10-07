@@ -260,8 +260,8 @@ def get_permission_query_conditions(doctype: str, user: str | None = None) -> st
 		fence = _company_condition(doctype, user)
 		if not fence or doctype not in TEAM_REVIEWED_DOCTYPES:
 			return fence
-		# A fenced HR user keeps the requests whose approval line they are on, in any
-		# company (HR, 7 Oct 2026: "regardless of company"), as approval_row_scope does.
+		# Outside the fence a fenced HR user keeps what anyone keeps below (own, line,
+		# rostered, supervised, shared), the same sets has_permission falls through to.
 		conditions.append(fence)
 
 	visible = _own_employees(user)
@@ -299,12 +299,9 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 		# an empty set fails closed for a fenced user (company_visible(None)),
 		# and stays open for group HR, whose fence is empty
 		companies = _row_companies(doc, doctype) or {None}
-		allowed = all(company_visible(company, user) for company in companies)
-		if not allowed and ptype == "read" and doctype in TEAM_REVIEWED_DOCTYPES:
-			# outside the fence by company, on it by routing: the line reads, as for anyone
-			routed = set(get_employees_routed_to(user))
-			allowed = bool(routed) and any(doc.get(field) in routed for field in owner_fields)
-		if not allowed:
+		if all(company_visible(company, user) for company in companies):
+			return True
+		if doctype not in TEAM_REVIEWED_DOCTYPES:
 			logger.info(
 				"[employee_owned_row_scope] HR user %s denied %s on %s %s — %s outside company fence",
 				user,
@@ -313,7 +310,10 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 				doc.get("name"),
 				sorted(c for c in companies if c),
 			)
-		return allowed
+			return False
+		# Outside the fence by company: the checks below apply as for anyone, the same sets
+		# the list ORs onto the fence, so a row the list shows always opens (Frappe review
+		# of 30a5315a0). The line reads (HR, 7 Oct 2026: "regardless of company").
 
 	own = set(_own_employees(user))
 	if own and any(doc.get(field) in own for field in owner_fields):

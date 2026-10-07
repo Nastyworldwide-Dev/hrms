@@ -480,6 +480,45 @@ class TestAttendanceRequestRowScope(_RowScopeCases, unittest.TestCase):
 		self.assertIn(f"'{CO_B}'", self._conditions({HR: [CO_B]}))
 
 
+class TestFencedHrListAndDocAgree(unittest.TestCase):
+	"""A row the list shows a fenced HR user must open (Frappe review of 30a5315a0): the list
+	ORed own, rostered, supervised and shared rows onto the fence, the document check did not."""
+
+	def _read(self, *, own=(), rostered=(), supervised=(), shared=(), ptype="read"):
+		doc = FakeDocument("Attendance Request", name="REQ-0001", employee=STAFF, company=CO_A)
+		with (
+			patch.object(frappe, "db", _db({STAFF: {"company": CO_A}})),
+			patch.object(employee_owned_row_scope, "_is_administrator", return_value=False),
+			patch.object(employee_owned_row_scope, "_is_hr", return_value=True),
+			patch.object(employee_owned_row_scope, "allowed_companies", side_effect=_fence({HR: [CO_B]})),
+			patch.object(
+				employee_owned_row_scope, "company_visible", side_effect=company_scope.company_visible
+			),
+			patch.object(company_scope, "allowed_companies", side_effect=_fence({HR: [CO_B]})),
+			patch.object(employee_owned_row_scope, "get_employees_routed_to", return_value=[]),
+			patch.object(employee_owned_row_scope, "_own_employees", return_value=list(own)),
+			patch.object(employee_owned_row_scope, "_rostered_by", return_value=list(rostered)),
+			patch.object(employee_owned_row_scope, "_supervised_reads", return_value=list(supervised)),
+			patch.object(employee_owned_row_scope, "get_shared", return_value=list(shared)),
+		):
+			return employee_owned_row_scope.has_permission(doc, ptype, HR)
+
+	def test_their_own_request_in_another_company_opens(self):
+		self.assertTrue(self._read(own=[STAFF]))
+
+	def test_a_row_they_roster_opens(self):
+		self.assertTrue(self._read(rostered=[STAFF]))
+
+	def test_a_row_they_supervise_opens_to_read(self):
+		self.assertTrue(self._read(supervised=[STAFF]))
+
+	def test_a_row_shared_with_them_opens(self):
+		self.assertTrue(self._read(shared=["REQ-0001"]))
+
+	def test_nothing_else_opens(self):
+		self.assertFalse(self._read())
+
+
 class TestEveryRequestDoctypeIgnoresUserPermissionsOnCompany(unittest.TestCase):
 	"""cause 4: the `company` Link on these doctypes must not be fenced natively."""
 
