@@ -60,7 +60,9 @@ class TestPostingDateDefault(unittest.TestCase):
 			if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
 		]
 		self.assertIn("set_posting_date", calls)
-		self.assertEqual(calls.index("set_posting_date"), 0)
+		# set_company reads no date (it only follows the employee); nothing else may come first
+		before = [c for c in calls[: calls.index("set_posting_date")] if c != "set_company"]
+		self.assertEqual(before, [])
 
 
 if __name__ == "__main__":

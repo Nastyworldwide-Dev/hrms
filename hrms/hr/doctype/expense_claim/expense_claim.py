@@ -59,9 +59,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self.notify_approver()
 
 	def validate(self):
-		# The Employee's company, never the client's: the company link ignores User Permissions
-		# so a named approver in another company can open the claim (40d3760a3).
-		set_company_from_employee(self)
+		self.set_company()
 		self.set_posting_date()
 		validate_active_employee(self.employee)
 		set_employee_name(self)
@@ -129,6 +127,15 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			return
 		self.posting_date = today()
 		frappe.logger("hrms").info("[expense_claim] %s: posting date defaulted to today", self.name)
+
+	def set_company(self):
+		"""The Employee's company, never the client's: the company link ignores User Permissions
+		so a named approver in another company can open the claim (40d3760a3). Set when the
+		claim is made or its employee/company is changed; an untouched draft keeps the company
+		it was filed under, so an employee's later move cannot re-point it at submit while its
+		payable account and expense accounts stay on the old company."""
+		if self.is_new() or self.has_value_changed("employee") or self.has_value_changed("company"):
+			set_company_from_employee(self)
 
 	def set_payable_account(self):
 		"""Default the payable account the way the Desk form does, server-side.
