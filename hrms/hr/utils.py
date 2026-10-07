@@ -1417,18 +1417,24 @@ def get_employees_routed_to(
 	`get_designated_approvers`; `department_parentfield` stays in the signature
 	so callers keep naming the request type in one place.
 
-	Active employees only, inside the caller's company fence, and never the
-	caller's own records (self-approval is refused separately, with its own
-	message). A user who is nobody's approver gets an empty list, which every
-	caller must read as "no admission", never as "no restriction". The first
-	rung is `get_direct_report_employees`'s query by another name — same
-	filters, but carrying `user_id` so the walk can continue past it.
+	Active employees only, in ANY company, and never the caller's own records
+	(self-approval is refused separately, with its own message). The company
+	fence is for HR SIGHT, not for a line somebody was given: REPORTED 7 Oct
+	2026 (HR), "make the approval list show everything where the user is the
+	named approver, regardless of company. Amran won't be the last cross-entity
+	manager (Dubai, South Africa)" — his reports sat in other companies, and this
+	walk, filtered to his own company, never reached them. Nothing widens past the
+	line for it: the upward check at the end keeps only the people whose
+	`get_designated_approvers` really names the caller. A user who is nobody's
+	approver gets an empty list, which every caller must read as "no admission",
+	never as "no restriction". The first rung is `get_direct_report_employees`'s
+	query by another name — same filters minus the company fence, but carrying
+	`user_id` so the walk can continue past it.
 
 	`request_cache`d because `has_permission` calls it once PER ROW on a list of
 	requests, and the answer cannot change inside one request — a walk of the
 	org chart per row would otherwise be the cost of opening the Team tab.
 	"""
-	from hrms.overrides.company_scope import allowed_companies
 	from hrms.utils.identity import normalize_login
 
 	login = normalize_login(user)
@@ -1437,11 +1443,9 @@ def get_employees_routed_to(
 
 	# Walk through everyone, Active or not: a senior who has LEFT still links
 	# his old team to the director above him, and the upward chain skips him
-	# (_cannot_act). Only Active people are kept as a result, below.
+	# (_cannot_act). Only Active people are kept as a result, below. No company
+	# filter: see the docstring.
 	filters = {}
-	companies = allowed_companies(user)
-	if companies:
-		filters["company"] = ("in", companies)
 
 	mine = set(own_employees(user))
 	routed: list[str] = []
@@ -1497,12 +1501,7 @@ def get_employees_routed_to(
 			for a in get_designated_approvers(name, employee_approver_field, department_parentfield)
 		}
 	]
-	logger.debug(
-		"[approval_scope] %s is in the approver chain of %d employee(s), company fence=%s",
-		user,
-		len(routed),
-		companies or "none",
-	)
+	logger.debug("[approval_scope] %s is in the approver chain of %d employee(s)", user, len(routed))
 	return routed
 
 

@@ -136,7 +136,20 @@ class FakeQuery:
 		# helper that builds its own query (a row-scope walker, say) records its
 		# predicates here too — including plain booleans from a mocked read.
 		# Those are not this endpoint's predicates and must not crash the lookup.
-		return next((p for p in self.predicates if isinstance(p, Expr) and p.field == field), None)
+		return next((p for p in self._flattened() if p.field == field), None)
+
+	def _flattened(self):
+		"""Every recorded predicate, looking inside and/or terms.
+
+		The remote check-in queue fences only its STAMPED arm (7 Oct 2026), so the
+		company predicate sits inside `(approver == user AND company in ...) OR
+		employee in routed` rather than at the top level of the query."""
+		pending = [p for p in self.predicates if isinstance(p, Expr)]
+		while pending:
+			expr = pending.pop(0)
+			yield expr
+			if expr.op in ("and", "or"):
+				pending.extend(part for part in expr.value if isinstance(part, Expr))
 
 
 class _Joiner:

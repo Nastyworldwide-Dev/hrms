@@ -1,10 +1,20 @@
 """Row scope for OT Request and Replacement Leave Claim.
 
 These doctypes carry no approver field — approval is the submit action — so
-visibility is: HR roles and Administrator unrestricted; staff see their own
-rows; and every superior the request is addressed to sees it —
-`get_employees_routed_to`: the reporting manager, the approver named on the
-Employee record, and a Department Approver on the employee's own department.
+visibility is: HR roles and Administrator unrestricted, HR inside its company
+fence; staff see their own rows; and every superior the request is addressed to
+sees it, in ANY company — `get_employees_routed_to`: the reporting manager, the
+approver named on the Employee record, and a Department Approver on the
+employee's own department.
+
+The company fence is for HR SIGHT only (HR, 7 Oct 2026: "regardless of
+company"). It used to be Frappe's own User Permission check on the `company`
+link, which also shut out an approver holding a Company User Permission for
+another entity; that link now ignores User Permissions
+(hrms.patches.v16_0.approver_reads_past_company_user_permissions) and HR's
+fence is restated here, as hrms.overrides.employee_owned_row_scope does for
+Attendance Request: a fenced HR user sees their companies' rows plus any row
+whose line they are on.
 
 The last two were added 21 Sep 2026 with the Attendance Request fix. Only
 reports_to counted before, so a superior named as approver was refused READ
@@ -24,6 +34,7 @@ import frappe
 from frappe.share import get_shared
 
 from hrms.hr.utils import get_employees_routed_to, sees_all_employee_data
+from hrms.overrides.company_scope import company_condition, request_company_visible
 from hrms.utils.identity import own_employees
 
 logger = logging.getLogger(__name__)
@@ -42,15 +53,22 @@ def _own_employees(user: str) -> list[str]:
 
 
 def get_permission_query_conditions(doctype: str, user: str | None = None) -> str:
-	"""List scope: own rows, direct reports' rows, and shared docs."""
+	"""List scope: own rows, direct reports' rows, and shared docs.
+
+	HR sees everything inside their company fence (everything, unfenced); a fenced
+	HR user also keeps the rows whose approval line they are on, in any company.
+	"""
 	user = user or frappe.session.user
+	conditions = []
 	if _unrestricted(user):
-		return ""
+		fence = company_condition(doctype, user)
+		if not fence:
+			return ""
+		conditions.append(fence)
 
 	# routed = the reporting line PLUS the approver named on the Employee record
 	# and any department approver — the superiors these doctypes address.
 	visible = _own_employees(user) + get_employees_routed_to(user)
-	conditions = []
 	if visible:
 		values = ", ".join(frappe.db.escape(e) for e in visible)
 		conditions.append(f"`tab{doctype}`.`employee` in ({values})")
@@ -83,8 +101,10 @@ def replacement_leave_claim_query_conditions(user: str | None = None) -> str:
 
 def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	user = user or frappe.session.user
-	if _unrestricted(user):
+	if _unrestricted(user) and request_company_visible(doc, user):
 		return True
+	# A company-fenced HR user outside the fence falls through: they may still be
+	# the employee, on the line, or shared in.
 	if doc.employee in _own_employees(user):
 		return True
 	if ptype == "read" and doc.employee in get_employees_routed_to(user):

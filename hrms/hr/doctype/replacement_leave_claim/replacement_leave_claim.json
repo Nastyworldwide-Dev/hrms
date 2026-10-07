@@ -70,6 +70,7 @@
    "fetch_from": "employee.company",
    "fieldname": "company",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Company",
    "options": "Company",
    "remember_last_selected_value": 1,

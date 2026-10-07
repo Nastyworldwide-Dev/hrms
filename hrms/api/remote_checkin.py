@@ -255,13 +255,11 @@ PENDING_REQUEST_FIELDS = (
 
 
 def _pending_for_approver_query(user: str, statuses: tuple[str, ...] = ("Pending",)):
-	"""Requests in `statuses` routed to `user`, fenced to their permitted companies.
+	"""Requests in `statuses` routed to `user`; only the stamped arm is company-fenced.
 
 	Remote Checkin Request carries no company field, so the fence rides on the
-	requesting Employee. Being named as approver is not by itself authority to
-	see the row: a group HR user fenced to one company must not be handed
-	another company's out-of-radius punches. ONE query for the pending queue,
-	the badge count and the decided history — three surfaces, one scope.
+	requesting Employee. ONE query for the pending queue, the badge count and the
+	decided history — three surfaces, one scope.
 
 	ROUTED, not just STAMPED (21 Sep 2026). `resolve_approver` writes ONE name on
 	the request when the punch is filed, but the whole chain above the employee
@@ -271,35 +269,35 @@ def _pending_for_approver_query(user: str, statuses: tuple[str, ...] = ("Pending
 	could not find it. `get_employees_routed_to` is the exact inverse of the list
 	`may_decide` reads, so the queue and the decision gate cannot disagree.
 
-	The company fence still applies to BOTH arms — it is applied once, below, to
-	the whole query. An auto-routed queue stays fenced (see
-	test_approval_scoping_invariant).
+	TWO ARMS, TWO RULES (7 Oct 2026, HR: "regardless of company"). The ROUTED arm
+	(`employee in routed`) is an approval line somebody drew on the Employee
+	record, so it is never fenced: a manager in one company sees the punches of
+	his reports in another. The STAMPED arm (`approver == user`) is the resolver's
+	guess — its HR fallback can name a user for any company — so it stays fenced:
+	being named by an algorithm is not authority to see another company's
+	out-of-radius punches. See test_approval_scoping_invariant.
 	"""
 	RemoteCheckinRequest = frappe.qb.DocType("Remote Checkin Request")
 	routed = get_employees_routed_to(user, "shift_request_approver", "shift_request_approver")
-	addressed = RemoteCheckinRequest.approver == user
-	if routed:
-		addressed = addressed | RemoteCheckinRequest.employee.isin(routed)
-		logger.debug("[api] remote_checkin pending for %s covers %d routed employee(s)", user, len(routed))
-	query = (
-		frappe.qb.from_(RemoteCheckinRequest)
-		.where(RemoteCheckinRequest.status.isin(list(statuses)))
-		.where(addressed)
-	)
+	stamped = RemoteCheckinRequest.approver == user
 
 	companies = permitted_company_filter(endpoint="remote_checkin.list_pending_for_approver")
+	query = frappe.qb.from_(RemoteCheckinRequest)
 	if companies is not None:
 		Employee = frappe.qb.DocType("Employee")
-		query = (
-			query.left_join(Employee)
-			.on(RemoteCheckinRequest.employee == Employee.name)
-			.where(Employee.company.isin(companies))
-		)
+		query = query.left_join(Employee).on(RemoteCheckinRequest.employee == Employee.name)
+		stamped = stamped & Employee.company.isin(companies)
 		logger.info(
-			"[api] remote_checkin pending fenced to %d company(ies) for %s",
+			"[api] remote_checkin pending: stamped arm fenced to %d company(ies) for %s",
 			len(companies),
 			user,
 		)
+
+	addressed = stamped
+	if routed:
+		addressed = addressed | RemoteCheckinRequest.employee.isin(routed)
+		logger.debug("[api] remote_checkin pending for %s covers %d routed employee(s)", user, len(routed))
+	query = query.where(RemoteCheckinRequest.status.isin(list(statuses))).where(addressed)
 
 	return query, RemoteCheckinRequest
 

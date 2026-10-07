@@ -161,7 +161,7 @@ class PWANotificationsMixin:
 		company = frappe.db.get_value("Employee", self.employee, "company")
 		for approver in get_designated_approvers(self.employee, "leave_approver", "leave_approvers"):
 			user = normalize_login(approver)
-			if self._ot_approver_can_receive(user, company):
+			if self._ot_approver_can_receive(user, company, line=True):
 				return user
 
 		hr_users = frappe.get_all(
@@ -187,8 +187,13 @@ class PWANotificationsMixin:
 				return user
 		return None
 
-	def _ot_approver_can_receive(self, user: str, company: str | None) -> bool:
-		"""A summary must neither widen source visibility nor invent authority."""
+	def _ot_approver_can_receive(self, user: str, company: str | None, line: bool = False) -> bool:
+		"""A summary must neither widen source visibility nor invent authority.
+
+		`line`: the user comes from the employee's own approval line, which reaches across
+		companies (HR, 7 Oct 2026: "regardless of company"); the company fence is for the
+		HR fallback only, so a fenced HR Manager is never sent another company's OT.
+		"""
 		from hrms.api.approval import _is_routed_approver
 		from hrms.overrides.company_scope import company_visible
 		from hrms.utils.identity import normalize_login
@@ -197,7 +202,7 @@ class PWANotificationsMixin:
 			user
 			and user != normalize_login(self._get_employee_user())
 			and frappe.db.get_value("User", user, "enabled")
-			and company_visible(company, user)
+			and (line or company_visible(company, user))
 			and frappe.has_permission(self.doctype, "read", doc=self, user=user)
 			and _is_routed_approver(self, user)
 		)

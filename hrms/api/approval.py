@@ -303,7 +303,15 @@ def decision_field(doctype: str) -> str:
 
 
 def _request_read_allowed(doc) -> bool:
-	"""Native document visibility plus the explicit company boundary."""
+	"""Native document visibility plus the explicit company boundary.
+
+	The boundary is for HR SIGHT, not for an approval line someone was given
+	(HR, 7 Oct 2026: "show everything where the user is the named approver,
+	regardless of company"). So the company check applies only when the caller is
+	NOT a routed approver of this request. `_is_routed_approver`'s own HR branch
+	still checks the company, so a fenced HR user stays fenced for a request they
+	reach only because they are HR; System Manager does not count here, as before.
+	"""
 	from hrms.overrides.company_scope import company_visible
 
 	logger.debug("[approval] checking request visibility for %s", doc.doctype)
@@ -311,7 +319,9 @@ def _request_read_allowed(doc) -> bool:
 		return False
 	employee = doc.get("employee")
 	company = frappe.db.get_value("Employee", employee, "company") if employee else doc.get("company")
-	return company_visible(company) and company_visible(doc.get("company") or company)
+	return (
+		company_visible(company) and company_visible(doc.get("company") or company)
+	) or _is_routed_approver(doc, system_manager_counts=False)
 
 
 def _decision_access(doc, status: str = "Approved") -> str | None:

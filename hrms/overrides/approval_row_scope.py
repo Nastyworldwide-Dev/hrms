@@ -13,12 +13,20 @@ these hooks are the ONLY row fence for staff. Access is granted to:
   - the employee the document belongs to (their user_id),
   - the named approver on the document,
   - everyone on the employee's approval line (their approver and manager, and
-    those people's approvers, as many levels as HR allows — default 2), inside
-    the approver's own company fence (owner, 29 Sep 2026: "they can act on
-    behalf"); the same list the Approvals screen and decide() read,
+    those people's approvers, as many levels as HR allows — default 2), in ANY
+    company (owner, 29 Sep 2026: "they can act on behalf"; HR, 7 Oct 2026:
+    "regardless of company" — a manager in one entity approves for another's
+    staff); the same list the Approvals screen and decide() read,
   - users the document is shared with (DocShare — share_doc_with_approver
     keeps historical approvers working),
-  - HR User / HR Manager and Administrator.
+  - HR User / HR Manager and Administrator — HR inside its company fence.
+
+The company fence is for HR SIGHT only. It used to be Frappe's own User
+Permission check on the `company` link, which also shut out an approver holding
+a Company User Permission for another entity; that link now ignores User
+Permissions (hrms.patches.v16_0.approver_reads_past_company_user_permissions)
+and HR's fence is restated here: a company-fenced HR user sees their companies'
+requests, plus any request whose line they are on, and nothing else.
 
 System Manager is deliberately NOT on that list: it is a technical role, and
 holding it must not reveal other teams' requests. The write-side fences in
@@ -33,6 +41,7 @@ import frappe
 from frappe.share import get_shared
 
 from hrms.hr.utils import get_employees_routed_to, sees_all_employee_data
+from hrms.overrides.company_scope import company_condition, request_company_visible
 from hrms.utils.identity import own_employees
 from hrms.utils.user_permission_scope import APPROVER_ROUTED_DOCTYPES
 
@@ -68,13 +77,21 @@ def _report_employees(user: str, doctype: str) -> list[str]:
 
 
 def get_permission_query_conditions(doctype: str, user: str | None = None) -> str:
-	"""List scope: own records, records the user approves, and shared docs."""
+	"""List scope: own records, records the user approves, and shared docs.
+
+	HR sees everything inside their company fence (everything, unfenced); a fenced
+	HR user also keeps the rows whose approval line they are on, in any company.
+	"""
 	user = user or frappe.session.user
+	conditions = []
 	if _unrestricted(user):
-		return ""
+		fence = company_condition(doctype, user)
+		if not fence:
+			return ""
+		conditions.append(fence)
 
 	approver_field = APPROVER_ROUTED_DOCTYPES[doctype]
-	conditions = [f"`tab{doctype}`.`{approver_field}` = {frappe.db.escape(user)}"]
+	conditions.append(f"`tab{doctype}`.`{approver_field}` = {frappe.db.escape(user)}")
 
 	# own records + direct reports' records. List visibility only: the write
 	# side stays with the approver, enforced in has_permission below.
@@ -104,11 +121,13 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	rights on the document (they set the status and submit); self-approval
 	and approver assignment are policed separately by the approver fence."""
 	user = user or frappe.session.user
-	if _unrestricted(user):
-		return True
 	if not doc.get("employee"):
 		# new/unsaved doc — role perms and validate_staff_approver govern
 		return True
+	if _unrestricted(user) and request_company_visible(doc, user):
+		return True
+	# A company-fenced HR user outside the fence falls through: they may still be
+	# the approver, the employee, on the line, or shared in.
 
 	approver_field = APPROVER_ROUTED_DOCTYPES[doc.doctype]
 	rights = [ptype] if ptype in _SHARE_RIGHTS else ["write"]

@@ -77,6 +77,29 @@ def company_visible(company, user: str | None = None, allow_blank: bool = False)
 	return company in companies
 
 
+def request_company_visible(doc, user: str | None = None) -> bool:
+	"""Is this employee's request inside the user's company fence?
+
+	The row-level question for the request doctypes whose `company` link no longer
+	rides Frappe's own User Permission check (hrms.patches.v16_0.
+	approver_reads_past_company_user_permissions): HR's company fence is restated
+	here, in code. The employee's company and the request's own stored company
+	must both be inside it, the pair `hrms.api.approval._request_read_allowed`
+	has always checked. An UNSAVED request has no stored company yet
+	(`fetch_from: employee.company` writes it at save, and whatever sits there
+	before is the user's default), so it is judged on its employee's company
+	alone. A user with no fence passes.
+	"""
+	user = user or frappe.session.user
+	if not allowed_companies(user):
+		return True
+	employee = doc.get("employee")
+	company = frappe.db.get_value("Employee", employee, "company") if employee else None
+	unsaved = bool(doc.get("__islocal")) or not doc.get("name")
+	stored = None if unsaved else doc.get("company")
+	return company_visible(company, user) and company_visible(stored or company, user)
+
+
 # --- Employee row scope -------------------------------------------------
 # Frappe already applies a Company User Permission to Employee automatically
 # (Employee.company is a Link field), but that path is bypassed by anything

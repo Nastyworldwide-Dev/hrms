@@ -1,24 +1,29 @@
 """Guard: the approval-scoping invariant, pinned from both sides.
 
 The rule (decided 2026-08-19, after the frontend audit flagged the two paths
-as "inconsistent"): **the system never GUESSES across a company boundary; a
-human may ASSIGN across one.**
+as "inconsistent"; widened 2026-10-07 after HR's "regardless of company"): **the
+system never GUESSES across a company boundary; a human may ASSIGN across one.**
 
   * AUTO-ROUTED approvals are company-fenced. Remote Checkin Request's
     approver is resolved by a rule chain (shift supervisor -> reports_to ->
-    HR fallback), so its queue rides `permitted_company_filter` and its HR
-    fallback prefers a same-company HR Manager. Being named by an algorithm
-    is not authority to see another company's punches.
+    HR fallback), so the STAMPED arm of its queue (`approver == user`) rides
+    `permitted_company_filter` and its HR fallback prefers a same-company HR
+    Manager. Being named by an algorithm is not authority to see another
+    company's punches.
 
-  * EXPLICITLY-ASSIGNED approvals are NOT fenced. The leave / expense /
-    shift / attendance queues key on the approver fields HR filled in by
-    hand; the assignment IS the authorization, and fencing it would silently
-    strand every deliberate cross-company assignment in a queue its owner
-    can never see — a request Pending forever.
+  * EXPLICITLY-ASSIGNED approval LINES are NEVER fenced. The leave / expense /
+    shift / attendance queues key on the approver fields HR filled in by hand,
+    and the remote check-in queue's ROUTED arm (`employee in routed`) reads the
+    same line; the assignment IS the authorization, and fencing it would
+    silently strand every deliberate cross-company assignment in a queue its
+    owner can never see — a request Pending forever. Amran (TNME) names the
+    approver of reports in other companies, and Dubai and South Africa will
+    follow. Only HR's SIGHT, the fallback for people who are on no line, is
+    fenced (hrms/tests/test_named_approver_sees_across_companies.py).
 
 Both directions are pinned so neither can drift into the other by accident:
 adding a fence to `get_filters` or removing the fence from the remote-checkin
-queue each turns a decision into a bug.
+queue's stamped arm each turns a decision into a bug.
 
 AST-based and bench-free: run as
 `python3 hrms/tests/test_approval_scoping_invariant.py`.
@@ -56,8 +61,8 @@ class TestAutoRoutedApprovalsStayFenced(unittest.TestCase):
 		fn = _function(REMOTE_CHECKIN, "_pending_for_approver_query")
 		self.assertTrue(
 			_called_names(fn) & FENCE_CALLS,
-			"_pending_for_approver_query lost its company fence — an auto-routed "
-			"queue would hand a fenced HR user another company's punches",
+			"_pending_for_approver_query lost its company fence on the stamped arm — an "
+			"auto-routed queue would hand a fenced HR user another company's punches",
 		)
 
 	def test_resolver_hr_fallback_prefers_the_same_company(self):
