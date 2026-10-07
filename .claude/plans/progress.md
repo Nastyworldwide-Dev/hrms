@@ -264,3 +264,8 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T02:28:49Z EVIDENCE: 2 correct — D1b team-roster-assign 24/24 (red on HEAD: 8 fail), eslint clean.
 2026-10-07T02:28:49Z EVIDENCE: 5 looks right — NOT RUN: local dev site lacks the Roster Day table and the site update was refused by the infra gate (pending record 20261007022835). Live HR check waits.
 - 2026-10-07T02:28:57Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-10-07T02:28:59Z COMMIT: 29a995f8c feat(pwa): HR can save an Off day in Nadi Assign without picking a shift → review+design dispatched
+- 2026-10-07T02:30:35Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-10-07T02:30:43Z COMMIT: 224c571cc fix(pwa): Nadi Assign said nothing when Save stayed grey with no shift → review+design dispatched
+2026-10-07T02:43:59Z EVIDENCE: 5 looks right — live on fresh.local as HR (390px): no-shift cell -> Assign grey until Day type, hint shown, Location hidden; Off day -> toast "Off day saved for 20 Oct"; Roster Day row written by HR; _classify_day=off. Console: only socket.io refused (local realtime server not running). Test row removed.
+2026-10-07T02:43:59Z NEXT: owner ruling on Work Day with no shift (recommend: refuse); then D2 edit in place.
