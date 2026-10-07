@@ -26,7 +26,6 @@ import frappe
 from frappe import _
 from frappe.utils import getdate, now_datetime
 
-from hrms.api.roster import _clear_day_markers as clear_day_markers
 from hrms.hr.doctype.shift_assignment.shift_assignment import refuse_overlapping_assignments
 from hrms.utils.shift_resolution import superseded_assignments
 from hrms.utils.timezone import employee_now
@@ -85,7 +84,24 @@ def clear_day_markers_on_submit(doc, method=None):
 		or getattr(doc, "synced_from_instance", None)
 	):
 		return
-	clear_day_markers(doc.employee, doc.start_date, doc.end_date)
+	_delete_day_markers(doc.employee, doc.start_date, doc.end_date)
+
+
+def _delete_day_markers(employee, start_date, end_date):
+	"""The marks in the shift's dates (an open end: from its start on). The submit already passed
+	its creator's own checks — an approver with no HR role approving a Shift Request included — so
+	the marks go without a second Roster Day permission check that would refuse the approval."""
+	if not frappe.db.table_exists("Roster Day"):
+		return  # deploy skew: no table, no marks
+	dates = ["between", [str(start_date), str(end_date)]] if end_date else [">=", str(start_date)]
+	names = frappe.get_all("Roster Day", filters={"employee": employee, "date": dates}, pluck="name")
+	for name in names:
+		frappe.delete_doc("Roster Day", name, ignore_permissions=True)
+	if names:
+		from hrms.utils.ot_calculation import forget_rostered_day_types
+
+		forget_rostered_day_types()
+		logger.info("[shift_assignment] %s: %d day mark(s) replaced by a submitted shift", employee, len(names))
 
 
 def queue_restamp(doc, method=None):

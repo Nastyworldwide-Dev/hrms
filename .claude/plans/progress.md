@@ -233,3 +233,9 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T07:21:58Z EVIDENCE: 3 works — bench fresh.local (rolled back, hook cache cleared): Desk-form shift on 4 Nov removes only that mark; a roster split over a marked 10 Nov keeps it; no circular import.
 - 2026-10-07T07:22:02Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-10-07T07:22:02Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
+- 2026-10-07T07:22:04Z COMMIT: de84475ac fix(roster): a shift made in the Desk form left the day-off mark under it → review+cross-app dispatched
+- 2026-10-07T07:23:18Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
+- 2026-10-07T07:23:18Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 3 extra test file(s) ⟂f95945b27b3b
+- 2026-10-07T07:23:19Z COMMIT: 86949c3f1 fix(roster): a shift rule's open-ended shift could wipe every future day mark → review+cross-app dispatched
+2026-10-07T07:24:56Z EVIDENCE: 2 correct — shift_assignment_hooks 16/16; invariant mutation-checked (untagging shift_rules fails 2). 3 works — bench fresh.local (rolled back): Desk shift on 4 Nov clears only that mark, roster split keeps 10 Nov.
+- 2026-10-07T07:24:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36

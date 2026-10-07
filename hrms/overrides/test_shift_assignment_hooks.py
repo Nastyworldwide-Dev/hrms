@@ -90,17 +90,33 @@ class TestClose(unittest.TestCase):
 		self.assertIn("superseded_assignments", {n.id for n in ast.walk(fn) if isinstance(n, ast.Name)})
 
 
-
-
 class TestAHandMadeShiftClearsTheDayMarks(unittest.TestCase):
 	"""Owner, 7 Oct 2026: a shift HR submits in the Desk form over a day marked Off is the newer
 	word, so the mark goes. Shifts made in code (roster splits, schedules, the bulk tool) go
 	through create_shift_assignment, which tags them to keep the marks."""
 
 	def _run(self, doc):
-		with patch.object(hooks, "clear_day_markers") as clear:
+		with patch.object(hooks, "_delete_day_markers") as clear:
 			hooks.clear_day_markers_on_submit(doc)
 		return clear
+
+	def test_the_marks_go_whoever_submitted_the_shift(self):
+		# review of de84475ac: an approver with no HR role approving a Shift Request submits the
+		# shift; the submit already passed their checks, so the mark is removed without a second
+		# Roster Day permission check that would refuse the whole approval
+		doc = _doc(start_date=date(2026, 10, 8), end_date=date(2026, 10, 8), flags=SimpleNamespace())
+		with (
+			patch.object(frappe.db, "table_exists", return_value=True, create=True),
+			patch.object(frappe, "get_all", return_value=["EMP-2026-10-08"]),
+			patch.object(frappe, "delete_doc") as delete,
+			patch("hrms.utils.ot_calculation.forget_rostered_day_types"),
+		):
+			hooks.clear_day_markers_on_submit(doc)
+		delete.assert_called_once_with("Roster Day", "EMP-2026-10-08", ignore_permissions=True)
+
+	def test_the_roster_api_is_imported_only_when_the_hook_runs(self):
+		source = pathlib.Path(hooks.__file__).read_text()
+		self.assertNotIn("\nfrom hrms.api.roster import", source)
 
 	def test_a_desk_submit_clears_the_marks_in_its_dates(self):
 		doc = _doc(start_date=date(2026, 10, 8), end_date=date(2026, 10, 10), flags=SimpleNamespace())
@@ -142,12 +158,43 @@ class TestAHandMadeShiftClearsTheDayMarks(unittest.TestCase):
 			body = body[body.index(creator) :]
 			self.assertIn("flags.keep_day_markers = True", body[: body.index(".submit()")], path)
 
+	def test_no_new_shift_creator_can_forget_the_tag(self):
+		# the tag is opt-out: a creator that forgets it wipes day marks. Every place that builds a
+		# Shift Assignment must be tagged here or named below as a person's decision.
+		import re
+
+		root = pathlib.Path(hooks.__file__).resolve().parents[1]
+		tagged = {
+			"hr/doctype/shift_assignment_tool/shift_assignment_tool.py",
+			"hr/shift_rules.py",
+			"api/attendance_master_edit.py",
+		}
+		a_persons_decision = {
+			"hr/doctype/shift_request/shift_request.py",
+			"hr/doctype/shift_swap_request/shift_swap_request.py",
+		}
+		creators = set()
+		for path in root.rglob("*.py"):
+			rel = path.relative_to(root).as_posix()
+			if "/test_" in rel or rel.startswith(("tests/", "patches/")) or "/probes/" in rel:
+				continue
+			text = path.read_text()
+			if re.search(
+				r'new_doc\("Shift Assignment"\)|get_doc\(\s*\{\s*"doctype": "Shift Assignment"', text
+			) or ("copy_doc(assignment)" in text and "Shift Assignment" in text):
+				creators.add(rel)
+		creators.discard("api/roster.py")  # its "doctype" dict is a filter, not a document
+		self.assertEqual(creators, tagged | a_persons_decision)
+		for rel in tagged:
+			self.assertIn("keep_day_markers = True", (root / rel).read_text(), rel)
+
 	def test_create_shift_assignment_tags_its_shifts_to_keep_the_marks(self):
 		from hrms.hr.doctype.shift_assignment_tool import shift_assignment_tool as tool
 
 		source = pathlib.Path(tool.__file__).read_text()
 		body = source[source.index("def create_shift_assignment(") :]
 		self.assertIn("assignment.flags.keep_day_markers = True", body[: body.index("assignment.submit()")])
+
 
 if __name__ == "__main__":
 	unittest.main()
