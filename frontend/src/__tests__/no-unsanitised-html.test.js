@@ -156,3 +156,28 @@ test("the tags whose contents are the payload are deleted, not unwrapped", async
 	// And the branch must USE the set — a list nothing reads is a comment.
 	assert.match(source, /if \(DELETE_WHOLE\.has\(tag\)\) \{\s*child\.remove\(\)/)
 })
+
+test("only glass/toast.js may call frappe-ui's toast, so every toast text is escaped", () => {
+	// frappe-ui's Toast renders `text` with v-html; gToast escapes it (006dc82a3). A second caller
+	// of the raw toast would bypass that escape.
+	const offenders = []
+	const walk = (dir) => {
+		for (const name of readdirSync(dir)) {
+			const path = join(dir, name)
+			if (statSync(path).isDirectory()) {
+				if (name !== "__tests__") walk(path)
+				continue
+			}
+			if (!/\.(js|vue|ts)$/.test(name) || /\.test\./.test(name)) continue
+			const rel = path.slice(SRC.length).replace(/^\//, "")
+			if (rel === "components/glass/toast.js" || rel === "frappeUiLean.js") continue
+			const text = readFileSync(path, "utf8")
+			const imports = /import\s*\{([^}]*)\}\s*from\s*["'](frappe-ui|[^"']*frappeUiLean)["']/g
+			for (const m of text.matchAll(imports)) {
+				if (/\btoast\b/.test(m[1])) offenders.push(rel)
+			}
+		}
+	}
+	walk(SRC)
+	assert.deepEqual(offenders, [])
+})

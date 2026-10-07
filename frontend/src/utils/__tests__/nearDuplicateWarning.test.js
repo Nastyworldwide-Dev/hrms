@@ -41,7 +41,8 @@ test("the created claim is asked about, by its own name, once", async () => {
 })
 
 test("each sentence is toasted as a warning, with the server's words", async () => {
-	const other = "You already claimed a Meals on 01-10-2026 in HR-EXP-0003. Check it is not the same expense."
+	const other =
+		"You already claimed a Meals on 01-10-2026 in HR-EXP-0003. Check it is not the same expense."
 	const h = harness([SENTENCE, other])
 	const shown = await h.run()
 	assert.equal(shown, 2)
@@ -63,11 +64,13 @@ test("nothing near it: no toast at all", async () => {
 	}
 })
 
-test("the toast text is rendered as HTML, so an expense type's markup is shown as text", async () => {
-	const h = harness(['You already claimed a <img src=x onerror=alert(1)> on 01-10-2026 in HR-EXP-0001. Check it is not the same expense.'])
+test("the sentence goes to the toast as written; gToast is the one place that escapes it", async () => {
+	// review of 006dc82a3: this util escaped AND gToast escaped, so "Travel & Meals" showed as
+	// "Travel &amp; Meals". Safety for the v-html toast lives in glass/toast.js.
+	const sentence = "You already claimed a Travel & Meals <b> on 01-10-2026 in HR-EXP-0001."
+	const h = harness([sentence])
 	await h.run()
-	assert.doesNotMatch(h.toasts[0].text, /<img/)
-	assert.match(h.toasts[0].text, /&lt;img src=x onerror=alert\(1\)&gt;/)
+	assert.equal(h.toasts[0].text, sentence)
 })
 
 test("a failed lookup never undoes the create: it is logged and nothing is toasted", async () => {
@@ -78,7 +81,11 @@ test("a failed lookup never undoes the create: it is logged and nothing is toast
 		const h = harness(new Error("boom"))
 		assert.equal(await h.run(), 0)
 		assert.deepEqual(h.toasts, [])
-		assert.match(logged.join("\n"), /HR-EXP-0002/, "the failure is on the console, with the claim named")
+		assert.match(
+			logged.join("\n"),
+			/HR-EXP-0002/,
+			"the failure is on the console, with the claim named"
+		)
 	} finally {
 		console.warn = log
 	}
