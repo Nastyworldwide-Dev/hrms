@@ -49,6 +49,8 @@ class TestApplicableHolidayList(unittest.TestCase):
 				return ("Sunday", "Saturday") if isinstance(field, list) else "LEGACY-COMPANY-HOLIDAYS"
 			if doctype == "Holiday":
 				return rows.get((name["parent"], name["holiday_date"]))
+			if doctype == "Roster Day":
+				return None  # no day marker here: the holiday calendar decides
 			raise AssertionError(doctype)
 
 		with (

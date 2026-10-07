@@ -211,3 +211,6 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T04:29:56Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-10-07T04:29:58Z COMMIT: 89b29f186 fix(roster): a shift dragged onto a marked day off still paid as a day off → review dispatched
 2026-10-07T04:30:54Z NEXT: alpha.39 built and reviewed (bd8ac1e1d..89b29f186), not pushed. Waiting on owner: (1) push + release; (2) should day sheet / Team status read Roster Day markers (ticket-team-py-member-statuses.md). Desk month view + drag-swap not checked live.
+- 2026-10-07T04:30:58Z COMMIT: 4870f0078 docs(plans): alpha.39 built and reviewed; release waits on the owner → review dispatched
+2026-10-07T04:45:55Z EVIDENCE: 3 works — pre-release: frontend 1562/1562, Desk 30/30; 123 py test files touching pay/check-in/roster run one by one: alpha.39 broke one (test_ot_holiday_classification strict fake DB, fixed). 6 files fail identically on alpha.38 code (pre-existing: replayed_tap 8, restamp 5, attendance_health 1, checkin_session_rules 1, sync_runner 1, shift_supervisor_rosters_own_team 1).
+- 2026-10-07T04:46:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
