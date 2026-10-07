@@ -69,6 +69,7 @@ def _assignment(**fields):
 		"day_type": "None",
 		"start_date": "2026-10-05",
 		"end_date": "2026-10-16",
+		"docstatus": 1,
 	}
 	doc = FakeDocument("Shift Assignment", flags=frappe._dict(), **{**defaults, **fields})
 	object.__setattr__(
@@ -213,6 +214,15 @@ class TestUpdateShiftAssignmentChangesOnlyWhatIsSent(_Base):
 			self.doc.db_writes.clear()
 			self.update(shift_location=empty)
 			self.assertEqual(self.doc.db_writes, [("shift_location", None)], repr(empty))
+
+	def test_a_cancelled_or_draft_assignment_is_refused_and_nothing_is_written(self):
+		# review of 29a84584a: the location path never saves, so Frappe's own
+		# docstatus check never ran and a cancelled assignment was edited unseen
+		for docstatus in (0, 2):
+			self.doc = _assignment(docstatus=docstatus)
+			with self.assertRaises(frappe.ValidationError, msg=docstatus):
+				self.update(shift_location="Lot 6")
+			self.assertEqual((self.doc.saves, self.doc.db_writes), ([], []))
 
 	def test_an_unknown_location_is_refused_and_nothing_is_written(self):
 		with self.assertRaises(frappe.ValidationError):

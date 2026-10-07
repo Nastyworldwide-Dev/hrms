@@ -273,3 +273,7 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T02:49:20Z PLAN: approved 3babe6ed3d5c — # Release 2.0.0-alpha.39 "Roster in HR's Hands" (approved 7 Oct 2026: owner ruled R1a R2a R3a R4a)
 - 2026-10-07T02:49:30Z COMMIT: ccf839256 docs(plans): alpha.39 owner rulings: one-day location keeps the split, no Work Day mark → review dispatched
 - 2026-10-07T02:50:51Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 5 file(s) ⟂5d9cef17ceeb
+- 2026-10-07T02:50:55Z COMMIT: 0c799c0bd fix(roster): a day with no shift could be marked Work Day → review+design dispatched
+- 2026-10-07T03:16:23Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-07T03:16:25Z COMMIT: 29a84584a feat(roster): one roster field changes without re-sending the rest → review dispatched
+- 2026-10-07T03:21:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36

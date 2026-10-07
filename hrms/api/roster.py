@@ -329,6 +329,9 @@ def update_shift_assignment(
 
 	doc = frappe.get_doc("Shift Assignment", assignment)
 	_ensure_can_roster_employee(doc.employee)
+	if doc.docstatus != 1:
+		# the location is written without a save, so Frappe's own check never runs
+		frappe.throw(_("Only a submitted shift assignment can change."))
 	sent = {
 		name: value
 		for name, value in (
