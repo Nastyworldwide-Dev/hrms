@@ -245,3 +245,4 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T07:30:41Z EVIDENCE: 3 works — alpha.40 pre-release: 247 test files touching the 7 changed modules, run one by one; every failure identical on alpha.39 code (replayed_tap 8, restamp 5, fenced 2, timezone 2, attendance_health 1, checkin_session_rules 1, sync_runner 1, supervisor_own_team 1).
 - 2026-10-07T07:30:46Z COMMIT: efe292f0d chore(release): 2.0.0-alpha.40 Days Off Everywhere → review+deps dispatched
 2026-10-07T07:31:52Z NEXT: alpha.40 released (v2.0.0-alpha.40). Owner puts alpha.39 + 40 live and runs migrate. No open rulings.
+- 2026-10-07T07:31:58Z COMMIT: 7196e774b docs(handoff): alpha.40 released → review dispatched
