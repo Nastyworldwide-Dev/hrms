@@ -140,6 +140,11 @@ export function firstMessage(error, fallback = "Request failed") {
 			// a break between parts stays a space ("Line one<br>Line two"); inline tags just go
 			.replace(/<br\s*\/?>|<\/(p|li|div)>/gi, " ")
 			.replace(/<[^>]*>/g, "")
+			// an unclosed tag at the end ("x <img onerror=...") is dropped, and any < or > left
+			// becomes its look-alike: the toast renders with v-html, so this can never be markup
+			.replace(/<[^>]*$/, "")
+			.replace(/</g, "‹")
+			.replace(/>/g, "›")
 			.replace(/\s+/g, " ")
 			.trim()
 	)

@@ -259,3 +259,6 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T08:07:04Z COMMIT: 3169ca158 fix(pwa): a request's save error used the old control and wrote raw server HTML → review+design dispatched
 - 2026-10-07T08:09:04Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-10-07T08:09:04Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 1 extra test file(s) ⟂b7fff5e7f6e0
+- 2026-10-07T08:09:10Z COMMIT: f94179f64 fix(pwa): a refusal split by line breaks ran its sentences together → review+design dispatched
+- 2026-10-07T08:11:04Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-07T08:11:04Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 1 extra test file(s) ⟂b7fff5e7f6e0

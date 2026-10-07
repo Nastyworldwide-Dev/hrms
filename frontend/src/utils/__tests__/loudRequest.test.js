@@ -140,6 +140,21 @@ test("silencing the toast does not swallow the rejection", async () => {
 	)
 })
 
+test("a refusal with an unclosed tag never reaches the toast as markup", () => {
+	// review of f94179f64: "<[^>]*>" only strips a tag that closes, and the toast renders with
+	// v-html, so a "<img src=x onerror=..." with no ">" passed straight through
+	for (const raw of [
+		"Refused <img src=x onerror=alert(1)",
+		"<script",
+		"a < b and c > d",
+		"x <b",
+	]) {
+		const out = firstMessage({ messages: [raw] })
+		assert.ok(!out.includes("<"), `${raw} -> ${out}`)
+	}
+	assert.equal(firstMessage({ messages: ["Refused <img src=x onerror=alert(1)"] }), "Refused")
+})
+
 test("a server refusal split by <br>, paragraphs or list items keeps a space between its parts", () => {
 	// review of 3169ca158: tags were stripped with nothing in their place, so a Frappe throw
 	// "Line one<br>Line two" read "Line oneLine two"
