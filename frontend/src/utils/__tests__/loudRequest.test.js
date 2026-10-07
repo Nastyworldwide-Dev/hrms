@@ -23,7 +23,10 @@ const source = readFileSync(new URL("../loudRequest.js", import.meta.url), "utf8
 	.replace('import { sessionUser } from "@/utils/personalCache"', "")
 const { makeLoudRequest, firstMessage, saveFailedSentence } = new Function(
 	"sessionUser",
-	`${noAccessSource.replace(/export function/g, "function")}\n${source.replace(/export function/g, "function")}\nreturn { makeLoudRequest, firstMessage, saveFailedSentence }`
+	`${noAccessSource.replace(/export function/g, "function")}\n${source.replace(
+		/export function/g,
+		"function"
+	)}\nreturn { makeLoudRequest, firstMessage, saveFailedSentence }`
 )(() => session.user)
 
 const PERMISSION_ERROR = {
@@ -137,6 +140,18 @@ test("silencing the toast does not swallow the rejection", async () => {
 	)
 })
 
+test("a server refusal split by <br>, paragraphs or list items keeps a space between its parts", () => {
+	// review of 3169ca158: tags were stripped with nothing in their place, so a Frappe throw
+	// "Line one<br>Line two" read "Line oneLine two"
+	assert.equal(
+		firstMessage({ messages: ["Leave overlaps<br>Pick other days"] }),
+		"Leave overlaps Pick other days"
+	)
+	assert.equal(firstMessage({ messages: ["<p>First.</p><p>Second.</p>"] }), "First. Second.")
+	assert.equal(firstMessage({ messages: ["<ul><li>One</li><li>Two</li></ul>"] }), "One Two")
+	assert.equal(firstMessage({ messages: ["Ask <b>HR</b> to change it."] }), "Ask HR to change it.")
+})
+
 test("firstMessage is the one reader of a server refusal, shared with the forms", () => {
 	assert.equal(
 		firstMessage({ messages: ["Insufficient leave balance"] }),
@@ -176,7 +191,9 @@ test("a failed load toasts plain words, never the server's sentence", async () =
 
 test("a read whose screen shows its own error is not toasted a second time", async () => {
 	const { loud, toasts } = harness()
-	await assert.rejects(() => loud({ url: "/api/method/hrms.api.announcements.home_announcements" }))
+	await assert.rejects(() =>
+		loud({ url: "/api/method/hrms.api.announcements.home_announcements" })
+	)
 	assert.equal(toasts.length, 0)
 })
 
@@ -227,9 +244,14 @@ test("a network failure reads as plain words everywhere, never 'Failed to fetch'
 	withOnline(false, () => assert.equal(firstMessage(NO_NETWORK), "No connection."))
 	withOnline(true, () => assert.equal(firstMessage(NO_NETWORK), "Could not reach the server."))
 	withOnline(false, () =>
-		assert.equal(firstMessage(new Error("NetworkError when attempting to fetch resource.")), "No connection.")
+		assert.equal(
+			firstMessage(new Error("NetworkError when attempting to fetch resource.")),
+			"No connection."
+		)
 	)
-	withOnline(false, () => assert.equal(firstMessage(new TypeError("Load failed")), "No connection."))
+	withOnline(false, () =>
+		assert.equal(firstMessage(new TypeError("Load failed")), "No connection.")
+	)
 })
 
 test("a server refusal still reads as the server's sentence", () => {
@@ -284,7 +306,10 @@ const forbidden = (extra = {}) =>
 	})
 
 test("a refusal of this page, from a signed-in person, is not toasted on top of its own sentence", async () => {
-	for (const error of [forbidden(), Object.assign(new Error("x"), { exc_type: "PermissionError" })]) {
+	for (const error of [
+		forbidden(),
+		Object.assign(new Error("x"), { exc_type: "PermissionError" }),
+	]) {
 		const { loud, toasts } = harness(error)
 		await assert.rejects(
 			() => loud({ url: read(), noAccessShown: true }),

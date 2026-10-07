@@ -85,7 +85,10 @@ const SILENT_ENDPOINTS = new Set([
 // after the request settles, so the check waits one frame before deciding.
 function noAccessDrawn(options) {
 	if (options?.noAccessShown) return true
-	return typeof document !== "undefined" && Boolean(document.querySelector?.(":not(.ion-page-hidden) [data-no-access]"))
+	return (
+		typeof document !== "undefined" &&
+		Boolean(document.querySelector?.(":not(.ion-page-hidden) [data-no-access]"))
+	)
 }
 
 function endpointOf(options) {
@@ -109,7 +112,9 @@ function endpointOf(options) {
 // review: "offline" was wrong for a server that was simply unreachable).
 function noServerAnswer(error) {
 	if (!error || error.exc_type || error.messages?.length) return false
-	return /failed to fetch|networkerror|network request failed|load failed/i.test(String(error.message || ""))
+	return /failed to fetch|networkerror|network request failed|load failed/i.test(
+		String(error.message || "")
+	)
 }
 
 function phoneOffline() {
@@ -127,11 +132,17 @@ export function saveFailedSentence(error, fallback) {
 }
 
 export function firstMessage(error, fallback = "Request failed") {
-	if (noServerAnswer(error)) return phoneOffline() ? "No connection." : "Could not reach the server."
+	if (noServerAnswer(error))
+		return phoneOffline() ? "No connection." : "Could not reach the server."
 	const message = error?.messages?.[0] || error?.message || fallback
-	return String(message)
-		.replace(/<[^>]*>/g, "")
-		.trim()
+	return (
+		String(message)
+			// a break between parts stays a space ("Line one<br>Line two"); inline tags just go
+			.replace(/<br\s*\/?>|<\/(p|li|div)>/gi, " ")
+			.replace(/<[^>]*>/g, "")
+			.replace(/\s+/g, " ")
+			.trim()
+	)
 }
 
 // Failures this seam has already logged (and toasted, unless silent). frappe-ui
@@ -191,10 +202,16 @@ export function makeLoudRequest(request, { notify = gToast, now = () => Date.now
 				// real failure on the same endpoint is still reported. A session that ENDED is not
 				// a refusal (isNoAccess) and goes on to the generic path, then the reload to Login.
 				const later =
-					typeof requestAnimationFrame === "function" ? requestAnimationFrame : (fn) => setTimeout(fn, 0)
+					typeof requestAnimationFrame === "function"
+						? requestAnimationFrame
+						: (fn) => setTimeout(fn, 0)
 				later(() => {
 					if (!noAccessDrawn(options))
-						notify({ title: "You can't open this.", text: "It is not shared with you.", variant: "error" })
+						notify({
+							title: "You can't open this.",
+							text: "It is not shared with you.",
+							variant: "error",
+						})
 				})
 			} else if (!silenced && !isRepeat(endpoint, now())) {
 				// Plain words only (audit F-6): the server's sentence names doctypes,

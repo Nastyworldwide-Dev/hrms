@@ -256,3 +256,6 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T08:03:28Z PLAN: approved d1bb7f9b3a26 — # Release 2.0.0-alpha.41 "Clean Glass" (approved 7 Oct 2026: owner "Approve as written", E1a, E2a)
 - 2026-10-07T08:07:00Z PLAN: approved d1bb7f9b3a26 — # Release 2.0.0-alpha.41 "Clean Glass" (approved 7 Oct 2026: owner "Approve as written", E1a, E2a)
 - 2026-10-07T08:07:01Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
+- 2026-10-07T08:07:04Z COMMIT: 3169ca158 fix(pwa): a request's save error used the old control and wrote raw server HTML → review+design dispatched
+- 2026-10-07T08:09:04Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-07T08:09:04Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 1 extra test file(s) ⟂b7fff5e7f6e0
