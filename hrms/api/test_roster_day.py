@@ -1,4 +1,4 @@
-"""HR marks a day Off / Rest / Public Holiday / Work Day with no shift (7 Oct 2026).
+"""HR marks a day Off / Rest / Public Holiday with no shift (7 Oct 2026).
 
 HR (Malay, 6 Oct): "kalau aku letak off day macam tu je tak boleh save, kena ada
 shift". `hrms.api.roster.set_day_type` writes a "Roster Day" marker for a date
@@ -189,8 +189,8 @@ class TestSetDayType(unittest.TestCase):
 		self.assertEqual({r["day_type"] for r in self.store.rows.values()}, {"Public Holiday"})
 		self.assertEqual([name for name, _ in self.store.saves], ["EMP-1-2026-10-09"])
 
-	def test_every_day_type_the_pay_rules_know_is_accepted(self):
-		for label in ot_calculation.ROSTER_DAY_TYPES:
+	def test_off_rest_and_public_holiday_are_accepted(self):
+		for label in ("Off Day", "Rest Day", "Public Holiday"):
 			store = _Store()
 			with _world(store):
 				self.assertEqual(roster.set_day_type("EMP-1", "2026-10-08", None, label), {"saved": 1})
@@ -222,6 +222,13 @@ class TestSetDayType(unittest.TestCase):
 			with self.assertRaises(frappe.ValidationError):
 				roster.set_day_type("EMP-1", "2026-10-01", "2026-12-02", "Rest Day")
 		self.assertEqual(self.store.rows, rows, "the refused call changed nothing")
+
+	def test_work_day_with_no_shift_is_refused(self):
+		# owner, 7 Oct 2026: a day with no shift is never marked worked; Work Day
+		# stays a Day Type on a shift
+		with _world(self.store), self.assertRaises(frappe.ValidationError):
+			roster.set_day_type("EMP-1", "2026-10-08", None, "Work Day")
+		self.assertEqual(self.store.rows, {})
 
 	def test_an_unknown_day_type_is_refused_and_nothing_is_written(self):
 		for bad in ("Weekend", "off day", "Holiday", "None\nWork Day"):

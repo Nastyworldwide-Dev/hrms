@@ -758,6 +758,10 @@ def _insert_shift(
 		)
 
 
+#: A day with no shift may be marked only as a day off (owner, 7 Oct 2026): never
+#: Work Day, which stays a Day Type on a shift.
+NO_SHIFT_DAY_TYPES = ("Off Day", "Rest Day", "Public Holiday")
+
 #: Longest stretch one set_day_type call marks (two pay windows' worth).
 # ceiling: 62 days per call, upgrade: HR asks to mark a longer stretch in one go.
 MAX_DAY_TYPE_DAYS = 62
@@ -767,7 +771,7 @@ MAX_DAY_TYPE_DAYS = 62
 def set_day_type(
 	employee: str, from_date: str, to_date: str | None = None, day_type: str | None = None
 ) -> dict:
-	"""Mark days Off / Rest / Public Holiday / Work Day for a person with NO shift.
+	"""Mark days Off / Rest / Public Holiday for a person with NO shift.
 
 	HR (6 Oct 2026): "kalau aku letak off day macam tu je tak boleh save, kena ada
 	shift". The marker is a "Roster Day" row (one per person per date); every pay
@@ -783,12 +787,12 @@ def set_day_type(
 
 	from frappe.utils import getdate
 
-	from hrms.utils.ot_calculation import ROSTER_DAY_TYPES, forget_rostered_day_types
+	from hrms.utils.ot_calculation import forget_rostered_day_types
 
 	_ensure_can_roster_employee(employee)
 	clearing = day_type in (None, "", "None")
-	if not clearing and day_type not in ROSTER_DAY_TYPES:
-		frappe.throw(_("Day Type must be one of {0}.").format(", ".join(ROSTER_DAY_TYPES)))
+	if not clearing and day_type not in NO_SHIFT_DAY_TYPES:
+		frappe.throw(_("Day Type must be one of {0}.").format(", ".join(NO_SHIFT_DAY_TYPES)))
 	if not from_date:
 		frappe.throw(_("Pick the day."))
 	start = getdate(from_date)

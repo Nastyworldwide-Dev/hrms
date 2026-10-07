@@ -271,3 +271,5 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T02:43:59Z NEXT: owner ruling on Work Day with no shift (recommend: refuse); then D2 edit in place.
 - 2026-10-07T02:44:11Z COMMIT: 594685f66 docs(plans): alpha.39 D1 checked live on the local site as HR → review dispatched
 - 2026-10-07T02:49:20Z PLAN: approved 3babe6ed3d5c — # Release 2.0.0-alpha.39 "Roster in HR's Hands" (approved 7 Oct 2026: owner ruled R1a R2a R3a R4a)
+- 2026-10-07T02:49:30Z COMMIT: ccf839256 docs(plans): alpha.39 owner rulings: one-day location keeps the split, no Work Day mark → review dispatched
+- 2026-10-07T02:50:51Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 5 file(s) ⟂5d9cef17ceeb

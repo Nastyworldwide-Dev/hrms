@@ -397,7 +397,9 @@ function openAssign(member) {
 }
 // Shift type is optional: with no shift, a day type alone saves a day marker
 // (HR, 6 Oct 2026: an "Off day" with no shift could not be saved).
-const hasDayType = (value) => !!value && value !== "None"
+// a day with no shift is never a work day (owner, 7 Oct 2026)
+const NO_SHIFT_DAY_TYPES = ["Off Day", "Rest Day", "Public Holiday"]
+const hasDayType = (value) => NO_SHIFT_DAY_TYPES.includes(value)
 const canSubmit = computed(() =>
 	Boolean(form.start_date && (form.shift_type || hasDayType(form.day_type)))
 )

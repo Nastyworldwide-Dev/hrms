@@ -135,6 +135,15 @@ test("Assign stays disabled with no start date", () => {
 	assert.ok(!vm.canSubmit.value)
 })
 
+test("Work day alone (no shift) cannot be saved: a day with no shift is never a work day", () => {
+	const { vm } = sheet()
+	vm.form.start_date = "2026-10-08"
+	vm.form.day_type = "Work Day"
+	assert.equal(vm.canSubmit.value, false)
+	vm.form.shift_type = "Morning"
+	assert.equal(vm.canSubmit.value, true, "Work day stays a Day type on a shift")
+})
+
 test("a day type alone saves a day marker and does not assign a shift", () => {
 	const { vm, calls } = sheet()
 	vm.form.start_date = "2026-10-08"
@@ -183,7 +192,6 @@ test("the marker toast says what was saved, in plain words", () => {
 		saved("Public Holiday", "2026-10-08", "2026-10-08").title,
 		"Public holiday saved for 8 Oct"
 	)
-	assert.equal(saved("Work Day", "2026-10-08", "2026-10-08").title, "Work day saved for 8 Oct")
 	assert.equal(
 		saved("Off Day", "2026-09-30", "2026-10-02").title,
 		"Off day saved for 30 Sep – 2 Oct",
