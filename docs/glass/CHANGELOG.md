@@ -10,6 +10,35 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.39] — Roster in HR's Hands — 2026-10-07
+
+HR can mark a day off without a shift, change one roster field at a time,
+and fix the kind of day even after people have punched.
+
+### Added
+- **A day off needs no shift.** In Nadi "Assign", leave Shift type empty and
+  pick Off day, Rest day or Public holiday: the day is saved as that kind of
+  day ("Off day saved for 8 Oct"). Work done on it is overtime at the off-day
+  rate. Work day still needs a shift.
+- **The roster shows those days.** Nadi shows O / R / PH on the day; Desk shows
+  the word. Tapping it in Nadi opens Assign with that day type picked.
+- **One field at a time.** Day type, location, status and end date each save
+  on their own, on one day or the whole shift, without re-entering the rest.
+  Desk no longer says "one at a time"; Nadi's day sheet has Location.
+- **HR can change the kind of day after people punched** (for example a
+  surprise public holiday). The day is re-priced and its attendance rebuilt;
+  a day already paid out stays as it is. A supervisor still asks HR, and a
+  shift or location change on a worked day is still refused for everyone.
+
+### Fixed
+- **Dragging a shift to another day keeps its day type** (it was reset), and
+  a shift dropped on a marked day off replaces the mark.
+- **A grey Save says why:** "Pick a From date.", or "Pick a shift, or choose
+  Off day, Rest day or Public holiday."
+- **Desk: an end date before the day being changed is refused before anything
+  saves**, and says to pick a later end date.
+- **A cancelled shift can no longer have its location changed.**
+
 ## [2.0.0-alpha.38] — Money and Waiting — 2026-10-06
 
 The same expense can't be paid twice, nothing waits on someone who is away,
