@@ -277,3 +277,7 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T03:16:23Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
 - 2026-10-07T03:16:25Z COMMIT: 29a84584a feat(roster): one roster field changes without re-sending the rest → review dispatched
 - 2026-10-07T03:21:15Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-07T03:21:16Z COMMIT: 86d028814 fix(roster): a cancelled shift assignment could still change location → review dispatched
+2026-10-07T03:23:42Z EVIDENCE: 2 correct — D2 screens: Nadi team-roster-assign 35/35, Desk ShiftAssignmentDialog 25/25 (each red 8 on HEAD); eslint clean (frontend).
+2026-10-07T03:23:42Z EVIDENCE: 5 looks right — live as HR: day sheet location-only change on 21 Oct -> only that day moved, shift and neighbours kept; test data removed.
+- 2026-10-07T03:23:46Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c

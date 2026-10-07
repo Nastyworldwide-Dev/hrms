@@ -83,7 +83,7 @@ const setupCode = script.content
 const MEMBER = { name: "HR-EMP-0001", company: "Verifica", employee_name: "Aina" }
 
 function sheet() {
-	const calls = { assign: [], dayType: [], toasts: [] }
+	const calls = { assign: [], dayType: [], change: [], toasts: [] }
 	const resource = (log) => ({
 		loading: false,
 		submit: (params, hooks) => log.push({ params, hooks }),
@@ -101,7 +101,7 @@ function sheet() {
 		teamManagers: { data: [], reload() {} },
 		assignShift: resource(calls.assign),
 		setDayType: resource(calls.dayType),
-		changeShiftDay: resource([]),
+		changeShiftDay: resource(calls.change),
 		removeShiftDay: resource([]),
 		console: { info() {}, warn() {}, error() {} },
 	}
@@ -288,4 +288,107 @@ test("set_day_type is wired through the roster fence", () => {
 		/export const setDayType = createResource\(\{\s*url: "hrms\.api\.roster\.set_day_type"/
 	)
 	assert.match(view, /import \{[^}]*\bsetDayType\b[^}]*\} from "@\/data\/team"/)
+})
+
+// Owner, R3a, 7 Oct 2026: the Day sheet edits the day's location too. The server keeps what is
+// not sent, so submitChange sends shift_location ONLY when it changed; an emptied field sends ""
+// (clears it). get_team_roster already carries shift_location on each shift row (team.py).
+const DAY = { iso: "2026-10-08" }
+const dayOf = (shift) => ({
+	...MEMBER,
+	shifts: [
+		{
+			name: "HR-SHA-0001",
+			shift_type: "Morning",
+			shift_location: "Lot 5",
+			day_type: "None",
+			start_date: "2026-10-05",
+			end_date: "2026-10-11",
+			...shift,
+		},
+	],
+})
+function daySheet(shift) {
+	const made = sheet()
+	made.vm.openDay(dayOf(shift), DAY)
+	return made
+}
+
+test("the Day sheet has a Location field on the Shift Location picker, with the eyebrow label", () => {
+	const day = view.slice(
+		view.indexOf("<!-- Day sheet"),
+		view.indexOf("</GModal>", view.indexOf("<!-- Day sheet"))
+	)
+	const field = day.slice(
+		day.lastIndexOf("<label", day.indexOf('doctype="Shift Location"')),
+		day.indexOf("</label>", day.indexOf('doctype="Shift Location"'))
+	)
+	assert.match(field, /<span class="g-eyebrow">\{\{ __\("Location"\) \}\}<\/span>/)
+	assert.match(field, /v-model="dayForm\.shift_location"/)
+})
+
+test("the Day sheet opens with the day's location", () => {
+	const { vm } = daySheet()
+	assert.equal(vm.dayForm.shift_location, "Lot 5")
+	const none = daySheet({ shift_location: null })
+	assert.equal(none.vm.dayForm.shift_location, "")
+})
+
+test("a freshly opened Day sheet has nothing to change", () => {
+	assert.equal(daySheet().vm.dayChanged.value, false)
+	assert.equal(daySheet({ shift_location: null }).vm.dayChanged.value, false)
+})
+
+test("a location change alone wakes Change shift", () => {
+	const { vm } = daySheet()
+	vm.dayForm.shift_location = "Lot 9"
+	assert.equal(vm.dayChanged.value, true)
+	vm.dayForm.shift_location = "Lot 5"
+	assert.equal(vm.dayChanged.value, false, "back to the prefill is no change")
+	vm.dayForm.shift_location = ""
+	assert.equal(vm.dayChanged.value, true, "emptying a set location is a change")
+})
+
+test("picking a location on a day that had none wakes Change shift", () => {
+	const { vm } = daySheet({ shift_location: null })
+	vm.dayForm.shift_location = "Lot 9"
+	assert.equal(vm.dayChanged.value, true)
+})
+
+test("a changed location is sent", () => {
+	const { vm, calls } = daySheet()
+	vm.dayForm.shift_location = "Lot 9"
+	vm.submitChange()
+	assert.equal(calls.change.length, 1)
+	assert.deepEqual(calls.change[0].params, {
+		assignment: "HR-SHA-0001",
+		date: "2026-10-08",
+		shift_type: "Morning",
+		shift_location: "Lot 9",
+		day_type: "None",
+	})
+})
+
+test("shift_location is NOT sent when only the day type or the shift changed", () => {
+	const { vm, calls } = daySheet()
+	vm.dayForm.day_type = "Rest Day"
+	vm.dayForm.shift_type = "Night"
+	vm.submitChange()
+	assert.equal("shift_location" in calls.change[0].params, false, "the server keeps the location")
+	assert.equal(calls.change[0].params.day_type, "Rest Day")
+	assert.equal(calls.change[0].params.shift_type, "Night")
+})
+
+test("an emptied location sends an empty string, which clears it", () => {
+	const { vm, calls } = daySheet()
+	vm.dayForm.shift_location = ""
+	vm.submitChange()
+	assert.equal(calls.change[0].params.shift_location, "")
+})
+
+test("a day with no location, left empty, sends no location", () => {
+	const { vm, calls } = daySheet({ shift_location: null })
+	vm.dayForm.day_type = "Off Day"
+	vm.submitChange()
+	assert.equal("shift_location" in calls.change[0].params, false)
 })

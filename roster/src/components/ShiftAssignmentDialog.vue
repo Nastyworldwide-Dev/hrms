@@ -362,21 +362,32 @@ const dayOnlyHint = computed(() =>
 	props.shiftAssignmentName && selectedDate.value ? `Changes ${selectedDate.value} only` : "",
 );
 
-const updateShiftAssigment = () => {
+// A one-day change (shift, location, day type) and a whole-assignment change (status, end date)
+// may be saved together (owner, R3a, 7 Oct 2026). The whole assignment goes FIRST: change_shift_day
+// splits the assignment, so the original name may stop existing afterwards. The day change goes
+// last, and only when the first call succeeded. Each resource shows its own error toast; a failure
+// stops the chain and the dialog stays open, but a save that already landed still reloads the roster.
+const updateShiftAssigment = async () => {
 	const doc = shiftAssignment.value.doc;
-	if (
-		shiftChanged.value &&
-		(form.status !== doc.status || (form.end_date || null) !== (doc.end_date || null))
-	) {
-		// one is a one-day change, the other edits the whole assignment
-		raiseToast(
-			"error",
-			"Change the shift for this day, or the end date and status — one at a time.",
-		);
+	const dayChanged = shiftChanged.value;
+	const wholeChanged = form.status !== doc.status || (form.end_date || null) !== (doc.end_date || null);
+	let saved = false;
+	try {
+		if (wholeChanged || !dayChanged) {
+			await updateShiftAssignment.submit();
+			saved = true;
+		}
+		if (dayChanged) await changeShiftDay.submit();
+	} catch {
+		// what was saved before the failure still shows on the roster
+		if (saved) emit("fetchEvents");
 		return;
 	}
-	if (shiftChanged.value) changeShiftDay.submit();
-	else updateShiftAssignment.submit();
+	if (dayChanged && wholeChanged)
+		raiseToast("success", `Shift Assignment updated and shift for ${selectedDate.value} changed.`);
+	else if (dayChanged) raiseToast("success", `Shift for ${selectedDate.value} changed.`);
+	else raiseToast("success", "Shift Assignment updated successfully!");
+	emit("fetchEvents");
 };
 
 const createShiftAssigment = () => {
@@ -490,10 +501,6 @@ const updateShiftAssignment = createResource({
 			end_date: form.end_date || null,
 		};
 	},
-	onSuccess: () => {
-		raiseToast("success", "Shift Assignment updated successfully!");
-		emit("fetchEvents");
-	},
 	onError(error: { messages: string[] }) {
 		raiseToast("error", error.messages[0]);
 	},
@@ -509,10 +516,6 @@ const changeShiftDay = createResource({
 			shift_location: form.shift_location || null,
 			day_type: form.day_type || "None",
 		};
-	},
-	onSuccess: () => {
-		raiseToast("success", `Shift for ${selectedDate.value} changed.`);
-		emit("fetchEvents");
 	},
 	onError(error: { messages: string[] }) {
 		raiseToast("error", error.messages[0]);

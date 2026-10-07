@@ -167,6 +167,10 @@
 							<span class="g-eyebrow">{{ __("Change to") }}</span>
 							<Link doctype="Shift Type" v-model="dayForm.shift_type" />
 						</label>
+						<label class="flex flex-col gap-1.5">
+							<span class="g-eyebrow">{{ __("Location") }}</span>
+							<Link doctype="Shift Location" v-model="dayForm.shift_location" />
+						</label>
 						<GSelect
 							:label="__('Day type')"
 							:options="dayTypeOptions"
@@ -292,7 +296,7 @@ function shiftCode(member, day) {
 // --- change / remove one day ---
 const dayOpen = ref(false)
 const dayTarget = ref(null)
-const dayForm = reactive({ shift_type: "", day_type: "None" })
+const dayForm = reactive({ shift_type: "", shift_location: "", day_type: "None" })
 
 // HR, 2 Oct 2026: the roster's Day Type sets the kind of day and its OT rate.
 // "None" follows the holiday calendar.
@@ -307,11 +311,18 @@ const DAY_TYPE_MARKS = { "Rest Day": "R", "Off Day": "O", "Public Holiday": "PH"
 function dayTypeMark(member, day) {
 	return DAY_TYPE_MARKS[shiftOn(member, day)?.day_type] || ""
 }
+// the day's location as the server holds it: empty and missing are the same
+const locationChanged = () =>
+	(dayForm.shift_location || "") !== (dayTarget.value?.shift?.shift_location || "")
 const dayChanged = computed(() => {
 	const shift = dayTarget.value?.shift
 	if (!shift) return false
 	const type = dayForm.shift_type || shift.shift_type
-	return type !== shift.shift_type || dayForm.day_type !== (shift.day_type || "None")
+	return (
+		type !== shift.shift_type ||
+		dayForm.day_type !== (shift.day_type || "None") ||
+		locationChanged()
+	)
 })
 const dayTitle = computed(() =>
 	dayTarget.value ? dayjs(dayTarget.value.date).format("ddd D MMM") : ""
@@ -337,6 +348,7 @@ function openDay(member, day) {
 	}
 	dayTarget.value = { member, shift, date: day.iso }
 	dayForm.shift_type = ""
+	dayForm.shift_location = shift.shift_location || ""
 	dayForm.day_type = shift.day_type || "None"
 	dayOpen.value = true
 }
@@ -355,7 +367,9 @@ function submitChange() {
 			assignment: t.shift.name,
 			date: t.date,
 			shift_type: dayForm.shift_type || t.shift.shift_type,
-			shift_location: t.shift.shift_location || null,
+			// only a changed location is sent: the server keeps the day's own otherwise,
+			// and "" clears it (owner, R3a, 7 Oct 2026)
+			...(locationChanged() ? { shift_location: dayForm.shift_location || "" } : {}),
 			day_type: dayForm.day_type,
 		},
 		{

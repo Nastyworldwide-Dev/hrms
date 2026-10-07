@@ -29,7 +29,7 @@ test("start date and employee stay fixed", () => {
 
 test("a changed shift type wakes Update and goes to change_shift_day", () => {
 	assert.match(view, /!shiftChanged\.value,/)
-	assert.match(view, /if \(shiftChanged\.value\) changeShiftDay\.submit\(\)/)
+	assert.match(view, /if \(dayChanged\) await changeShiftDay\.submit\(\)/)
 	assert.match(view, /url: "hrms\.api\.roster\.change_shift_day"/)
 })
 
@@ -41,9 +41,95 @@ test("shift type and location say they change this day only", () => {
 	assert.match(view, /`Changes \$\{selectedDate\.value\} only`/)
 })
 
-test("a shift change plus an end-date or status change is refused, not half-applied", () => {
-	assert.match(view, /shiftChanged\.value &&\s*\(form\.status !== doc\.status \|\| \(form\.end_date \|\| null\) !== \(doc\.end_date \|\| null\)\)/)
-	assert.match(view, /one at a time/)
+// Owner, R3a, 7 Oct 2026: a day change and a whole-assignment change in one save are both
+// applied, whole assignment first. change_shift_day splits the assignment (the original name
+// may stop existing), so it must go last, and only after the first call succeeded.
+// The real function text runs here against stub resources.
+const saveSource = view.slice(view.indexOf("const updateShiftAssigment"), view.indexOf("const createShiftAssigment"))
+
+const save = async ({ shiftChanged = false, status = "Active", end_date = "2026-10-31", failing = "" }) => {
+	const calls = []
+	const toasts = []
+	const emitted = []
+	const resource = (name) => ({
+		submit: async () => {
+			calls.push(name)
+			if (failing === name) throw new Error(`${name} failed`)
+		},
+	})
+	const run = new Function(
+		"shiftAssignment",
+		"form",
+		"shiftChanged",
+		"changeShiftDay",
+		"updateShiftAssignment",
+		"raiseToast",
+		"emit",
+		"selectedDate",
+		`${saveSource}; return updateShiftAssigment`
+	)(
+		{ value: { doc: { status: "Active", end_date: "2026-10-31" } } },
+		{ status, end_date },
+		{ value: shiftChanged },
+		resource("changeShiftDay"),
+		resource("updateShiftAssignment"),
+		(type, message) => toasts.push([type, message]),
+		(event) => emitted.push(event),
+		{ value: "2026-10-15" }
+	)
+	await run()
+	return { calls, toasts, emitted }
+}
+
+test("a shift change plus an end-date or status change is no longer refused", () => {
+	assert.doesNotMatch(view, /one at a time/)
+})
+
+test("a whole-assignment change alone sends only update_shift_assignment", async () => {
+	const r = await save({ status: "Inactive" })
+	assert.deepEqual(r.calls, ["updateShiftAssignment"])
+	assert.deepEqual(r.toasts, [["success", "Shift Assignment updated successfully!"]])
+	assert.deepEqual(r.emitted, ["fetchEvents"])
+})
+
+test("a one-day change alone sends only change_shift_day", async () => {
+	const r = await save({ shiftChanged: true })
+	assert.deepEqual(r.calls, ["changeShiftDay"])
+	assert.deepEqual(r.toasts, [["success", "Shift for 2026-10-15 changed."]])
+	assert.deepEqual(r.emitted, ["fetchEvents"])
+})
+
+test("both changes: update_shift_assignment first, change_shift_day second, one toast, one reload", async () => {
+	for (const edit of [{ status: "Inactive" }, { end_date: "2026-10-20" }]) {
+		const r = await save({ shiftChanged: true, ...edit })
+		assert.deepEqual(r.calls, ["updateShiftAssignment", "changeShiftDay"])
+		assert.equal(r.toasts.length, 1)
+		assert.equal(r.toasts[0][0], "success")
+		assert.deepEqual(r.emitted, ["fetchEvents"])
+	}
+})
+
+test("both changes: when update_shift_assignment fails, change_shift_day is not sent", async () => {
+	const r = await save({ shiftChanged: true, status: "Inactive", failing: "updateShiftAssignment" })
+	assert.deepEqual(r.calls, ["updateShiftAssignment"])
+	assert.deepEqual(r.toasts, [])
+	assert.deepEqual(r.emitted, [])
+})
+
+test("both changes: when change_shift_day fails, the saved status still reloads the roster", async () => {
+	// the whole-assignment change is already saved; a roster left as it was would show the old status
+	const r = await save({ shiftChanged: true, status: "Inactive", failing: "changeShiftDay" })
+	assert.deepEqual(r.calls, ["updateShiftAssignment", "changeShiftDay"])
+	assert.deepEqual(r.toasts, [])
+	assert.deepEqual(r.emitted, ["fetchEvents"])
+})
+
+test("the resources leave the toast and the reload to the one save, so a combined save toasts once", () => {
+	const block = (name) => view.slice(view.indexOf(`const ${name} = createResource`), view.indexOf("});", view.indexOf(`const ${name} = createResource`)))
+	for (const name of ["updateShiftAssignment", "changeShiftDay"]) {
+		assert.doesNotMatch(block(name), /raiseToast\("success"/, name)
+		assert.doesNotMatch(block(name), /emit\("fetchEvents"\)/, name)
+	}
 })
 
 // review of b4d308942: an open-ended shift's blank end date ("" vs null) is not a change
