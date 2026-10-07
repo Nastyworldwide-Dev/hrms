@@ -253,14 +253,28 @@ test("submitting a disabled sheet sends nothing", () => {
 	assert.equal(calls.assign.length + calls.dayType.length, 0)
 })
 
+test("with no shift, a blocked Save says why and points at the reason", () => {
+	const { vm } = sheet()
+	vm.form.start_date = "2026-10-08"
+	vm.form.day_type = "Work Day"
+	assert.equal(vm.shiftHint.value, "Pick a shift, or choose Off day, Rest day or Public holiday.")
+	vm.form.day_type = "Off Day"
+	assert.equal(
+		vm.shiftHint.value,
+		"Leave empty and pick a Day type to mark the day only (Off, Rest, Public holiday)."
+	)
+	const tag = view.slice(view.indexOf("<GButton"), view.indexOf("/>", view.indexOf("<GButton")))
+	assert.match(
+		tag,
+		/:aria-describedby="canSubmit \|\| form\.shift_type \? undefined : 'assign-shift-hint'"/
+	)
+})
+
 test("the Shift type hint shows only with no shift and is tied to the field", () => {
 	const hint = view.match(/<span[^>]*id="assign-shift-hint"[^>]*>[\s\S]*?<\/span>/)?.[0]
 	assert.ok(hint, "a hint line with an id")
 	assert.match(hint, /v-if="!form\.shift_type"/)
-	assert.match(
-		hint,
-		/Leave empty and pick a Day type to mark the day only \(Off, Rest, Public holiday\)\./
-	)
+	assert.match(hint, /\{\{ shiftHint \}\}/)
 	// the field names the hint only while the hint is on screen
 	assert.match(view, /:describedby="form\.shift_type \? '' : 'assign-shift-hint'"/)
 	// and Link hands that id to the real picker button as aria-describedby

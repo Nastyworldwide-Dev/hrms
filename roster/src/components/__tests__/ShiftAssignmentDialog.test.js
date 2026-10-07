@@ -88,8 +88,15 @@ test("an end date before the day being changed is refused before anything is sav
 	assert.deepEqual(r.calls, [])
 	assert.equal(r.toasts.length, 1)
 	assert.equal(r.toasts[0][0], "error")
-	assert.match(r.toasts[0][1], /end date.*before.*2026-10-15/i)
+	assert.match(r.toasts[0][1], /end date must be on or after 2026-10-15.*pick a later end date/i)
 	assert.deepEqual(r.emitted, [])
+})
+
+test("the end-date guard stays out of an end-date-only change and of an end date on the day", async () => {
+	const alone = await save({ shiftChanged: false, end_date: "2026-10-10" })
+	assert.deepEqual(alone.calls, ["updateShiftAssignment"])
+	const onTheDay = await save({ shiftChanged: true, end_date: "2026-10-15" })
+	assert.deepEqual(onTheDay.calls, ["updateShiftAssignment", "changeShiftDay"])
 })
 
 test("a shift change plus an end-date or status change is no longer refused", () => {

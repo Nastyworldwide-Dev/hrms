@@ -284,3 +284,7 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T03:23:48Z COMMIT: 9f59dae7e feat(roster): Desk and Nadi save one roster field without a refusal → review+design dispatched
 - 2026-10-07T03:25:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
 - 2026-10-07T03:25:04Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-10-07T03:25:05Z COMMIT: 874619e77 fix(roster): Desk could still store a Work Day mark on a day with no shift → review dispatched
+- 2026-10-07T03:25:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-10-07T03:25:48Z COMMIT: 89fc2e064 fix(roster): Desk half-saved when the new end date fell before the changed day → review+design dispatched
+- 2026-10-07T03:26:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49

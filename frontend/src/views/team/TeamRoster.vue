@@ -114,11 +114,7 @@
 								id="assign-shift-hint"
 								class="text-caption text-ink-600"
 							>
-								{{
-									__(
-										"Leave empty and pick a Day type to mark the day only (Off, Rest, Public holiday)."
-									)
-								}}
+								{{ shiftHint }}
 							</span>
 						</div>
 						<label v-if="form.shift_type" class="flex flex-col gap-1.5">
@@ -148,6 +144,7 @@
 							:label="__('Assign shift')"
 							:pending-label="__('Assigning…')"
 							:disabled="!canSubmit"
+							:aria-describedby="canSubmit || form.shift_type ? undefined : 'assign-shift-hint'"
 							:pending="assignShift.loading || setDayType.loading"
 							@click="submitAssign"
 						/>
@@ -414,6 +411,12 @@ function openAssign(member) {
 // a day with no shift is never a work day (owner, 7 Oct 2026)
 const NO_SHIFT_DAY_TYPES = ["Off Day", "Rest Day", "Public Holiday"]
 const hasDayType = (value) => NO_SHIFT_DAY_TYPES.includes(value)
+// with no shift the hint says how to mark a day, or why Save is still grey
+const shiftHint = computed(() =>
+	hasDayType(form.day_type) || !form.day_type || form.day_type === "None"
+		? __("Leave empty and pick a Day type to mark the day only (Off, Rest, Public holiday).")
+		: __("Pick a shift, or choose Off day, Rest day or Public holiday.")
+)
 const canSubmit = computed(() =>
 	Boolean(form.start_date && (form.shift_type || hasDayType(form.day_type)))
 )

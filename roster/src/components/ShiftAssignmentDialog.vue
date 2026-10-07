@@ -373,7 +373,10 @@ const updateShiftAssigment = async () => {
 	const wholeChanged = form.status !== doc.status || (form.end_date || null) !== (doc.end_date || null);
 	if (dayChanged && form.end_date && form.end_date < selectedDate.value) {
 		// the day would fall outside the assignment: refuse before either save lands
-		raiseToast("error", `The end date is before ${selectedDate.value}, the day you are changing.`);
+		raiseToast(
+			"error",
+			`The end date must be on or after ${selectedDate.value}, the day you are changing. Pick a later end date.`,
+		);
 		return;
 	}
 	let saved = false;

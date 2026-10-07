@@ -8,7 +8,7 @@ roster.py is now 11 fixes/90d. `change_shift_from` is ~100 lines in the endpoint
 # Ticket: approval.py hotspot (27 fixes/90d)
 decide / decide_many / get_decision_actions / _approve_would_refuse / _decision_access all re-derive "may this caller act on this request and would it be refused". decide_many (5 Oct 2026) deliberately calls decide() and adds no rule, so it stays safe, but each new caller needs the same savepoint + lost-transaction handling. One helper owning "run decide for one item inside a savepoint and classify the outcome" would serve decide_many and any future batch (reject, cancel). Also: after a savepoint rollback Frappe keeps the item's after_commit callbacks queued (frappe/database/database.py rollback(save_point=) does not reset them). Reviewed safe today (PWA push re-reads the row, email flush re-reads the queue, realtime is content-free) but day_remark callbacks were not confirmed to re-read state.
 
-## Update 7 Oct 2026 (alpha.39: ee44ec9fc, 29a84584a, 86d028814, 0c799c0bd) — 14 fixes / 90 days
+## Update 7 Oct 2026 (alpha.39: ee44ec9fc, 29a84584a, 86d028814, 0c799c0bd, 874619e77) — 15 fixes / 90 days
 - update_shift_assignment now takes four optional fields (NOT_SENT) plus three refusal rules and the
   marker clear, about 80 lines in the endpoint. Move "what changed, what is refused, which markers go"
   into one tested helper; the endpoint becomes fence + call.
@@ -18,3 +18,4 @@ decide / decide_many / get_decision_actions / _approve_would_refuse / _decision_
   ROSTER_DAY_TYPES (ot_calculation.py). One module.
 - db_set / db.set_value paths skip Frappe's docstatus check: update_shift_assignment guards it now;
   insert_shift's neighbour merge (db.set_value, docstatus != 2) still includes drafts.
+- The no-shift Day Type message is written twice (set_day_type and RosterDay.validate): one helper. Schedule this ticket before the next roster.py fix.
