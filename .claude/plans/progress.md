@@ -260,3 +260,7 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T02:21:52Z NEXT: D1b (Nadi Assign shift optional, worker writing .claude/tmp/d1b-result.md) -> review diff, vitest red/green, live on fresh.local as HR, commit; read D1 review of ee44ec9fc; then D2 edit-in-place.
 - 2026-10-07T02:22:08Z COMMIT: b7ed16705 docs(plans): alpha.39 progress — D1 server landed, D1b in flight → review dispatched
 - 2026-10-07T02:27:40Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-07T02:27:41Z COMMIT: 212e84af6 fix(roster): a Shift Supervisor could read every company's day markers → review dispatched
+2026-10-07T02:28:49Z EVIDENCE: 2 correct — D1b team-roster-assign 24/24 (red on HEAD: 8 fail), eslint clean.
+2026-10-07T02:28:49Z EVIDENCE: 5 looks right — NOT RUN: local dev site lacks the Roster Day table and the site update was refused by the infra gate (pending record 20261007022835). Live HR check waits.
+- 2026-10-07T02:28:57Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c

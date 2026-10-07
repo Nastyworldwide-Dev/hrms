@@ -19,6 +19,7 @@
 			:class="{ 'g-linkpick__trigger--empty': !modelValue }"
 			:disabled="disabled"
 			:aria-label="ariaLabel || undefined"
+			:aria-describedby="describedby || undefined"
 			aria-haspopup="dialog"
 			:aria-expanded="open ? 'true' : 'false'"
 			@click="openSheet"
@@ -111,6 +112,11 @@ const props = defineProps({
 	},
 	// accessible name when the visible label is a sibling, not a <label for>
 	ariaLabel: {
+		type: String,
+		default: "",
+	},
+	// id of a hint line under the field; read out with the picker button
+	describedby: {
 		type: String,
 		default: "",
 	},

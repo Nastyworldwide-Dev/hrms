@@ -100,10 +100,23 @@
 				<template #actionSheet>
 					<div class="flex flex-col gap-4 pt-1">
 						<div class="text-kra-label text-ink-600">{{ assignTarget?.employee_name }}</div>
-						<label class="flex flex-col gap-1.5">
-							<span class="g-eyebrow">{{ __("Shift type") }}</span>
-							<Link doctype="Shift Type" v-model="form.shift_type" />
-						</label>
+						<div class="flex flex-col gap-1.5">
+							<label class="flex flex-col gap-1.5">
+								<span class="g-eyebrow">{{ __("Shift type") }}</span>
+								<Link
+									doctype="Shift Type"
+									v-model="form.shift_type"
+									:describedby="form.shift_type ? '' : 'assign-shift-hint'"
+								/>
+							</label>
+							<span
+								v-if="!form.shift_type"
+								id="assign-shift-hint"
+								class="text-caption text-ink-600"
+							>
+								{{ __("Leave empty to mark the day only (Off, Rest, Public holiday).") }}
+							</span>
+						</div>
 						<label class="flex flex-col gap-1.5">
 							<span class="g-eyebrow">{{ __("Location") }}</span>
 							<Link doctype="Shift Location" v-model="form.shift_location" />
@@ -131,7 +144,7 @@
 							:label="__('Assign shift')"
 							:pending-label="__('Assigning…')"
 							:disabled="!canSubmit"
-							:pending="assignShift.loading"
+							:pending="assignShift.loading || setDayType.loading"
 							@click="submitAssign"
 						/>
 					</div>
@@ -190,7 +203,14 @@ import GModal from "@/components/glass/GModal.vue"
 import GButton from "@/components/glass/GButton.vue"
 import Link from "@/components/Link.vue"
 import ResourceError from "@/components/ResourceError.vue"
-import { teamRoster, assignShift, teamManagers, changeShiftDay, removeShiftDay } from "@/data/team"
+import {
+	teamRoster,
+	assignShift,
+	setDayType,
+	teamManagers,
+	changeShiftDay,
+	removeShiftDay,
+} from "@/data/team"
 import { buildManagerOptions } from "@/utils/team"
 
 const __ = inject("$translate")
@@ -371,9 +391,27 @@ function openAssign(member) {
 	form.end_date = weekStart.value.add(6, "day").format("YYYY-MM-DD")
 	assignOpen.value = true
 }
-const canSubmit = computed(() => form.shift_type && form.start_date)
+// Shift type is optional: with no shift, a day type alone saves a day marker
+// (HR, 6 Oct 2026: an "Off day" with no shift could not be saved).
+const hasDayType = (value) => !!value && value !== "None"
+const canSubmit = computed(() =>
+	Boolean(form.start_date && (form.shift_type || hasDayType(form.day_type)))
+)
+// "8 Oct", "8–10 Oct", "30 Sep – 2 Oct": the days a marker was saved for
+function markedDays(from, to) {
+	const start = dayjs(from)
+	const end = to ? dayjs(to) : start
+	if (!end.isAfter(start, "day")) return start.format("D MMM")
+	return start.isSame(end, "month")
+		? `${start.format("D")}–${end.format("D MMM")}`
+		: `${start.format("D MMM")} – ${end.format("D MMM")}`
+}
+const assignError = (fallback) => (e) =>
+	gToast({ title: e?.messages?.[0] || fallback, variant: "error" })
+
 function submitAssign() {
 	if (!canSubmit.value) return
+	if (!form.shift_type) return submitDayMarker()
 	assignShift.submit(
 		{
 			employee: assignTarget.value.name,
@@ -391,8 +429,29 @@ function submitAssign() {
 				gToast({ title: __("Shift assigned"), variant: "success" })
 				load()
 			},
-			onError: (e) =>
-				gToast({ title: e?.messages?.[0] || __("Could not assign shift"), variant: "error" }),
+			onError: assignError(__("Could not assign shift")),
+		}
+	)
+}
+// No shift: only the kind of day is saved. A marker has no location, so the
+// Location field is ignored here.
+function submitDayMarker() {
+	const label = dayTypeOptions.value.find((o) => o.value === form.day_type)?.label
+	const days = markedDays(form.start_date, form.end_date)
+	setDayType.submit(
+		{
+			employee: assignTarget.value.name,
+			from_date: form.start_date,
+			to_date: form.end_date || null,
+			day_type: form.day_type,
+		},
+		{
+			onSuccess: () => {
+				assignOpen.value = false
+				gToast({ title: __("{0} saved for {1}", [label, days]), variant: "success" })
+				load()
+			},
+			onError: assignError(__("Could not save the day type")),
 		}
 	)
 }

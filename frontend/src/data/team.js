@@ -43,6 +43,12 @@ export const assignShift = createResource({
 	url: "hrms.api.roster.insert_shift",
 })
 
+// Mark days Off / Rest / Public holiday / Work for a person with NO shift (a
+// "Roster Day" marker, never a Shift Assignment). Same server fence as assign.
+export const setDayType = createResource({
+	url: "hrms.api.roster.set_day_type",
+})
+
 // Change or remove one rostered day (same server fence as assign; a day with
 // punches or attendance is refused and left for HR).
 export const changeShiftDay = createResource({
