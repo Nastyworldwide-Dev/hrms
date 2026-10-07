@@ -114,10 +114,14 @@
 								id="assign-shift-hint"
 								class="text-caption text-ink-600"
 							>
-								{{ __("Leave empty to mark the day only (Off, Rest, Public holiday).") }}
+								{{
+									__(
+										"Leave empty and pick a Day type to mark the day only (Off, Rest, Public holiday)."
+									)
+								}}
 							</span>
 						</div>
-						<label class="flex flex-col gap-1.5">
+						<label v-if="form.shift_type" class="flex flex-col gap-1.5">
 							<span class="g-eyebrow">{{ __("Location") }}</span>
 							<Link doctype="Shift Location" v-model="form.shift_location" />
 						</label>

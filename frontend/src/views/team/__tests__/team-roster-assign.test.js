@@ -249,12 +249,23 @@ test("the Shift type hint shows only with no shift and is tied to the field", ()
 	const hint = view.match(/<span[^>]*id="assign-shift-hint"[^>]*>[\s\S]*?<\/span>/)?.[0]
 	assert.ok(hint, "a hint line with an id")
 	assert.match(hint, /v-if="!form\.shift_type"/)
-	assert.match(hint, /Leave empty to mark the day only \(Off, Rest, Public holiday\)\./)
+	assert.match(
+		hint,
+		/Leave empty and pick a Day type to mark the day only \(Off, Rest, Public holiday\)\./
+	)
 	// the field names the hint only while the hint is on screen
 	assert.match(view, /:describedby="form\.shift_type \? '' : 'assign-shift-hint'"/)
 	// and Link hands that id to the real picker button as aria-describedby
 	const link = read("../../../components/Link.vue")
 	assert.match(link, /:aria-describedby="describedby \|\| undefined"/)
+})
+
+test("Location shows only with a shift: a day marker has no location", () => {
+	const field = view.slice(
+		view.lastIndexOf("<label", view.indexOf('doctype="Shift Location"')),
+		view.indexOf('doctype="Shift Location"')
+	)
+	assert.match(field, /v-if="form\.shift_type"/)
 })
 
 test("the Assign button stays a real disabled button and waits on both writes", () => {
