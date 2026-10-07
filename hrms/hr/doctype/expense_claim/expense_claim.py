@@ -133,7 +133,15 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		so a named approver in another company can open the claim (40d3760a3). Set when the
 		claim is made or its employee/company is changed; an untouched draft keeps the company
 		it was filed under, so an employee's later move cannot re-point it at submit while its
-		payable account and expense accounts stay on the old company."""
+		payable account and expense accounts stay on the old company.
+
+		A claim that settles an Employee Advance takes the advance's company: that is where the
+		advance's ledger sits, and a claim on the employee's newer company would find nothing to
+		settle. Read from the advance itself, never from the client."""
+		advance = next((row.employee_advance for row in self.advances or [] if row.employee_advance), None)
+		if advance:
+			self.company = frappe.db.get_value("Employee Advance", advance, "company") or self.company
+			return
 		if self.is_new() or self.has_value_changed("employee") or self.has_value_changed("company"):
 			set_company_from_employee(self)
 

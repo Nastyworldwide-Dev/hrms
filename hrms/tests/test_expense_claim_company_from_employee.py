@@ -35,8 +35,9 @@ def _lift_method(name, namespace):
 
 
 class _Claim:
-	def __init__(self, *, new, changed=(), company="OLD-CO", employee="EMP-1"):
+	def __init__(self, *, new, changed=(), company="OLD-CO", employee="EMP-1", advances=()):
 		self._new = new
+		self.advances = [type("Row", (), {"employee_advance": a})() for a in advances]
 		self._changed = set(changed)
 		self.company = company
 		self.employee = employee
@@ -55,8 +56,10 @@ class _Claim:
 class TestCompanyFromEmployee(unittest.TestCase):
 	def setUp(self):
 		self.calls = []
+		self.frappe = MagicMock()
+		self.frappe.db.get_value.side_effect = lambda dt, name, field: {"ADV-1": "ADVANCE-CO"}.get(name)
 		self.ns = {
-			"frappe": MagicMock(),
+			"frappe": self.frappe,
 			"set_company_from_employee": lambda doc: self.calls.append(doc),
 		}
 		self.method = _lift_method("set_company", self.ns)
@@ -79,6 +82,24 @@ class TestCompanyFromEmployee(unittest.TestCase):
 	def test_an_untouched_draft_keeps_the_company_it_was_filed_under(self):
 		self.method(_Claim(new=False))
 		self.assertEqual(self.calls, [])
+
+	def test_a_claim_settling_an_advance_takes_the_advances_company(self):
+		"""The advance's ledger sits in the advance's company; a claim on the employee's newer
+		company would find nothing to settle (Frappe review of 1df336a01)."""
+		claim = _Claim(new=True, company="CLIENT-CO", advances=["ADV-1"])
+		self.method(claim)
+		self.assertEqual(claim.company, "ADVANCE-CO")
+		self.assertEqual(self.calls, [])
+
+	def test_the_advance_wins_on_an_untouched_draft_too(self):
+		claim = _Claim(new=False, company="CLIENT-CO", advances=["ADV-1"])
+		self.method(claim)
+		self.assertEqual(claim.company, "ADVANCE-CO")
+
+	def test_an_advance_row_with_no_link_does_not_count(self):
+		claim = _Claim(new=True, advances=[None])
+		self.method(claim)
+		self.assertEqual(self.calls, [claim])
 
 	def test_validate_sets_the_company_first(self):
 		validate = next(n for n in _class().body if isinstance(n, ast.FunctionDef) and n.name == "validate")
