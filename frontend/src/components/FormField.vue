@@ -334,11 +334,15 @@ const selectionList = computed(() => {
 	if ((props.fieldtype === "Link" || props.fieldtype === "Select") && props.documentList) {
 		return props.documentList
 	} else if (props.fieldtype == "Select" && props.options) {
-		const options = props.options.split("\n")
-		return options.map((option) => ({
-			label: __(option),
-			value: option,
-		}))
+		// Frappe's own spelling is one word per line. A caller may also hand a
+		// list: words (shown and sent as they are) or { label, value } pairs
+		// (shows the label, sends the value) — a filter that says "Waiting"
+		// for the stored "Open".
+		const options = Array.isArray(props.options) ? props.options : props.options.split("\n")
+		return options.map((option) => {
+			const value = typeof option === "object" ? option.value : option
+			return { label: __(typeof option === "object" ? option.label ?? value : option), value }
+		})
 	}
 
 	return []

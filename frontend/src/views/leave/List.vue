@@ -13,6 +13,7 @@
 import GPage from "@/components/glass/GPage.vue"
 import ListView from "@/components/ListView.vue"
 import { inject } from "vue"
+import { requestStatus } from "@/utils/requestStatus"
 
 const __ = inject("$translate")
 const LEAVE_FIELDS = [
@@ -25,7 +26,18 @@ const LEAVE_FIELDS = [
 	"total_leave_days",
 	"status",
 ]
-const STATUS_FILTER_OPTIONS = ["Open", "Approved", "Rejected"] // __("Open"), __("Approved"), __("Rejected")
+// The filter SHOWS the word a row's chip shows and SENDS the stored value
+// (the DB still says "Open"). The label comes from the chip's own rule, so the
+// two cannot drift; FormField translates it.
+const stateOption = (value, docstatus) => ({
+	label: requestStatus("Leave Application", { status: value, docstatus }).label,
+	value,
+})
+const STATUS_FILTER_OPTIONS = [
+	stateOption("Open", 0),
+	stateOption("Approved", 1),
+	stateOption("Rejected", 1),
+]
 const FILTER_CONFIG = [
 	{
 		fieldname: "status",

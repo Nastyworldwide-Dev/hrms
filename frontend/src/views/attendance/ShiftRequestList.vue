@@ -13,6 +13,7 @@
 import GPage from "@/components/glass/GPage.vue"
 import { inject } from "vue"
 import ListView from "@/components/ListView.vue"
+import { requestStatus } from "@/utils/requestStatus"
 
 const __ = inject("$translate")
 const SHIFT_REQUEST_FIELDS = [
@@ -26,7 +27,18 @@ const SHIFT_REQUEST_FIELDS = [
 	"status",
 	"docstatus",
 ]
-const STATUS_FILTER_OPTIONS = ["Draft", "Approved", "Rejected"]
+// The filter SHOWS the word a row's chip shows and SENDS the stored value
+// (the DB still says "Draft"). The label comes from the chip's own rule, so the
+// two cannot drift; FormField translates it.
+const stateOption = (value, docstatus) => ({
+	label: requestStatus("Shift Request", { status: value, docstatus }).label,
+	value,
+})
+const STATUS_FILTER_OPTIONS = [
+	stateOption("Draft", 0),
+	stateOption("Approved", 1),
+	stateOption("Rejected", 1),
+]
 const FILTER_CONFIG = [
 	{
 		fieldname: "status",

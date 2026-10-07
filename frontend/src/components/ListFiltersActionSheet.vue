@@ -12,7 +12,7 @@
 				:fieldtype="filter.fieldtype"
 				:fieldname="filter.fieldname"
 				:label="filter.label"
-				:options="asOptions(filter.options)"
+				:options="filter.options"
 				:placeholder="__('All')"
 				v-model="filters[filter.fieldname].value"
 			/>
@@ -54,7 +54,4 @@ const filters = computed({
 		emit("update:filters", value)
 	},
 })
-
-//: FormField reads Select options as Frappe does, one per line.
-const asOptions = (options) => (Array.isArray(options) ? options.join("\n") : options)
 </script>

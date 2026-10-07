@@ -270,3 +270,5 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T08:13:44Z COMMIT: f35e2b982 fix(pwa): a refusal with "<" in it lost everything after the comparison → review+design dispatched
 - 2026-10-07T08:18:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
 - 2026-10-07T08:18:45Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 2 extra test file(s) ⟂cf4a11809724
+- 2026-10-07T08:18:50Z COMMIT: 006dc82a3 fix(pwa): toasts escape their text, so refusals keep their < and > → review+design dispatched
+- 2026-10-07T08:20:24Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
