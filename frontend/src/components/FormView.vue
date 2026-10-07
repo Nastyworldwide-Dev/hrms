@@ -265,15 +265,13 @@
 				class="px-4 pt-4 pb-4 standalone:pb-safe-bottom bg-ground sticky bottom-0 w-full z-40 border-t border-divider"
 			>
 				<div class="w-full max-w-content-column-lg mx-auto">
-					<ErrorMessage
-						class="mb-2"
-						:message="
-							formErrorMessage ||
-							docList?.insert?.error ||
-							documentResource?.setValue?.error ||
-							finalize.error
-						"
-					/>
+					<!-- The form's one error line: FormField's Glass line, said aloud, plain text
+					     (frappe-ui's ErrorMessage wrote the raw server string with v-html).
+					     The wrapper carries the gap: .g-field-error sets margin 0 and loads later
+					     than the utilities, so an mb-2 on the line itself would lose. -->
+					<div v-if="formError" class="mb-2">
+						<p class="g-field-error" role="alert">{{ formError }}</p>
+					</div>
 
 					<!-- GButton, not a frappe-ui Button painted with utilities (8.17).
 				     This was the ONLY primary action in the product that bypassed
@@ -420,7 +418,7 @@ import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 
 import { goBackOrHome } from "@/utils/navigation"
-import { ErrorMessage, createListResource, createDocumentResource, createResource } from "frappe-ui"
+import { createListResource, createDocumentResource, createResource } from "frappe-ui"
 import { Ellipsis } from "lucide-vue-next"
 import GActionSheet from "@/components/glass/GActionSheet.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
@@ -834,6 +832,15 @@ const finalize = createResource({
 			variant: "error",
 		})
 	},
+})
+
+// The one line above the save button. formErrorMessage is already a sentence
+// (validation, saveError prop); the three requests hand back an Error, which
+// firstMessage reduces to the server's first sentence with its markup stripped.
+const formError = computed(() => {
+	if (formErrorMessage.value) return formErrorMessage.value
+	const failed = docList?.insert?.error || documentResource?.setValue?.error || finalize.error
+	return failed ? firstMessage(failed) : ""
 })
 
 const docPermissions = createResource({

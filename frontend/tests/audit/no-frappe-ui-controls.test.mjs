@@ -29,12 +29,7 @@ const BANNED = [
 ]
 
 //: file (relative to frontend/) -> banned names it may still import, and why.
-export const ALLOW_LIST = {
-	"src/components/FormView.vue": {
-		names: ["ErrorMessage"],
-		why: "the form's server error line; the ⋯ menu and the confirm dialogs went Glass in alpha.7 Phase 4",
-	},
-}
+export const ALLOW_LIST = {}
 
 function bannedImports(text) {
 	const found = []

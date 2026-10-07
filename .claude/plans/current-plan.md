@@ -59,6 +59,22 @@ E1 Expense Claim words on Desk: (a) RECOMMENDED: same as Nadi — Waiting / Appr
 E2 Android Back: if S5 cannot be done safely on Ionic 7.4, (a) RECOMMENDED: keep today's behaviour,
    note it, revisit on the Ionic upgrade; (b) upgrade Ionic in this release (bigger, separate risk).
 
+## AMENDMENTS (7 Oct, plan review)
+P1 S1 Approvals mapping (exact): --g-ink-3 -> --g-ink3; --g-accent -> --g-brand (GCheckbox's checked colour;
+   tick text --g-on-brand contrasts in both themes); --g-ink-2 -> --g-ink2. Theme names have no hyphen
+   before the digit.
+P2 S3 mechanism corrected: expense_claim.json has `"states": []` and Doctype States only drive form badges;
+   the Desk LIST pill comes from expense_claim_list.js get_indicator. S3 changes get_indicator (with a test
+   that executes it, load-order aware — desk-listview-settings-one-owner), plus a Remote Checkin Request
+   *_list.js. No doctype JSON change, so no Property Setter patch.
+P3 Step R is a HARD release precondition: `yarn gates` with a served site and AUDIT_PW, all 11 gates
+   measured, output saved as an EVIDENCE line. CI skipping the 4 site gates is not a pass.
+P4 S8: each value maps to the EXACT equal token (not the nearest); the visual gate runs locally on a served
+   site before and after each S8 commit; baseline updates ride in the same commit as the tokens.
+P5 S2 test asserts the request payload carries the stored value ("Open"/"Draft"), not the label.
+P6 S6 server search: permission-scoped (get_list, never get_all), query escaped / parameterised.
+P7 S12: each refactor names its existing test file first (no empty stubs).
+
 ## EXPECTED OUTPUT:
 - UI: Approvals checkboxes/labels get their colours back; list filters say Waiting; Desk says the same
   words as Nadi; request errors in the Glass style; Help search finds any ticket; a partly loaded request

@@ -252,3 +252,7 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T08:01:27Z PLAN: approved 8a1817154211 — # Release 2.0.0-alpha.41 "Clean Glass" (approved 7 Oct 2026: owner "Approve as written", E1a, E2a)
 2026-10-07T08:01:27Z RULINGS: alpha.41 approved as written; E1a Expense Desk words = Nadi; E2a Android Back fallback = keep + note.
 2026-10-07T08:01:27Z NEXT: build S1 (gates), S2 (filter words), S4 (FormView error line) in parallel; then S3, S5-S12.
+- 2026-10-07T08:01:30Z COMMIT: 458669110 docs(plans): alpha.41 Clean Glass plan approved with the owner's rulings → review dispatched
+- 2026-10-07T08:03:28Z PLAN: approved d1bb7f9b3a26 — # Release 2.0.0-alpha.41 "Clean Glass" (approved 7 Oct 2026: owner "Approve as written", E1a, E2a)
+- 2026-10-07T08:07:00Z PLAN: approved d1bb7f9b3a26 — # Release 2.0.0-alpha.41 "Clean Glass" (approved 7 Oct 2026: owner "Approve as written", E1a, E2a)
+- 2026-10-07T08:07:01Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
