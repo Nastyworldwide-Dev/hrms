@@ -48,6 +48,19 @@ D4  Polish that matters: drag-swap keeps Day Type; the roster shows the day mark
     shift; plain errors ("Pick a shift or a day type").
 Tests first per slice; live proof on fresh.local as HR and as a supervisor, Nadi and Desk.
 
+## AMENDMENTS (7 Oct, plan review)
+A1 Readers: every PAY / attendance reader already asks _classify_day (grep 7 Oct: ot_calculation, shift_type,
+   ot_request, employee_checkin, reminders). Direct Shift Assignment.day_type reads are display only
+   (roster.py:818 get_shifts, team.py:416) -> D4 shows markers there.
+A2 Precedence: a Roster Day marker beats the assignment's Day Type for that date (the per-day word is the more
+   specific one). Last word wins: any write that sets a Day Type over a date (Assign with a shift, whole-assignment
+   Day Type in D2) deletes the markers inside its dates in the same transaction. One marker per (employee, date).
+A3 R2a punch with no shift: the check-in already falls back to Employee.default_shift; with a marker that says
+   Off, that punch is overtime at the off rate. LIMIT: a person with no assignment AND no default shift that day
+   has no shift times to price against -> stays off-shift, logged. Test both.
+A4 set_day_type: same write fence as insert_shift (_ensure_can_roster_employee); worked-day refusal for
+   supervisors stays (D3 lifts it for HR only).
+
 ## EXPECTED OUTPUT:
 - UI: in the Nadi Assign sheet, Shift type is optional. Picking only "Off day" saves ("Off day saved for 8 Oct").
   The day sheet has Location. Each field saves alone. The roster shows O / R / PH on a day with no shift.
