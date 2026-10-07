@@ -24,7 +24,7 @@
 		     a kind of request may be missing (alpha.41 S7). -->
 		<!-- The live region is always in the page and only its text changes: a region added
 		     together with its text is often not announced (review of 63d347a20). -->
-		<div role="status">
+		<div role="status" class="contents">
 			<p v-if="isPartlyLoaded" class="text-caption text-ink-600 mt-2">
 				{{ __("Some requests didn't load.") }}
 				<button type="button" class="g-seclink g-focusable underline" @click="retryLastFive">

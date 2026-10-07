@@ -17,7 +17,7 @@ test("the line is wired to the shared rule and retries in place", () => {
 		flat.includes("partlyLoaded(lastFive.value.length,MY_REQUEST_LISTS)"),
 		"uses the shared rule"
 	)
-	const region = template.match(/<div role="status">[\s\S]*?<\/div>/)?.[0]
+	const region = template.match(/<div role="status" class="contents">[\s\S]*?<\/div>/)?.[0]
 	assert.ok(region, "the live region is always in the page")
 	assert.match(region, /v-if="isPartlyLoaded"/)
 	assert.match(region, /Some requests didn't load\./)
@@ -26,4 +26,10 @@ test("the line is wired to the shared rule and retries in place", () => {
 
 test("the old ceiling note is gone with the gap it named", () => {
 	assert.doesNotMatch(script, /ceiling: a partial failure with rows reads as complete/)
+})
+
+test("the always-present status region takes no slot in the section's flex gap", () => {
+	// review of a6fc82cd1: .g-form-section is a flex column with gap 8px, so an empty wrapper
+	// added a stray 8px at the bottom. display:contents keeps it in the accessibility tree only.
+	assert.match(panel, /<div role="status" class="contents">/)
 })

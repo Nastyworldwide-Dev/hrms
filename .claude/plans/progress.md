@@ -282,3 +282,7 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T08:31:30Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
 - 2026-10-07T08:31:35Z COMMIT: 63d347a20 fix(pwa): "Your last 5" looked complete when one of its lists failed → review+design dispatched
 - 2026-10-07T08:35:52Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
+- 2026-10-07T08:36:00Z COMMIT: a6fc82cd1 fix(pwa): the retry line blinked off on a tap, and an unticked box was too faint → review+design dispatched
+2026-10-07T08:56:42Z EVIDENCE: 3 works — S5 sheet e2e on fresh.local: sheet-back-stays 4, sheet-closes 5, sheet-leaves-with-page 3, sheet-is-tappable 3 green; repeat-each=2: 30/30 green (load ~16-22). Red on the old guard: back-stays 1+2 (worker).
+- 2026-10-07T08:56:44Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-07T08:56:44Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
