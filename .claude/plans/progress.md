@@ -245,3 +245,7 @@ NEXT: owner puts alpha.35-38 live (then migrate); tickets open: loudRequest spli
 DEAD END: K1 (pipeline consolidation) CANCELLED by the owner, 6 Oct: "keel isnt ours to modify or push or merge. so we just focus on this nadi." Never copy, merge, modify or push keel or the pipeline repos. Leftovers ~/keel and ~/hp-k1 (branch k1/consolidate) deleted with the owner's yes, 6 Oct; /opt/keel untouched. Until a gate runs frontend/tests, run `node --experimental-test-module-mocks --test tests/*.test.* tests/**/*.test.*` in frontend/ by hand before each commit.
 NEXT: wait for the owner's next Nadi task.
 - 2026-10-06T09:45:19Z COMMIT: b64d73795 docs(plans): K1 cancelled by the owner; the next step is the next Nadi task → review dispatched
+- 2026-10-06T09:46:40Z COMMIT: b3d25e407 docs(plans): the K1 leftover copies are deleted → review dispatched
+
+2026-10-07T01:49:29Z RULINGS: alpha.39 roster — R1a day marker (Roster Day), R2a off-day punches = OT flat 2x, R3a each field saves alone, R4a HR may re-type a worked day.
+2026-10-07T01:49:29Z NEXT: D1 day marker — Roster Day doctype + set_day_type API + _classify_day reads it; Nadi Assign shift optional.
