@@ -13,12 +13,17 @@ import { fileURLToPath } from "node:url"
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8")
 const template = (src) => src.split("<script")[0]
-const lineOf = (src, n) => src.split("\n")[n - 1]
+// Found by what the line says, not its number: an edit above must not move the check.
+const lineWith = (src, anchor) => {
+	const line = src.split("\n").find((l) => l.includes(anchor))
+	assert.ok(line, `no line with ${anchor}`)
+	return line
+}
 
 test("StrictRejectionDialog: the sheet body is the sheet's ground, not the page's", () => {
 	const src = read("../StrictRejectionDialog.vue")
 	assert.match(src, /<GModal\b/)
-	const body = lineOf(src, 3)
+	const body = lineWith(src, "w-full flex flex-col pb-5")
 	assert.match(body, /\bbg-sheet-bg\b/)
 	assert.doesNotMatch(body, /\bbg-bg\b/)
 	assert.doesNotMatch(template(src), /\bbg-bg\b/)
@@ -37,7 +42,7 @@ test("ExpenseTaxesTable: the Add tax sheet uses the sheet's ground and cell", ()
 
 test("WorkflowActionSheet: the bar inside the sheet is the sheet's ground, the page bar keeps the page ground", () => {
 	const src = read("../WorkflowActionSheet.vue")
-	const [formBar, sheetBar] = [lineOf(src, 6), lineOf(src, 7)]
+	const [formBar, sheetBar] = [lineWith(src, "standalone:pb-safe-bottom"), lineWith(src, "z-overlay p-4")]
 	assert.match(formBar, /\bbg-ground\b/)
 	assert.match(sheetBar, /\bbg-sheet-bg\b/)
 	assert.doesNotMatch(sheetBar, /\bbg-ground\b/)
@@ -45,7 +50,7 @@ test("WorkflowActionSheet: the bar inside the sheet is the sheet's ground, the p
 
 test("FormattedField: the read-only text block (shown in a sheet) is a sheet cell", () => {
 	const src = read("../FormattedField.vue")
-	const block = lineOf(src, 28)
+	const block = lineWith(src, "py-3 px-3 mt-2")
 	assert.match(block, /\bbg-sheet-cell\b/)
 	assert.doesNotMatch(block, /\bbg-surface\b/)
 })
@@ -62,7 +67,7 @@ test("TeamRoster: the Assign shift date inputs are sheet cells; the roster grid 
 		assert.doesNotMatch(input, /\bbg-surface\b/)
 	}
 	// the shift-on cell of the page grid is not in a sheet and stays a card surface
-	assert.match(lineOf(src, 68), /'bg-surface'/)
+	assert.match(lineWith(src, "shiftOn(member, day) ?"), /'bg-surface'/)
 })
 
 // Rules of the hand-written stylesheet whose selector list holds `selector`.
