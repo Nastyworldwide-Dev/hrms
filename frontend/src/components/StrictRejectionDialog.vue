@@ -1,6 +1,6 @@
 <template>
 	<GModal :is-open="isOpen" :title="title" @did-dismiss="onDismiss">
-		<div class="bg-bg w-full flex flex-col pb-5">
+		<div class="bg-sheet-bg w-full flex flex-col pb-5">
 			<div class="w-full flex flex-row items-center gap-3 pb-4 px-4 border-b border-hair">
 				<div class="h-12 w-12 shrink-0 bg-danger/15 flex items-center justify-center">
 					<Slash class="h-6 w-6 text-danger-ink" aria-hidden="true" />

@@ -62,7 +62,7 @@
 
 		<GModal :is-open="isModalOpen" :title="modalTitle" @did-dismiss="resetSelectedItem()">
 				<!-- Add Expense Tax Action Sheet -->
-				<div class="bg-ground w-full flex flex-col pb-5">
+				<div class="bg-sheet-bg w-full flex flex-col pb-5">
 					<div class="w-full flex flex-col items-center justify-center gap-5 p-4">
 						<div class="flex flex-col w-full space-y-4 expense-fields">
 							<!-- A failed load is not an empty form (alpha.38 L1b). -->
@@ -250,7 +250,7 @@ function calculateTotalTax() {
 .expense-fields :deep(input:not([type="checkbox"]):not([type="radio"])),
 .expense-fields :deep(textarea),
 .expense-fields :deep(select) {
-	background-color: var(--g-glass-fill-fallback);
+	background-color: var(--g-sheet-cell);
 	border: 1px solid var(--g-hair);
 	border-radius: 0;
 	font-size: 15px;

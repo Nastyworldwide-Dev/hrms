@@ -23,6 +23,9 @@ http://ionicframework.com/docs/theming/ */
 	/** secondary **/
 	--ion-color-secondary: #3dc2ff;
 	--ion-color-secondary-rgb: 61, 194, 255;
+	/* Each "-contrast" below follows --g-tile-on-tile; its "-contrast-rgb" twin stays a literal
+	   because Ionic reads it comma-separated and --g-tile-on-tile-rgb is space-separated. Change
+	   them together (both are 255 255 255 today). */
 	--ion-color-secondary-contrast: var(--g-tile-on-tile);
 	--ion-color-secondary-contrast-rgb: 255, 255, 255;
 	--ion-color-secondary-shade: #36abe0;

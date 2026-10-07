@@ -25,7 +25,7 @@
 
 	<div
 		v-else-if="['Small Text', 'Text', 'Long Text'].includes(props.fieldtype)"
-		class="text-inkbase text-row-label bg-surface border border-divider py-3 px-3 mt-2"
+		class="text-inkbase text-row-label bg-sheet-cell border border-divider py-3 px-3 mt-2"
 	>
 		{{ props.value }}
 	</div>

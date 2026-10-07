@@ -129,7 +129,7 @@
 								<input
 									type="date"
 									v-model="form.start_date"
-									class="g-touch bg-surface border border-divider rounded-input p-2.5 text-inkbase"
+									class="g-touch bg-sheet-cell border border-divider rounded-input p-2.5 text-inkbase"
 								/>
 							</label>
 							<label class="flex flex-col gap-1.5 flex-1">
@@ -137,7 +137,7 @@
 								<input
 									type="date"
 									v-model="form.end_date"
-									class="g-touch bg-surface border border-divider rounded-input p-2.5 text-inkbase"
+									class="g-touch bg-sheet-cell border border-divider rounded-input p-2.5 text-inkbase"
 								/>
 							</label>
 						</div>
