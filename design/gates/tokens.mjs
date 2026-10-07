@@ -17,6 +17,9 @@
 //      theme collapses them renders the wrong one correctly. Every such pair is
 //      reported, because each is a place a swap can hide.
 //
+// Why each accepted pair is accepted, and the misuse found: design/token-collapses.md
+// (the baseline JSON has no reason field).
+//
 // Static — reads tokens.json, glass.css and tailwind.config.js. No site needed.
 //
 //   node tokens.mjs                    enforce
