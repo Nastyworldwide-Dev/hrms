@@ -4,6 +4,7 @@ from frappe.utils import add_days, date_diff
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
+from hrms.hr.doctype.roster_day.roster_day import NO_SHIFT_DAY_TYPES
 from hrms.hr.doctype.shift_assignment.shift_assignment import ShiftAssignment
 from hrms.hr.doctype.shift_assignment_tool.shift_assignment_tool import create_shift_assignment
 from hrms.hr.doctype.shift_schedule.shift_schedule import get_or_insert_shift_schedule
@@ -850,10 +851,6 @@ def _insert_shift(
 			day_type=day_type,
 		)
 
-
-#: A day with no shift may be marked only as a day off (owner, 7 Oct 2026): never
-#: Work Day, which stays a Day Type on a shift.
-NO_SHIFT_DAY_TYPES = ("Off Day", "Rest Day", "Public Holiday")
 
 #: Longest stretch one set_day_type call marks (two pay windows' worth).
 # ceiling: 62 days per call, upgrade: HR asks to mark a longer stretch in one go.

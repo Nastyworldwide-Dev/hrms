@@ -281,3 +281,6 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T03:23:42Z EVIDENCE: 2 correct — D2 screens: Nadi team-roster-assign 35/35, Desk ShiftAssignmentDialog 25/25 (each red 8 on HEAD); eslint clean (frontend).
 2026-10-07T03:23:42Z EVIDENCE: 5 looks right — live as HR: day sheet location-only change on 21 Oct -> only that day moved, shift and neighbours kept; test data removed.
 - 2026-10-07T03:23:46Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
+- 2026-10-07T03:23:48Z COMMIT: 9f59dae7e feat(roster): Desk and Nadi save one roster field without a refusal → review+design dispatched
+- 2026-10-07T03:25:03Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 6 file(s) ⟂b1aa65dc91c9
+- 2026-10-07T03:25:04Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98

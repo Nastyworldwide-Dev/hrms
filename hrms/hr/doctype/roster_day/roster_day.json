@@ -43,7 +43,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Day Type",
-   "options": "Work Day\nRest Day\nOff Day\nPublic Holiday",
+   "options": "Off Day\nRest Day\nPublic Holiday",
    "reqd": 1
   },
   {
