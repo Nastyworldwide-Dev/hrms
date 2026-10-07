@@ -65,6 +65,21 @@ A5 Where pay reads the marker: inside ot_calculation._read_rostered_day_types, b
    query, and WITHOUT the shift filter (a marker belongs to the date, not a shift). Every marker write or delete
    (set_day_type, A2's delete-on-assign) calls forget_rostered_day_types() so no stale day type is cached.
 
+A6 D2 narrowed (7 Oct): Location for ONE day keeps the existing split path (change_shift_day); the marker holds
+   Day Type only, because geofence (hrms/utils/geofence.py, employee_checkin) reads location from Shift Assignment
+   alone and a second source is a new risk for no visible gain (HR sees the same result). What changes:
+   - change_shift_day keeps the day's shift and location when the caller does not send them (today it WIPES the
+     location unless re-sent, and demands a shift).
+   - update_shift_assignment takes any of status, end_date, day_type, shift_location for the WHOLE assignment,
+     changing only what was sent. day_type/status/end_date are allow_on_submit; shift_location is not, so it is
+     written with db_set (no doctype JSON change -> no Property Setter trap).
+   - Desk dialog: the "one at a time" refusal goes; a day change and a whole-assignment change save in sequence.
+   - Nadi day sheet gets Location.
+
+A7 Owner, 7 Oct: (1) yes to A6 (a one-day location move keeps the split); (2) NO "Work Day" with no shift:
+   set_day_type and Nadi Assign accept only Off / Rest / Public holiday without a shift; Work Day stays a Day Type
+   on a shift.
+
 ## EXPECTED OUTPUT:
 - UI: in the Nadi Assign sheet, Shift type is optional. Picking only "Off day" saves ("Off day saved for 8 Oct").
   The day sheet has Location. Each field saves alone. The roster shows O / R / PH on a day with no shift.

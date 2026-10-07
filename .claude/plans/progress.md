@@ -269,3 +269,5 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T02:30:43Z COMMIT: 224c571cc fix(pwa): Nadi Assign said nothing when Save stayed grey with no shift → review+design dispatched
 2026-10-07T02:43:59Z EVIDENCE: 5 looks right — live on fresh.local as HR (390px): no-shift cell -> Assign grey until Day type, hint shown, Location hidden; Off day -> toast "Off day saved for 20 Oct"; Roster Day row written by HR; _classify_day=off. Console: only socket.io refused (local realtime server not running). Test row removed.
 2026-10-07T02:43:59Z NEXT: owner ruling on Work Day with no shift (recommend: refuse); then D2 edit in place.
+- 2026-10-07T02:44:11Z COMMIT: 594685f66 docs(plans): alpha.39 D1 checked live on the local site as HR → review dispatched
+- 2026-10-07T02:49:20Z PLAN: approved 3babe6ed3d5c — # Release 2.0.0-alpha.39 "Roster in HR's Hands" (approved 7 Oct 2026: owner ruled R1a R2a R3a R4a)
