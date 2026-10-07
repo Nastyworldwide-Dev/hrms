@@ -224,3 +224,5 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T06:44:14Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
 - 2026-10-07T06:44:14Z EVIDENCE: 3 works — blast radius green: 11 dependent(s), 8 extra test file(s) ⟂2fe864bb96a3
 - 2026-10-07T06:44:17Z COMMIT: fe2e61dad feat(team): a day HR marked off shows as off on Home, the day sheet and Team → review dispatched
+- 2026-10-07T06:47:37Z COMMIT: d62b512bc docs(plans): Team status ticket records the day-marker follow-ups → review dispatched
+2026-10-07T07:04:22Z NEXT: owner to decide (1) Desk-form shift on a marked day clears the marker (hand-made only, not splits)? (2) release fe2e61dad as alpha.40 now or hold. 2 commits ahead of origin, not pushed.
