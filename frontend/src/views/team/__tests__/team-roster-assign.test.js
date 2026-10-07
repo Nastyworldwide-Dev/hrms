@@ -253,6 +253,13 @@ test("submitting a disabled sheet sends nothing", () => {
 	assert.equal(calls.assign.length + calls.dayType.length, 0)
 })
 
+test("with no shift and no From date, the hint asks for the date", () => {
+	const { vm } = sheet()
+	vm.form.start_date = ""
+	vm.form.day_type = "Off Day"
+	assert.equal(vm.shiftHint.value, "Pick a From date.")
+})
+
 test("with no shift, a blocked Save says why and points at the reason", () => {
 	const { vm } = sheet()
 	vm.form.start_date = "2026-10-08"

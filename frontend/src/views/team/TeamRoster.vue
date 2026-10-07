@@ -413,7 +413,9 @@ const NO_SHIFT_DAY_TYPES = ["Off Day", "Rest Day", "Public Holiday"]
 const hasDayType = (value) => NO_SHIFT_DAY_TYPES.includes(value)
 // with no shift the hint says how to mark a day, or why Save is still grey
 const shiftHint = computed(() =>
-	hasDayType(form.day_type) || !form.day_type || form.day_type === "None"
+	!form.start_date
+		? __("Pick a From date.")
+		: hasDayType(form.day_type) || !form.day_type || form.day_type === "None"
 		? __("Leave empty and pick a Day type to mark the day only (Off, Rest, Public holiday).")
 		: __("Pick a shift, or choose Off day, Rest day or Public holiday.")
 )
