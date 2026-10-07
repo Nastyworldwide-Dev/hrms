@@ -239,3 +239,7 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T07:23:19Z COMMIT: 86949c3f1 fix(roster): a shift rule's open-ended shift could wipe every future day mark → review+cross-app dispatched
 2026-10-07T07:24:56Z EVIDENCE: 2 correct — shift_assignment_hooks 16/16; invariant mutation-checked (untagging shift_rules fails 2). 3 works — bench fresh.local (rolled back): Desk shift on 4 Nov clears only that mark, roster split keeps 10 Nov.
 - 2026-10-07T07:24:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-07T07:25:02Z COMMIT: 9f61777a3 fix(roster): approving a Shift Request over a marked day could be refused → review+cross-app dispatched
+- 2026-10-07T07:27:08Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
+- 2026-10-07T07:27:10Z COMMIT: c6cbe29b1 test(roster): the shift-creator guard caught only one way of writing a shift → review+cross-app dispatched
+2026-10-07T07:30:41Z EVIDENCE: 3 works — alpha.40 pre-release: 247 test files touching the 7 changed modules, run one by one; every failure identical on alpha.39 code (replayed_tap 8, restamp 5, fenced 2, timezone 2, attendance_health 1, checkin_session_rules 1, sync_runner 1, supervisor_own_team 1).

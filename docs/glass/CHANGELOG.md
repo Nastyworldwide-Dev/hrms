@@ -10,6 +10,21 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.40] — Days Off Everywhere — 2026-10-07
+
+A day HR marks off reads as a day off on every screen, and a shift HR adds
+by hand over it replaces the mark.
+
+### Fixed
+- **A marked day off is off everywhere.** Home and the Calendar day sheet no
+  longer offer the default shift on it, and the Team page and the Calendar's
+  team part say Off, not Scheduled or Not in yet. Someone who still punches
+  in shows as Present.
+- **A shift HR adds in the Desk form over a marked day off replaces the
+  mark**, as the roster already did, so pay and the Team page follow the shift.
+  Shifts the system makes itself (roster splits, shift rules, repairs) never
+  remove a mark.
+
 ## [2.0.0-alpha.39] — Roster in HR's Hands — 2026-10-07
 
 HR can mark a day off without a shift, change one roster field at a time,
