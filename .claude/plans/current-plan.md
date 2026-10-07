@@ -61,6 +61,10 @@ A3 R2a punch with no shift: the check-in already falls back to Employee.default_
 A4 set_day_type: same write fence as insert_shift (_ensure_can_roster_employee); worked-day refusal for
    supervisors stays (D3 lifts it for HR only).
 
+A5 Where pay reads the marker: inside ot_calculation._read_rostered_day_types, before the Shift Assignment
+   query, and WITHOUT the shift filter (a marker belongs to the date, not a shift). Every marker write or delete
+   (set_day_type, A2's delete-on-assign) calls forget_rostered_day_types() so no stale day type is cached.
+
 ## EXPECTED OUTPUT:
 - UI: in the Nadi Assign sheet, Shift type is optional. Picking only "Off day" saves ("Off day saved for 8 Oct").
   The day sheet has Location. Each field saves alone. The roster shows O / R / PH on a day with no shift.
