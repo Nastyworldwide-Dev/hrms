@@ -214,3 +214,6 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T04:30:58Z COMMIT: 4870f0078 docs(plans): alpha.39 built and reviewed; release waits on the owner → review dispatched
 2026-10-07T04:45:55Z EVIDENCE: 3 works — pre-release: frontend 1562/1562, Desk 30/30; 123 py test files touching pay/check-in/roster run one by one: alpha.39 broke one (test_ot_holiday_classification strict fake DB, fixed). 6 files fail identically on alpha.38 code (pre-existing: replayed_tap 8, restamp 5, attendance_health 1, checkin_session_rules 1, sync_runner 1, shift_supervisor_rosters_own_team 1).
 - 2026-10-07T04:46:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-07T04:46:10Z COMMIT: 704bcfd38 test(ot): the holiday-calendar tests refused the new day-marker read → review dispatched
+- 2026-10-07T04:46:48Z COMMIT: 403539ff2 chore(release): 2.0.0-alpha.39 Roster in HR's Hands → review+deps dispatched
+- 2026-10-07T04:47:40Z COMMIT: 4dff516c0 fix(release): About this app showed "Honest Leave Balances" since alpha.27 → review+deps dispatched

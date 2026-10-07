@@ -1,14 +1,14 @@
 # HANDOFF
-prompt:   alpha.38 "Money and Waiting" (owner rulings R1-R5 + SOPs + leftovers)
-status:   done (K1 pipeline consolidation not started: needs write access to /opt/keel)
-commit:   b8137433b on nz-glass (tag v2.0.0-alpha.38, GitHub Release created)
-files:    hrms/hr/doctype/expense_claim/expense_claim.py (duplicate claims)
-          hrms/utils/approval_reminders.py (approver away)
-          hrms/utils/cancel_notice.py + hrms/hooks.py (cancel notices)
-          frontend/src/views/sop/SopFormSheet.vue (SOP editor)
-          frontend/src/utils/loudRequest.js (offline, refusal wording)
-          frontend/src/components/FormView.vue, ResourceError.vue, MustReadNotice.vue
-          docs/glass/audit/2026-10-06-*.md (supervisor Desk, approver reports)
-verify:   on the live site after the update: run migrate (refreshes the hook cache for cancel notices); file the same claim twice -> refused
-flags:    frontend/tests is run by no gate (went red twice unseen); humanless-pipeline commits stay local by owner ruling
-next:     owner puts alpha.35-38 live; then K1 (one pipeline copy, gate runs frontend/tests)
+prompt:   alpha.39 "Roster in HR's Hands" (owner rulings R1a-R4a, A6, A7)
+status:   done
+commit:   4dff516c0 on nz-glass (tag v2.0.0-alpha.39, GitHub Release created)
+files:    hrms/hr/doctype/roster_day/ (new doctype: a day off with no shift)
+          hrms/api/roster.py (set_day_type, edit one field, HR re-types a worked day, swap)
+          hrms/utils/ot_calculation.py (pay reads the day marker first)
+          hrms/api/team.py (Nadi roster returns markers)
+          frontend/src/views/team/TeamRoster.vue (Assign without a shift, Location, O/R/PH)
+          roster/src/components/ShiftAssignmentDialog.vue, MonthViewTable.vue (Desk)
+verify:   live site: run migrate (creates Roster Day); Nadi Team roster -> Assign, no shift, Off day -> saves and shows O
+flags:    Glass gates CI red on the last 10 pushes (before this release too); Desk month view + drag-swap not checked live;
+          day sheet / Team status do not read day markers yet (owner to decide, ticket-team-py-member-statuses.md)
+next:     owner puts alpha.39 live and runs migrate; then the day-sheet marker decision
