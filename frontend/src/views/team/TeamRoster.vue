@@ -305,8 +305,10 @@ const dayTypeOptions = computed(() => [
 	{ label: __("Public holiday"), value: "Public Holiday" },
 ])
 const DAY_TYPE_MARKS = { "Rest Day": "R", "Off Day": "O", "Public Holiday": "PH", "Work Day": "W" }
+// a day with no shift can still carry a Roster Day marker (Off / Rest / Public holiday)
+const markerOn = (member, day) => (shiftOn(member, day) ? "" : member.markers?.[day.iso] || "")
 function dayTypeMark(member, day) {
-	return DAY_TYPE_MARKS[shiftOn(member, day)?.day_type] || ""
+	return DAY_TYPE_MARKS[shiftOn(member, day)?.day_type || markerOn(member, day)] || ""
 }
 // the day's location as the server holds it: empty and missing are the same
 const locationChanged = () =>
@@ -327,10 +329,9 @@ const dayTitle = computed(() =>
 
 function dayLabel(member, day) {
 	const s = shiftOn(member, day)
+	const word = s ? s.day_type : markerOn(member, day)
 	const type =
-		s && s.day_type && s.day_type !== "None"
-			? dayTypeOptions.value.find((o) => o.value === s.day_type)?.label
-			: ""
+		word && word !== "None" ? dayTypeOptions.value.find((o) => o.value === word)?.label : ""
 	return `${member.employee_name}, ${day.iso}: ${s ? s.shift_type : __("No shift")}${
 		type ? `, ${type}` : ""
 	}`
@@ -341,6 +342,7 @@ function openDay(member, day) {
 	if (!shift) {
 		openAssign(member)
 		form.start_date = form.end_date = day.iso
+		form.day_type = markerOn(member, day) || "None"
 		return
 	}
 	dayTarget.value = { member, shift, date: day.iso }

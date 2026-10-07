@@ -237,6 +237,18 @@
 								</div>
 							</div>
 
+							<!-- Roster Day marker: a day with no shift can still be Off / Rest / Public Holiday -->
+							<div
+								v-if="
+									!events.data?.[employee.name]?.[day.date] &&
+									dayMarkers[employee.name]?.[day.date]
+								"
+								class="text-center font-semibold text-gray-500"
+								:title="dayMarkers[employee.name][day.date]"
+							>
+								{{ DAY_TYPE_MARKS[dayMarkers[employee.name][day.date]] }}
+							</div>
+
 							<!-- Add Shift -->
 							<Button
 								variant="outline"
@@ -334,7 +346,13 @@ interface ShiftAssignment extends Shift {
 	end_date: string;
 }
 
-type Events = Record<string, (HolidayWithDate | LeaveApplication | ShiftAssignment)[]>;
+interface DayMarker {
+	roster_day: string;
+	date: string;
+	day_type: string;
+}
+
+type Events = Record<string, (HolidayWithDate | LeaveApplication | ShiftAssignment | DayMarker)[]>;
 type MappedEvents = Record<string, Record<string, Holiday | Leave | Shift[]>>;
 
 const props = defineProps<{
@@ -359,6 +377,13 @@ const hoveredCell = ref({
 	shift_status: "",
 });
 const dropCell = ref({ employee: "", date: "", shift: "" });
+// Roster Day markers by employee and date, shown on a day with no shift
+const DAY_TYPE_MARKS: Record<string, string> = {
+	"Rest Day": "R",
+	"Off Day": "O",
+	"Public Holiday": "PH",
+};
+const dayMarkers = ref<Record<string, Record<string, string>>>({});
 
 const daysOfMonth = computed(() => {
 	const daysOfMonth = [];
@@ -425,6 +450,14 @@ const events = createResource({
 	},
 	transform: (data: Events) => {
 		const mappedEvents: MappedEvents = {};
+		const markers: Record<string, Record<string, string>> = {};
+		for (const employee in data) {
+			for (const event of data[employee]) {
+				if ("roster_day" in event)
+					(markers[employee] ||= {})[event.date] = event.day_type;
+			}
+		}
+		dayMarkers.value = markers;
 		for (const employee in data) {
 			mapEventsToDates(data, mappedEvents, employee);
 		}
@@ -462,6 +495,8 @@ const mapEventsToDates = (data: Events, mappedEvents: MappedEvents, employee: st
 
 		for (const event of Object.values(data[employee])) {
 			let result: Holiday | Leave | undefined;
+			// a marker is drawn from dayMarkers, never as a shift (it has no start_date)
+			if ("roster_day" in event) continue;
 			if ("holiday" in event) {
 				result = handleHoliday(event, date);
 				if (result) {

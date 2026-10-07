@@ -434,9 +434,34 @@ def get_team_roster(start_date: str, end_date: str, manager: str | None = None) 
 	for r in rows:
 		by_employee.setdefault(r.employee, []).append({k: v for k, v in r.items() if k != "employee"})
 
+	markers = _day_markers(ids, start, end)
 	return {
 		"start_date": str(start),
 		"end_date": str(end),
 		"manager": team_of,
-		"members": [{**m, "shifts": by_employee.get(m.name, [])} for m in members],
+		"members": [
+			{**m, "shifts": by_employee.get(m.name, []), "markers": markers.get(m.name, {})}
+			for m in members
+		],
 	}
+
+def _day_markers(employees: list[str], start, end) -> dict[str, dict[str, str]]:
+	"""{employee: {iso date: day_type}} for the Roster Day markers (Off / Rest /
+	Public Holiday on a day with no shift) of `employees` in [start, end].
+
+	`employees` is the list the caller's fence already admitted; the read skips
+	doctype permissions because a Shift Supervisor holds no Roster Day role.
+	A site not migrated yet has no table (deploy skew): no markers.
+	"""
+	if not frappe.db.table_exists("Roster Day"):
+		return {}
+	rows = frappe.get_all(
+		"Roster Day",
+		filters={"employee": ("in", employees), "date": ("between", [str(start), str(end)])},
+		fields=["employee", "date", "day_type"],
+		ignore_permissions=True,
+	)
+	out: dict[str, dict[str, str]] = {}
+	for row in rows:
+		out.setdefault(row.employee, {})[str(row.date)] = row.day_type
+	return out

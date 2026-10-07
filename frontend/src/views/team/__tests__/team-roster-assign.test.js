@@ -429,3 +429,41 @@ test("a day with no location, left empty, sends no location", () => {
 	vm.submitChange()
 	assert.equal("shift_location" in calls.change[0].params, false)
 })
+
+// D4, 7 Oct 2026: a day with no shift but a Roster Day marker shows O / R / PH, says so to a screen
+// reader, and tapping it opens Assign with that Day type already picked.
+const MARKED = (markers) => ({ ...MEMBER, shifts: [], markers })
+
+test("a marked day with no shift shows its letter and is named for a screen reader", () => {
+	const { vm } = sheet()
+	const member = MARKED({
+		"2026-10-20": "Off Day",
+		"2026-10-21": "Rest Day",
+		"2026-10-22": "Public Holiday",
+	})
+	assert.equal(vm.dayTypeMark(member, { iso: "2026-10-20" }), "O")
+	assert.equal(vm.dayTypeMark(member, { iso: "2026-10-21" }), "R")
+	assert.equal(vm.dayTypeMark(member, { iso: "2026-10-22" }), "PH")
+	assert.equal(vm.dayTypeMark(member, { iso: "2026-10-23" }), "", "an unmarked day shows nothing")
+	assert.equal(vm.dayLabel(member, { iso: "2026-10-20" }), "Aina, 2026-10-20: No shift, Off day")
+	assert.equal(vm.dayLabel(member, { iso: "2026-10-23" }), "Aina, 2026-10-23: No shift")
+})
+
+test("a marker never replaces a shift's own mark, and a member with no markers key still reads", () => {
+	const { vm } = sheet()
+	const member = { ...dayOf({ day_type: "Rest Day" }), markers: { "2026-10-08": "Off Day" } }
+	assert.equal(vm.dayTypeMark(member, DAY), "R", "the shift's Day Type is what the cell shows")
+	assert.equal(vm.dayLabel(member, DAY), "Aina, 2026-10-08: Morning, Rest day")
+	assert.equal(vm.dayTypeMark({ ...MEMBER }, DAY), "")
+})
+
+test("tapping a marked empty day opens Assign for that day with the marker's Day type", () => {
+	const { vm } = sheet()
+	vm.openDay(MARKED({ "2026-10-20": "Rest Day" }), { iso: "2026-10-20" })
+	assert.equal(vm.assignOpen.value, true)
+	assert.equal(vm.form.start_date, "2026-10-20")
+	assert.equal(vm.form.end_date, "2026-10-20")
+	assert.equal(vm.form.day_type, "Rest Day")
+	vm.openDay(MARKED({ "2026-10-20": "Rest Day" }), { iso: "2026-10-21" })
+	assert.equal(vm.form.day_type, "None", "an unmarked empty day opens as before")
+})

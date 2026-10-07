@@ -2,106 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-
-## 5 Oct 2026 (late): hunt continues, nothing pushed
-EVIDENCE: correct half/full-day leave traced on fresh.local (request -> approve -> cancel -> amend -> attendance rebuilt); probes /tmp/probe_hd1.py, /tmp/probe_hd2.py; reviews of 1ad6e6c7d and 261f60b9e: no Critical/Warning.
-DEAD END: none new. Release gate keeps asking to push; owner said push only on his word and keep the safety tag local.
-NEXT: (1) route announcements._push_to_users through push_body (same &amp; defect); (2) read /tmp/wording-inventory.md (scout) and fix PWA-vs-Desk wording mismatches; (3) trace amend/rebuild for OT, Attendance Request, Expense Claim; (4) AU-2 signed-out notice, AU-3 only Guest 403 = session lost (verified: expired session gives PermissionError 403 via is_whitelisted), AU-5, N+1 in get_leave_applications; (5) wait for "push".
-- 2026-10-05T09:52:51Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 5 file(s) ⟂5d9cef17ceeb
-- 2026-10-05T09:52:51Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-10-05T09:52:54Z COMMIT: ff899b5a4 fix(team): a day HR marked half showed the boss a bare "Present" → review+design dispatched
-- 2026-10-05T09:54:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-10-05T09:54:50Z COMMIT: 9d6a5e062 fix(team): "Half day" was the first thing cut off on a phone → review+design dispatched
-- 2026-10-05T09:55:49Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-10-05T09:55:49Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-10-05T09:55:51Z COMMIT: 8cdbedec5 fix(team): an old draft attendance row could hide a day HR marked half → review dispatched
-- 2026-10-05T09:59:53Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-10-05T09:59:53Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 4 extra test file(s) ⟂5c6fe2548ee6
-- 2026-10-05T09:59:55Z COMMIT: a5c28c876 fix(ot): the refusal named overtime to nine decimals → review dispatched
-- 2026-10-05T10:00:25Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-05T10:00:28Z COMMIT: bc350a0a6 fix(ot): the claim box opened on a nine-decimal number → review+design dispatched
-- 2026-10-05T10:01:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-10-05T10:01:51Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 4 extra test file(s) ⟂5c6fe2548ee6
-- 2026-10-05T10:01:53Z COMMIT: e806aab52 fix(ot): a refused claim could read equal to its cap → review dispatched
-- 2026-10-05T10:04:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-10-05T10:04:42Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452
-- 2026-10-05T10:04:44Z COMMIT: 0e08bffd5 fix(ot): a stored minute read as two minutes in the refusal → review+design+cross-app dispatched
-- 2026-10-05T10:05:36Z EVIDENCE: 2 correct — mapped tests green (bun ) for 7 file(s) ⟂2500172f42c8
-- 2026-10-05T10:05:39Z COMMIT: 0d1bfd039 fix(desk): one word per state in Desk, the same as Nadi → review+design dispatched
-- 2026-10-05T10:08:00Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-10-05T10:08:00Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452
-- 2026-10-05T10:08:03Z COMMIT: 1070014b4 chore(ot): name the one limit of the minute words → review dispatched
-EVIDENCE: announcements push NOT affected by the "&amp;" class (checked 5 Oct 2026): HR Announcement.summary is Small Text, controller strips tags on save (hr_announcement.py:55), stored as typed text, not escaped HTML. Routing it through push_body would wrongly decode a typed "&amp;". Left alone.
-NEXT: (1) read the review of 1070014b4; (2) AU-2 signed-out notice, AU-3 only Guest 403 counts as lost session (probe: expired session = PermissionError 403 from is_whitelisted, so 403 alone cannot be dropped), AU-5; (3) trace amend/rebuild for OT, Attendance Request, Expense Claim; (4) Desk wording: Expense Claim + Remote Checkin (ticket, needs Nabil's word); (5) OD2 (30-min banding of typed claims) needs Nabil's ruling; (6) wait for "push" (17+ commits local).
-- 2026-10-05T10:18:32Z PUSH: nz-glass @ 1070014b4
-- 2026-10-05T10:20:40Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-05T10:20:42Z COMMIT: 1c63f546b fix(roster): the shift picker showed only shifts named like the chosen one → review+design dispatched
-- 2026-10-05T10:23:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-05T10:23:22Z COMMIT: 3a860c31e fix(roster): the shift picker lost the chosen person's name and its tick → review+design dispatched
-
-## 5 Oct 2026 (end of session): pushed 18, roster picker fix local
-EVIDENCE: pushed af05c1670..1070014b4 to origin/nz-glass on Nabil's "push" (branch only, safety tag stays local). Roster picker: 1c63f546b + 3a860c31e local; shown 2 of 25 shifts before, 25 of 25 after (search_link probe on fresh.local); reviews of 1c63f546b gave two real warnings (bare id label, no tick), fixed in 3a860c31e.
-OWNER RULINGS (5 Oct): OT typed claims banded to 30 min (YES, NOT BUILT YET: validate_claimed_hours should round_ot_pay_hours the claim for Overtime Pay only; Replacement Leave unchanged); Desk wording for Expense Claim and Remote Checkin Request YES (NOT BUILT: ticket-desk-wording-expense-remote.md).
-DEAD END: the pre-commit hook bundles co-modified tracked files into the next commit (hit twice: 0e08bffd5, a5c28c876); stage the pair and commit in separate commands; the gate checks before the command runs.
-LEARNING(gate): a stub test that mocks frappe.bold/_ passes without reading the message -> assert on caught.exception text with bold/_ patched (done in test_ot_storage_precision.py).
-NEXT: (1) read the two reviews of 3a860c31e, fix real findings, then push branch only (Nabil said check before push); (2) build the OT 30-min banding of typed claims (ruled YES); (3) Desk wording for Expense Claim + Remote Checkin (ruled YES); (4) AU-2 signed-out notice on Submit, AU-5 stale cached page; (5) trace amend/rebuild for OT, Attendance Request, Expense Claim; (6) after deploy: Leave list in Desk must say Waiting (else a live Workflow overrides).
-- 2026-10-05T10:25:28Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-05T10:25:34Z COMMIT: d94faafcd fix(roster): the picker's closed box went blank while typing a search → review+design dispatched
-- 2026-10-05T10:27:36Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-05T10:27:41Z COMMIT: 72f38eb43 fix(roster): the picker's closed box could still go blank while typing → review+design dispatched
-- 2026-10-05T10:29:30Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
-- 2026-10-05T10:29:30Z EVIDENCE: 3 works — blast radius green: 9 dependent(s), 4 extra test file(s) ⟂5c6fe2548ee6
-- 2026-10-05T10:29:32Z COMMIT: 66f0ed539 feat(ot): a typed Overtime Pay claim is cut down to the half hour → review dispatched
-- 2026-10-05T10:30:21Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-05T10:30:24Z COMMIT: b4ba0595a fix(roster): the picker's own box was not disabled and had no name → review+design dispatched
-- 2026-10-05T10:32:51Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-10-05T10:32:51Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 2 extra test file(s) ⟂a5801cfef452
-- 2026-10-05T10:32:52Z COMMIT: b9ca0e8dd fix(ot): the half-hour rule could cut a claim an approver had already read → review dispatched
-- 2026-10-05T10:34:12Z PUSH: nz-glass @ b9ca0e8dd
-- 2026-10-05T11:11:05Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-10-05T11:11:13Z COMMIT: 112adc0af feat(ot): the claim form says overtime is paid in half hours → review+design dispatched
-- 2026-10-05T11:14:33Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-10-05T11:14:36Z COMMIT: eb32c90c8 chore(ot): cut open Overtime Pay claims to the half hour on deploy → review+design dispatched
-- 2026-10-05T11:17:00Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-10-05T11:17:02Z COMMIT: 89502794a fix(ot): the cleanup patch kept the old claim figure nowhere readable → review dispatched
-- 2026-10-05T11:19:22Z PUSH: nz-glass @ 89502794a
-- 2026-10-05T11:26:14Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-05T11:26:16Z COMMIT: 2110f2ec7 fix(desk): a remote check-in request says Waiting, like Nadi → review+design dispatched
-- 2026-10-05T11:29:12Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 7 file(s) ⟂85be7f79c548
-- 2026-10-05T11:29:14Z COMMIT: 3f761024f fix(desk): an expense claim says Waiting / Approved · unpaid / Paid, like Nadi → review+design dispatched
-- 2026-10-05T11:30:32Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-05T11:30:35Z COMMIT: 6976d80c0 fix(desk): the "Approved · unpaid" pill listed too few claims when clicked → review+design dispatched
-- 2026-10-05T11:41:04Z COMMIT: 299b1c267 docs(plan): stabilise Nadi and keep Desk in good hands → review dispatched
-- 2026-10-06T01:35:51Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-10-06T01:35:54Z COMMIT: 3a54590cd fix(checkin): the Today status line stayed stale after a punch → review+design dispatched
-- 2026-10-06T01:37:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-10-06T01:37:52Z COMMIT: 18026f349 fix(checkin): a burst of other people's punches would reload four reads each → review+design dispatched
-- 2026-10-06T01:49:31Z COMMIT: 6253bdc45 fix(pwa): pull-down and load-more-on-scroll never ran on the real app → review+design dispatched
-- 2026-10-06T01:50:30Z COMMIT: bb0d5a450 test(e2e): a real pull-down and a real scroll are checked on the running app → review+design dispatched
-- 2026-10-06T02:10:09Z COMMIT: 9f56f8a5d test(e2e): the pull gate pulled 360 px and failed on its own second pull → review+design dispatched
-
-## 6 Oct 2026: real-browser work, check-in and pull-down fixed
-EVIDENCE: drove the running app on fresh.local in a real browser (Playwright, iPhone 13, real touch events). (1) check-in: after a punch the button changed but the Today status line stayed stale until reload; fixed (3a54590cd + debounce 18026f349), verified live: line changes within 600 ms. (2) pull-down: the element fires "ion-refresh"/"ion-scroll" (@ionic/vue renames events to kebab-case), the app listened for camelCase, so a real pull made 0 requests on Home/Requests/Approvals/Announcements and load-more never ran; fixed 6253bdc45. The 28 Sep fix was pinned by source-reading tests that stayed green. Gates: e2e/pull-refresh.spec.js (4/4 red with the old listener, 3/3 green runs with the fix) + e2e/list-scroll.spec.js.
-DEAD END: the first pull spec dragged 360 px and logged two refreshes (Ionic starts at 120 px, the rest of the drag was a second pull): a test artefact, not an app bug; probes with touch/mouse/fast release each ran the handler once.
-LEARNING(gate): a fix for "does nothing on the real app" is proven only by a test that runs the real app; source-text tests cannot see an event-name mismatch. The commit gate runs *.spec.js with bun, which cannot run Playwright: use a `test(e2e):` commit, which the gate skips.
-OPEN: 7 untracked probe scripts frontend/e2e/live-*.mjs (delete or fold into tests); countWords.test.js and notifications-reason.test.js untracked from earlier; no pull-down on Notifications/Team/Roster/two dashboards/Issues/Helpdesk (plan Stage 1.3); AU-2 signed-out message; stale cached page AU-5; update-after-deploy only while hidden; ticket realtime-fanout (useListUpdate has no debounce/filter for any caller); two Desk gaps from the plan.
-NEXT: push the 9 reviewed commits (branch only; Nabil said push when all done), then Stage 1 of docs/glass/plan/2026-10-05-stabilise-nadi-plan.md: signed-out message, pull-down on the screens that lack it (now a real gate exists), counts, required expected_modified.
-- 2026-10-06T02:10:59Z COMMIT: d20fc621d docs(plan): note the list second-page gap and the 6 Oct real-browser findings → review dispatched
-- 2026-10-06T03:02:37Z PLAN: approved ae107bc4bd38 — # Release 2.0.0-alpha.35 "Steady Nadi" (6 Oct 2026)
-- 2026-10-06T03:04:54Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-10-06T03:04:57Z COMMIT: 55b190300 fix(requests): the request chips never counted compensatory leave → review dispatched
-- 2026-10-06T03:05:19Z COMMIT: f96f1f53e test(placeholders): the empty-queue test failed on quote style, not on the row → review+design dispatched
-- 2026-10-06T03:08:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
-- 2026-10-06T03:08:11Z COMMIT: ef5509251 fix(requests): the chips would count compensatory leave the list never shows → review dispatched
-- 2026-10-06T03:09:22Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-06T03:09:23Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-10-06T03:09:28Z COMMIT: 4ab2dd0a3 fix(pwa): an app kept open never looked for a new build after a deploy → review+design dispatched
-- 2026-10-06T03:09:58Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-06T03:09:58Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-10-06T03:10:08Z COMMIT: 17de8474d fix(pwa): an app kept open never looked for a new build after a deploy → review+design dispatched
-- 2026-10-06T03:10:54Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-10-06T03:10:54Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
-- 2026-10-06T03:10:57Z COMMIT: 7036458ff fix(pwa): an app kept open never looked for a new build after a deploy → review+design dispatched
 - 2026-10-06T03:17:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
 - 2026-10-06T03:17:42Z EVIDENCE: 3 works — blast radius green: 15 dependent(s), 12 extra test file(s) ⟂84fa3520acad
 - 2026-10-06T03:17:44Z COMMIT: 17136b06d fix(approvals): a decision without the revision the approver read skipped the check → review dispatched
@@ -296,3 +196,10 @@ NEXT: wait for the owner's next Nadi task.
 2026-10-07T04:00:22Z EVIDENCE: 2 correct — D3 test_roster_worked_day_type 22/22 (red on HEAD: 11 fail); 8 roster/pay files green.
 2026-10-07T04:00:22Z EVIDENCE: 3 works — bench fresh.local (real Frappe, rolled back): HR re-types worked FIRST day 28 Sep -> assignment keeps it as Off Day, 29 Sep-2 Oct new assignment None, one remark queued hr_asked=True, _classify_day off/normal; supervisor -> "Ask HR". Test data removed.
 - 2026-10-07T04:00:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
+- 2026-10-07T04:00:34Z COMMIT: 142d3eb8e feat(roster): HR can change the Day Type of a day that has punches → review dispatched
+- 2026-10-07T04:05:50Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-07T04:05:53Z COMMIT: 28fd9beeb fix(roster): re-sending the same Day Type re-marked every worked day → review dispatched
+2026-10-07T04:24:27Z EVIDENCE: 2 correct — D4 markers_shown 16/16 (red on HEAD 14), Nadi 42/42 (red 2), Desk 31/31 (MonthViewTable red 4); ruff/eslint clean.
+2026-10-07T04:24:27Z EVIDENCE: 5 looks right — live as HR (390px): 20-21 Oct marked Off with no shift show "O" and aria "No shift, Off day"; 22 Oct blank; tap prefills Day type Off Day. Bench: supervisor get_day_markers returns own line only, an outsider marker hidden. Test data removed.
+- 2026-10-07T04:24:32Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 8 file(s) ⟂f5cc77a393ea
+- 2026-10-07T04:24:32Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81

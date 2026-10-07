@@ -192,9 +192,10 @@ def get_events(
 	holidays = get_holidays(month_start, month_end, employee_filters)
 	leaves = get_leaves(month_start, month_end, employee_filters)
 	shifts = get_shifts(month_start, month_end, employee_filters, shift_filters)
+	markers = get_day_markers(month_start, month_end, employee_filters)
 
 	events = {}
-	for event in [holidays, leaves, shifts]:
+	for event in [holidays, leaves, shifts, markers]:
 		for key, value in event.items():
 			if key in events:
 				events[key].extend(value)
@@ -430,7 +431,8 @@ def swap_shift(
 
 	break_shift(src_shift_doc, src_date)
 	# a swap moves a shift between two days; it is not a Day Type word, so it
-	# never wipes a Roster Day marker (the whitelisted insert_shift would)
+	# never wipes a Roster Day marker (the whitelisted insert_shift would). The
+	# shift carries its own Day Type with it, both ways.
 	_insert_shift(
 		tgt_employee,
 		tgt_company,
@@ -439,6 +441,7 @@ def swap_shift(
 		tgt_date,
 		src_shift_doc.status,
 		src_shift_doc.shift_location,
+		src_shift_doc.day_type,
 	)
 
 	if tgt_shift:
@@ -450,6 +453,7 @@ def swap_shift(
 			src_date,
 			tgt_shift_doc.status,
 			tgt_shift_doc.shift_location,
+			tgt_shift_doc.day_type,
 		)
 
 
@@ -1172,6 +1176,45 @@ def get_shifts(
 
 	return group_by_employee(query.run(as_dict=True))
 
+
+def get_day_markers(
+	month_start: str, month_end: str, employee_filters: dict[str, str]
+) -> dict[str, list[dict]]:
+	"""Roster Day markers (Off / Rest / Public Holiday on a day with no shift) for the
+	month view, as {employee: [{"roster_day", "date", "day_type"}]}.
+
+	Same fence as get_shifts: the company-scoped employee filters, then the people
+	the caller may see. A Shift Supervisor holds no Roster Day permission, so the
+	rows are read past it for their rostered line only (the shift rows' own scope);
+	anyone who is neither HR nor a supervisor gets nothing.
+	"""
+	from hrms.hr.utils import sees_all_employee_data
+
+	_validate_employee_filters(employee_filters)
+	employee_filters = scope_employee_filters(employee_filters, endpoint="roster.get_day_markers")
+	if not frappe.db.table_exists("Roster Day"):
+		return {}  # deploy skew: no table, no markers
+	# the same people get_shifts joins: the company-scoped Employee filters, no
+	# Employee permission layer (a supervisor's line may sit in another company)
+	employees = frappe.get_all("Employee", filters=employee_filters, pluck="name")
+	if not sees_all_employee_data(frappe.session.user):
+		line = set(rostered_employees(frappe.session.user))
+		employees = [name for name in employees if name in line]
+	if not employees:
+		return {}
+	rows = frappe.get_all(
+		"Roster Day",
+		filters={"employee": ("in", employees), "date": ("between", [str(month_start), str(month_end)])},
+		fields=["name", "employee", "date", "day_type"],
+		order_by="date asc",
+		ignore_permissions=True,
+	)
+	return group_by_employee(
+		[
+			{"employee": row.employee, "roster_day": row.name, "date": str(row.date), "day_type": row.day_type}
+			for row in rows
+		]
+	)
 
 def group_by_employee(events: list[dict]) -> dict[str, list[dict]]:
 	grouped_events = {}
