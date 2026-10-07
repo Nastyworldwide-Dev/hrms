@@ -31,6 +31,7 @@ from hrms.hr.utils import (
 	validate_staff_approver,
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
+from hrms.overrides.employee_company_default import set_company_from_employee
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,9 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self.notify_approver()
 
 	def validate(self):
+		# The Employee's company, never the client's: the company link ignores User Permissions
+		# so a named approver in another company can open the claim (40d3760a3).
+		set_company_from_employee(self)
 		self.set_posting_date()
 		validate_active_employee(self.employee)
 		set_employee_name(self)

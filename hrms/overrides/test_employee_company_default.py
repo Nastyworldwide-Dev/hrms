@@ -94,7 +94,9 @@ class TestWiring(unittest.TestCase):
 			company = next((f for f in meta["fields"] if f["fieldname"] == "company"), None)
 			if not company or not company.get("reqd"):
 				continue
-			if company.get("fetch_from", "").endswith(".company"):
+			# fetch_if_empty keeps a client value, which nothing else checks once the
+			# company link ignores User Permissions (security review of 40d3760a3)
+			if company.get("fetch_from", "").endswith(".company") and not company.get("fetch_if_empty"):
 				continue
 			if "set_company_from_employee(self)" in (folder / f"{dt}.py").read_text():
 				continue
