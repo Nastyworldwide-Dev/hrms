@@ -340,7 +340,9 @@ def swap_shift(
 	capture("shift_swapped", {"mutual_swap": bool(tgt_shift)})
 
 	break_shift(src_shift_doc, src_date)
-	insert_shift(
+	# a swap moves a shift between two days; it is not a Day Type word, so it
+	# never wipes a Roster Day marker (the whitelisted insert_shift would)
+	_insert_shift(
 		tgt_employee,
 		tgt_company,
 		src_shift_doc.shift_type,
@@ -351,7 +353,7 @@ def swap_shift(
 	)
 
 	if tgt_shift:
-		insert_shift(
+		_insert_shift(
 			src_shift_doc.employee,
 			src_shift_doc.company,
 			tgt_shift_doc.shift_type,
@@ -477,12 +479,16 @@ def change_shift_day(
 	"""Roster "Change": one day moves to another shift type, location or Day Type."""
 	doc = frappe.get_doc("Shift Assignment", assignment)
 	employee, company, status = doc.employee, doc.company, doc.status
+	sent_day_type = day_type
 	day_type = day_type or doc.get("day_type") or "None"
 	logger.info(
 		"[roster] %s changes %s on %s to %s (%s)", frappe.session.user, doc.name, date, shift_type, day_type
 	)
 	remove_shift_day(doc.name, date)
-	insert_shift(employee, company, shift_type, date, date, status, shift_location, day_type=day_type)
+	_insert_shift(employee, company, shift_type, date, date, status, shift_location, day_type=day_type)
+	if sent_day_type:
+		# the caller named a Day Type for this one day: the last word wins over a marker
+		_clear_day_markers(employee, date, date)
 
 
 def _assignments_and_worked_days(employee: str, start) -> tuple[list, list]:
@@ -666,6 +672,26 @@ def insert_shift(
 	shift_location: str | None = None,
 	day_type: str | None = None,
 ) -> None:
+	"""Assign a shift over a date range (Nadi "Assign", Desk roster).
+
+	Last word wins (7 Oct 2026): a Roster Day marker inside the dates is the older
+	word, so it goes in the same transaction. An open end clears every marker from
+	the start on. Splits and swaps call `_insert_shift`, which keeps the markers.
+	"""
+	_insert_shift(employee, company, shift_type, start_date, end_date, status, shift_location, day_type)
+	_clear_day_markers(employee, start_date, end_date or None)
+
+
+def _insert_shift(
+	employee: str,
+	company: str,
+	shift_type: str,
+	start_date: str,
+	end_date: str | None,
+	status: str,
+	shift_location: str | None = None,
+	day_type: str | None = None,
+) -> None:
 	_ensure_can_roster_employee(employee)
 	frappe.has_permission("Shift Assignment", "create", throw=True)
 	day_type = _valid_day_type(day_type)
@@ -730,6 +756,124 @@ def insert_shift(
 			ignore_permissions=own_line,
 			day_type=day_type,
 		)
+
+
+#: Longest stretch one set_day_type call marks (two pay windows' worth).
+# ceiling: 62 days per call, upgrade: HR asks to mark a longer stretch in one go.
+MAX_DAY_TYPE_DAYS = 62
+
+
+@frappe.whitelist(methods=["POST"])
+def set_day_type(
+	employee: str, from_date: str, to_date: str | None = None, day_type: str | None = None
+) -> dict:
+	"""Mark days Off / Rest / Public Holiday / Work Day for a person with NO shift.
+
+	HR (6 Oct 2026): "kalau aku letak off day macam tu je tak boleh save, kena ada
+	shift". The marker is a "Roster Day" row (one per person per date); every pay
+	and attendance reader asks `_classify_day`, which reads it before any Shift
+	Assignment. An empty day_type (or "None") deletes the markers in the range.
+	Same write fence as insert_shift; a day with punches or attendance is refused
+	for everyone (HR may re-type a worked day in a later release).
+
+	Idempotent: the same call twice leaves the same rows. Returns {"saved": n}:
+	the days now carrying the word, or the markers removed when clearing.
+	"""
+	from datetime import timedelta
+
+	from frappe.utils import getdate
+
+	from hrms.utils.ot_calculation import ROSTER_DAY_TYPES, forget_rostered_day_types
+
+	_ensure_can_roster_employee(employee)
+	clearing = day_type in (None, "", "None")
+	if not clearing and day_type not in ROSTER_DAY_TYPES:
+		frappe.throw(_("Day Type must be one of {0}.").format(", ".join(ROSTER_DAY_TYPES)))
+	if not from_date:
+		frappe.throw(_("Pick the day."))
+	start = getdate(from_date)
+	end = getdate(to_date) if to_date else start
+	if end < start:
+		frappe.throw(_("The last day cannot be before the first day."))
+	if (end - start).days + 1 > MAX_DAY_TYPE_DAYS:
+		frappe.throw(_("Mark at most {0} days at a time.").format(MAX_DAY_TYPE_DAYS))
+	if not frappe.db.table_exists("Roster Day"):
+		# deploy skew: the code is new, the site not migrated yet
+		frappe.throw(_("Day markers are not ready on this site yet. Ask IT to update it."))
+
+	days = [start + timedelta(days=offset) for offset in range((end - start).days + 1)]
+	for day in days:
+		_refuse_worked_day(employee, str(day))
+
+	# The fence above admits HR (in company) and a supervisor's own line; for that
+	# line Frappe's per-document checks are skipped, as insert_shift does.
+	own_line = employee in rostered_employees(frappe.session.user)
+	marked = {
+		getdate(row.date): row
+		for row in frappe.get_all(
+			"Roster Day",
+			filters={"employee": employee, "date": ["between", [str(start), str(end)]]},
+			fields=["name", "date", "day_type"],
+		)
+	}
+	saved = 0
+	for day in days:
+		row = marked.get(day)
+		if clearing:
+			if row:
+				frappe.delete_doc("Roster Day", row.name, ignore_permissions=own_line)
+				saved += 1
+			continue
+		if not row:
+			doc = frappe.get_doc(
+				{"doctype": "Roster Day", "employee": employee, "date": str(day), "day_type": day_type}
+			)
+			doc.flags.ignore_permissions = own_line
+			doc.insert()
+		elif row.day_type != day_type:
+			doc = frappe.get_doc("Roster Day", row.name)
+			doc.day_type = day_type
+			doc.flags.ignore_permissions = own_line
+			doc.save()
+		saved += 1
+	forget_rostered_day_types()
+	logger.info(
+		"[roster] %s set %s..%s of %s to %s: %d day(s)",
+		frappe.session.user,
+		start,
+		end,
+		employee,
+		day_type or "cleared",
+		saved,
+	)
+	return {"saved": saved}
+
+
+def _clear_day_markers(employee: str, start_date, end_date=None) -> int:
+	"""Delete the Roster Day markers of `employee` from start_date to end_date (an
+	open end = every marker from start_date on): an assignment written over those
+	dates is the newer word (last word wins, 7 Oct 2026). Only called after the
+	roster fence admitted the caller for this employee."""
+	if not frappe.db.table_exists("Roster Day"):
+		return 0  # deploy skew: no table, no markers
+	dates = ["between", [str(start_date), str(end_date)]] if end_date else [">=", str(start_date)]
+	names = frappe.get_all("Roster Day", filters={"employee": employee, "date": dates}, pluck="name")
+	own_line = employee in rostered_employees(frappe.session.user)
+	for name in names:
+		frappe.delete_doc("Roster Day", name, ignore_permissions=own_line)
+	if names:
+		from hrms.utils.ot_calculation import forget_rostered_day_types
+
+		forget_rostered_day_types()
+		logger.info(
+			"[roster] %s cleared %d day marker(s) of %s from %s to %s",
+			frappe.session.user,
+			len(names),
+			employee,
+			start_date,
+			end_date or "open end",
+		)
+	return len(names)
 
 
 def _valid_day_type(day_type: str | None) -> str:

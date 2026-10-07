@@ -99,7 +99,7 @@ class TestSupervisorRostersSelfAndLine(unittest.TestCase):
 		# With Frappe's per-document checks skipped for the admitted line, a
 		# caller-chosen company would file the shift in the wrong company.
 		root = pathlib.Path(__file__).resolve().parents[1]
-		insert = (root / "api" / "roster.py").read_text().split("def insert_shift(")[1].split("\ndef ")[0]
+		insert = (root / "api" / "roster.py").read_text().split("def _insert_shift(")[1].split("\ndef ")[0]
 		own = insert.index("own_line = employee in rostered_employees")
 		self.assertIn('company = frappe.db.get_value("Employee", employee, "company")', insert[own:])
 

@@ -249,3 +249,10 @@ NEXT: wait for the owner's next Nadi task.
 
 2026-10-07T01:49:29Z RULINGS: alpha.39 roster — R1a day marker (Roster Day), R2a off-day punches = OT flat 2x, R3a each field saves alone, R4a HR may re-type a worked day.
 2026-10-07T01:49:29Z NEXT: D1 day marker — Roster Day doctype + set_day_type API + _classify_day reads it; Nadi Assign shift optional.
+- 2026-10-07T01:50:12Z COMMIT: bd8ac1e1d docs(plans): alpha.39 roster plan approved with the owner's four rulings → review dispatched
+- 2026-10-07T01:51:40Z COMMIT: 23909227f docs(plans): alpha.39 plan amended from review: marker precedence, readers, no-shift punch → review dispatched
+- 2026-10-07T01:53:08Z COMMIT: 1a6bd1751 docs(plans): alpha.39 plan names where pay reads the day marker → review dispatched
+2026-10-07T02:20:46Z EVIDENCE: 2 correct — test_roster_day 29/29, test_roster_day_type 13/13, test_off_day_marker_punch 3/3; red on HEAD code: 6F+18E, 3F, 1F.
+2026-10-07T02:20:46Z EVIDENCE: 3 works — 29 pay/roster stub files green; test_shift_supervisor_rosters_own_team 1 fail is pre-existing on HEAD (Attendance row fence), not D1.
+- 2026-10-07T02:20:58Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 11 file(s) ⟂a204f4f4a3bd
+- 2026-10-07T02:20:58Z EVIDENCE: 3 works — blast radius green: 19 dependent(s), 11 extra test file(s) ⟂145db77564d9

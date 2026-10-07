@@ -385,6 +385,14 @@ def forget_rostered_day_types():
 
 @request_cache
 def _read_rostered_day_types(employee, day, shift=None) -> list:
+	# A Roster Day marker is the per-day word, so it beats the assignment's Day
+	# Type and is read whatever shift is asked about: a person with no shift has
+	# only the marker. A site not migrated yet has no table (deploy skew).
+	if frappe.db.table_exists("Roster Day"):
+		marker = frappe.db.get_value("Roster Day", {"employee": employee, "date": day}, "day_type")
+		if marker:
+			logger.debug("[ot_calculation] roster day marker %s %s: %s", employee, day, marker)
+			return [marker]
 	filters = {"employee": employee, "docstatus": 1, "status": "Active", "start_date": ("<=", day)}
 	if shift:
 		filters["shift_type"] = shift

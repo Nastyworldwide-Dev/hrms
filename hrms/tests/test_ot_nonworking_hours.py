@@ -219,6 +219,8 @@ class TestNonworkingHours(unittest.TestCase):
 				return None if weekly_off is None else frappe._dict(weekly_off=weekly_off)
 			if doctype == "Holiday List":  # the synthetic calendar covers every test date
 				return (date(2025, 1, 1), date(2027, 12, 31))
+			if doctype == "Roster Day":
+				return None  # no day marker here: the roster and calendar decide
 			raise AssertionError(doctype)
 
 		stack = ExitStack()
