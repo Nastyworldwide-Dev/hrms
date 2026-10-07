@@ -78,7 +78,12 @@ def clear_day_markers_on_submit(doc, method=None):
 	the newer word on those days, so their Roster Day marks go (owner, 7 Oct 2026; last word
 	wins). Shifts made in code — roster splits and swaps, schedules, the bulk tool — come through
 	create_shift_assignment, which sets `keep_day_markers`: a split must never wipe a mark."""
-	if doc.status != "Active" or getattr(doc.flags, "keep_day_markers", False):
+	if (
+		doc.status != "Active"
+		or getattr(doc.flags, "keep_day_markers", False)
+		# a mirrored row is the other site's word, not HR's here
+		or getattr(doc, "synced_from_instance", None)
+	):
 		return
 	clear_day_markers(doc.employee, doc.start_date, doc.end_date)
 

@@ -124,6 +124,24 @@ class TestAHandMadeShiftClearsTheDayMarks(unittest.TestCase):
 		block = block[: block.index("},")]
 		self.assertIn("hrms.overrides.shift_assignment_hooks.clear_day_markers_on_submit", block)
 
+	def test_a_mirrored_shift_keeps_the_marks(self):
+		# a row copied from the other site is that site's word, not HR's here
+		doc = _doc(flags=SimpleNamespace(), synced_from_instance="verifica")
+		self._run(doc).assert_not_called()
+
+	def test_every_shift_made_in_code_is_tagged_to_keep_the_marks(self):
+		# review of de84475ac: the shift rules create OPEN-ENDED shifts, so an untagged one
+		# would wipe every future mark of that person; the Fix-a-day tool re-creates a shift
+		# as a repair. An approved Shift Request is a person's decision and is left untagged.
+		root = pathlib.Path(hooks.__file__).resolve().parents[1]
+		for path, creator in (
+			("hr/shift_rules.py", "def _create_assignment("),
+			("api/attendance_master_edit.py", "def _submit_assignment("),
+		):
+			body = (root / path).read_text()
+			body = body[body.index(creator) :]
+			self.assertIn("flags.keep_day_markers = True", body[: body.index(".submit()")], path)
+
 	def test_create_shift_assignment_tags_its_shifts_to_keep_the_marks(self):
 		from hrms.hr.doctype.shift_assignment_tool import shift_assignment_tool as tool
 

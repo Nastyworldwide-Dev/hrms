@@ -1085,6 +1085,8 @@ def _link_punches(names, attendance):
 def _submit_assignment(fields):
 	doc = frappe.get_doc({"doctype": "Shift Assignment", **fields})
 	doc.flags.ignore_permissions = True
+	# a repair re-creates a shift; it is not a new word on the day's kind
+	doc.flags.keep_day_markers = True
 	doc.insert()
 	doc.submit()
 	return doc.name

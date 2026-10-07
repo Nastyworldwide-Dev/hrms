@@ -306,6 +306,8 @@ def _create_assignment(employee: str, desired, start_date):
 		}
 	)
 	assignment.flags.ignore_permissions = True
+	# open-ended and made by a rule, not by HR: it must never wipe the person's day marks
+	assignment.flags.keep_day_markers = True
 	assignment.insert()
 	assignment.submit()
 	return assignment
