@@ -8,13 +8,26 @@
 		     down 33 px on every visit and pulled it back when the fetch landed.
 		     iOS refreshes cached rows in place. -->
 		<p class="sr-only" role="status">{{ refreshing ? __("Refreshing…") : "" }}</p>
-		<RequestList :items="lastFive" :resource="lastFiveResource" :what="__('your requests')" compact>
+		<RequestList
+			:items="lastFive"
+			:resource="lastFiveResource"
+			:what="__('your requests')"
+			compact
+		>
 			<template #footer>
 				<button type="button" class="g-form-row g-form-row--action g-seeall" @click="openAll">
 					{{ __("See all") }}
 				</button>
 			</template>
 		</RequestList>
+		<!-- Five good rows are shown, not hidden behind one list's error, but the person is told
+		     a kind of request may be missing (alpha.41 S7). -->
+		<p v-if="partlyLoaded" class="text-caption text-ink-600 mt-2" role="status">
+			{{ __("Some requests didn't load.") }}
+			<button type="button" class="g-seclink g-focusable" @click="lastFiveResource.reload()">
+				{{ __("Try again") }}
+			</button>
+		</p>
 	</div>
 
 	<GModal :is-open="allOpen" :title="__('All your requests')" @did-dismiss="allOpen = false">
@@ -255,9 +268,7 @@ const lastFive = computed(() => lastRequests(myRequests.value))
 //: The six own-request lists seen as ONE resource, so "Your last 5" can tell
 //: loading and failure from "nothing here" (four states, D6). Failure counts
 //: only when there is nothing to show — five good rows are not hidden behind
-//: one list's error.
-//: ceiling: a partial failure with rows reads as complete, upgrade: a "some
-//: requests could not load" line if a single list failing is ever reported.
+//: one list's error; partlyLoaded says one is missing instead.
 const lastFiveResource = reactive({
 	error: computed(() =>
 		lastFive.value.length ? null : MY_REQUEST_LISTS.find((list) => list.error)?.error || null
@@ -265,6 +276,11 @@ const lastFiveResource = reactive({
 	loading: computed(() => MY_REQUEST_LISTS.some((list) => list.loading && !list.data)),
 	reload: () => reloadLists(MY_REQUEST_LISTS, "last five retry"),
 })
+
+//: Rows on screen while one of the six lists failed: the list is incomplete and says so.
+const partlyLoaded = computed(
+	() => lastFive.value.length > 0 && MY_REQUEST_LISTS.some((list) => list.error)
+)
 
 // Attendance Request, OT Request and Replacement Leave Claim are all
 // docstatus-driven (no status/approver field), so the history trail — which is
