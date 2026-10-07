@@ -106,11 +106,11 @@
 								<Link
 									doctype="Shift Type"
 									v-model="form.shift_type"
-									:describedby="form.shift_type ? '' : 'assign-shift-hint'"
+									:describedby="form.shift_type && canSubmit ? '' : 'assign-shift-hint'"
 								/>
 							</label>
 							<span
-								v-if="!form.shift_type"
+								v-if="!form.shift_type || !canSubmit"
 								id="assign-shift-hint"
 								class="text-caption text-ink-600"
 							>
@@ -144,7 +144,7 @@
 							:label="__('Assign shift')"
 							:pending-label="__('Assigning…')"
 							:disabled="!canSubmit"
-							:aria-describedby="canSubmit || form.shift_type ? undefined : 'assign-shift-hint'"
+							:aria-describedby="canSubmit ? undefined : 'assign-shift-hint'"
 							:pending="assignShift.loading || setDayType.loading"
 							@click="submitAssign"
 						/>
