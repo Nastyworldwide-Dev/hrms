@@ -288,3 +288,11 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T03:25:45Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
 - 2026-10-07T03:25:48Z COMMIT: 89fc2e064 fix(roster): Desk half-saved when the new end date fell before the changed day → review+design dispatched
 - 2026-10-07T03:26:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-07T03:26:52Z COMMIT: 865201245 fix(roster): a grey Save or a refused end date did not say what to do → review+design dispatched
+- 2026-10-07T03:28:02Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-10-07T03:28:04Z COMMIT: fba1360dd fix(pwa): a cleared From date left Save grey with the wrong hint → review+design dispatched
+- 2026-10-07T03:29:14Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-10-07T03:29:16Z COMMIT: f035843d2 fix(pwa): with a shift picked and no date, Save was grey with no reason → review+design dispatched
+2026-10-07T04:00:22Z EVIDENCE: 2 correct — D3 test_roster_worked_day_type 22/22 (red on HEAD: 11 fail); 8 roster/pay files green.
+2026-10-07T04:00:22Z EVIDENCE: 3 works — bench fresh.local (real Frappe, rolled back): HR re-types worked FIRST day 28 Sep -> assignment keeps it as Off Day, 29 Sep-2 Oct new assignment None, one remark queued hr_asked=True, _classify_day off/normal; supervisor -> "Ask HR". Test data removed.
+- 2026-10-07T04:00:31Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73

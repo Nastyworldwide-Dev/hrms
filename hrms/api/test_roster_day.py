@@ -283,12 +283,13 @@ class TestSetDayType(unittest.TestCase):
 		self.assertEqual(hr.deleted, [("EMP-1-2026-10-08", False)])
 
 	def test_a_worked_day_in_the_range_refuses_the_whole_call(self):
+		# a supervisor; HR may re-type a worked day (D3, owner R4a: test_roster_worked_day_type.py)
 		self.store.worked = {"2026-10-09"}
-		with _world(self.store), self.assertRaises(frappe.ValidationError):
+		with _world(self.store, user="lead", line=["EMP-1"]), self.assertRaises(frappe.ValidationError):
 			roster.set_day_type("EMP-1", "2026-10-08", "2026-10-10", "Off Day")
 		self.assertEqual(self.store.rows, {}, "no partial range")
 		self.store.mark("EMP-1", "2026-10-09", "Off Day")
-		with _world(self.store), self.assertRaises(frappe.ValidationError):
+		with _world(self.store, user="lead", line=["EMP-1"]), self.assertRaises(frappe.ValidationError):
 			roster.set_day_type("EMP-1", "2026-10-09", None, None)
 		self.assertEqual(
 			self.store.dates("EMP-1"), ["2026-10-09"], "a worked day's marker is not cleared either"

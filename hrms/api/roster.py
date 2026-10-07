@@ -382,10 +382,16 @@ def update_shift_assignment(
 		# not allow_on_submit: a save would refuse it, so the one column is written directly
 		doc.db_set("shift_location", shift_location)
 	if day_type is not NOT_SENT:
+		from hrms.hr.utils import sees_all_employee_data
 		from hrms.utils.ot_calculation import forget_rostered_day_types
 
 		_clear_day_markers(doc.employee, doc.start_date, new_end)
 		forget_rostered_day_types()
+		if sees_all_employee_data(frappe.session.user):
+			# owner R4a: the worked days in the range are re-priced, so each is re-marked
+			worked = _assignments_and_worked_days(doc.employee, doc.start_date)[1]
+			last = getdate(new_end) if new_end else None
+			_remark_retyped_days(doc.employee, [day for day in worked if not last or day <= last], day_type)
 	logger.info(
 		"[roster] %s updated %s: %s",
 		frappe.session.user,
@@ -493,17 +499,30 @@ def break_shift(assignment: str | ShiftAssignment, date: str) -> None:
 		)
 
 
-def _refuse_worked_day(employee: str, date: str) -> None:
+def _worked_day(employee: str, date: str) -> bool:
+	"""True when the day carries Attendance or a punch."""
+	return bool(
+		frappe.db.exists("Attendance", {"employee": employee, "attendance_date": date, "docstatus": ["!=", 2]})
+		or frappe.db.exists("Employee Checkin", {"employee": employee, "time": ["between", [date, date]]})
+	)
+
+
+def _refuse_worked_day(employee: str, date: str, *, day_type_only: bool = False) -> None:
 	"""A day with punches or attendance keeps its shift (owner ruling a, 2 Oct
-	2026): taking it away would leave the punches pointing at no shift."""
-	worked = frappe.db.exists(
-		"Attendance", {"employee": employee, "attendance_date": date, "docstatus": ["!=", 2]}
-	) or frappe.db.exists("Employee Checkin", {"employee": employee, "time": ["between", [date, date]]})
-	if worked:
-		logger.info("[roster] %s refused change on worked day %s %s", frappe.session.user, employee, date)
+	2026): taking it away would leave the punches pointing at no shift.
+
+	`day_type_only`: the change moves the day's Day Type and nothing else, so the
+	punches still point at their shift. HR may then (owner R4a, 7 Oct 2026: the
+	day is re-priced and re-marked); a supervisor is still refused."""
+	if _worked_day(employee, date):
 		from hrms.hr.utils import sees_all_employee_data
 
-		if sees_all_employee_data(frappe.session.user):
+		hr = sees_all_employee_data(frappe.session.user)
+		if day_type_only and hr:
+			logger.info("[roster] %s may re-type worked day %s %s", frappe.session.user, employee, date)
+			return
+		logger.info("[roster] %s refused change on worked day %s %s", frappe.session.user, employee, date)
+		if hr:
 			# HR is who a supervisor is sent to; never tell HR to ask HR
 			frappe.throw(
 				_("This day already has punches or attendance, so its shift cannot be changed here.")
@@ -538,6 +557,26 @@ def _refuse_worked_range_for_supervisor(employee: str, start, end) -> None:
 		frappe.throw(_("Some of these days already have punches or attendance. Ask HR to change them."))
 
 
+def _remark_retyped_days(employee: str, days, day_type: str | None) -> None:
+	"""HR re-typed worked days (owner R4a, 7 Oct 2026): queue each one's attendance re-mark after
+	commit, with HR's authority (money holds stay). Today and later are left to the hourly job by
+	`remark_day_after_commit` itself. Callers pass HR only: `hr_asked` is HR's word."""
+	if not days:
+		return
+	from hrms.utils.day_remark import remark_day_after_commit
+
+	reason = f"day type changed to {day_type or 'None'} by {frappe.session.user}"
+	queued = [str(day) for day in days if remark_day_after_commit(employee, day, reason, hr_asked=True)]
+	logger.info(
+		"[roster] %s re-marks %d of %d worked day(s) of %s: %s",
+		frappe.session.user,
+		len(queued),
+		len(days),
+		employee,
+		", ".join(queued) or "none (today or later)",
+	)
+
+
 @frappe.whitelist(methods=["POST"])
 def remove_shift_day(assignment: str, date: str) -> None:
 	"""Nadi Team roster "Remove": take one day out of an assignment."""
@@ -566,9 +605,17 @@ def change_shift_day(
 	doc = frappe.get_doc("Shift Assignment", assignment)
 	employee, company, status = doc.employee, doc.company, doc.status
 	sent_day_type = day_type
-	day_type = day_type or doc.get("day_type") or "None"
+	current_day_type = doc.get("day_type") or "None"
+	day_type = day_type or current_day_type
 	shift_type = shift_type or doc.shift_type
 	shift_location = doc.shift_location if shift_location is NOT_SENT else (shift_location or None)
+	# only the Day Type moves: the day keeps its shift and location, so punches on it still point at them
+	day_type_only = (
+		bool(sent_day_type)
+		and sent_day_type != current_day_type
+		and shift_type == doc.shift_type
+		and (shift_location or None) == (doc.shift_location or None)
+	)
 	logger.info(
 		"[roster] %s changes %s on %s to %s at %s (%s)",
 		frappe.session.user,
@@ -578,11 +625,37 @@ def change_shift_day(
 		shift_location,
 		day_type,
 	)
-	remove_shift_day(doc.name, date)
-	_insert_shift(employee, company, shift_type, date, date, status, shift_location, day_type=day_type)
+	retyped_worked = day_type_only and _worked_day(employee, date)
+	if retyped_worked:
+		# owner R4a: HR may re-type a worked day, a supervisor is refused here. The shift stays,
+		# so this skips remove_shift_day, whose refusal is for a shift change.
+		_ensure_can_roster_employee(employee)
+		_refuse_worked_day(employee, date, day_type_only=True)
+	if retyped_worked and date_diff(date, doc.start_date) == 0:
+		# A first day cannot be cut off: break_shift would cancel the assignment, which Frappe
+		# refuses while punches point at it. The assignment keeps the day, re-typed in place
+		# (day_type and end_date are allow_on_submit), and the rest moves to a new assignment.
+		rest_end = doc.end_date
+		doc.flags.ignore_permissions = True
+		doc.day_type = day_type
+		doc.end_date = date
+		doc.save()
+		if not rest_end or date_diff(rest_end, date) > 0:
+			_insert_shift(
+				employee, company, shift_type, add_days(date, 1), rest_end, status, shift_location,
+				day_type=current_day_type,
+			)
+	else:
+		if retyped_worked:
+			break_shift(doc, date)
+		else:
+			remove_shift_day(doc.name, date)
+		_insert_shift(employee, company, shift_type, date, date, status, shift_location, day_type=day_type)
 	if sent_day_type:
 		# the caller named a Day Type for this one day: the last word wins over a marker
 		_clear_day_markers(employee, date, date)
+	if retyped_worked:
+		_remark_retyped_days(employee, [date], day_type)
 
 
 def _assignments_and_worked_days(employee: str, start) -> tuple[list, list]:
@@ -868,7 +941,7 @@ def set_day_type(
 	and attendance reader asks `_classify_day`, which reads it before any Shift
 	Assignment. An empty day_type (or "None") deletes the markers in the range.
 	Same write fence as insert_shift; a day with punches or attendance is refused
-	for everyone (HR may re-type a worked day in a later release).
+	for a supervisor. HR may re-type it (owner R4a, 7 Oct 2026): the day is re-marked.
 
 	Idempotent: the same call twice leaves the same rows. Returns {"saved": n}:
 	the days now carrying the word, or the markers removed when clearing.
@@ -877,6 +950,7 @@ def set_day_type(
 
 	from frappe.utils import getdate
 
+	from hrms.hr.utils import sees_all_employee_data
 	from hrms.utils.ot_calculation import forget_rostered_day_types
 
 	_ensure_can_roster_employee(employee)
@@ -897,7 +971,7 @@ def set_day_type(
 
 	days = [start + timedelta(days=offset) for offset in range((end - start).days + 1)]
 	for day in days:
-		_refuse_worked_day(employee, str(day))
+		_refuse_worked_day(employee, str(day), day_type_only=True)
 
 	# The fence above admits HR (in company) and a supervisor's own line; for that
 	# line Frappe's per-document checks are skipped, as insert_shift does.
@@ -911,13 +985,17 @@ def set_day_type(
 		)
 	}
 	saved = 0
+	changed = []
 	for day in days:
 		row = marked.get(day)
 		if clearing:
 			if row:
 				frappe.delete_doc("Roster Day", row.name, ignore_permissions=own_line)
 				saved += 1
+				changed.append(day)
 			continue
+		if row is None or row.day_type != day_type:
+			changed.append(day)
 		if not row:
 			doc = frappe.get_doc(
 				{"doctype": "Roster Day", "employee": employee, "date": str(day), "day_type": day_type}
@@ -940,6 +1018,9 @@ def set_day_type(
 		day_type or "cleared",
 		saved,
 	)
+	if sees_all_employee_data(frappe.session.user):
+		# only HR got past a worked day above (owner R4a): the days it re-typed are re-marked
+		_remark_retyped_days(employee, [day for day in changed if _worked_day(employee, str(day))], day_type)
 	return {"saved": saved}
 
 

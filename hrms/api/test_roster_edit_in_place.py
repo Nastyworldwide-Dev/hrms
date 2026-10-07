@@ -33,6 +33,7 @@ import frappe
 
 from hrms.api import roster
 from hrms.api.test_roster_day import _Store, _world
+from hrms.utils import day_remark
 
 _REAL_VALID_DAY_TYPE = roster._valid_day_type
 DAY_TYPE_OPTIONS = "None\nWork Day\nRest Day\nOff Day\nPublic Holiday"
@@ -54,6 +55,15 @@ class _EditStore(_Store):
 				lo, hi = between[1]
 				return any(str(lo) <= day <= str(hi) for day in self.worked)
 		return super().exists(arg, filters)
+
+	def get_all(self, doctype, filters=None, fields=None, pluck=None, **kwargs):
+		# what `_assignments_and_worked_days` reads: the attendance days, no punches, no other assignment
+		if doctype == "Attendance":
+			start = str(filters["attendance_date"][1])
+			return sorted(day for day in self.worked if day >= start)
+		if doctype in ("Shift Assignment", "Employee Checkin"):
+			return []
+		return super().get_all(doctype, filters, fields, pluck, **kwargs)
 
 
 def _assignment(**fields):
@@ -85,6 +95,8 @@ class _Base(unittest.TestCase):
 		self.doc = _assignment()
 		self.created = MagicMock()
 		self.logger = MagicMock()
+		self.broke = MagicMock()  # break_shift: the split itself is not under test here
+		self.remark = MagicMock(return_value=True)  # the real one queues a job after commit
 
 	def world(self, **kwargs):
 		stack = ExitStack()
@@ -98,6 +110,8 @@ class _Base(unittest.TestCase):
 			(roster, "create_shift_assignment", self.created),
 			(roster, "remove_shift_day", MagicMock()),
 			(roster, "logger", self.logger),
+			(roster, "break_shift", self.broke),
+			(day_remark, "remark_day_after_commit", self.remark),
 		):
 			stack.enter_context(patch.object(obj, name, value, create=True))
 		return stack
