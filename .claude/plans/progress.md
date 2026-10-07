@@ -264,3 +264,6 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T08:11:04Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 1 extra test file(s) ⟂b7fff5e7f6e0
 - 2026-10-07T08:11:08Z COMMIT: 96ac1b8e1 fix(pwa): a refusal with an unclosed tag could reach the toast as markup → review+design dispatched
 - 2026-10-07T08:12:07Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-07T08:12:13Z COMMIT: 2c4353b69 test(roster): pin that Desk names each request state with Nadi's word → review+design dispatched
+- 2026-10-07T08:13:39Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
+- 2026-10-07T08:13:40Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 1 extra test file(s) ⟂b7fff5e7f6e0
