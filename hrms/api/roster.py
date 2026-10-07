@@ -330,6 +330,7 @@ def update_shift_assignment(
 
 	doc = frappe.get_doc("Shift Assignment", assignment)
 	_ensure_can_roster_employee(doc.employee)
+	old_day_type = doc.get("day_type") or "None"
 	if doc.docstatus != 1:
 		# the location is written without a save, so Frappe's own check never runs
 		frappe.throw(_("Only a submitted shift assignment can change."))
@@ -385,10 +386,12 @@ def update_shift_assignment(
 		from hrms.hr.utils import sees_all_employee_data
 		from hrms.utils.ot_calculation import forget_rostered_day_types
 
-		_clear_day_markers(doc.employee, doc.start_date, new_end)
+		markers = _clear_day_markers(doc.employee, doc.start_date, new_end)
 		forget_rostered_day_types()
-		if sees_all_employee_data(frappe.session.user):
-			# owner R4a: the worked days in the range are re-priced, so each is re-marked
+		if sees_all_employee_data(frappe.session.user) and (markers or day_type != old_day_type):
+			# owner R4a: the worked days in the range are re-priced, so each is re-marked.
+			# Re-sending the word it already has re-prices nothing: re-marking every worked day
+			# since the start with HR's authority would overwrite hand-keyed days for no change.
 			worked = _assignments_and_worked_days(doc.employee, doc.start_date)[1]
 			last = getdate(new_end) if new_end else None
 			_remark_retyped_days(doc.employee, [day for day in worked if not last or day <= last], day_type)
@@ -566,6 +569,9 @@ def _remark_retyped_days(employee: str, days, day_type: str | None) -> None:
 	from hrms.utils.day_remark import remark_day_after_commit
 
 	reason = f"day type changed to {day_type or 'None'} by {frappe.session.user}"
+	# ceiling: one queued job per worked day, so re-typing a months-long assignment queues that
+	# many in one request (the count is logged below), upgrade: one background sweep job when a
+	# log line shows more than a pay window (31 days) at once.
 	queued = [str(day) for day in days if remark_day_after_commit(employee, day, reason, hr_asked=True)]
 	logger.info(
 		"[roster] %s re-marks %d of %d worked day(s) of %s: %s",
