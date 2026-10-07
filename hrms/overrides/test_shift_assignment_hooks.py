@@ -173,17 +173,36 @@ class TestAHandMadeShiftClearsTheDayMarks(unittest.TestCase):
 			"hr/doctype/shift_request/shift_request.py",
 			"hr/doctype/shift_swap_request/shift_swap_request.py",
 		}
+		# loose on purpose (review of 9f61777a3): any file that names the doctype AND builds a
+		# document in any style — new_doc, get_doc with a dict or dict(), copy_doc, mapped docs
+		builds = re.compile(r"new_doc\(|get_doc\(\s*(\{|dict\()|copy_doc\(|get_mapped_doc\(")
 		creators = set()
 		for path in root.rglob("*.py"):
 			rel = path.relative_to(root).as_posix()
 			if "/test_" in rel or rel.startswith(("tests/", "patches/")) or "/probes/" in rel:
 				continue
 			text = path.read_text()
-			if re.search(
-				r'new_doc\("Shift Assignment"\)|get_doc\(\s*\{\s*"doctype": "Shift Assignment"', text
-			) or ("copy_doc(assignment)" in text and "Shift Assignment" in text):
+			if "Shift Assignment" in text and builds.search(text):
 				creators.add(rel)
-		creators.discard("api/roster.py")  # its "doctype" dict is a filter, not a document
+		# files that name the doctype and build OTHER documents only (looked at, 7 Oct 2026)
+		builds_other_documents = {
+			"api/roster.py",  # its "doctype" dict is a filter
+			"api/attendance_fix_day.py",
+			"hr/doctype/shift_assignment/shift_assignment.py",
+			"hr/doctype/shift_type/shift_type.py",
+			"utils/attendance_recovery.py",
+			"api/__init__.py",
+			"hr/doctype/attendance/attendance.py",
+			"hr/doctype/attendance_request/attendance_request.py",
+			"hr/doctype/employee_attendance_tool/employee_attendance_tool.py",
+			"hr/doctype/employee_checkin/employee_checkin.py",
+			"overrides/employee_checkin_override.py",
+			"setup.py",
+			"sync/parity.py",
+			"sync/runner.py",  # mirrors submitted rows as drafts, then sets docstatus: no on_submit
+			"utils/shift_reminders.py",
+		}
+		creators -= builds_other_documents
 		self.assertEqual(creators, tagged | a_persons_decision)
 		for rel in tagged:
 			self.assertIn("keep_day_markers = True", (root / rel).read_text(), rel)
