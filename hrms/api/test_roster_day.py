@@ -439,5 +439,24 @@ class TestLastWordWins(unittest.TestCase):
 		self.assertEqual(callers, [], "internal callers must use _insert_shift")
 
 
+class TestNoRoleReadsEveryMarker(unittest.TestCase):
+	def test_a_shift_supervisor_holds_no_role_permission_on_markers(self):
+		# Review of ee44ec9fc: a plain role read has no row fence, so get_list would
+		# hand a supervisor every company's markers. Their own line is written
+		# through set_day_type, which skips the document checks for that line only.
+		import json
+
+		meta = json.loads(
+			(
+				pathlib.Path(roster.__file__).resolve().parents[1]
+				/ "hr"
+				/ "doctype"
+				/ "roster_day"
+				/ "roster_day.json"
+			).read_text()
+		)
+		self.assertNotIn("Shift Supervisor", [p["role"] for p in meta["permissions"]])
+
+
 if __name__ == "__main__":
 	unittest.main()

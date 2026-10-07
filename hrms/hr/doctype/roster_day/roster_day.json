@@ -99,11 +99,6 @@
    "role": "HR User",
    "share": 1,
    "write": 1
-  },
-  {
-   "read": 1,
-   "report": 1,
-   "role": "Shift Supervisor"
   }
  ],
  "sort_field": "date",
