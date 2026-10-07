@@ -10,6 +10,46 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.41] — Clean Glass — 2026-10-07
+
+Managers who approve for another company see their people's requests, and
+the app's rough edges are smoothed: words, colours, errors and the Back key.
+
+### Fixed
+- **A named approver sees requests from any company.** A manager in one
+  company who approves for staff in another (TNME, and Dubai and South Africa
+  as they join) now sees and decides their leave, claims, shift, On Duty, OT
+  and replacement leave on Approvals and on Desk. HR who are limited to some
+  companies still see only those companies, plus the people they approve for.
+  The OT summary goes to that manager, not to HR.
+- **An expense claim is always filed under the employee's company,** and an
+  old draft keeps its company if the employee moves.
+- **Approvals shows its colours again.** Ticks, the selected box and the age
+  line had lost their colour.
+- **One word for waiting.** List filters say Waiting, Approved and Not
+  approved, the same words as the rows.
+- **Errors read cleanly.** A request's save error uses the app's own style;
+  a refusal keeps its "<" and ">"; line breaks no longer run sentences
+  together; "&" shows as "&".
+- **"Your last 5" says when part of it did not load,** with Try again.
+- **Android Back with a sheet open closes only the sheet,** stays on the page
+  and returns focus to the button that opened it.
+- **Dark mode:** fields and bars inside sheets keep their edge; the picked
+  tick in a picker is readable in light mode.
+- **A sent request's date and time read as words** ("24 Sep 2026, 5:58 pm"),
+  not a greyed box in US format.
+
+### Changed
+- Old hard-coded colours now follow the Glass design tokens (no visible
+  change). The design checks run honestly in CI; the checks that need a
+  running site are run before each release.
+- Behind the scenes: the error-message, Back-key focus and app-update code is
+  split into smaller parts with their own tests (no visible change).
+
+### Deploy
+- Run **migrate**: a patch lets an approver open a request from another
+  company (six request types).
+
 ## [2.0.0-alpha.40] — Days Off Everywhere — 2026-10-07
 
 A day HR marks off reads as a day off on every screen, and a shift HR adds

@@ -2,103 +2,6 @@
 2026-09-07T07:20Z COMMIT: ec2224979 fix late-checkout bound; 7c9ed90d6 feat re-mark attendance on approval; 776ee69ec audit doc; pushed 108d7158f
 2026-09-07T07:20Z NEXT: Nabil deploys (bench migrate runs); then audit fix plan row 1 (desktop_icon roles) + row 2 (payroll report timestamps + patch)
 2026-09-07T07:25Z COMMIT: 778774f58 same-punch window; 81f68b879 double toast; pushed
-- 2026-10-06T03:17:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 9 file(s) ⟂0819c392f5b2
-- 2026-10-06T03:17:42Z EVIDENCE: 3 works — blast radius green: 15 dependent(s), 12 extra test file(s) ⟂84fa3520acad
-- 2026-10-06T03:17:44Z COMMIT: 17136b06d fix(approvals): a decision without the revision the approver read skipped the check → review dispatched
-- 2026-10-06T03:18:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-10-06T03:18:21Z EVIDENCE: 3 works — blast radius green: 15 dependent(s), 12 extra test file(s) ⟂84fa3520acad
-- 2026-10-06T03:18:24Z COMMIT: 37b666465 perf(leave): the leave list read the database once per row for the reason check → review dispatched
-- 2026-10-06T03:21:27Z COMPACT: context compacted — read the last NEXT above before continuing
-- 2026-10-06T03:26:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-10-06T03:26:50Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 10 extra test file(s) ⟂26261ccd9d8d
-- 2026-10-06T03:32:37Z EVIDENCE: 2 correct — mapped tests green (bun ) for 9 file(s) ⟂0e91782f6c7d
-- 2026-10-06T03:32:41Z COMMIT: 3e6df44b1 fix(pwa): pulling down did nothing on seven screens → review+design dispatched
-- 2026-10-06T03:40:02Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
-- 2026-10-06T03:40:09Z COMMIT: 873ceee08 test(helpdesk): the hub test could not build the page after pull-down landed → review+design dispatched
-- 2026-10-06T04:24:59Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-06T04:25:05Z COMMIT: e089c3d3d fix(issues): HR pulling down on the issue board did nothing → review+design dispatched
-- 2026-10-06T04:25:17Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-10-06T04:25:20Z COMMIT: 397c34910 fix(attendance): the calendar pull closed before the month had loaded → review+design dispatched
-- 2026-10-06T04:25:33Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
-- 2026-10-06T04:25:33Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 10 extra test file(s) ⟂26261ccd9d8d
-- 2026-10-06T04:25:38Z COMMIT: 666d6007b fix(session): a failed Log out could hide a later "you were signed out" → review+security+design dispatched
-- 2026-10-06T04:25:48Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-06T04:25:52Z COMMIT: c6d8abb4d fix(login): an expired session left the last page copy on the phone → review+security+design dispatched
-- 2026-10-06T04:26:17Z COMMIT: ee75de979 test(e2e): the pull-refresh gate covers the seven screens that lacked it → review+design dispatched
-- 2026-10-06T04:27:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 1 file(s) ⟂c80ac5cacfbd
-- 2026-10-06T04:27:08Z COMMIT: 9cc7d3563 test(checkin): the no-selfie guard test read the indent, not the guard → review dispatched
-- 2026-10-06T04:30:07Z COMMIT: 1ef5b3271 docs(audit): the Shift Supervisor Desk probe has no supervisor to run as → review dispatched
-- 2026-10-06T04:32:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-10-06T04:32:42Z EVIDENCE: 3 works — blast radius green: 3 dependent(s), 2 extra test file(s) ⟂add7c1e7c916
-- 2026-10-06T04:32:50Z COMMIT: d21f3dad9 perf(approvals): the approvals list asked the leave-reason rule once per row → review dispatched
-- 2026-10-06T04:34:26Z COMMIT: 5e0c6fdd0 chore(release): 2.0.0-alpha.36 Loose Ends → review+deps dispatched
-
-- 2026-10-06 alpha.36 "Loose Ends" released: tag v2.0.0-alpha.36. A1-A4, O1, D1 (pipeline-health reads wrapped upgrade:), D2 tickets, G1 (pre-commit-test leaves e2e specs to Playwright; humanless-pipeline 6777dcb, local), G2 (.no-release-gate).
-DEAD END: V1 supervisor probe: fresh.local has no Shift Supervisor with reports; setting a test password was refused.
-NEXT: owner deploys; seed a supervisor on fresh.local (owner call) then run /tmp/slices/alpha36-V1.md; humanless-pipeline commits 6777dcb + 0639d1a are local, push on owner word; bench (evals/ab.sh) not run.
-- 2026-10-06T04:35:03Z PUSH: nz-glass @ 405c1997d
-- 2026-10-06T04:35:04Z COMMIT: 405c1997d docs(handoff): alpha.36 released → review dispatched
-- 2026-10-06T04:45:42Z COMMIT: 405c1997d docs(handoff): alpha.36 released → review dispatched
-- 2026-10-06T04:49:10Z COMMIT: 405c1997d docs(handoff): alpha.36 released → review dispatched
-- 2026-10-06T04:52:07Z COMMIT: 679cc0255 docs(audit): a Shift Supervisor on Desk sees their team and no one else → review dispatched
-- 2026-10-06T04:57:49Z COMMIT: e3474242c docs(audit): owner rulings on supervisor access; remote check-ins tested → review dispatched
-- 2026-10-06T05:26:40Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-10-06T05:26:40Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-10-06T05:26:43Z COMMIT: 929945a60 fix(pwa): a page you may not open said "Could not load, try again" → review+security+design dispatched
-- 2026-10-06T05:26:54Z EVIDENCE: 2 correct — mapped tests green (bun ) for 17 file(s) ⟂da5fdd6c5fcd
-- 2026-10-06T05:26:56Z COMMIT: 3e3a09306 fix(pwa): a long name or reason wrapped rows onto three lines on a phone → review+design dispatched
-- 2026-10-06T05:28:25Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-06T05:28:28Z COMMIT: 5ddbc5e01 fix(a11y): a screen reader opening any sheet heard "dialog" and no name → review+design dispatched
-- 2026-10-06T05:29:05Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-06T05:29:09Z COMMIT: c946b1ce7 fix(a11y): the must-read notice was an unnamed dialog too → review+design dispatched
-- 2026-10-06T05:29:52Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-10-06T05:29:54Z COMMIT: adaa441b1 fix(pwa): a long name could cut off how many requests are waiting → review+design dispatched
-- 2026-10-06T05:31:08Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
-- 2026-10-06T05:31:11Z COMMIT: 1049cbd54 fix(a11y): every toast had an unnamed 20 px close button → review+design dispatched
-- 2026-10-06T05:34:24Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
-- 2026-10-06T05:34:27Z COMMIT: 0fc29cea0 fix(a11y): a sheet was announced as two dialogs, and Close was English only → review+design dispatched
-- 2026-10-06T05:42:58Z EVIDENCE: 2 correct — mapped tests green (bun ) for 13 file(s) ⟂884c4344e835
-- 2026-10-06T05:42:58Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 13 extra test file(s) ⟂2d3ffee99479
-- 2026-10-06T05:43:02Z COMMIT: 594cc6b6b refactor(session): one function decides that the session ended → review+security+design dispatched
-- 2026-10-06T05:45:32Z COMMIT: 9def8161d chore(a11y): the known-problems list was out of date; it is now empty → review dispatched
-- 2026-10-06T05:48:05Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
-- 2026-10-06T05:48:05Z EVIDENCE: 3 works — blast radius green: 25 dependent(s), 10 extra test file(s) ⟂26261ccd9d8d
-- 2026-10-06T05:48:08Z COMMIT: f42188553 fix(session): a 403 that is not an expiry could reload the page forever → review+security+design dispatched
-- 2026-10-06T05:49:39Z COMMIT: 0db6c24c6 chore(release): 2.0.0-alpha.37 Clear Screens → review+deps dispatched
-
-- 2026-10-06 alpha.37 "Clear Screens" released: tag v2.0.0-alpha.37. B2 no-access sentence, B3 one-line names (+summary rows wrap), B1 sheet/notice/toast names (16-item a11y baseline was stale: 0 serious on 76), R1 sessionEnded owner + reload-loop guard, V1 supervisor Desk audit + owner rulings, P1 lint hook re-linked to humanless-pipeline (was /opt/keel bare git add -u), T1 test HR + supervisor on fresh.local.
-DEAD END: 25 other ~/.claude/hooks still link /opt/keel (older versions) - owner call, one gate at a time.
-NEXT: owner deploys; alpha.38 = second toast after no-access, 4 parts blank on failed load (RequestTimeline, ExpensesTable, ExpenseTaxesTable, MustReadNotice); humanless-pipeline commits local (6777dcb, 0639d1a, c6ac5e7).
-- 2026-10-06T05:49:58Z PUSH: nz-glass @ b04e69ab6
-- 2026-10-06T05:49:58Z COMMIT: b04e69ab6 docs(handoff): alpha.37 released → review dispatched
-- 2026-10-06T06:26:20Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-10-06T06:26:24Z COMMIT: ecf979a03 feat(approvals): a request does not wait on an approver who is on leave → review dispatched
-- 2026-10-06T06:28:34Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-10-06T06:28:36Z COMMIT: 68b8306f9 fix(approvals): someone could get two reminders on the same morning → review dispatched
-- 2026-10-06T06:55:06Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
-- 2026-10-06T06:55:06Z EVIDENCE: 3 works — blast radius green: 5 dependent(s), 3 extra test file(s) ⟂17919a97fd02
-- 2026-10-06T06:55:09Z COMMIT: 2dca91f50 feat(requests): cancelling an approved request tells its approver and HR → review+cross-app dispatched
-- 2026-10-06T06:58:27Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-10-06T06:58:27Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
-- 2026-10-06T06:58:31Z COMMIT: 1b6d48c1c fix(approvals): a long leave with one half day was not read as away → review dispatched
-- 2026-10-06T07:00:09Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-10-06T07:00:09Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-10-06T07:00:13Z COMMIT: f5ed29ab4 fix(expense): the same expense could be claimed and paid twice → review dispatched
-- 2026-10-06T07:02:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-10-06T07:02:21Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-10-06T07:02:26Z COMMIT: ff7e6c09b fix(expense): a copy filed later made the original claim unapprovable → review dispatched
-- 2026-10-06T07:05:42Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 4 file(s) ⟂43f52428a892
-- 2026-10-06T07:05:42Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-10-06T07:05:44Z COMMIT: 6fc26b344 fix(expense): an old draft edited to copy a newer claim slipped past the check → review dispatched
-- 2026-10-06T07:11:16Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
-- 2026-10-06T07:11:16Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
-- 2026-10-06T07:11:19Z COMMIT: f370bb56d fix(expense): adding a receipt to an original claim was refused for its old line → review dispatched
-- 2026-10-06T07:59:34Z EVIDENCE: 2 correct — mapped tests green (bun ) for 5 file(s) ⟂99296e5bb39c
-- 2026-10-06T07:59:40Z COMMIT: 3b7b8bc1f fix(sop): HR editing an SOP in Nadi saw raw code and could not format it → review+design dispatched
-- 2026-10-06T08:01:15Z EVIDENCE: 2 correct — mapped tests green (pytest bun ) for 11 file(s) ⟂754ac19061fd
-- 2026-10-06T08:01:15Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 2 extra test file(s) ⟂cf4a11809724
-- 2026-10-06T08:01:19Z COMMIT: df96cb48c feat(expense): Nadi shows the "you already claimed this" warning too → review+security+design+cross-app dispatched
-- 2026-10-06T08:03:16Z EVIDENCE: 2 correct — mapped tests green (bun ) for 3 file(s) ⟂788cca13b6a1
 - 2026-10-06T08:03:25Z COMMIT: 4e1563923 fix(sop): a picture HR inserted in an SOP showed empty to staff → review+design dispatched
 - 2026-10-06T08:06:46Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 5 file(s) ⟂a3a4f7ac8d73
 - 2026-10-06T08:06:46Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
@@ -291,3 +194,42 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T09:11:26Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
 - 2026-10-07T09:11:30Z COMMIT: d7e728d11 fix(pwa): after Back closed a sheet, focus fell to the page instead of its opener → review+design dispatched
 2026-10-07T09:27:17Z EVIDENCE: 2 correct — S8: lint 47 total 0 new (baseline was stale: 234 -> 47, most debt cleared earlier); frontend suite 1599/1599; GATES_NO_SITE=1 yarn gates rc 0. 5 looks right — S8a 75 captures 390x844 light+dark: 72 identical, 2 AA-only (18px, 5px), 1 not comparable (server 500); S8b 18 captures: 16 identical, 2 dark differ 6/4 px.
+- 2026-10-07T09:27:23Z COMMIT: 305a23de1 refactor(pwa): dead check-in map styles go, old Ionic colours follow the Glass tokens → review+design dispatched
+- 2026-10-07T09:40:29Z COMPACT: context compacted — read the last NEXT above before continuing
+- 2026-10-07T10:02:08Z COMMIT: 75d2bebae docs(design): say why each accepted light/dark colour pair is accepted → review+security dispatched
+- 2026-10-07T10:07:28Z EVIDENCE: 2 correct — mapped tests green (bun ) for 8 file(s) ⟂514b00a817f9
+- 2026-10-07T10:07:31Z COMMIT: a1cdce0da fix(pwa): page colours inside sheets vanished in dark, a picked tick was unreadable in light → review+security+design dispatched
+- 2026-10-07T10:09:44Z EVIDENCE: 2 correct — mapped tests green (bun ) for 1 file(s) ⟂447b403db931
+- 2026-10-07T10:09:48Z COMMIT: e14132445 test(pwa): find the sheet-token sites by what the line says, not its number → review+security+design dispatched
+- 2026-10-07T10:29:30Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 18 file(s) ⟂5a2db5800a86
+- 2026-10-07T10:29:30Z EVIDENCE: 3 works — blast radius green: 66 dependent(s), 60 extra test file(s) ⟂b2e83537742b
+- 2026-10-07T10:29:32Z COMMIT: 40d3760a3 fix(approvals): a named approver in another company saw none of his reports' requests → review+security dispatched
+- 2026-10-07T10:35:05Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-07T10:35:07Z COMMIT: 30a5315a0 fix(approvals): HR limited to one company still could not see an On Duty on their own line → review dispatched
+- 2026-10-07T10:36:26Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-07T10:36:26Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-10-07T10:36:28Z COMMIT: 7ada56a41 fix(claims): an Expense Claim could be filed under a company sent by the client → review dispatched
+- 2026-10-07T10:39:59Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-07T10:40:04Z COMMIT: 3a952df0a fix(approvals): a fenced HR user's On Duty list showed rows that 403'd on open → review dispatched
+- 2026-10-07T10:40:20Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-07T10:40:20Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-10-07T10:40:36Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 3 file(s) ⟂def0d4bb8c36
+- 2026-10-07T10:40:36Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-10-07T10:40:38Z COMMIT: 1df336a01 fix(claims): an old draft claim re-pointed itself at submit after its employee moved company → review dispatched
+- 2026-10-07T10:42:19Z COMMIT: 16bf22708 test(e2e): prove a list's second page loads and the Desk roster keeps Day Types → review+design dispatched
+- 2026-10-07T10:43:21Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 2 file(s) ⟂e6004e8cb4c1
+- 2026-10-07T10:43:21Z EVIDENCE: 3 works — blast radius green: 2 dependent(s), 1 extra test file(s) ⟂2b4564685e81
+- 2026-10-07T10:43:23Z COMMIT: 22c5f2364 fix(claims): a claim settling an advance left the advance's company after a company move → review dispatched
+- 2026-10-07T11:00:42Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-07T11:00:44Z COMMIT: 066b18f6a fix(pwa): a sent request's date-time sat in a greyed US-format box → review+design dispatched
+- 2026-10-07T11:01:18Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
+- 2026-10-07T11:01:18Z EVIDENCE: 3 works — blast radius green: 4 dependent(s), 4 extra test file(s) ⟂c68dc5c03ea4
+- 2026-10-07T11:01:21Z COMMIT: 2c68a9b36 refactor(pwa): the router's focus release moves to its own module, sharing one samePage rule → review+design dispatched
+- 2026-10-07T11:01:36Z EVIDENCE: 2 correct — mapped tests green (bun ) for 10 file(s) ⟂f3b86cf4d3e6
+- 2026-10-07T11:01:36Z EVIDENCE: 3 works — blast radius green: 6 dependent(s), 4 extra test file(s) ⟂36d20de2ec08
+- 2026-10-07T11:01:38Z COMMIT: 979c69fa7 refactor(pwa): loudRequest splits into what a refusal says and how a failure is reported → review+design dispatched
+- 2026-10-07T11:01:53Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-07T11:01:53Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 0 extra test file(s) ⟂2065c46f7f10
+- 2026-10-07T11:01:55Z COMMIT: cf6e15bd0 refactor(pwa): service worker start-up moves out of main.js → review+design dispatched
+2026-10-07T11:33:04Z EVIDENCE: 4 gates — alpha.41 full served run (fresh.local, final bundle, AUDIT_PW): lint 47/0 new, usage 0, contrast 20/0, surfaces 46/0, tokens 19 known, scale ok, motion ok, a11y 76 screens 0 serious; visual FAIL 94 (baselines from alpha.14), coherence FAIL 2 (dash-attendance), ios FAIL 1 (/approvals banner radius) — all three predate alpha.41, ticket-served-gates-stale.md
+2026-10-07T11:33:04Z NEXT: release alpha.41 tagged; owner deploys + migrate. Then ticket-served-gates-stale.md before alpha.42; S12 items 4-5 (approvalToast table, attendance_list dialog) still open.
