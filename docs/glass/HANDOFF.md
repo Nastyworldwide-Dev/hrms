@@ -1,11 +1,13 @@
 # HANDOFF
-prompt:   alpha.40 "Days Off Everywhere" (owner, 7 Oct: day marks on every screen; Desk-form shift clears a mark)
+prompt:   alpha.41 Clean Glass + HR cross-company approver
 status:   done
-commit:   efe292f0d on nz-glass (tag v2.0.0-alpha.40, GitHub Release created)
-files:    hrms/api/now.py (Home + day sheet: a marked day is a day off)
-          hrms/api/team.py (Team status: Off on a marked day)
-          hrms/overrides/shift_assignment_hooks.py + hrms/hooks.py (hand-made shift clears the mark)
-          hrms/hr/shift_rules.py, hrms/api/attendance_master_edit.py, shift_assignment_tool.py (code-made shifts keep it)
-verify:   live site: migrate (alpha.39's Roster Day if not yet); mark a day Off -> Team says Off; add a Desk shift on it -> mark gone
-flags:    Glass gates CI red on every push since before alpha.38; pre-existing test failures listed in progress.md
-next:     owner puts alpha.39 + alpha.40 live and runs migrate
+commit:   6feb489e8 on nz-glass (tag v2.0.0-alpha.41)
+files:    hrms/hr/utils.py (approval walk ignores company)
+          hrms/api/approval.py, hrms/api/remote_checkin.py
+          hrms/overrides/{approval,ot,employee_owned}_row_scope.py
+          hrms/patches/v16_0/approver_reads_past_company_user_permissions.py
+          hrms/hr/doctype/expense_claim/expense_claim.py
+          frontend/src (S1-S12 UI fixes, 3 refactors)
+verify:   run migrate on the live site; Amran (TNME) opens Approvals and sees his other-company reports
+flags:    served gates visual/coherence/ios red from before alpha.41 (ticket-served-gates-stale.md); S12 items 4-5 skipped
+next:     re-baseline visual + fix 2 coherence + 1 ios finding before alpha.42
