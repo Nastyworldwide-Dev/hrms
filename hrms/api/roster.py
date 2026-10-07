@@ -23,6 +23,25 @@ ROSTER_SUPERVISOR_ROLE = "Shift Supervisor"
 logger = frappe.logger("hrms")
 
 
+class _NotSent(str):
+	"""The default of an optional field the browser did not send.
+
+	Frappe hands a whitelisted function only the keyword arguments the browser
+	sent, so "left out" (keep what is there) and "sent empty" (clear it) need two
+	different defaults. A str subclass, so Frappe's argument-type check, which adds
+	the default's type to the annotation, still reads `str | None`. Compare with
+	`is`, never `==`: it equals "" like any empty string.
+	"""
+
+	__slots__ = ()
+
+	def __repr__(self):
+		return "<not sent>"
+
+
+NOT_SENT = _NotSent()
+
+
 def _ensure_can_roster(employee: str) -> None:
 	"""Write fence for every roster action. Mirrors the read fence
 	(_may_read_employee) but for WRITES, and fails CLOSED:
@@ -287,31 +306,88 @@ def delete_shift_assignment(assignment: str) -> None:
 
 
 @frappe.whitelist(methods=["POST"])
-def update_shift_assignment(assignment: str, status: str, end_date: str | None = None) -> None:
-	"""Desk Roster "Update": status and end date of the whole assignment.
+def update_shift_assignment(
+	assignment: str,
+	status: str | None = NOT_SENT,
+	end_date: str | None = NOT_SENT,
+	day_type: str | None = NOT_SENT,
+	shift_location: str | None = NOT_SENT,
+) -> None:
+	"""Desk Roster "Update" and the edit-in-place of the whole assignment (owner, R3a, 7 Oct 2026).
+
+	Changes only the fields the caller SENT; the rest stay as they are. An empty
+	end_date means open-ended, an empty shift_location means none, a Day Type of
+	"None" follows the holiday calendar again.
 
 	Was frappe.client set_value from the browser — Frappe's write check, with
 	the company User Permission, refused a supervisor's report in another
-	company. Only the two fields that may change after submit.
+	company. status, end_date and day_type may change after submit; shift_location
+	may not, so it is written with db_set (no doctype change). A Day Type word is
+	the newer word over every Roster Day marker in the assignment's dates (A2).
 	"""
+	from frappe.utils import getdate
+
 	doc = frappe.get_doc("Shift Assignment", assignment)
 	_ensure_can_roster_employee(doc.employee)
-	if status not in ("Active", "Inactive"):
+	sent = {
+		name: value
+		for name, value in (
+			("status", status),
+			("end_date", end_date),
+			("day_type", day_type),
+			("shift_location", shift_location),
+		)
+		if value is not NOT_SENT
+	}
+	if not sent:
+		frappe.throw(_("Nothing to change. Send a status, end date, day type or location."))
+	if status is not NOT_SENT and status not in ("Active", "Inactive"):
 		frappe.throw(_("Status must be Active or Inactive."))
-	from frappe.utils import add_days, getdate
+	if day_type is not NOT_SENT:
+		day_type = _valid_day_type(day_type)
+	if shift_location is not NOT_SENT:
+		shift_location = shift_location or None
+		if shift_location and not frappe.db.exists("Shift Location", shift_location):
+			frappe.throw(_("Shift Location {0} does not exist.").format(shift_location))
+	new_end = doc.end_date if end_date is NOT_SENT else (end_date or None)
 
 	if status == "Inactive" and doc.status != "Inactive":
 		# the whole assignment stops counting
 		_refuse_worked_range_for_supervisor(doc.employee, doc.start_date, doc.end_date)
-	elif end_date and (not doc.end_date or getdate(end_date) < getdate(doc.end_date)):
+	elif (
+		end_date is not NOT_SENT
+		and new_end
+		and (not doc.end_date or getdate(new_end) < getdate(doc.end_date))
+	):
 		# the days cut off the end stop counting
-		_refuse_worked_range_for_supervisor(doc.employee, add_days(end_date, 1), doc.end_date)
-	doc.flags.ignore_permissions = True
-	doc.status = status
-	doc.end_date = end_date or None
-	doc.save()
-	logger.info("[roster] %s updated %s: %s until %s", frappe.session.user, assignment, status, end_date)
+		_refuse_worked_range_for_supervisor(doc.employee, add_days(new_end, 1), doc.end_date)
+	if day_type is not NOT_SENT:
+		# re-typing a worked day re-prices it: HR may (D3), a supervisor may not
+		_refuse_worked_range_for_supervisor(doc.employee, doc.start_date, new_end)
 
+	if sent.keys() - {"shift_location"}:
+		doc.flags.ignore_permissions = True
+		if status is not NOT_SENT:
+			doc.status = status
+		if end_date is not NOT_SENT:
+			doc.end_date = new_end
+		if day_type is not NOT_SENT:
+			doc.day_type = day_type
+		doc.save()
+	if shift_location is not NOT_SENT:
+		# not allow_on_submit: a save would refuse it, so the one column is written directly
+		doc.db_set("shift_location", shift_location)
+	if day_type is not NOT_SENT:
+		from hrms.utils.ot_calculation import forget_rostered_day_types
+
+		_clear_day_markers(doc.employee, doc.start_date, new_end)
+		forget_rostered_day_types()
+	logger.info(
+		"[roster] %s updated %s: %s",
+		frappe.session.user,
+		assignment,
+		", ".join(f"{name}={value or 'none'}" for name, value in sent.items()),
+	)
 
 @frappe.whitelist(methods=["POST"])
 def swap_shift(
@@ -472,17 +548,31 @@ def remove_shift_day(assignment: str, date: str) -> None:
 def change_shift_day(
 	assignment: str,
 	date: str,
-	shift_type: str,
-	shift_location: str | None = None,
+	shift_type: str | None = None,
+	shift_location: str | None = NOT_SENT,
 	day_type: str | None = None,
 ) -> None:
-	"""Roster "Change": one day moves to another shift type, location or Day Type."""
+	"""Roster "Change": one day moves to another shift type, location or Day Type.
+
+	Only what the caller sends changes (owner, R3a, 7 Oct 2026): no shift_type keeps the
+	day's shift, no shift_location keeps its location (an empty one clears it), no day_type
+	keeps its Day Type. The day still leaves the assignment and comes back as its own
+	assignment: a one-day change splits (A6).
+	"""
 	doc = frappe.get_doc("Shift Assignment", assignment)
 	employee, company, status = doc.employee, doc.company, doc.status
 	sent_day_type = day_type
 	day_type = day_type or doc.get("day_type") or "None"
+	shift_type = shift_type or doc.shift_type
+	shift_location = doc.shift_location if shift_location is NOT_SENT else (shift_location or None)
 	logger.info(
-		"[roster] %s changes %s on %s to %s (%s)", frappe.session.user, doc.name, date, shift_type, day_type
+		"[roster] %s changes %s on %s to %s at %s (%s)",
+		frappe.session.user,
+		doc.name,
+		date,
+		shift_type,
+		shift_location,
+		day_type,
 	)
 	remove_shift_day(doc.name, date)
 	_insert_shift(employee, company, shift_type, date, date, status, shift_location, day_type=day_type)
