@@ -246,3 +246,9 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T07:30:46Z COMMIT: efe292f0d chore(release): 2.0.0-alpha.40 Days Off Everywhere → review+deps dispatched
 2026-10-07T07:31:52Z NEXT: alpha.40 released (v2.0.0-alpha.40). Owner puts alpha.39 + 40 live and runs migrate. No open rulings.
 - 2026-10-07T07:31:58Z COMMIT: 7196e774b docs(handoff): alpha.40 released → review dispatched
+- 2026-10-07T07:32:36Z COMMIT: f3aa6f271 docs(plans): progress ledger after the alpha.40 handoff → review dispatched
+- 2026-10-07T07:59:59Z PLAN: approved a98a7292d437 — # Release 2.0.0-alpha.41 "Clean Glass" (DRAFT 7 Oct 2026 — awaiting owner approval)
+2026-10-07T08:00:17Z NEXT: alpha.41 "Clean Glass" plan drafted (current-plan.md), awaiting owner approval + rulings E1 (Expense words on Desk) and E2 (Android Back fallback).
+- 2026-10-07T08:01:27Z PLAN: approved 8a1817154211 — # Release 2.0.0-alpha.41 "Clean Glass" (approved 7 Oct 2026: owner "Approve as written", E1a, E2a)
+2026-10-07T08:01:27Z RULINGS: alpha.41 approved as written; E1a Expense Desk words = Nadi; E2a Android Back fallback = keep + note.
+2026-10-07T08:01:27Z NEXT: build S1 (gates), S2 (filter words), S4 (FormView error line) in parallel; then S3, S5-S12.
