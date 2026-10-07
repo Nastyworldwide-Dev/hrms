@@ -430,9 +430,10 @@ def swap_shift(
 	capture("shift_swapped", {"mutual_swap": bool(tgt_shift)})
 
 	break_shift(src_shift_doc, src_date)
-	# a swap moves a shift between two days; it is not a Day Type word, so it
-	# never wipes a Roster Day marker (the whitelisted insert_shift would). The
-	# shift carries its own Day Type with it, both ways.
+	# The shift carries its own Day Type with it, both ways, and is the newer word
+	# on the day it lands on: that day's Roster Day marker goes (last word wins),
+	# or the grid would show the shift while pay still read the marker.
+	_clear_day_markers(tgt_employee, tgt_date, tgt_date)
 	_insert_shift(
 		tgt_employee,
 		tgt_company,
@@ -445,6 +446,7 @@ def swap_shift(
 	)
 
 	if tgt_shift:
+		_clear_day_markers(src_shift_doc.employee, src_date, src_date)
 		_insert_shift(
 			src_shift_doc.employee,
 			src_shift_doc.company,

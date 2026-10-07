@@ -361,7 +361,8 @@ class TestLastWordWins(unittest.TestCase):
 		self.assign("2026-10-06", "2026-10-08")
 		self.created.assert_called_once()
 
-	def test_a_swap_never_wipes_a_marker(self):
+	def test_a_swap_clears_only_the_marker_of_the_day_it_lands_on(self):
+		# review of d93c4ab49: the arriving shift is the newer word on that day only
 		source = FakeDocument(
 			"Shift Assignment",
 			name="SA-1",
@@ -380,8 +381,9 @@ class TestLastWordWins(unittest.TestCase):
 		):
 			roster.swap_shift("SA-1", "2026-10-07", "EMP-1", "2026-10-08", None)
 		self.created.assert_called_once()
-		self.assertEqual(len(self.store.dates("EMP-1")), 6)
-		self.assertEqual(self.store.deleted, [])
+		self.assertEqual(
+			self.store.dates("EMP-1"), ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-09", "2026-10-12"]
+		)
 
 	def test_breaking_a_shift_never_wipes_a_marker(self):
 		assignment = FakeDocument(

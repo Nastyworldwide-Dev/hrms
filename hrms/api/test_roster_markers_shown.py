@@ -257,20 +257,31 @@ def _assignment(name, employee, shift_type, day_type):
 
 
 class TestSwapKeepsDayType(unittest.TestCase):
-	def swap(self, tgt_shift):
+	def swap(self, tgt_shift, store=None):
 		docs = {
 			"SA-1": _assignment("SA-1", "EMP-1", "9-6", "Rest Day"),
 			"SA-2": _assignment("SA-2", "EMP-2", "6-3", "Off Day"),
 		}
 		created = MagicMock()
 		with (
-			_world(_Store()),
+			_world(store or _Store()),
 			patch.object(roster, "create_shift_assignment", created),
 			patch.object(roster, "break_shift"),
 			patch.object(frappe, "get_doc", lambda name_or_doctype, name=None: docs[name or name_or_doctype]),
 		):
 			roster.swap_shift("SA-1", "2026-10-07", "EMP-2", "2026-10-08", tgt_shift)
 		return created
+
+	def test_a_shift_dropped_on_a_marked_day_clears_that_days_marker(self):
+		# review of d93c4ab49: the grid showed the shift while pay still read the day as Off.
+		# The arriving shift is the newer word (last word wins); the other days keep theirs.
+		store = _Store()
+		store.mark("EMP-2", "2026-10-08", "Off Day")
+		store.mark("EMP-2", "2026-10-09", "Off Day")
+		store.mark("EMP-1", "2026-10-07", "Rest Day")
+		self.swap("SA-2", store)
+		self.assertEqual(store.dates("EMP-2"), ["2026-10-09"])
+		self.assertEqual(store.dates("EMP-1"), [])
 
 	def test_a_move_keeps_the_shifts_day_type(self):
 		created = self.swap(None)
