@@ -22,3 +22,11 @@ class RosterDay(Document):
 		# Desk writes the doctype directly, past set_day_type's own check
 		if self.day_type not in NO_SHIFT_DAY_TYPES:
 			frappe.throw(_("Day Type must be one of {0}.").format(", ".join(NO_SHIFT_DAY_TYPES)))
+
+
+def marked_day_off(employee, day) -> bool:
+	"""HR marked this date Off / Rest / Public Holiday with no shift: a day off on every screen
+	that asks "is this a working day" (owner, 7 Oct 2026). A site not migrated yet has no table."""
+	if not frappe.db.table_exists("Roster Day"):
+		return False
+	return bool(frappe.db.get_value("Roster Day", {"employee": employee, "date": str(day)}, "day_type"))

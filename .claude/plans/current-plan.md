@@ -80,6 +80,13 @@ A7 Owner, 7 Oct: (1) yes to A6 (a one-day location move keeps the split); (2) NO
    set_day_type and Nadi Assign accept only Off / Rest / Public holiday without a shift; Work Day stays a Day Type
    on a shift.
 
+A8 D5 (owner "yeah sure", 7 Oct, after alpha.39 shipped): the day sheet and Team status read Roster Day markers.
+   Root: each screen decides "is this a day off" on its own — now.py `_is_rest_day` (holiday list; used by
+   default_shift_on for Home, the Calendar day sheet and half_day) and team.py member_statuses `is_holiday`
+   (holiday list; Team page + Calendar team part). A marker is always a day off (no Work Day marker, A7), so
+   both ask "holiday OR marker". Markers only: a shift's own Day Type is not pulled in here (no scope creep).
+   Effects: a marked day with no shift shows no default shift on Home / the day sheet; Team status says Off.
+
 ## EXPECTED OUTPUT:
 - UI: in the Nadi Assign sheet, Shift type is optional. Picking only "Off day" saves ("Off day saved for 8 Oct").
   The day sheet has Location. Each field saves alone. The roster shows O / R / PH on a day with no shift.

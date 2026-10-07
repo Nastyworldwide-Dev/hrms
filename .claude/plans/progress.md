@@ -217,3 +217,9 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T04:46:10Z COMMIT: 704bcfd38 test(ot): the holiday-calendar tests refused the new day-marker read → review dispatched
 - 2026-10-07T04:46:48Z COMMIT: 403539ff2 chore(release): 2.0.0-alpha.39 Roster in HR's Hands → review+deps dispatched
 - 2026-10-07T04:47:40Z COMMIT: 4dff516c0 fix(release): About this app showed "Honest Leave Balances" since alpha.27 → review+deps dispatched
+- 2026-10-07T04:50:11Z COMMIT: 9bb929c37 docs(handoff): alpha.39 released → review dispatched
+- 2026-10-07T06:41:29Z PLAN: approved cfb64c08cef6 — # Release 2.0.0-alpha.39 "Roster in HR's Hands" (approved 7 Oct 2026: owner ruled R1a R2a R3a R4a)
+2026-10-07T06:44:07Z EVIDENCE: 2 correct — D5 now_default_shift 8/8, calendar_team_matches_team_page 7/7 (red on HEAD: 2); 39 affected files, only pre-existing failures (fenced 2, checkin_session_rules 1, same on HEAD).
+2026-10-07T06:44:07Z EVIDENCE: 3 works — bench fresh.local (rolled back): 22 Oct Team status Scheduled -> Off, day-sheet shift Nadi W0 Day -> none after marking Off.
+- 2026-10-07T06:44:14Z EVIDENCE: 2 correct — mapped tests green (pytest ) for 7 file(s) ⟂8ac8c021b707
+- 2026-10-07T06:44:14Z EVIDENCE: 3 works — blast radius green: 11 dependent(s), 8 extra test file(s) ⟂2fe864bb96a3

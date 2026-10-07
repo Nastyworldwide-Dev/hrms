@@ -51,6 +51,8 @@ def _tap(employee, log_type, hh, mm):
 
 def _ordered(rows, kw):
 	"""Honour order_by like the database: "docstatus asc, modified asc" sorts by those keys, in turn."""
+	if kw.get("pluck"):
+		return [row[kw["pluck"]] for row in rows]
 	spec = kw.get("order_by")
 	if not spec:
 		return rows
@@ -60,12 +62,13 @@ def _ordered(rows, kw):
 	return rows
 
 class TestCalendarTeamMatchesTeamPage(unittest.TestCase):
-	def _run(self, fn, *args, members, taps, attendance=(), leave=()):
+	def _run(self, fn, *args, members, taps, attendance=(), leave=(), markers=()):
 		tables = {
 			"Employee": list(members),
 			"Attendance": list(attendance),
 			"Leave Application": list(leave),
 			"Employee Checkin": list(taps),
+			"Roster Day": list(markers),
 		}
 		shift = frappe._dict(start_time="09:00:00", end_time="18:00:00")
 		with (
@@ -84,6 +87,7 @@ class TestCalendarTeamMatchesTeamPage(unittest.TestCase):
 		):
 			db.get_value.return_value = shift
 			db.exists.return_value = False
+			db.table_exists.return_value = True
 			return fn(*args)
 
 	def test_a_member_who_punched_in_is_in_before_attendance_is_written(self):
@@ -141,6 +145,16 @@ class TestCalendarTeamMatchesTeamPage(unittest.TestCase):
 			}
 			page = self._run(team.get_team_status, DAY, members=members, taps=taps, attendance=[rows[k] for k in order])
 			self.assertTrue(page["members"][0]["half_day_marked"], order)
+
+	def test_a_day_hr_marked_off_with_no_shift_is_off_on_both_screens(self):
+		# owner, 7 Oct 2026: the roster shows "O"; the Team page and the sheet say Off, not "Not In Yet"
+		members = [_member("A", "Harith"), _member("B", "Azza")]
+		markers = [frappe._dict(employee="A", day_type="Off Day")]
+		page = self._run(team.get_team_status, DAY, members=members, taps=[], markers=markers)
+		rows = {row["employee"]: row["status"] for row in page["members"]}
+		self.assertEqual(rows, {"A": "Off", "B": "Not In Yet"})
+		sheet = self._run(calendar.get_day, DAY, members=members, taps=[], markers=markers)
+		self.assertEqual({row["employee"]: row["status"] for row in sheet["team"]}, rows)
 
 	def test_the_caller_is_never_in_their_own_team(self):
 		members = [_member("SENIOR", "Me"), _member("A", "Harith")]

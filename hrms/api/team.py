@@ -291,6 +291,21 @@ def member_statuses(members, day) -> tuple[list[dict], dict]:
 			# worked past midnight into this date: say where it counted
 			slot["counted_on"] = elsewhere[-1]["counted_on"]
 
+	# HR marked the day Off / Rest / Public Holiday with no shift (owner, 7 Oct 2026): a day off
+	# here too, as on the roster. One read for the team; a site not migrated yet has no table.
+	marked_off = (
+		set(
+			frappe.get_all(
+				"Roster Day",
+				filters={"employee": ("in", ids), "date": day},
+				pluck="employee",
+				ignore_permissions=True,
+			)
+		)
+		if frappe.db.table_exists("Roster Day")
+		else set()
+	)
+
 	shift_bounds = {}
 
 	def bounds(shift):
@@ -309,7 +324,7 @@ def member_statuses(members, day) -> tuple[list[dict], dict]:
 		punch = punches.get(member.name) or {}
 		shift = (att and att.shift) or member.default_shift
 		shift_start, shift_end = bounds(shift)
-		is_holiday = bool(
+		is_holiday = member.name in marked_off or bool(
 			member.holiday_list
 			and frappe.db.exists("Holiday", {"parent": member.holiday_list, "holiday_date": day})
 		)

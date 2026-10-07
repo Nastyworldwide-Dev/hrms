@@ -148,10 +148,13 @@ def default_shift_on(employee, on_date) -> str | None:
 
 
 def _is_rest_day(employee, on_date) -> bool:
-	"""On the employee's holiday list for `on_date` (holiday or weekly off)."""
+	"""On the employee's holiday list for `on_date` (holiday or weekly off), or a day HR marked
+	off with no shift (Roster Day, owner 7 Oct 2026)."""
 	from erpnext.setup.doctype.employee.employee import is_holiday
 
-	return bool(is_holiday(employee, on_date, raise_exception=False))
+	from hrms.hr.doctype.roster_day.roster_day import marked_day_off
+
+	return bool(is_holiday(employee, on_date, raise_exception=False)) or marked_day_off(employee, on_date)
 
 
 def _hhmm(value) -> str:
