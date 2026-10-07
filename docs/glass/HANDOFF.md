@@ -1,14 +1,11 @@
 # HANDOFF
-prompt:   alpha.39 "Roster in HR's Hands" (owner rulings R1a-R4a, A6, A7)
+prompt:   alpha.40 "Days Off Everywhere" (owner, 7 Oct: day marks on every screen; Desk-form shift clears a mark)
 status:   done
-commit:   4dff516c0 on nz-glass (tag v2.0.0-alpha.39, GitHub Release created)
-files:    hrms/hr/doctype/roster_day/ (new doctype: a day off with no shift)
-          hrms/api/roster.py (set_day_type, edit one field, HR re-types a worked day, swap)
-          hrms/utils/ot_calculation.py (pay reads the day marker first)
-          hrms/api/team.py (Nadi roster returns markers)
-          frontend/src/views/team/TeamRoster.vue (Assign without a shift, Location, O/R/PH)
-          roster/src/components/ShiftAssignmentDialog.vue, MonthViewTable.vue (Desk)
-verify:   live site: run migrate (creates Roster Day); Nadi Team roster -> Assign, no shift, Off day -> saves and shows O
-flags:    Glass gates CI red on the last 10 pushes (before this release too); Desk month view + drag-swap not checked live;
-          day sheet / Team status do not read day markers yet (owner to decide, ticket-team-py-member-statuses.md)
-next:     owner puts alpha.39 live and runs migrate; then the day-sheet marker decision
+commit:   efe292f0d on nz-glass (tag v2.0.0-alpha.40, GitHub Release created)
+files:    hrms/api/now.py (Home + day sheet: a marked day is a day off)
+          hrms/api/team.py (Team status: Off on a marked day)
+          hrms/overrides/shift_assignment_hooks.py + hrms/hooks.py (hand-made shift clears the mark)
+          hrms/hr/shift_rules.py, hrms/api/attendance_master_edit.py, shift_assignment_tool.py (code-made shifts keep it)
+verify:   live site: migrate (alpha.39's Roster Day if not yet); mark a day Off -> Team says Off; add a Desk shift on it -> mark gone
+flags:    Glass gates CI red on every push since before alpha.38; pre-existing test failures listed in progress.md
+next:     owner puts alpha.39 + alpha.40 live and runs migrate
