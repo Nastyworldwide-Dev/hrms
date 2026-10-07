@@ -176,6 +176,14 @@ test("only glass/toast.js may call frappe-ui's toast, so every toast text is esc
 			for (const m of text.matchAll(imports)) {
 				if (/\btoast\b/.test(m[1])) offenders.push(rel)
 			}
+			// the other roads to the same function (review of ac81ac031): a namespace or dynamic
+			// import of frappe-ui, or the Toast file itself
+			if (
+				/import\s*\*\s*as\s+\w+\s+from\s*["']frappe-ui["']/.test(text) ||
+				/import\(\s*["']frappe-ui["']\s*\)/.test(text) ||
+				/frappe-ui\/src\/components\/Toast/i.test(text)
+			)
+				offenders.push(rel)
 		}
 	}
 	walk(SRC)

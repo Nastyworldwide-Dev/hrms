@@ -229,16 +229,18 @@ ion-tab-button.g-tabbar__btn:active {
    Apple's badge: a small capsule on the icon's top-trailing corner. */
 .g-tabbar__badge {
 	position: absolute;
-	top: -6px;
+	top: -4px;
 	left: 12px;
-	min-width: 18px;
-	height: 18px;
-	padding: 0 5px;
-	border-radius: 9px;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 4px;
+	/* A capsule: half the 20px height is 10, off the 4pt grid. 12px is on it, and
+	   CSS scales a radius down to fit the box, so this draws as exactly 10px. */
+	border-radius: 12px;
 	background: var(--g-badge);
 	color: var(--g-on-badge);
 	font-size: 11px;
-	line-height: 18px;
+	line-height: 20px;
 	font-weight: 600;
 	font-variant-numeric: tabular-nums;
 	text-align: center;
@@ -2613,7 +2615,9 @@ html[data-transparency="reduce"] .g-modal::part(content) {
 }
 .g-undo-enter-active,
 .g-undo-leave-active {
-	transition: opacity 200ms ease, transform 200ms ease;
+	transition:
+		opacity var(--g-motion-state-change-duration) var(--g-motion-state-change-easing),
+		transform var(--g-motion-state-change-duration) var(--g-motion-state-change-easing);
 }
 .g-undo-enter-from,
 .g-undo-leave-to {
@@ -3421,10 +3425,10 @@ ion-router-outlet {
 	   Never let a longer count push the column wider than the grid. */
 	max-width: 100%;
 	overflow: hidden;
-	min-height: 13px;
+	min-height: 12px;
 	font-size: 11px;
 	font-weight: 500;
-	line-height: 13px;
+	line-height: 12px;
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 	pointer-events: none;
@@ -3542,15 +3546,15 @@ ion-router-outlet {
 }
 .g-now__gauge-track {
 	position: relative;
-	height: 6px;
-	border-radius: 3px;
+	height: 4px;
+	border-radius: 2px;
 	background: var(--g-track-solid);
 	overflow: hidden;
 }
 .g-now__gauge-fill {
 	position: absolute;
 	inset: 0 auto 0 0;
-	border-radius: 3px;
+	border-radius: 2px;
 	background: var(--g-accent-ink);
 	transition:
 		width var(--g-motion-progress-duration) var(--g-motion-progress-easing),
@@ -3963,6 +3967,7 @@ ion-router-outlet {
 	font-size: var(--g-type-caption-size);
 	line-height: var(--g-type-caption-line-height);
 	color: var(--g-danger-ink);
+	overflow-wrap: anywhere;
 }
 
 /* ==========================================================================
@@ -5279,7 +5284,7 @@ ion-modal.g-mustread {
 	font-family: var(--g-font-display);
 	font-weight: 800;
 	color: var(--g-ink);
-	margin: 22px 0 6px;
+	margin: 24px 0 8px;
 	line-height: 1.3;
 }
 .sop-prose h1 {
@@ -5306,7 +5311,7 @@ ion-modal.g-mustread {
 	margin-top: 0;
 }
 .sop-prose p {
-	margin: 0 0 10px;
+	margin: 0 0 12px;
 }
 .sop-prose strong,
 .sop-prose b {
@@ -5323,7 +5328,7 @@ ion-modal.g-mustread {
 	padding-left: 22px;
 	display: flex;
 	flex-direction: column;
-	gap: 5px;
+	gap: 4px;
 }
 .sop-prose ul {
 	list-style: square;
@@ -5337,23 +5342,23 @@ ion-modal.g-mustread {
 }
 .sop-prose li > ul,
 .sop-prose li > ol {
-	margin: 5px 0 0;
+	margin: 4px 0 0;
 }
 .sop-prose blockquote {
 	margin: 0 0 12px;
-	padding: 6px 0 6px 14px;
+	padding: 8px 0 8px 16px;
 	border-left: 3px solid var(--g-accent-ink);
 	color: var(--g-ink2);
 }
 .sop-prose hr {
 	border: 0;
 	border-top: 2px solid var(--g-hair);
-	margin: 18px 0;
+	margin: 16px 0;
 }
 .sop-prose table {
 	width: 100%;
 	border-collapse: collapse;
-	margin: 4px 0 14px;
+	margin: 4px 0 16px;
 	font-size: 12.5px;
 	display: block;
 	overflow-x: auto;
@@ -5366,11 +5371,11 @@ ion-modal.g-mustread {
 	text-align: left;
 	color: var(--g-ink);
 	border-bottom: 2px solid var(--g-ink);
-	padding: 7px 10px 7px 0;
+	padding: 8px 12px 8px 0;
 }
 .sop-prose td {
 	border-bottom: 1px solid var(--g-hair);
-	padding: 7px 10px 7px 0;
+	padding: 8px 12px 8px 0;
 	vertical-align: top;
 }
 .sop-prose img {
@@ -5382,10 +5387,10 @@ ion-modal.g-mustread {
 .sop-prose code {
 	font-size: 12px;
 	background: var(--g-icon-bg);
-	padding: 2px 5px;
+	padding: 2px 4px;
 }
 .sop-prose pre {
-	padding: 10px 12px;
+	padding: 12px;
 	overflow-x: auto;
 	margin: 0 0 12px;
 }

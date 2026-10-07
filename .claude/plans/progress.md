@@ -274,3 +274,7 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T08:20:24Z EVIDENCE: 2 correct — mapped tests green (bun ) for 6 file(s) ⟂2216a7693f49
 - 2026-10-07T08:20:29Z COMMIT: 703b9f754 fix(pwa): the list filters offered "Open" and "Draft" for rows that say Waiting → review+design dispatched
 - 2026-10-07T08:21:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 4 file(s) ⟂4ccc22c38833
+- 2026-10-07T08:21:54Z COMMIT: ac81ac031 fix(pwa): an expense type with "&" showed as "&amp;" in the duplicate warning → review+design dispatched
+- 2026-10-07T08:24:14Z PLAN: approved 72c2ffd8c585 — # Release 2.0.0-alpha.41 "Clean Glass" (approved 7 Oct 2026: owner "Approve as written", E1a, E2a)
+2026-10-07T08:30:43Z EVIDENCE: 2 correct — S1: GATES_NO_SITE=1 yarn gates rc 0 (surfaces/tokens/scale/motion PASS, site gates SKIPPED line), design/gates tests 23/23, red seen for surfaces/verdict/field-error. 5 looks right — built CSS on fresh.local: badge 20x20 round (99+ 31x20 pill), gauge 4px; /tmp/d1b/s1-probe.png.
+- 2026-10-07T08:30:44Z EVIDENCE: 2 correct — mapped tests green (bun ) for 13 file(s) ⟂884c4344e835

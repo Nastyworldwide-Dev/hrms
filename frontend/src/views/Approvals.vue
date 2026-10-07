@@ -697,12 +697,12 @@ async function refresh(event) {
 	place-items: center;
 	width: 22px;
 	height: 22px;
-	border: 2px solid var(--g-ink-3);
+	border: 2px solid var(--g-ink3);
 	border-radius: 999px;
 }
 .g-approvals__tick--on {
-	background: var(--g-accent);
-	border-color: var(--g-accent);
+	background: var(--g-brand);
+	border-color: var(--g-brand);
 	color: var(--g-on-brand);
 }
 /* a number AND a word: colour is never the only signal (WCAG 1.4.1) */
@@ -714,7 +714,7 @@ async function refresh(event) {
 	white-space: nowrap;
 }
 .g-approvals__age--calm {
-	color: var(--g-ink-2);
+	color: var(--g-ink2);
 }
 .g-approvals__age--amber {
 	color: var(--g-warn-ink);

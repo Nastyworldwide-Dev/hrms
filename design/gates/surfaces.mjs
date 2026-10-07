@@ -32,7 +32,8 @@ import { dirname, join, relative, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-const SRC = join(ROOT, "frontend", "src");
+// SURFACES_SRC points the gate at another source tree: the test's own fixtures.
+const SRC = process.env.SURFACES_SRC || join(ROOT, "frontend", "src");
 const LIMIT = 6;
 const REPORT_ONLY = process.argv.includes("--report-only");
 
@@ -83,6 +84,9 @@ function costFile(file, seen = new Set()) {
 	let sheetDepth = 0;
 	let openSheet = 0;
 	let branch = null;
+	// was the pending v-if group opened inside a sheet? Its cost belongs to that
+	// sheet even if the group is only flushed after the sheet has closed.
+	let branchInSheet = false;
 	const loopedHere = [];
 
 	// route a count to the screen, or to the sheet currently open
@@ -136,8 +140,10 @@ function costFile(file, seen = new Set()) {
 		if (/\bv-if=/.test(line)) {
 			if (branch !== null) add(branch);
 			branch = lineTotal;
+			branchInSheet = sheetDepth > 0;
 		} else if (/\bv-else-if=|\bv-else\b/.test(line)) {
 			branch = Math.max(branch ?? 0, lineTotal);
+			branchInSheet = branchInSheet || sheetDepth > 0;
 		} else if (branch !== null && lineTotal) {
 			// A v-if with no v-else must not swallow everything after it: the
 			// group closes as soon as a line with no branch directive carries a
@@ -151,6 +157,12 @@ function costFile(file, seen = new Set()) {
 		}
 
 		if (closes) {
+			// rule 3: a v-if group opened inside the sheet closes with it. Left
+			// pending, it would be flushed later at depth 0, onto the screen.
+			if (branch !== null && branchInSheet) {
+				add(branch);
+				branch = null;
+			}
 			sheetDepth = Math.max(0, sheetDepth - closes);
 			if (sheetDepth === 0 && openSheet > 0) {
 				sheets.push(openSheet);

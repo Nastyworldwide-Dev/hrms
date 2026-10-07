@@ -22,3 +22,25 @@ test("a skipped gate passes lenient but FAILS --strict", () => {
 	assert.equal(gatesFailed([ok, skip], false), false);
 	assert.equal(gatesFailed([ok, skip], true), true);
 });
+
+const siteSkip = (gate) => ({ gate, code: 0, info: { status: "skip" } });
+const SITE = ["a11y", "visual", "coherence", "ios"];
+
+test("a named skip is allowed under --strict, an unnamed one is not", () => {
+	// CI has no served site: it names the four site gates, and only those
+	const board = [ok, siteSkip("a11y"), siteSkip("visual"), siteSkip("coherence"), siteSkip("ios")];
+	assert.equal(gatesFailed(board, true, SITE), false);
+	assert.equal(gatesFailed(board, true), true);
+	assert.equal(gatesFailed(board, true, ["a11y"]), true);
+});
+
+test("allowing the site gates to skip never excuses another gate's skip", () => {
+	const board = [siteSkip("tokens"), siteSkip("a11y")];
+	assert.equal(gatesFailed(board, true, SITE), true);
+});
+
+test("allowed skips do not excuse a failure, even in a site gate", () => {
+	const crashed = { gate: "visual", code: 1, info: {} };
+	assert.equal(gatesFailed([ok, crashed], true, SITE), true);
+	assert.equal(gatesFailed([ok, crashed], false, SITE), true);
+});

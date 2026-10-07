@@ -2,8 +2,12 @@
 #
 # Fails on NEW lint debt above design/lint-baseline.json, a contrast regression
 # in design/tokens.json, a surface over budget, or a new token collapse. The
-# three render-time gates (a11y, visual, coherence) SKIP without a served site,
-# so what runs here is the five static ones.
+# four site gates (a11y, visual, coherence, ios) need a served site and
+# AUDIT_PW, which CI does not have: GATES_NO_SITE=1 lets exactly those four skip,
+# and the board prints a "SKIPPED (needs a served site)" line, so a skip is never
+# read as a pass. What is measured here is the seven static gates (lint, usage,
+# contrast, surfaces, tokens, scale, motion). The four run locally, with the site
+# served, before a release.
 #
 # Now runs on pull_request as well as push, so it can be set as a required
 # check in branch protection — it could not be while it only ran on push.
@@ -29,3 +33,5 @@ jobs:
           cache-dependency-path: frontend/yarn.lock
       - run: yarn install --frozen-lockfile
       - run: yarn gates
+        env:
+          GATES_NO_SITE: "1"

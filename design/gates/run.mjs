@@ -6,6 +6,12 @@
 //                         a11y and visual are RENDER-TIME: slow, they need a running
 //                         site and SKIP without one, so a laptop with no bench
 //                         still runs the four static gates.
+//   GATES_NO_SITE=1       for a runner that has no served site (CI): a skip by
+//                         a11y, visual, coherence or ios is expected, prints one
+//                         "SKIPPED (needs a served site)" line and does not fail
+//                         the board, even with --strict. Any other gate that
+//                         skips, and any failure, still fails. Run them locally
+//                         with the site served before a release.
 
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -14,6 +20,9 @@ import { gatesFailed } from "./verdict.mjs";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const STRICT = process.argv.includes("--strict");
+const SITE_GATES = ["a11y", "visual", "coherence", "ios"];
+// the runner says it has no served site: those four gates may skip
+const ALLOWED_SKIPS = process.env.GATES_NO_SITE === "1" ? SITE_GATES : [];
 const GATES = [
   "lint",
   "usage",
@@ -101,11 +110,18 @@ for (const { gate, code, info } of results) {
 const skipped = results
   .filter((r) => r.code === 0 && r.info.status === "skip")
   .map((r) => r.gate);
-if (skipped.length) {
+const expectedSkips = skipped.filter((g) => ALLOWED_SKIPS.includes(g));
+const unexpectedSkips = skipped.filter((g) => !ALLOWED_SKIPS.includes(g));
+if (expectedSkips.length) {
   console.log(
-    `\n${skipped.length} of ${results.length} gates MEASURED NOTHING: ${skipped.join(", ")}.` +
+    `\nSKIPPED (needs a served site): ${expectedSkips.join(", ")} — run locally before release`,
+  );
+}
+if (unexpectedSkips.length) {
+  console.log(
+    `\n${unexpectedSkips.length} of ${results.length} gates MEASURED NOTHING: ${unexpectedSkips.join(", ")}.` +
       `\nThey need a served site and AUDIT_PW. Do not read this board as a pass.`,
   );
 }
 
-process.exit(gatesFailed(results, STRICT) ? 1 : 0);
+process.exit(gatesFailed(results, STRICT, ALLOWED_SKIPS) ? 1 : 0);

@@ -75,6 +75,10 @@ P5 S2 test asserts the request payload carries the stored value ("Open"/"Draft")
 P6 S6 server search: permission-scoped (get_list, never get_all), query escaped / parameterised.
 P7 S12: each refactor names its existing test file first (no empty stubs).
 
+P8 S6 dropped (7 Oct, measured): the Help list (HelpSplitList) has NO search box. Its ceiling is how many rows
+   it loads: 50 own issues (IssueList pageLength 50), up to 100 own tickets (list_tickets limit 100, max 200).
+   One person past that is unlikely and the ceiling names the upgrade trigger. Nothing to build.
+
 ## EXPECTED OUTPUT:
 - UI: Approvals checkboxes/labels get their colours back; list filters say Waiting; Desk says the same
   words as Nadi; request errors in the Glass style; Help search finds any ticket; a partly loaded request
