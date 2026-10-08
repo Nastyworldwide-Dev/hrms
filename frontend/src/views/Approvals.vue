@@ -15,12 +15,26 @@
 			>
 				<ResourceError :resource="waiting" what="your approvals" />
 
-				<!-- As tall as the page it becomes when requests wait (the summary
-				     line, a group heading and its first row), so the queue arriving
-				     does not push "already answered" down (scroll-and-shift audit,
-				     29 Sep 2026: the approval line now routes more to approvers). -->
+				<!-- As tall as the page it becomes when requests wait (the banner, the
+				     summary line, the chips row, a group heading and its first row), so
+				     the queue arriving does not push "already answered" down
+				     (scroll-and-shift audit, 29 Sep 2026: the approval line now routes
+				     more to approvers; 8 Oct: the deadline banner and the chips row
+				     were missing, 136 pt). The ghost banner is the real banner box
+				     with its real second line, hidden, so it is 60 pt wide enough and
+				     76 pt where that line wraps (320 wide): no fixed number fits both.
+				     ceiling: a person row whose label wraps (320-326 wide, a long name) is
+				     taller than its skeleton row, 22 pt, cold only; upgrade: keep the last
+				     row count and height in the cache if an owner report names it. -->
 				<template v-if="waiting.loading && !waiting.data">
+					<GBanner variant="warning" class="g-approvals__ghost-banner" aria-hidden="true">
+						<p class="m-0 font-semibold">&nbsp;</p>
+						<p class="m-0 text-caption text-ink-600">
+							{{ __("Staff attendance and pay wait on your decision.") }}
+						</p>
+					</GBanner>
 					<p class="g-form-footer" aria-hidden="true">&nbsp;</p>
+					<div class="g-approvals__ghost-chips" aria-hidden="true" />
 					<!-- the "Yours" section it becomes: 144 pt, measured 29 Sep 2026 -->
 					<div class="g-approvals__placeholder">
 						<GListPanel loading :rows="2" />
@@ -664,6 +678,14 @@ async function refresh(event) {
 }
 .g-approvals__kind {
 	padding: 8px 16px 0;
+}
+/* first load only: the banner and the chips row the answer brings, kept in
+   their places (visibility keeps the box, so the wrap at 320 wide is real) */
+.g-approvals__ghost-banner {
+	visibility: hidden;
+}
+.g-approvals__ghost-chips {
+	min-height: var(--g-touch-target-min);
 }
 .g-approvals__chips {
 	display: flex;

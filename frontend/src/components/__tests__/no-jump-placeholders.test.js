@@ -39,6 +39,25 @@ test("an empty queue is the same row as its skeleton, not a loose line", () => {
 	assert.match(read("../../views/Approvals.vue"), /<GListPanel loading :rows="2" \/>/)
 })
 
+test("Approvals holds the banner's and the chips row's places while the queue loads", () => {
+	// 8 Oct 2026, measured at 320/390/402: the placeholder covered the summary and one section (144) but not the
+	// deadline banner (60, or 76 at 320 where its second line wraps) nor the chips row (44), so "already answered"
+	// moved 136 when the queue landed. A fixed reserve fails at 320, so the ghost banner is the real GBanner with
+	// the real second line, hidden: it wraps where the banner wraps.
+	const src = read("../../views/Approvals.vue")
+	const loading = src.slice(src.indexOf('v-if="waiting.loading && !waiting.data"'), src.indexOf('v-else-if="!waiting.error"'))
+	assert.match(loading, /<GBanner[^>]*class="g-approvals__ghost-banner"[^>]*aria-hidden="true"/)
+	const words = '__("Staff attendance and pay wait on your decision.")'
+	assert.ok(loading.includes(words), "the ghost banner says the real second line, so it wraps like the real one")
+	assert.ok(src.slice(src.indexOf('v-else-if="!waiting.error"')).includes(words), "the real banner says the same line")
+	assert.match(loading, /class="g-approvals__ghost-chips"[^>]*aria-hidden="true"/)
+	// banner, summary line, chips row, then the section: the order the answer has
+	const at = (needle) => loading.indexOf(needle)
+	assert.ok(at("g-approvals__ghost-banner") < at("g-form-footer") && at("g-form-footer") < at("g-approvals__ghost-chips") && at("g-approvals__ghost-chips") < at("g-approvals__placeholder"))
+	assert.match(src, /\.g-approvals__ghost-banner\s*\{\s*visibility: hidden;/)
+	assert.match(src, /\.g-approvals__ghost-chips\s*\{\s*min-height: var\(--g-touch-target-min\);/)
+})
+
 test("a skeleton row is the icon row's height: the skeleton sits in the real well", () => {
 	assert.match(read("../glass/GListPanel.vue"), /<span class="g-row__well">\s*<GSkeleton width="29px"/)
 })
