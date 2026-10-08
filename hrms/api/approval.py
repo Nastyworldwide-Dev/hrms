@@ -503,10 +503,11 @@ BULK_CAP = 50
 
 
 def _bulk_items(items) -> list[dict]:
-	"""The batch as a list of {doctype, name, modified}, or a plain refusal.
+	"""The batch as a list of {doctype, name, modified[, reason]}, or a plain refusal.
 
-	Accepts a JSON string (a POST body) or a list. Only the three fields below are read:
-	the caller never names a field to write.
+	Accepts a JSON string (a POST body) or a list. Only the fields below are read: the caller
+	never names a field to write. `reason` is the approver's own words for one request (bulk
+	reject, 8 Oct 2026); it is kept stripped when it is text, and left out when it is not.
 	"""
 	import json
 
@@ -524,7 +525,7 @@ def _bulk_items(items) -> list[dict]:
 		frappe.throw(_("Pick at least one request."), frappe.ValidationError)
 	if len(items) > BULK_CAP:
 		frappe.throw(
-			_("Approve up to {0} requests at a time. Untick some and try again.").format(BULK_CAP),
+			_("Pick up to {0} requests at a time. Untick some and try again.").format(BULK_CAP),
 			frappe.ValidationError,
 		)
 	if not all(row.get("modified") for row in items):
@@ -535,11 +536,23 @@ def _bulk_items(items) -> list[dict]:
 	# opposite orders would otherwise lock them in opposite orders and deadlock
 	return sorted(
 		(
-			{"doctype": row.get("doctype"), "name": row.get("name"), "modified": row.get("modified")}
+			{
+				"doctype": row.get("doctype"),
+				"name": row.get("name"),
+				"modified": row.get("modified"),
+				**_own_reason(row),
+			}
 			for row in items
 		),
 		key=lambda row: (row["doctype"], row["name"]),
 	)
+
+
+def _own_reason(row: dict) -> dict:
+	"""{"reason": text} when this request carries its own non-empty reason, else {}."""
+	reason = row.get("reason")
+	reason = reason.strip() if isinstance(reason, str) else ""
+	return {"reason": reason} if reason else {}
 
 
 def _refused(row: dict, code: str, reason: str) -> dict:
@@ -587,24 +600,35 @@ def check_many(items: str | list) -> dict:
 	return {"ready": ready, "refused": refused}
 
 
-@frappe.whitelist(methods=["POST"])
-def decide_many(items: str | list) -> dict:
-	"""Approve these requests, one by one; a refusal stops nothing.
+#: What the audit trail says about a decision made through a bulk call (8 Oct 2026). An Info
+#: comment, so the request's timeline shows who and when without a new field on seven doctypes.
+BULK_COMMENT = {"Approved": "Approved in bulk", "Rejected": "Rejected in bulk"}
 
-	No rule of its own: each request goes through `decide`, so access, state, the idempotent
-	retry, the revision check and every controller validator are exactly the one-at-a-time ones.
-	Each runs in its own savepoint, so a request that fails leaves no half write and the next
-	one still goes ahead. APPROVE ONLY: a rejection needs its own reason (decide), so it stays
-	one by one.
+
+def _decide_each(rows: list[dict], status: str, reasons: list[str | None]) -> tuple[list, list]:
+	"""Decide every row as `status`, one savepoint each: (decided states, refusals).
+
+	The ONE loop behind decide_many and reject_many. `reasons` runs alongside `rows`. No rule of
+	its own: each row goes through `decide`, so a refusal there is a refusal here. A row `decide`
+	actually changed also gets its "in bulk" comment inside the same savepoint, so the decision
+	and its audit line stand or fall together; a row that was already decided (decide answers an
+	identical retry with the settled state) is left alone and gets no second comment.
 	"""
-	rows = _bulk_items(items)
-	approved, refused = [], []
-	for n, row in enumerate(rows):
-		savepoint = f"bulk_approve_{n}"
+	word = "approved" if status == "Approved" else "rejected"
+	decided, refused = [], []
+	for n, (row, reason) in enumerate(zip(rows, reasons, strict=True)):
+		savepoint = f"bulk_{word}_{n}"
 		frappe.db.savepoint(savepoint)
 		try:
-			state = decide(row["doctype"], row["name"], "Approved", expected_modified=row["modified"])
-			approved.append(state)
+			# a plain read, no lock: decide takes the locks, in its own order (an OT request locks
+			# its employee first), and a second lock here could invert that order
+			was_pending = frappe.db.get_value(row["doctype"], row["name"], "docstatus") == 0
+			state = decide(
+				row["doctype"], row["name"], status, expected_modified=row["modified"], reason=reason
+			)
+			if was_pending:
+				frappe.get_doc(row["doctype"], row["name"]).add_comment("Info", BULK_COMMENT[status])
+			decided.append(state)
 		except frappe.PermissionError:
 			frappe.db.rollback(save_point=savepoint)
 			refused.append(_refused(row, "not_yours", _("This request is not waiting on you.")))
@@ -616,16 +640,54 @@ def decide_many(items: str | list) -> dict:
 
 			if _lost_transaction(error):
 				# a deadlock or lock timeout rolled back the WHOLE transaction: carrying on would
-				# report approvals that no longer exist
+				# report decisions that no longer exist
 				raise
-			# a bug in one request must not lose the others' approvals
+			# a bug in one request must not lose the others' decisions
 			frappe.db.rollback(save_point=savepoint)
-			logger.exception("[approval] bulk approve failed for %s %s", row["doctype"], row["name"])
-			refused.append(_refused(row, "error", _("This one could not be approved. Open it to see why.")))
+			logger.exception("[approval] bulk %s failed for %s %s", word, row["doctype"], row["name"])
+			message = (
+				_("This one could not be approved. Open it to see why.")
+				if status == "Approved"
+				else _("This one could not be rejected. Open it to see why.")
+			)
+			refused.append(_refused(row, "error", message))
 		finally:
 			frappe.clear_messages()
-	logger.info("[approval] %s bulk approved %d of %d", frappe.session.user, len(approved), len(rows))
+	logger.info("[approval] %s bulk %s %d of %d", frappe.session.user, word, len(decided), len(rows))
+	return decided, refused
+
+
+@frappe.whitelist(methods=["POST"])
+def decide_many(items: str | list) -> dict:
+	"""Approve these requests, one by one; a refusal stops nothing.
+
+	No rule of its own: each request goes through `decide`, so access, state, the idempotent
+	retry, the revision check and every controller validator are exactly the one-at-a-time ones.
+	Each runs in its own savepoint (`_decide_each`), so a request that fails leaves no half write
+	and the next one still goes ahead. Rejecting in bulk is `reject_many`: the 5 Oct ruling that
+	a rejection stays one by one was reversed by the owner on 8 Oct 2026.
+	"""
+	rows = _bulk_items(items)
+	approved, refused = _decide_each(rows, "Approved", [None] * len(rows))
 	return {"approved": approved, "refused": refused}
+
+
+@frappe.whitelist(methods=["POST"])
+def reject_many(items: str | list, reason: str | None = None) -> dict:
+	"""Reject these requests, each with a reason; a refusal stops nothing.
+
+	A rejection must say why (decide, audit P0-10). Each item may carry its own `reason`; one
+	without it uses the shared `reason`. If any request would be left with none, the whole call is
+	refused up front, before anything is written. Every request then goes through `decide` as
+	"Rejected", the same loop and the same refusal codes as `decide_many`.
+	"""
+	rows = _bulk_items(items)
+	shared = reason.strip() if isinstance(reason, str) else ""
+	reasons = [row.get("reason") or shared for row in rows]
+	if not all(reasons):
+		frappe.throw(_("Say why these are not approved."), frappe.ValidationError)
+	rejected, refused = _decide_each(rows, "Rejected", reasons)
+	return {"rejected": rejected, "refused": refused}
 
 
 def _plain(refusal) -> str:

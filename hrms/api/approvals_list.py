@@ -11,6 +11,10 @@ applies, in its order. Routing alone is not enough: its HR branch admits
 System Manager, whom `approval_row_scope` deliberately denies read, so an
 admin-only login saw every team's requests and reasons (review of be4b81edf).
 Session-scoped: the caller is never a parameter.
+
+Owner ruling, 8 Oct 2026: the page lists only requests SENT to the caller. A
+higher-up or HR can still step in from Desk or a notification (`decide` and
+Home's scan are untouched); the "Other teams" rows are simply not on this page.
 """
 
 import logging
@@ -23,10 +27,12 @@ from hrms.api.approval import (
 	APPROVER_FIELD,
 	DECIDE_THEN_SUBMIT,
 	_is_routed_approver,
+	_leave_balance_now,
 	_request_read_allowed,
 	may_read_leave_reason,
 	may_read_leave_reasons,
 )
+from hrms.api.now import _hhmm
 from hrms.utils.identity import normalize_login, own_employees
 
 logger = logging.getLogger(__name__)
@@ -35,6 +41,27 @@ logger = logging.getLogger(__name__)
 #: uses): an HR operator is routed everything, and every candidate costs a
 #: routed-approver check. Past it the page says the list is longer.
 SCAN_CAP = 50
+
+#: Rows read per type for THIS page (owner, 8 Oct 2026): bulk acts on up to 100 at once, so the
+#: page has to hold 100 of a type. Home keeps its own cap (needs_you.SCAN_CAP).
+#: ceiling: each leave row costs one live balance lookup, 100 per load at most,
+#: upgrade: one batched balance query if the page is slow to open on a big queue.
+LIST_CAP = 100
+
+#: The types whose row says "a file is attached" (receipt, medical certificate).
+ATTACHABLE = ("Leave Application", "Expense Claim")
+
+#: The request's own first and last day, which the page's date filter reads. One-day types name
+#: the same field twice; Replacement Leave names its bank month.
+OWN_DATES = {
+	"Leave Application": ("from_date", "to_date"),
+	"Shift Request": ("from_date", "to_date"),
+	"Attendance Request": ("from_date", "to_date"),
+	"OT Request": ("ot_date", "ot_date"),
+	"Expense Claim": ("posting_date", "posting_date"),
+	"Replacement Leave Claim": ("bank_month", "bank_month"),
+	"Compensatory Leave Request": ("work_from_date", "work_end_date"),
+}
 
 #: The person's word for each type (glossary: "Time off", "Overtime" …).
 KIND = {
@@ -65,10 +92,11 @@ def _days(n) -> str:
 	return f"{text} day" if n == 1 else f"{text} days"
 
 
-#: Where a row sits on the page (owner-approved design, 23 Sep 2026). YOURS =
-#: sent to the caller; OTHER = they receive it only because they are higher up
-#: the chain, or HR. Presentation only: the two gates in `_mine_of` decide
-#: which rows exist; this never admits or drops one.
+#: Where a row sits (owner-approved design, 23 Sep 2026). YOURS = sent to the
+#: caller; OTHER = they receive it only because they are higher up the chain, or
+#: HR. The page lists YOURS only since 8 Oct 2026; OTHER is still the placement
+#: Desk and notification step-ins use. The two gates in `_mine_of` decide which
+#: rows exist; placement never admits a row.
 YOURS, OTHER = "yours", "other"
 
 #: The Employee-record field naming who a request type is sent to. Remote
@@ -145,16 +173,104 @@ def _placement(doctype: str, doc, me: dict, cache: dict) -> dict:
 	}
 
 
-def _row(doc, me: dict | None = None, cache: dict | None = None, may_read_reason: bool | None = None) -> dict:
+def _iso(value) -> str:
+	"""'2026-10-14' for a date, a date-time or its text; '' when there is none."""
+	return str(value)[:10] if value else ""
+
+
+def _own_dates(doc) -> dict:
+	"""`from_date` and `to_date` as plain ISO days, for the page's date filter."""
+	first, last = OWN_DATES.get(doc.doctype, (None, None))
+	return {"from_date": _iso(first and doc.get(first)), "to_date": _iso(last and doc.get(last))}
+
+
+def _attached_names(doctype: str, docs) -> set:
+	"""Which of these requests have a file attached: ONE query for the whole list, never one per row."""
+	names = [doc.name for doc in docs]
+	if not names:
+		return set()
+	found = set(
+		frappe.get_all(
+			"File",
+			filters={"attached_to_doctype": doctype, "attached_to_name": ["in", names]},
+			pluck="attached_to_name",
+		)
+	)
+	logger.debug("[approvals_list] %s: %d of %d have a file", doctype, len(found), len(names))
+	return found
+
+
+def _current_shift(doc) -> str:
+	"""The shift the employee works on the request's first day, '' when unknown. Never raises.
+
+	The roster assignment covering that day, else the employee's default shift: the rule Home's
+	shift window uses. NOT `get_employee_shift` at midnight: it counts a shift only when the asked
+	time is inside its check-in window, so for a day shift it answered with the default shift
+	instead of the rostered one (pinned by test_approvals_list, 8 Oct 2026).
+	"""
+	employee, day = doc.get("employee"), doc.get("from_date")
+	if not (employee and day):
+		return ""
+	try:
+		from hrms.utils.geofence import resolve_assignment
+
+		found = resolve_assignment(employee, date.fromisoformat(_iso(day)))
+		shift = (found and found.get("shift_type")) or frappe.db.get_value(
+			"Employee", employee, "default_shift"
+		)
+	except Exception:
+		logger.warning("[approvals_list] current shift unavailable for %s", doc.get("name"), exc_info=True)
+		return ""
+	return shift or ""
+
+
+def _expense_currency(doc) -> str:
+	"""The claim's own currency, else its company's default."""
+	if currency := doc.get("currency"):
+		return currency
+	company = doc.get("company")
+	return (frappe.get_cached_value("Company", company, "default_currency") if company else "") or ""
+
+
+def _clock(value) -> str:
+	"""'09:05' for a time field, '' when it is empty (midnight is a time, not an absence)."""
+	return "" if value is None or value == "" else _hhmm(value)
+
+
+def _row(
+	doc,
+	me: dict | None = None,
+	cache: dict | None = None,
+	may_read_reason: bool | None = None,
+	attached: set | None = None,
+) -> dict:
 	"""What an approver needs to decide, in plain words. No raw field names.
 
 	`may_read_reason` is a leave request's answer to "may the caller read the reason?" when the
 	caller already asked for the whole list at once (`get_waiting_for_me`). None asks here, for
-	this one request.
+	this one request. `attached` is the same for "has a file": the names of this type that do,
+	read once for the page; None looks up this one request.
+
+	Beyond the common keys a row carries what its type needs to be decided without opening it
+	(8 Oct 2026): time off `half_day`, `days`, `balance_after`, `attached`; expense `items`,
+	`expense_types`, `currency`, `attached`; shift change `new_shift`, `current_shift`; fix a
+	day `in_time`, `out_time`. Every row carries its own `from_date` and `to_date`.
 	"""
 	kind = KIND.get(doc.doctype, doc.doctype)
-	when, detail, reason = request_when(doc), "", ""
+	when, detail, reason, extra = request_when(doc), "", "", {}
+	if doc.doctype in ATTACHABLE:
+		if attached is None:
+			attached = _attached_names(doc.doctype, [doc])
+		extra["attached"] = doc.name in attached
 	if doc.doctype == "Leave Application":
+		days = float(doc.get("total_leave_days") or 0)
+		balance = _leave_balance_now(doc)
+		extra.update(
+			half_day=bool(doc.get("half_day")),
+			days=days,
+			# what is left once THIS is approved; None when there is no number to subtract from
+			balance_after=None if balance is None else round(float(balance) - days, 3),
+		)
 		# Which half, when the request says (owner, 25 Sep 2026): the approver
 		# decides knowing whether the person is out in the morning or afternoon.
 		session = doc.get("half_day_session") if doc.get("half_day") else ""
@@ -172,11 +288,21 @@ def _row(doc, me: dict | None = None, cache: dict | None = None, may_read_reason
 	elif doc.doctype == "Expense Claim":
 		detail = f"{frappe.utils.fmt_money(doc.get('grand_total') or doc.get('total_claimed_amount') or 0)}"
 		reason = doc.get("remark") or ""
+		lines = doc.get("expenses") or []
+		kinds = (line.get("expense_type") for line in lines if line.get("expense_type"))
+		extra.update(
+			items=len(lines),
+			# each kind once, in the order the lines were claimed
+			expense_types=list(dict.fromkeys(kinds)),
+			currency=_expense_currency(doc),
+		)
 	elif doc.doctype == "Shift Request":
 		detail = doc.get("shift_type") or ""
+		extra.update(new_shift=detail, current_shift=_current_shift(doc))
 	elif doc.doctype == "Attendance Request":
 		detail = doc.get("reason") or ""
 		reason = doc.get("explanation") or ""
+		extra.update(in_time=_clock(doc.get("in_time")), out_time=_clock(doc.get("out_time")))
 	elif doc.doctype == "Replacement Leave Claim":
 		detail = _days(doc.get("claimed_days"))
 		reason = doc.get("explanation") or ""
@@ -195,6 +321,8 @@ def _row(doc, me: dict | None = None, cache: dict | None = None, may_read_reason
 		# Summed per person on the page ("5 days · 14h 30m"); overtime only.
 		"hours": float(doc.get("claimed_hours") or 0) if doc.doctype == "OT Request" else 0,
 		"modified": str(doc.get("modified") or ""),
+		**_own_dates(doc),
+		**extra,
 		**_placement(doc.doctype, doc, me or _me(), {} if cache is None else cache),
 	}
 
@@ -244,6 +372,9 @@ def _remote_row(req, me: dict | None = None, cache: dict | None = None) -> dict:
 		"selfie_image": req.get("selfie_image"),
 		"hours": 0,
 		"modified": str(req.get("checkin_time") or ""),
+		# the day it was made, so the date filter treats it like any one-day request
+		"from_date": _iso(req.get("checkin_time")),
+		"to_date": _iso(req.get("checkin_time")),
 		**_placement("Remote Checkin Request", req, me or _me(), {} if cache is None else cache),
 	}
 
@@ -337,34 +468,44 @@ def _mine_of(
 
 @frappe.whitelist(methods=["GET", "POST"])
 def get_waiting_for_me() -> dict:
+	"""The rows SENT to the caller, oldest first (owner, 8 Oct 2026: other teams are not listed here).
+
+	Only `section == YOURS` rows are returned, with the key kept (the calendar filters on it). The
+	two gates in `_mine_of` still decide what exists; this narrows what the page shows. Up to
+	LIST_CAP rows per type, so a bulk action of 100 has all 100 on the page.
+	"""
 	rows, capped = [], False
 	me, cache = _me(), {}
 	for doctype in _types_on_site():
 		field, pending = DECIDE_THEN_SUBMIT[doctype]
 		try:
-			mine, hit_cap = _mine_of(doctype, field, pending)
+			mine, hit_cap = _mine_of(doctype, field, pending, cap=LIST_CAP)
+			mine = [doc for doc in mine if _placement(doctype, doc, me, cache)["section"] == YOURS]
+			capped = capped or hit_cap
+			# one File query for the type, one reason batch for the leave list: never one per row
+			attached = _attached_names(doctype, mine) if doctype in ATTACHABLE else None
+			if doctype == "Leave Application":
+				# the reason rule is asked once for the page's leave list, not once per row (6 Oct 2026)
+				readable = may_read_leave_reasons(mine)
+				built = [
+					_row(doc, me, cache, may_read_reason=ok, attached=attached)
+					for doc, ok in zip(mine, readable, strict=True)
+				]
+			else:
+				built = [_row(doc, me, cache, attached=attached) for doc in mine]
 		except Exception:
 			# One unavailable type must not take the page down; logged by name
 			# so a silent zero is never mistaken for an empty queue.
 			logger.exception("[approvals_list] %s failed; skipped", doctype)
 			continue
-		capped = capped or hit_cap
-		if doctype == "Leave Application":
-			# the reason rule is asked once for the page's leave list, not once per row (6 Oct 2026)
-			readable = may_read_leave_reasons(mine)
-			rows.extend(
-				_row(doc, me, cache, may_read_reason=ok) for doc, ok in zip(mine, readable, strict=True)
-			)
-		else:
-			rows.extend(_row(doc, me, cache) for doc in mine)
+		rows.extend(built)
 	try:
-		rows.extend(_remote_row(req, me, cache) for req in _remote_checkins())
+		rows.extend(
+			row for req in _remote_checkins() if (row := _remote_row(req, me, cache))["section"] == YOURS
+		)
 	except Exception:
 		logger.exception("[approvals_list] remote check-ins failed; skipped")
 	# Oldest first: the one waiting longest is the one to decide next.
 	rows.sort(key=lambda row: row["modified"])
-	yours = sum(row["section"] == YOURS for row in rows)
-	logger.info(
-		"[approvals_list] user=%s rows=%d yours=%d capped=%s", frappe.session.user, len(rows), yours, capped
-	)
+	logger.info("[approvals_list] user=%s rows=%d capped=%s", frappe.session.user, len(rows), capped)
 	return {"rows": rows, "capped": capped}
