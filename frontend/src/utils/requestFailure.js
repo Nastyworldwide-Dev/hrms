@@ -99,7 +99,7 @@ function isRepeat(endpoint, now) {
  * when the checks before it let it be, and only a failure that goes on to be reported starts the
  * repeat window, so a refusal never uses it up.
  */
-export function classifyFailure(error, { endpoint, signedIn, now }) {
+function classifyFailure(error, { endpoint, signedIn, now }) {
 	const silenced =
 		SILENT_EXCEPTIONS.has(error?.exc_type) ||
 		SILENT_ENDPOINTS.has(endpoint) ||
