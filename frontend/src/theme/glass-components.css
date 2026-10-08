@@ -3148,6 +3148,15 @@ textarea {
 ion-refresher {
 	z-index: 2;
 }
+/* alpha.42 (measured, WebKit, frame by frame): until Ionic hydrates it, an
+   <ion-refresher> is a plain block with no mode class, so a flex column with a
+   gap (the issue lists, HelpSplitList) paid the gap for it, then got it back
+   when Ionic set display:none: "Nothing open" moved 16 px at the end of the
+   load. A hydrated one carries .ios / .md; before that it takes no place in
+   the page, the same rule as the overlays below. */
+ion-refresher:not(.ios):not(.md) {
+	display: none;
+}
 /* Above the content, it must only be SEEN while someone is pulling: at rest
    its "Refreshing…" / "Pull to refresh" line showed through the page top on a
    real phone (hotfix 23 Sep, screenshots of Home and Requests). Ionic marks

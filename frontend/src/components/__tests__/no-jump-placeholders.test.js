@@ -17,6 +17,13 @@ test("an overlay Ionic has not hydrated yet takes no place in the page", () => {
 	assert.match(css, /:is\(ion-modal, ion-popover[^)]*\):not\(\.ios\):not\(\.md\)\s*\{\s*display: none;/)
 })
 
+test("a pull-to-refresh Ionic has not hydrated yet takes no place in the page", () => {
+	// Undefined <ion-refresher> is a plain block. Inside a flex column with a gap (IssueList, HelpSplitList)
+	// it paid the gap for ~100 ms until Ionic set display:none, and "Nothing open" moved 16 px (measured
+	// frame by frame, 8 Oct 2026: top 77 -> 61, kids ion-refresher[block] -> ion-refresher[none/absolute]).
+	assert.match(css, /ion-refresher:not\(\.ios\):not\(\.md\)\s*\{\s*display: none;/)
+})
+
 test("an empty queue is the same row as its skeleton, not a loose line", () => {
 	// NeedsYou no longer draws an empty row (29 Sep 2026: an empty queue hides
 	// the block); the Approvals page still says so, as one row.
