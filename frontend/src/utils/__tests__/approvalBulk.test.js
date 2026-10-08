@@ -41,6 +41,7 @@ import {
 	rowKey,
 	toggle,
 	toggleAll,
+	leftOver,
 	typeChips,
 } from "../approvalBulk.js"
 
@@ -383,8 +384,10 @@ test("sendInChunks sends one chunk at a time, in order, and merges what each ret
 	assert.equal(merged.done.length + merged.refused.length, 25)
 	// indexes 0 and 5 of each chunk of 10, index 0 of the chunk of 5: 2 + 2 + 1
 	assert.equal(merged.refused.length, 5)
-	// reported as each chunk goes out: "Approving 10 of 25…", never "0 of 25"
+	// reported as each chunk COMES BACK (review of b47084495: "100 of 100" showed while the last
+	// chunk was still in flight): 0 before anything returns, then what is finished
 	assert.deepEqual(progress, [
+		[0, 25],
 		[10, 25],
 		[20, 25],
 		[25, 25],
@@ -692,4 +695,21 @@ test("the shared reason sent with a reject is the typed one, else the first requ
 	assert.equal(sharedFor(items, "  Peak week "), "Peak week")
 	assert.equal(sharedFor(items, "   "), "own one")
 	assert.equal(sharedFor([], ""), "")
+})
+
+test("Select all ticks at most BULK_CAP and says how many it left (review of b47084495)", () => {
+	const many = Array.from({ length: 150 }, (_, i) => ({
+		doctype: "Leave Application",
+		name: `L${i}`,
+		section: "yours",
+	}))
+	const selected = toggleAll(new Set(), many)
+	// the oldest first, as the list shows them: the ones waiting longest get decided
+	assert.equal(selected.size, BULK_CAP)
+	assert.ok(selected.has(rowKey(many[0])) && !selected.has(rowKey(many[BULK_CAP])))
+	// a full cap reads as "all" so the next tap unticks, not "some" forever
+	assert.equal(allState(selected, many), "all")
+	assert.equal(toggleAll(selected, many).size, 0)
+	assert.equal(leftOver(many), 50)
+	assert.equal(leftOver(many.slice(0, 10)), 0)
 })

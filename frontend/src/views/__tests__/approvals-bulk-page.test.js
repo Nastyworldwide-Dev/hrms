@@ -348,9 +348,10 @@ test("the Reject button stays off until every request has a reason, and sends th
 	)
 })
 
-test("the work says how far it is: 'Approving 30 of 100…' and 'Rejecting …', polite and announced", () => {
-	assert.match(script, /__\("Approving \{0\} of \{1\}…"/)
-	assert.match(script, /__\("Rejecting \{0\} of \{1\}…"/)
+test("the work says how far it is: 'Approving… 30 of 100 done' and 'Rejecting …', polite and announced", () => {
+	// "done": it counts what the server answered, never a chunk still on its way (review of b47084495)
+	assert.match(script, /__\("Approving… \{0\} of \{1\} done"/)
+	assert.match(script, /__\("Rejecting… \{0\} of \{1\} done"/)
 	assert.match(
 		template,
 		/role="status"[^>]*aria-live="polite"|aria-live="polite"[^>]*role="status"/
@@ -386,4 +387,15 @@ test("each control is told apart by a screen reader (design review of b47084495)
 	// a disabled Reject says why, on screen, and is described by it
 	assert.match(template, /id="approvals-reject-hint"[\s\S]{0,120}Add a reason to continue\./)
 	assert.match(template, /:aria-describedby="rejectReady \? undefined : 'approvals-reject-hint'"/)
+})
+
+test("Select all past the cap says it takes the oldest and how many it left (review of b47084495)", () => {
+	assert.match(
+		template,
+		/leftOver\(visibleRows\)[\s\S]{0,80}__\('Select the oldest \{0\}', \[BULK_CAP\]\)/
+	)
+	assert.match(
+		template,
+		/__\("\{0\} more wait\. Decide these first, or filter\.", \[leftOver\(visibleRows\)\]\)/
+	)
 })

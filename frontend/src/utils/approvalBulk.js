@@ -158,17 +158,24 @@ export function toggle(selected, row) {
 
 //: "Select all in this filter": every row of the filter that can be ticked; if
 //: they are all ticked already, untick them (and only them).
+//: At most BULK_CAP, the oldest first (the order the list shows): Select all on 150 used to tick
+//: all 150 and refuse only at Approve (review of b47084495). The page says how many it left.
 export function toggleAll(selected, rows) {
-	const pickable = rows.filter(canBulk)
+	const pickable = capped(rows)
 	const next = new Set(selected)
 	const all = pickable.length > 0 && pickable.every((row) => next.has(rowKey(row)))
 	for (const row of pickable) all ? next.delete(rowKey(row)) : next.add(rowKey(row))
 	return next
 }
 
+const capped = (rows) => rows.filter(canBulk).slice(0, BULK_CAP)
+
+//: How many tickable rows Select all leaves out because of the cap.
+export const leftOver = (rows) => Math.max(0, rows.filter(canBulk).length - BULK_CAP)
+
 //: Selection state of the "Select all" control: "none" | "some" | "all"
 export function allState(selected, rows) {
-	const pickable = rows.filter(canBulk)
+	const pickable = capped(rows)
 	const ticked = pickable.filter((row) => selected.has(rowKey(row))).length
 	return ticked === 0 ? "none" : ticked === pickable.length ? "all" : "some"
 }
@@ -207,17 +214,19 @@ export function chunks(list, size = CHUNK_SIZE) {
 }
 
 //: Send `items` to the server one piece at a time, in order, and merge the answers:
-//: {done: what `doneKey` ("ready", "approved" or "rejected") listed, refused}. `onProgress(sent, total)`
-//: is called as each piece goes out. A piece that throws stops the rest and the error goes to the
-//: caller: what went through is then unknown, so nothing is guessed here.
+//: {done: what `doneKey` ("ready", "approved" or "rejected") listed, refused}. `onProgress(finished,
+//: total)` is called before the first piece and as each piece comes back, so it counts only what the
+//: server answered. A piece that throws stops the rest and the error goes to the caller: what went
+//: through is then unknown, so nothing is guessed here.
 export async function sendInChunks(items, send, doneKey, onProgress = () => {}) {
 	const done = []
 	const refused = []
-	let sent = 0
+	let finished = 0
+	onProgress(finished, items.length)
 	for (const part of chunks(items)) {
-		sent += part.length
-		onProgress(sent, items.length)
 		const result = await send(part)
+		finished += part.length
+		onProgress(finished, items.length)
 		done.push(...(result?.[doneKey] || []))
 		refused.push(...(result?.refused || []))
 	}

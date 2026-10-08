@@ -105,10 +105,18 @@
 					<div v-if="pickable.length" class="flex items-center">
 						<GCheckbox
 							:model-value="allState === 'all'"
-							:label="__('Select all {0}', [pickable.length])"
+							:label="
+								leftOver(visibleRows)
+									? __('Select the oldest {0}', [BULK_CAP])
+									: __('Select all {0}', [pickable.length])
+							"
 							@update:model-value="ticked = toggleAll(ticked, visibleRows)"
 						/>
 					</div>
+					<!-- Select all stops at the cap (review of b47084495): say so, never tick 150 and refuse later -->
+					<p v-if="leftOver(visibleRows)" class="m-0 text-caption text-ink-600">
+						{{ __("{0} more wait. Decide these first, or filter.", [leftOver(visibleRows)]) }}
+					</p>
 					<!-- The same 51 pt row as the skeleton above (alpha.8 r3: three
 					     skeleton rows collapsing to one grey line moved the page
 					     132 pt; alpha.9 D5: nothing loose). -->
@@ -601,6 +609,7 @@ import {
 	siteToday,
 	toggle,
 	toggleAll,
+	leftOver,
 	typeChips,
 } from "@/utils/approvalBulk"
 import GBanner from "@/components/glass/GBanner.vue"
@@ -804,16 +813,17 @@ const sheetTitle = computed(() => {
 		return n === 1 ? __("Reject 1 request?") : __("Reject {0} requests?", [n])
 	return n === 1 ? __("Approve 1 request?") : __("Approve {0} requests?", [n])
 })
-// "Checking 20 of 100…" / "Approving 30 of 100…" / "Rejecting 30 of 100…", read out politely
+// "Checking… 20 of 100 done" / "Approving… 30 of 100 done": counts what the server ANSWERED, so it
+// never says "100 of 100" while the last ten are still on their way (review of b47084495)
 const progressText = computed(() => {
 	const current = sheet.value
 	if (!current?.progress) return ""
-	const [sent, total] = current.progress
-	if (current.phase === "check") return __("Checking {0} of {1}…", [sent, total])
+	const [finished, total] = current.progress
+	if (current.phase === "check") return __("Checking… {0} of {1} done", [finished, total])
 	if (current.phase !== "working") return ""
 	return current.mode === "reject"
-		? __("Rejecting {0} of {1}…", [sent, total])
-		: __("Approving {0} of {1}…", [sent, total])
+		? __("Rejecting… {0} of {1} done", [finished, total])
+		: __("Approving… {0} of {1} done", [finished, total])
 })
 const resultWords = computed(() => {
 	const current = sheet.value
