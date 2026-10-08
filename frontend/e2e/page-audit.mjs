@@ -181,7 +181,7 @@ console.log(Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, n]) => `
 // audit reads as off-pair (12/18 captions under a row, the expense poster's
 // big figure, 15/23 on a reason text) — each a deliberate multi-line or
 // one-line figure, not drift. New findings, or more of these, fail the gate.
-const KNOWN = { T9: 6 }
+const KNOWN = { T9: 2 } // alpha.42: 7 -> 2 (line heights onto the type tokens); left: expense-claims poster 34/34, approvals 12/18
 const byRule = {}
 for (const r of rows) for (const i of r.issues) byRule[i.split(" ")[0]] = (byRule[i.split(" ")[0]] || 0) + 1
 const over = Object.entries(byRule).filter(([rule, n]) => n > (KNOWN[rule] ?? 0))

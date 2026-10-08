@@ -1094,6 +1094,7 @@ html[data-theme="dark"] .g-badge--open {
 	font-family: var(--g-type-card-title-family);
 	font-size: var(--g-type-card-title-size);
 	font-weight: var(--g-type-card-title-weight);
+	line-height: var(--g-type-card-title-line-height);
 	font-variant-numeric: tabular-nums;
 	color: var(--g-ink);
 }
@@ -1726,6 +1727,7 @@ svg.lucide {
 	font-family: var(--g-type-micro-label-family);
 	font-size: var(--g-type-micro-label-size);
 	font-weight: var(--g-type-micro-label-weight);
+	line-height: var(--g-type-micro-label-line-height);
 	letter-spacing: var(--g-type-micro-label-tracking);
 	/* secondary, not tertiary: 12 pt text needs 4.5:1 (Apple accessibility);
 	   ink3 measured 3.26 light / 3.52 dark (alpha.12 audit) */
@@ -1748,6 +1750,7 @@ svg.lucide {
 	   minimum; iOS Calendar draws day numbers large. Fits 7 columns at 320px. */
 	font-size: 15px;
 	font-weight: var(--g-type-card-title-weight);
+	line-height: var(--g-type-card-title-line-height);
 	font-variant-numeric: tabular-nums;
 	/* day numbers use --ink-muted (§14.4 exception 2) */
 	color: var(--g-ink-muted);
@@ -3675,6 +3678,7 @@ ion-router-outlet {
 .g-now__date {
 	font-family: var(--g-type-caption-family);
 	font-size: var(--g-type-caption-size);
+	line-height: var(--g-type-caption-line-height);
 	letter-spacing: var(--g-type-caption-tracking);
 	color: var(--g-ink2);
 	margin-bottom: 4px;
