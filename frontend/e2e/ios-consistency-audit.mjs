@@ -32,7 +32,8 @@ for (const s of list) {
 			if (uniq(chev).length > 1) issues.push(`chevron sizes differ: ${uniq(chev)}`)
 			if (uniq(bar).length > 1) issues.push(`bar icon sizes differ: ${uniq(bar)}`)
 			// 2. groups: left/right edges must be the gutter (16)
-			const groups = [...page.querySelectorAll(".g-form-group, .g-list, .g-glass, .g-today")].filter(vis).filter((g) => !g.closest("ion-modal, .g-header, ion-tab-bar"))
+			// a banner is glass but not a group: it takes radius-banner by spec §10.1 #10
+			const groups = [...page.querySelectorAll(".g-form-group, .g-list, .g-glass, .g-today")].filter(vis).filter((g) => !g.closest("ion-modal, .g-header, ion-tab-bar") && !g.classList.contains("g-banner"))
 			const edges = groups.map((g) => { const r = g.getBoundingClientRect(); return `${R(r.left)}-${R(innerWidth - r.right)}` })
 			if (uniq(edges).length > 1) issues.push(`group side margins differ: ${uniq(edges)}`)
 			const off = groups.filter((g) => { const r = g.getBoundingClientRect(); return Math.abs(r.left - 16) > 0.6 || Math.abs(innerWidth - r.right - 16) > 0.6 })

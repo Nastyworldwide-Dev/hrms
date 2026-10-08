@@ -80,6 +80,9 @@ test("coherence: profile every screen", async () => {
 						// action anyone sees, so not a second filled button (alpha.5).
 						const box = e.getBoundingClientRect()
 						if (box.bottom <= 0 || box.right <= 0 || box.top >= innerHeight) continue
+						// A calendar day is coloured by what happened that day (present = brand),
+						// a status mark you can tap to open the day, not an action button.
+						if (e.closest(".g-cal__day")) continue
 						const cs = getComputedStyle(e)
 						const paint = cs.backgroundColor + " " + cs.backgroundImage
 						const cls = (e.className || "").toString()
@@ -183,7 +186,8 @@ test("coherence: profile every screen", async () => {
 					// Declared non-avatars: square marks that are not people. Same
 					// discipline as ROLES — an exclusion is a visible edit here, not a
 					// class someone can sprinkle on markup to silence the gate.
-					const NOT_AVATAR = ".g-logo, [class*='logo'], svg, [data-icon]"
+					// .g-cal__day: a calendar date number in its square day cell, not a person.
+					const NOT_AVATAR = ".g-logo, [class*='logo'], svg, [data-icon], .g-cal__day"
 					const isAvatarish = (e) => {
 						if (e.closest(NOT_AVATAR)) return false
 						const r = e.getBoundingClientRect()
