@@ -479,8 +479,10 @@ def get_waiting_for_me() -> dict:
 	for doctype in _types_on_site():
 		field, pending = DECIDE_THEN_SUBMIT[doctype]
 		try:
-			mine, hit_cap = _mine_of(doctype, field, pending, cap=LIST_CAP)
-			mine = [doc for doc in mine if _placement(doctype, doc, me, cache)["section"] == YOURS]
+			# yours_only INSIDE the scan, so the cap counts rows sent to the caller: filtering after
+			# it let 100 older step-in rows push an HR user's own requests off the page (review of
+			# ef7fee8b4)
+			mine, hit_cap = _mine_of(doctype, field, pending, cap=LIST_CAP, yours_only=True)
 			capped = capped or hit_cap
 			# one File query for the type, one reason batch for the leave list: never one per row
 			attached = _attached_names(doctype, mine) if doctype in ATTACHABLE else None

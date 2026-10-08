@@ -1318,3 +1318,49 @@ class TestAttachmentsAreLookedUpOncePerType(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestOtherTeamsDoNotEatThePageCap(unittest.TestCase):
+	"""Review of ef7fee8b4: the page capped the scan at 100 and THEN dropped other teams' rows,
+	so an HR or higher-up with 100+ older rows routed to them as a step-in lost their own
+	requests from the page (the class of 474d12d34). The cap must count rows SENT to the caller."""
+
+	def test_my_request_behind_a_hundred_older_other_team_rows_is_listed(self):
+		names = [f"LA-{i:03d}" for i in range(121)]  # 120 other teams' first, mine last
+
+		def paged(doctype, filters=None, pluck=None, order_by=None, limit=None, start=0, **kw):
+			return names[start : start + limit] if doctype == "Leave Application" else []
+
+		def doc(dt, name):
+			return frappe._dict(
+				doctype=dt,
+				name=name,
+				employee="E-MINE" if name == "LA-120" else "E-OTHER",
+				employee_name=name,
+				leave_type="Annual Leave",
+				modified=f"2026-09-01 00:00:{int(name[3:]) % 60:02d}",
+			)
+
+		sent = lambda doctype, d, facts, me: d.employee == "E-MINE"  # noqa: E731
+		with (
+			patch.object(frappe, "get_all", side_effect=paged, create=True),
+			patch.object(frappe, "get_doc", side_effect=doc),
+			patch.object(frappe, "session", frappe._dict(user=CALLER)),
+			patch.object(frappe.db, "get_value", return_value={}),
+			patch.object(approvals_list, "own_employees", return_value=[CALLER_EMPLOYEE]),
+			patch.object(approvals_list, "_is_routed_approver", side_effect=lambda d: True),
+			patch.object(approvals_list, "_request_read_allowed", side_effect=lambda d: True),
+			patch.object(approvals_list, "_sent_to_me", side_effect=sent),
+			patch.object(approvals_list, "_attached_names", return_value=set()),
+			patch.object(approvals_list, "_leave_balance_now", return_value=None),
+			patch.object(
+				approvals_list,
+				"may_read_leave_reasons",
+				side_effect=lambda docs, user=None: [True] * len(docs),
+			),
+			patch.object(approvals_list, "_types_on_site", return_value=["Leave Application"]),
+			patch.object(approvals_list, "_remote_checkins", return_value=[]),
+		):
+			result = approvals_list.get_waiting_for_me()
+		self.assertEqual([row["name"] for row in result["rows"]], ["LA-120"])
+		self.assertFalse(result["capped"], "one of mine is not 'more are waiting'")
