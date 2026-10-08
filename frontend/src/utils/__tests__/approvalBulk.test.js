@@ -6,13 +6,29 @@ import assert from "node:assert/strict"
 import {
 	AMBER_DAYS,
 	BULK_CAP,
+	CHUNK_SIZE,
 	RED_DAYS,
+	activeFilters,
 	afterApprove,
 	ageTone,
 	allState,
 	banner,
 	canBulk,
+	canReject,
+	chipLabel,
+	chunks,
 	daysWaiting,
+	departmentOptions,
+	effectiveReason,
+	employeeOptions,
+	filterRows,
+	kindSummary,
+	onlyYours,
+	pruneFilters,
+	rejectItems,
+	sharedFor,
+	rowDetails,
+	sendInChunks,
 	siteToday,
 	searchRows,
 	keepVisible,
@@ -50,8 +66,12 @@ const checkin = (name) => ({
 	modified: "2026-09-02 08:47:00",
 })
 
-test("the cap matches the server's (hrms.api.approval.BULK_CAP = 50)", () => {
-	assert.equal(BULK_CAP, 50)
+test("the page takes up to 100 at once, sent 10 at a time (owner ruling 8 Oct 2026; was 50 in one call)", () => {
+	// the server still refuses a call of more than hrms.api.approval.BULK_CAP = 50, so the page
+	// never sends more than CHUNK_SIZE in one call
+	assert.equal(BULK_CAP, 100)
+	assert.equal(CHUNK_SIZE, 10)
+	assert.ok(CHUNK_SIZE <= 50)
 })
 
 test("days waiting is counted by the calendar, never negative", () => {
@@ -275,15 +295,18 @@ const yours = (name, kind = "Time off") => ({
 })
 const theirs = (name) => ({ ...yours(name), section: "other" })
 
-test("only the Yours rows can be ticked: Other-teams rows show no tick, so Select all must not take them", () => {
+test("Other teams is gone (owner ruling 8 Oct 2026): rows not sent to the approver never reach the page", () => {
+	// a personal cache written before the server stopped sending them can still hold such rows
 	const rows = [yours("A"), theirs("B")]
-	const ticked = toggleAll(new Set(), rows)
+	assert.deepEqual(
+		onlyYours(rows).map((r) => r.name),
+		["A"]
+	)
+	const ticked = toggleAll(new Set(), onlyYours(rows))
 	assert.deepEqual([...ticked], [rowKey(yours("A"))])
-	assert.equal(canBulk(theirs("B")), false)
-	assert.equal(toggle(new Set(), theirs("B")).size, 0)
 })
 
-test("a request is tickable only when the approver can see it ticked", () => {
+test("a request is tickable unless it is a check-in (ticks always show since 8 Oct 2026)", () => {
 	assert.equal(canBulk(yours("A")), true)
 	assert.equal(canBulk({ ...yours("A"), doctype: "Remote Checkin Request" }), false)
 })
@@ -307,7 +330,366 @@ test("what is sent is only what is ticked AND shown", () => {
 })
 
 test("a filter with nothing tickable says so", () => {
+	// only check-ins left: nothing to tick (Other teams no longer exists to be "nothing tickable" too)
 	assert.equal(nothingTickable([{ ...yours("A"), doctype: "Remote Checkin Request" }]), true)
 	assert.equal(nothingTickable([yours("A")]), false)
 	assert.equal(nothingTickable([]), false)
+})
+
+// ---- bulk v2 (owner rulings 8 Oct 2026) ----
+
+const tr = (text, args = []) => text.replace(/\{(\d+)\}/g, (_, i) => args[i])
+
+test("chunks cut a list into pieces of ten, the last one shorter, and never lose an item", () => {
+	const list = Array.from({ length: 25 }, (_, i) => i)
+	assert.deepEqual(
+		chunks(list).map((c) => c.length),
+		[10, 10, 5]
+	)
+	assert.deepEqual(chunks(list).flat(), list)
+	assert.equal(chunks(Array.from({ length: 100 }, (_, i) => i)).length, 10)
+	assert.deepEqual(chunks([]), [])
+	assert.deepEqual(chunks([1, 2, 3], 2), [[1, 2], [3]])
+})
+
+test("sendInChunks sends one chunk at a time, in order, and merges what each returned", async () => {
+	const items = Array.from({ length: 25 }, (_, i) => ({
+		doctype: "Leave Application",
+		name: `L${i}`,
+	}))
+	let running = 0
+	let widest = 0
+	const sizes = []
+	const progress = []
+	const merged = await sendInChunks(
+		items,
+		async (part) => {
+			running += 1
+			widest = Math.max(widest, running)
+			await new Promise((resolve) => setTimeout(resolve, 1))
+			running -= 1
+			sizes.push(part.length)
+			// every fifth request is refused
+			return {
+				approved: part.filter((_, i) => i % 5),
+				refused: part.filter((_, i) => !(i % 5)).map((p) => ({ ...p, reason: "no" })),
+			}
+		},
+		"approved",
+		(done, total) => progress.push([done, total])
+	)
+	assert.equal(widest, 1, "never two calls at once")
+	assert.deepEqual(sizes, [10, 10, 5])
+	assert.equal(merged.done.length + merged.refused.length, 25)
+	// indexes 0 and 5 of each chunk of 10, index 0 of the chunk of 5: 2 + 2 + 1
+	assert.equal(merged.refused.length, 5)
+	// reported as each chunk goes out: "Approving 10 of 25…", never "0 of 25"
+	assert.deepEqual(progress, [
+		[10, 25],
+		[20, 25],
+		[25, 25],
+	])
+})
+
+test("sendInChunks reads the key the endpoint answers with (reject_many says rejected)", async () => {
+	const merged = await sendInChunks(
+		[{ name: "a" }],
+		async (part) => ({ rejected: part, refused: [] }),
+		"rejected"
+	)
+	assert.deepEqual(merged.done, [{ name: "a" }])
+})
+
+test("a chunk that throws stops the rest: nothing more is sent", async () => {
+	const items = Array.from({ length: 30 }, (_, i) => ({ name: `L${i}` }))
+	let calls = 0
+	await assert.rejects(
+		sendInChunks(
+			items,
+			async (part) => {
+				calls += 1
+				if (calls === 2) throw new Error("offline")
+				return { approved: part, refused: [] }
+			},
+			"approved"
+		),
+		/offline/
+	)
+	assert.equal(calls, 2)
+})
+
+const leaveRow = (over = {}) => ({
+	doctype: "Leave Application",
+	detail: "Annual Leave · 2 days",
+	half_day: false,
+	days: 2,
+	balance_after: 3,
+	attached: true,
+	...over,
+})
+
+test("a time-off line says type, days, half day, balance left after, and a file", () => {
+	assert.equal(
+		rowDetails(leaveRow({ half_day: true }), tr),
+		"Annual Leave · 2 days · Half day · 3 left after · File"
+	)
+	assert.equal(rowDetails(leaveRow(), tr), "Annual Leave · 2 days · 3 left after · File")
+})
+
+test("a half day keeps its AM or PM, as the old line said it", () => {
+	const half = leaveRow({ half_day: true, days: 0.5, detail: "Annual Leave · Half day · AM" })
+	assert.equal(rowDetails(half, tr), "Annual Leave · Half day · AM · 3 left after · File")
+})
+
+test("a time-off line leaves out what is absent: no balance, no file, one day, a half day says Half day once", () => {
+	assert.equal(
+		rowDetails(leaveRow({ balance_after: null, attached: false, days: 1 }), tr),
+		"Annual Leave · 1 day"
+	)
+	assert.equal(
+		rowDetails(leaveRow({ half_day: true, days: 0.5 }), tr),
+		"Annual Leave · Half day · 3 left after · File"
+	)
+	// 0 left is still a number worth saying
+	assert.match(rowDetails(leaveRow({ balance_after: 0 }), tr), /0 left after/)
+})
+
+test("a row from a cache older than the new keys falls back to the server's own detail", () => {
+	assert.equal(
+		rowDetails({ doctype: "Leave Application", detail: "Annual Leave · 2 days" }, tr),
+		"Annual Leave · 2 days"
+	)
+})
+
+test("an overtime line is the hours and the note", () => {
+	const ot = { doctype: "OT Request", detail: "3h 30m", reason: "Month-end stock count" }
+	assert.equal(rowDetails(ot, tr), "3h 30m · Month-end stock count")
+	assert.equal(rowDetails({ ...ot, reason: "" }, tr), "3h 30m")
+})
+
+test("an expense line is the total, items, types and a receipt", () => {
+	const claim = {
+		doctype: "Expense Claim",
+		detail: "MYR 120.00",
+		items: 3,
+		expense_types: ["Travel", "Meals"],
+		attached: true,
+		currency: "MYR",
+	}
+	assert.equal(rowDetails(claim, tr), "MYR 120.00 · 3 items · Travel, Meals · Receipt")
+	assert.equal(
+		rowDetails({ ...claim, items: 1, expense_types: ["Travel"], attached: false }, tr),
+		"MYR 120.00 · 1 item · Travel"
+	)
+	assert.equal(rowDetails({ doctype: "Expense Claim", detail: "MYR 5.00" }, tr), "MYR 5.00")
+})
+
+test("a shift line is from-shift arrow to-shift; with no current shift it is the new one", () => {
+	const shift = {
+		doctype: "Shift Request",
+		detail: "Night",
+		current_shift: "Morning",
+		new_shift: "Night",
+	}
+	assert.equal(rowDetails(shift, tr), "Morning → Night")
+	assert.equal(rowDetails({ ...shift, current_shift: "" }, tr), "Night")
+	assert.equal(rowDetails({ doctype: "Shift Request", detail: "Night" }, tr), "Night")
+})
+
+test("a Fix a day line is the reason and the in-out times", () => {
+	const fix = {
+		doctype: "Attendance Request",
+		detail: "Work From Home",
+		in_time: "09:00",
+		out_time: "18:00",
+	}
+	assert.equal(rowDetails(fix, tr), "Work From Home · 09:00–18:00")
+	assert.equal(rowDetails({ ...fix, out_time: "" }, tr), "Work From Home · In 09:00")
+	assert.equal(rowDetails({ ...fix, in_time: "", out_time: "" }, tr), "Work From Home")
+})
+
+test("any other type shows the server's detail as it is", () => {
+	assert.equal(rowDetails({ doctype: "Replacement Leave Claim", detail: "2 days" }, tr), "2 days")
+	assert.equal(
+		rowDetails({ doctype: "Remote Checkin Request", detail: "In · 120 m" }, tr),
+		"In · 120 m"
+	)
+	assert.equal(rowDetails({ doctype: "Leave Application" }, tr), "")
+})
+
+const req = (name, over = {}) => ({
+	section: "yours",
+	doctype: "Leave Application",
+	name,
+	kind: "Time off",
+	employee: "E1",
+	who: "Aisyah",
+	department: "Production",
+	modified: "2026-08-17 09:00:00",
+	from_date: "2026-10-12",
+	to_date: "2026-10-14",
+	...over,
+})
+
+test("filterRows narrows by kind, department and employee, all together", () => {
+	const rows = [
+		req("A"),
+		req("B", { kind: "Overtime", doctype: "OT Request" }),
+		req("C", { department: "Warehouse", employee: "E2", who: "Zul" }),
+	]
+	assert.deepEqual(
+		filterRows(rows, {}).map((r) => r.name),
+		["A", "B", "C"]
+	)
+	assert.deepEqual(
+		filterRows(rows, { kind: "Time off" }).map((r) => r.name),
+		["A", "C"]
+	)
+	assert.deepEqual(
+		filterRows(rows, { department: "Warehouse" }).map((r) => r.name),
+		["C"]
+	)
+	assert.deepEqual(
+		filterRows(rows, { employee: "E1" }).map((r) => r.name),
+		["A", "B"]
+	)
+	assert.deepEqual(
+		filterRows(rows, { kind: "Time off", department: "Production" }).map((r) => r.name),
+		["A"]
+	)
+})
+
+test("the date range keeps a request whose own dates overlap it, edges included", () => {
+	const rows = [
+		req("in", { from_date: "2026-10-12", to_date: "2026-10-14" }),
+		req("before", { from_date: "2026-10-01", to_date: "2026-10-05" }),
+		req("after", { from_date: "2026-10-20", to_date: "2026-10-21" }),
+		req("touchesStart", { from_date: "2026-10-08", to_date: "2026-10-10" }),
+		req("touchesEnd", { from_date: "2026-10-15", to_date: "2026-10-17" }),
+		req("spans", { from_date: "2026-10-01", to_date: "2026-10-30" }),
+	]
+	const names = (f) => filterRows(rows, f).map((r) => r.name)
+	assert.deepEqual(names({ from: "2026-10-10", to: "2026-10-15" }), [
+		"in",
+		"touchesStart",
+		"touchesEnd",
+		"spans",
+	])
+	assert.deepEqual(names({ from: "2026-10-16" }), ["after", "touchesEnd", "spans"])
+	assert.deepEqual(names({ to: "2026-10-04" }), ["before", "spans"])
+})
+
+test("a request with no dates is kept only when no date filter is set", () => {
+	const rows = [
+		req("none", { from_date: "", to_date: "" }),
+		req("one", { from_date: "2026-10-12", to_date: "" }),
+	]
+	assert.deepEqual(
+		filterRows(rows, {}).map((r) => r.name),
+		["none", "one"]
+	)
+	assert.deepEqual(
+		filterRows(rows, { from: "2026-10-12", to: "2026-10-12" }).map((r) => r.name),
+		["one"]
+	)
+	assert.deepEqual(
+		filterRows(rows, { from: "2026-10-13" }).map((r) => r.name),
+		[]
+	)
+})
+
+test("department and employee choices come from the loaded rows, once each, sorted", () => {
+	const rows = [
+		req("A", { department: "Warehouse", employee: "E2", who: "Zul" }),
+		req("B"),
+		req("C", { department: "" }),
+		req("D", { department: "Production" }),
+	]
+	assert.deepEqual(departmentOptions(rows), [
+		{ label: "Production", value: "Production" },
+		{ label: "Warehouse", value: "Warehouse" },
+	])
+	assert.deepEqual(employeeOptions(rows), [
+		{ label: "Aisyah", value: "E1" },
+		{ label: "Zul", value: "E2" },
+	])
+})
+
+test("the Filter button counts departments, employee and dates, dates once", () => {
+	assert.equal(activeFilters({ department: "", employee: "", from: "", to: "" }), 0)
+	assert.equal(
+		activeFilters({ department: "QC", employee: "", from: "2026-10-01", to: "2026-10-02" }),
+		2
+	)
+	assert.equal(activeFilters({ department: "QC", employee: "E1", from: "", to: "2026-10-02" }), 3)
+})
+
+test("a department or employee that has left the list is dropped from the filters", () => {
+	const rows = [req("A")]
+	assert.deepEqual(
+		pruneFilters({ department: "Warehouse", employee: "E1", from: "x", to: "y" }, rows),
+		{
+			department: "",
+			employee: "E1",
+			from: "x",
+			to: "y",
+		}
+	)
+})
+
+test("a chip reads label (count), the All chip too", () => {
+	assert.equal(chipLabel({ key: "Time off", label: "Time off", count: 8 }, tr), "Time off (8)")
+	assert.equal(chipLabel({ key: "", label: "All", count: 20 }, tr), "All (20)")
+})
+
+test("the confirm sheet sums the ticked requests per type, biggest first", () => {
+	const rows = [
+		req("A"),
+		req("B"),
+		req("C"),
+		req("D", { kind: "Overtime" }),
+		req("E", { kind: "Overtime" }),
+	]
+	assert.equal(kindSummary(rows, tr), "3 Time off · 2 Overtime")
+	assert.equal(kindSummary([req("A")], tr), "1 Time off")
+	assert.equal(kindSummary([], tr), "")
+})
+
+test("a rejected request uses its own reason, else the shared one", () => {
+	assert.equal(effectiveReason("  too short notice ", "Peak week"), "too short notice")
+	assert.equal(effectiveReason("   ", " Peak week "), "Peak week")
+	assert.equal(effectiveReason(undefined, ""), "")
+})
+
+test("Reject stays off until every request has a reason of its own or the shared one", () => {
+	const items = [
+		{ doctype: "Leave Application", name: "A" },
+		{ doctype: "Leave Application", name: "B" },
+	]
+	const key = (n) => rowKey({ doctype: "Leave Application", name: n })
+	assert.equal(canReject(items, "", {}), false)
+	assert.equal(canReject(items, "Peak week", {}), true)
+	assert.equal(canReject(items, "   ", {}), false)
+	assert.equal(canReject(items, "", { [key("A")]: "x" }), false, "B still has none")
+	assert.equal(canReject(items, "", { [key("A")]: "x", [key("B")]: "y" }), true)
+	assert.equal(canReject([], "Peak week", {}), false, "nothing to reject")
+})
+
+test("reject items carry the revision the approver saw and the reason that applies to each", () => {
+	const items = [
+		{ doctype: "Leave Application", name: "A", modified: "m1" },
+		{ doctype: "OT Request", name: "B", modified: "m2" },
+	]
+	const own = { [rowKey(items[0])]: " not this week " }
+	assert.deepEqual(rejectItems(items, "Peak week", own), [
+		{ doctype: "Leave Application", name: "A", modified: "m1", reason: "not this week" },
+		{ doctype: "OT Request", name: "B", modified: "m2", reason: "Peak week" },
+	])
+})
+
+test("the shared reason sent with a reject is the typed one, else the first request's own (never empty)", () => {
+	const items = [{ reason: "own one" }, { reason: "own two" }]
+	assert.equal(sharedFor(items, "  Peak week "), "Peak week")
+	assert.equal(sharedFor(items, "   "), "own one")
+	assert.equal(sharedFor([], ""), "")
 })

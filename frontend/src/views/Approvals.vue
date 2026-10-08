@@ -3,15 +3,16 @@
 		<template #body>
 			<!-- Everything waiting on YOUR decision (audit-flows 4B; owner ruling
 			     23 Sep: approvals appear only where they can be done), GROUPED so a
-			     long queue reads at a glance (owner-approved design, 23 Sep): Yours
-			     first, then Other teams you may act for; department, then kind; one
-			     line per person; five lines, then "See all"; never an endless list
-			     (NN/g infinite scrolling; Baymard "load more"). Every request still
-			     opens the same sheet that decides it. -->
+			     long queue reads at a glance (owner-approved design, 23 Sep): department,
+			     then kind; five lines, then "See all"; never an endless list (NN/g
+			     infinite scrolling; Baymard "load more"). Owner rulings 8 Oct 2026: only
+			     the requests sent to YOU (Other teams is gone), ticks always shown (no
+			     Select button), Approve and Reject many at once, up to 100. Every request
+			     still opens the same sheet that decides it. -->
 			<GPullRefresh @refresh="refresh" />
 			<div
 				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:py-7"
-				:class="{ 'g-approvals__page--barred': selectMode && ticked.size }"
+				:class="{ 'g-approvals__page--barred': ticked.size }"
 			>
 				<ResourceError :resource="waiting" what="your approvals" />
 
@@ -72,32 +73,40 @@
 								:aria-pressed="String(kindFilter === chip.key)"
 								@click="kindFilter = chip.key"
 							>
-								{{ chip.key ? __(chip.label) : __("All") }} · {{ chip.count }}
+								{{ chipLabel(chip, __) }}
 							</button>
 						</div>
-						<button
-							type="button"
-							class="g-focusable g-approvals__select"
-							@click="toggleSelectMode"
-						>
-							{{ selectMode ? __("Done") : __("Select") }}
-						</button>
+						<!-- department, employee and dates live in one sheet; the count says how many are on -->
+						<div class="flex flex-none items-center gap-1">
+							<button
+								v-if="filterCount"
+								type="button"
+								class="g-focusable g-approvals__clear"
+								@click="clearFilters"
+							>
+								{{ __("Clear") }}
+							</button>
+							<button
+								type="button"
+								class="g-focusable g-approvals__chip"
+								:class="{ 'g-approvals__chip--on': filterCount }"
+								aria-haspopup="dialog"
+								@click="filterOpen = true"
+							>
+								<ListFilter class="g-row-icon" aria-hidden="true" />
+								{{ filterCount ? __("Filter ({0})", [filterCount]) : __("Filter") }}
+							</button>
+						</div>
 					</div>
-					<p
-						v-if="selectMode && nothingTickable(visibleRows)"
-						class="text-caption text-ink-600 m-0"
-					>
+					<p v-if="nothingTickable(visibleRows)" class="text-caption text-ink-600 m-0">
 						{{ __("These are approved one by one. Tap one to open it.") }}
 					</p>
-					<div v-if="selectMode && pickable.length" class="flex items-center">
+					<div v-if="pickable.length" class="flex items-center">
 						<GCheckbox
 							:model-value="allState === 'all'"
-							:label="__('Select all shown')"
+							:label="__('Select all {0}', [pickable.length])"
 							@update:model-value="ticked = toggleAll(ticked, visibleRows)"
 						/>
-						<span class="text-caption text-ink-600 ml-auto">
-							{{ ticked.size }} / {{ pickable.length }}
-						</span>
 					</div>
 					<!-- The same 51 pt row as the skeleton above (alpha.8 r3: three
 					     skeleton rows collapsing to one grey line moved the page
@@ -113,6 +122,11 @@
 								<CircleCheckBig class="g-row-icon" />
 							</template>
 						</GListRow>
+					</GListPanel>
+
+					<!-- the filters hide everything: say so (Clear sits beside the Filter button) -->
+					<GListPanel v-if="rows.length && !visibleRows.length">
+						<GListRow :label="__('Nothing matches these filters.')" :tappable="false" wrap />
 					</GListPanel>
 
 					<!-- YOURS: sent to you to decide -->
@@ -138,22 +152,25 @@
 											v-for="person in shown(`${dept.key}:${kind.key}`, kind.people).rows"
 											:key="person.key"
 										>
-											<!-- select mode: one tick per request, so the approver ticks what
-											     they mean (a person can have three requests of one kind) -->
-											<template v-if="selectMode && person.rows.some(canBulk)">
-												<GListRow
+											<!-- one row per request, so the approver ticks what they mean (a person can
+											     have three requests of one kind). The tick is a 44 pt control of its own
+											     and the text opens the request: with no Select mode a tap on the row can no
+											     longer mean "tick", and a request must stay readable (reason, file) before
+											     it is decided (owner ruling 8 Oct 2026). -->
+											<template v-if="person.rows.some(canBulk)">
+												<div
 													v-for="req in person.rows.filter(canBulk)"
 													:key="rowKey(req)"
-													:label="`${req.who} · ${[req.when, req.detail]
-														.filter(Boolean)
-														.join(' · ')}`"
-													:sublabel="ageText(req)"
-													:chevron="false"
-													role="checkbox"
-													:aria-checked="String(ticked.has(rowKey(req)))"
-													@click="ticked = toggle(ticked, req)"
+													class="g-approvals__req"
 												>
-													<template #icon>
+													<button
+														type="button"
+														role="checkbox"
+														class="g-focusable g-approvals__tickbtn"
+														:aria-checked="String(ticked.has(rowKey(req)))"
+														:aria-label="reqLabel(req)"
+														@click="ticked = toggle(ticked, req)"
+													>
 														<span
 															class="g-approvals__tick"
 															:class="{ 'g-approvals__tick--on': ticked.has(rowKey(req)) }"
@@ -161,15 +178,23 @@
 														>
 															<Check v-if="ticked.has(rowKey(req))" class="g-row-icon" />
 														</span>
-													</template>
-													<template #badge>
-														<span
-															class="g-approvals__age"
-															:class="`g-approvals__age--${tone(req)}`"
-															>{{ ageWords(req) }}</span
-														>
-													</template>
-												</GListRow>
+													</button>
+													<GListRow
+														class="g-approvals__reqbody"
+														:label="reqLabel(req)"
+														wrap
+														:sublabel="rowDetails(req, __)"
+														@click="open(req)"
+													>
+														<template #badge>
+															<span
+																class="g-approvals__age"
+																:class="`g-approvals__age--${tone(req)}`"
+																>{{ ageWords(req) }}</span
+															>
+														</template>
+													</GListRow>
+												</div>
 											</template>
 											<GListRow
 												v-else
@@ -196,56 +221,6 @@
 								</template>
 							</template>
 						</GListPanel>
-					</section>
-
-					<!-- OTHER TEAMS: someone else approves; you may step in -->
-					<section v-if="groups.other.count" class="flex flex-col gap-3">
-						<!-- A heading like "Yours", so heading navigation finds it; the
-						     button inside it is the disclosure (WAI-ARIA APG). -->
-						<h2 class="m-0">
-							<button
-								type="button"
-								class="g-focusable g-approvals__toggle"
-								:aria-expanded="String(otherOpen)"
-								aria-controls="approvals-other-teams"
-								@click="otherOpen = !otherOpen"
-							>
-								<span class="g-eyebrow">{{ __("Other teams") }} · {{ groups.other.count }}</span>
-								<span class="text-caption text-ink-600">{{
-									otherOpen ? __("Hide") : __("Show")
-								}}</span>
-							</button>
-						</h2>
-						<div v-show="otherOpen" id="approvals-other-teams" class="flex flex-col gap-3">
-							<GListPanel>
-								<template v-for="team in groups.other.teams" :key="team.key">
-									<p class="g-approvals__kind text-caption text-ink-600">
-										{{
-											[
-												team.name || __("No department"),
-												team.approverName ? __("{0}'s team", [team.approverName]) : "",
-												team.count,
-											]
-												.filter(Boolean)
-												.join(" · ")
-										}}
-									</p>
-									<GListRow
-										v-for="person in shown(team.key, team.people).rows"
-										:key="person.key"
-										:label="personLine(person, __)"
-										wrap
-										:sublabel="`${__(person.kind)} · ${personWhen(person)}`"
-										@click="openPerson(person)"
-									/>
-									<GroupMore
-										:page="shown(team.key, team.people)"
-										@all="expand(team.key)"
-										@more="more(team.key)"
-									/>
-								</template>
-							</GListPanel>
-						</div>
 					</section>
 
 					<p v-if="waiting.data?.capped" class="text-caption text-ink-600">
@@ -304,46 +279,95 @@
 				/>
 			</GModal>
 
-			<!-- The bar the approver acts from: how many are ticked, and one button. -->
+			<!-- The bar the approver acts from: how many are ticked, and what to do with them. -->
 			<div
-				v-if="selectMode && ticked.size"
+				v-if="ticked.size"
 				class="g-approvals__bar"
 				role="region"
-				:aria-label="__('Approve the ticked requests')"
+				:aria-label="__('Ticked requests')"
 			>
-				<div class="min-w-0">
-					<p class="m-0 font-semibold">{{ __("{0} selected", [ticked.size]) }}</p>
-					<p class="m-0 text-caption text-ink-600">
-						{{ __("Each one is checked before it is approved.") }}
-					</p>
+				<div class="g-approvals__bar-head">
+					<div class="min-w-0 flex-1">
+						<p class="m-0 font-semibold">{{ __("{0} selected", [ticked.size]) }}</p>
+						<p class="m-0 text-caption text-ink-600">
+							{{ __("Each one is checked before it is approved.") }}
+						</p>
+					</div>
+					<button type="button" class="g-focusable g-approvals__clear" @click="ticked = new Set()">
+						{{ __("Clear") }}
+					</button>
 				</div>
-				<button type="button" class="g-focusable g-approvals__clear" @click="ticked = new Set()">
-					{{ __("Clear") }}
-				</button>
-				<GButton :label="__('Approve {0}', [ticked.size])" @click="startApprove" />
+				<div class="g-approvals__bar-actions">
+					<GButton class="flex-1" danger :label="__('Reject')" @click="startReject" />
+					<GButton class="flex-1" :label="__('Approve')" @click="startApprove" />
+				</div>
 			</div>
+
+			<GModal :is-open="filterOpen" :title="__('Filter')" @did-dismiss="filterOpen = false">
+				<div class="flex flex-col gap-4">
+					<GSelect
+						v-if="departmentChoices.length > 1 || filters.department"
+						v-model="filters.department"
+						:label="__('Department')"
+						:placeholder="__('All departments')"
+						:options="departmentChoices"
+					/>
+					<GSelect
+						v-if="employeeChoices.length > 1 || filters.employee"
+						v-model="filters.employee"
+						:label="__('Employee')"
+						:placeholder="__('Everyone')"
+						:options="employeeChoices"
+					/>
+					<div class="flex flex-col gap-3" role="group" aria-labelledby="approvals-dates">
+						<p id="approvals-dates" class="g-eyebrow m-0">{{ __("Dates") }}</p>
+						<GDatePicker v-model="filters.from" :label="__('From')" :max-date="filters.to" />
+						<GDatePicker v-model="filters.to" :label="__('To')" :min-date="filters.from" />
+						<p class="g-form-footer">
+							{{ __("Shows requests that fall on any of these days.") }}
+						</p>
+					</div>
+					<div class="flex gap-3">
+						<GGhostButton
+							class="flex-1"
+							:label="__('Clear')"
+							:disabled="!filterCount"
+							@click="clearFilters"
+						/>
+						<GButton
+							class="flex-1"
+							:label="__('Show {0}', [visibleRows.length])"
+							@click="filterOpen = false"
+						/>
+					</div>
+				</div>
+			</GModal>
 
 			<GModal
 				:is-open="!!sheet"
-				:title="__('Approve')"
+				:title="sheetTitle"
 				:dismissible="sheet?.phase !== 'working'"
-				@did-dismiss="sheet = null"
+				@did-dismiss="closeSheet"
 			>
-				<template v-if="sheet">
-					<p v-if="sheet.phase === 'check'" class="text-caption text-ink-600" role="status">
-						{{ __("Checking each one…") }}
+				<div v-if="sheet" class="flex flex-col gap-3">
+					<!-- how far the work is, read out politely as it goes (checking, approving or rejecting).
+					     Always in the sheet, so the live region exists before its words change. Empty it
+					     takes no room. -->
+					<p class="m-0 text-caption text-ink-600" role="status" aria-live="polite">
+						{{ progressText }}
 					</p>
 					<!-- A failed check stays here, with the ticks kept and a way to try again: a toast
 					     disappears on its own and leaves nothing to press. -->
-					<div v-else-if="sheet.phase === 'failed'" class="flex flex-col gap-3" role="alert">
+					<div v-if="sheet.phase === 'failed'" class="flex flex-col gap-3" role="alert">
 						<p class="m-0 font-semibold">{{ __("Nothing was approved.") }}</p>
 						<p class="m-0 text-caption text-ink-600">
 							{{ __("Your ticks are kept. Check your connection and try again.") }}
 						</p>
 						<GButton :label="__('Try again')" @click="startApprove" />
 					</div>
-					<!-- A failed APPROVE may have got some through before the connection dropped, so it
-					     must not claim that nothing was approved (review, 5 Oct 2026). -->
+					<!-- A failed APPROVE (or REJECT) may have got some through before the connection dropped,
+					     so it must not claim that nothing happened (review, 5 Oct 2026). A chunk that fails
+					     stops the rest, and what the earlier chunks wrote is unknown until the list is read. -->
 					<div
 						v-else-if="sheet.phase === 'failed-approve'"
 						class="flex flex-col gap-3"
@@ -353,9 +377,112 @@
 						<p class="m-0 text-caption text-ink-600">
 							{{ __("The list is reloading. Check what is left before you try again.") }}
 						</p>
-						<GButton :label="__('Close')" @click="sheet = null" />
+						<GButton :label="__('Close')" @click="closeSheet" />
 					</div>
-					<template v-else>
+					<div
+						v-else-if="sheet.phase === 'failed-reject'"
+						class="flex flex-col gap-3"
+						role="alert"
+					>
+						<p class="m-0 font-semibold">{{ __("We could not confirm what was rejected.") }}</p>
+						<p class="m-0 text-caption text-ink-600">
+							{{ __("The list is reloading. Check what is left before you try again.") }}
+						</p>
+						<GButton :label="__('Close')" @click="closeSheet" />
+					</div>
+					<!-- Some were refused: the sheet stays open and names each one with its reason. They stay
+					     ticked and pending in the list. -->
+					<template v-else-if="sheet.phase === 'result'">
+						<p class="m-0 font-semibold">{{ resultWords }}</p>
+						<section class="flex flex-col gap-2">
+							<h3 class="g-eyebrow">
+								{{
+									sheet.mode === "reject"
+										? __("{0} not rejected", [sheet.refused.length])
+										: __("{0} not approved", [sheet.refused.length])
+								}}
+							</h3>
+							<GListPanel>
+								<GListRow
+									v-for="req in sheet.refused"
+									:key="rowKey(req)"
+									:label="rowLabel(req)"
+									:sublabel="req.reason"
+									wrap
+									:chevron="false"
+									:tappable="false"
+								/>
+							</GListPanel>
+							<p class="text-caption text-ink-600">
+								{{ __("Refused ones stay in your list. Open one to see what to fix.") }}
+							</p>
+						</section>
+						<GButton :label="__('Close')" @click="closeSheet" />
+					</template>
+					<!-- REJECT: one reason for all, editable per request; the button waits for every reason -->
+					<template v-else-if="sheet.mode === 'reject'">
+						<p class="m-0 text-caption text-ink-600">{{ sheet.summary }}</p>
+						<GTextarea
+							v-model="rejectShared"
+							:label="__('Why not? (required)')"
+							:disabled="sheet.phase === 'working'"
+						/>
+						<p class="m-0 text-caption text-ink-600">
+							{{ __("Each person sees this reason on their request.") }}
+						</p>
+						<GListPanel>
+							<div v-for="(req, at) in sheet.items" :key="rowKey(req)">
+								<GListRow
+									:label="rowLabel(req)"
+									:sublabel="
+										effectiveReason(rejectOwn[rowKey(req)], rejectShared) || __('Needs a reason')
+									"
+									wrap
+									:chevron="false"
+									:tappable="false"
+								>
+									<template #badge>
+										<button
+											type="button"
+											class="g-focusable g-approvals__clear"
+											:aria-expanded="String(Boolean(rejectEditing[rowKey(req)]))"
+											:aria-controls="`approvals-reason-${at}`"
+											:disabled="sheet.phase === 'working'"
+											@click="rejectEditing[rowKey(req)] = !rejectEditing[rowKey(req)]"
+										>
+											{{ __("Edit reason") }}
+										</button>
+									</template>
+								</GListRow>
+								<!-- kept in the page when closed, so aria-controls always points at something -->
+								<div
+									:id="`approvals-reason-${at}`"
+									class="g-approvals__reason"
+									:hidden="!rejectEditing[rowKey(req)]"
+								>
+									<GTextarea
+										v-if="rejectEditing[rowKey(req)]"
+										:model-value="rejectOwn[rowKey(req)] || ''"
+										:label="__('Reason for {0}', [req.who])"
+										:placeholder="__('Leave empty to use the reason above')"
+										:disabled="sheet.phase === 'working'"
+										@update:model-value="rejectOwn[rowKey(req)] = $event"
+									/>
+								</div>
+							</div>
+						</GListPanel>
+						<GButton
+							danger
+							:label="__('Reject {0}', [sheet.items.length])"
+							:pending="sheet.phase === 'working'"
+							:pending-label="__('Rejecting…')"
+							:disabled="!rejectReady"
+							@click="confirmReject"
+						/>
+					</template>
+					<!-- APPROVE: what the check said (nothing to show while it is still checking) -->
+					<template v-else-if="sheet.phase === 'ready' || sheet.phase === 'working'">
+						<p class="m-0 text-caption text-ink-600">{{ sheet.summary }}</p>
 						<section v-if="sheet.ready.length" class="flex flex-col gap-2">
 							<h3 class="g-eyebrow">{{ __("{0} ready", [sheet.ready.length]) }}</h3>
 							<GListPanel>
@@ -396,7 +523,7 @@
 							@click="confirmApprove"
 						/>
 					</template>
-				</template>
+				</div>
 			</GModal>
 		</template>
 	</BaseLayout>
@@ -414,10 +541,14 @@ import ResourceError from "@/components/ResourceError.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
+import GDatePicker from "@/components/glass/GDatePicker.vue"
+import GGhostButton from "@/components/glass/GGhostButton.vue"
+import GSelect from "@/components/glass/GSelect.vue"
+import GTextarea from "@/components/glass/GTextarea.vue"
 //: Loaded on first use, not in the first download (alpha.13: Ionic's
 //: refresher is 41 KB, and nobody pulls before the page has drawn).
 const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
-import { Check, CircleCheckBig } from "lucide-vue-next"
+import { Check, CircleCheckBig, ListFilter } from "lucide-vue-next"
 import { TILE } from "@/utils/iconTile"
 import { personalCacheKey } from "@/utils/personalCache"
 import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
@@ -425,19 +556,33 @@ import { decidedForApproverResource } from "@/data/remoteCheckin"
 import { isApprover } from "@/data/team"
 import { groupApprovals, pageOf, personLine } from "@/utils/approvalGroups"
 import {
+	BULK_CAP,
+	activeFilters,
 	afterApprove,
 	ageTone,
 	allState as allStateOf,
 	banner,
 	canBulk,
+	canReject,
+	chipLabel,
 	daysWaiting,
-	filterByKind,
+	departmentOptions,
+	effectiveReason,
+	employeeOptions,
+	filterRows,
 	itemsFor,
 	keepVisible,
+	kindSummary,
 	nothingTickable,
+	onlyYours,
 	overCap,
 	prune,
+	pruneFilters,
+	rejectItems,
+	rowDetails,
 	rowKey,
+	sendInChunks,
+	sharedFor,
 	siteToday,
 	toggle,
 	toggleAll,
@@ -453,9 +598,10 @@ const __ = inject("$translate")
 const router = useRouter()
 const $dayjs = inject("$dayjs")
 
-// The server decides who sees what, and which section each row is in: only
-// requests routed to the caller, by the same check approval.decide uses
-// (hrms/api/approvals_list.py). This page only groups them.
+// The server decides who sees what: only requests routed to the caller, by the same check
+// approval.decide uses (hrms/api/approvals_list.py). Owner ruling 8 Oct 2026: no Other teams;
+// onlyYours also drops such a row from a personal cache written before the server stopped
+// sending them. This page only groups what is left.
 const waiting = createResource({
 	url: "hrms.api.approvals_list.get_waiting_for_me",
 	// Personal, like every approver-scoped read: without a cache every visit
@@ -463,14 +609,27 @@ const waiting = createResource({
 	cache: personalCacheKey("nsty:approvals-waiting"),
 	auto: true,
 })
-const rows = computed(() => waiting.data?.rows || [])
+const rows = computed(() => onlyYours(waiting.data?.rows || []))
 
-// Filter by type (HR, 4 Oct 2026). The chips count what is waiting; the filter narrows what the
-// groups below show, so "See all", the group counts and select-all all follow it.
+// Filter by type (HR, 4 Oct 2026), then by department, employee and dates (owner, 8 Oct 2026).
+// The chips count what is waiting; the filters narrow what the groups below show, so "See all",
+// the group counts and select-all all follow them.
 const ticked = ref(new Set())
 const kindFilter = ref("")
 const chips = computed(() => typeChips(rows.value))
-const visibleRows = computed(() => filterByKind(rows.value, kindFilter.value))
+const filters = reactive({ department: "", employee: "", from: "", to: "" })
+const filterOpen = ref(false)
+const filterCount = computed(() => activeFilters(filters))
+const visibleRows = computed(() => filterRows(rows.value, { kind: kindFilter.value, ...filters }))
+// the choices come from the rows that are loaded; the employee list follows the department
+const departmentChoices = computed(() => departmentOptions(rows.value))
+const employeeChoices = computed(() =>
+	employeeOptions(filterRows(rows.value, { department: filters.department }))
+)
+function clearFilters() {
+	console.info("[Approvals] filters cleared")
+	Object.assign(filters, { department: "", employee: "", from: "", to: "" })
+}
 const groups = computed(() => groupApprovals(visibleRows.value))
 // A tick that is no longer shown (another chip) is dropped: the bar never counts, and Approve
 // never sends, a request the approver cannot see ticked (design + code review, 5 Oct 2026).
@@ -480,19 +639,23 @@ watch(chips, (list) => {
 	if (kindFilter.value && !list.some((chip) => chip.key === kindFilter.value))
 		kindFilter.value = ""
 })
+// a department or employee whose last request was decided is gone too: the page never sits empty
+// behind a filter nobody can see
+watch(rows, (list) => Object.assign(filters, pruneFilters(filters, list)))
+// the employee chosen must belong to the department chosen next
+watch(
+	() => filters.department,
+	() => Object.assign(filters, pruneFilters(filters, rows.value))
+)
 
 // The site's today (Asia/Kuala_Lumpur), declared before its first reader.
 const today = () => siteToday(new Date(), siteTimeZone())
 const headline = computed(() => banner(rows.value, today()))
 
-// Select mode: tick many, approve once. Check-ins stay one by one (approvalBulk.ONE_BY_ONE).
-const selectMode = ref(false)
+// Ticks are always shown (owner ruling 8 Oct 2026: chip, Select all, Approve, Confirm = 4 taps).
+// Check-ins stay one by one (approvalBulk.ONE_BY_ONE).
 const pickable = computed(() => visibleRows.value.filter(canBulk))
 const allState = computed(() => allStateOf(ticked.value, visibleRows.value))
-function toggleSelectMode() {
-	selectMode.value = !selectMode.value
-	if (!selectMode.value) ticked.value = new Set()
-}
 // a request that left the list (decided elsewhere, or approved here) is no longer ticked
 watch(rows, (list) => (ticked.value = prune(ticked.value, list)))
 
@@ -502,14 +665,6 @@ const summary = computed(() => {
 	const count = __("{0} waiting", [rows.value.length])
 	return oldest ? `${count} · ${__("oldest since {0}", [$dayjs(oldest).format("D MMM")])}` : count
 })
-
-// Other teams starts folded when it is long, so your own work stays on top.
-const otherOpen = ref(true)
-watch(
-	() => groups.value.other.startCollapsed,
-	(collapsed) => (otherOpen.value = !collapsed),
-	{ immediate: true }
-)
 
 // Per group: five lines, then "See all"; expanded, twenty per page.
 const expanded = reactive({})
@@ -595,11 +750,13 @@ function close() {
 	waiting.reload()
 }
 
-// A request in the confirm sheet, named the way the list names it.
+// A request in the list and in the sheets, named the way the list names it: who, then the days.
+// The details (type, hours, amount, shift) ride on the second line.
 const byKey = computed(() => new Map(rows.value.map((row) => [rowKey(row), row])))
+const reqLabel = (row) => [row.who, row.when].filter(Boolean).join(" · ")
 function rowLabel(req) {
 	const row = byKey.value.get(rowKey(req))
-	return row ? `${row.who} · ${[row.when, row.detail].filter(Boolean).join(" · ")}` : req.name
+	return row ? `${reqLabel(row)}${row.kind ? ` · ${__(row.kind)}` : ""}` : req.name
 }
 
 // How long a request has waited, in words and as a tone (amber from 7 days, red from 14).
@@ -609,58 +766,206 @@ const ageWords = (row) => {
 	const days = waited(row)
 	return days < 1 ? __("Today") : days === 1 ? __("1 day") : __("{0} days", [days])
 }
-const ageText = (row) => __("since {0}", [$dayjs(row.modified).format("D MMM")])
 
-// Approve many: ask the server which would go through, show it, then approve those.
-// The server adds no rule of its own: each request goes through the same decide() as one by one.
-const sheet = ref(null) // null | { phase: "check" | "ready" | "working", ready: [], refused: [] }
+// Decide many: ask the server which would go through, show it, then decide those. Up to 100 at once,
+// sent ten at a time (approvalBulk.CHUNK_SIZE: the server takes 50 per call and a long call risks a
+// timeout). The server adds no rule of its own: each request goes through the same decide() as one by one.
+// sheet: null | { mode: "approve" | "reject", phase: "check" | "ready" | "working" | "result" | "failed"
+//   | "failed-approve" | "failed-reject", ready, refused, items, summary, done, progress }
+const sheet = ref(null)
 const checkMany = createResource({ url: "hrms.api.approval.check_many" })
 const decideMany = createResource({ url: "hrms.api.approval.decide_many" })
+const rejectMany = createResource({ url: "hrms.api.approval.reject_many" })
+
+// The count is the one the sheet was opened with: a partial result leaves fewer ticked, but the
+// sheet is still about the request the approver started.
+const sheetTitle = computed(() => {
+	const current = sheet.value
+	if (!current) return ""
+	const n = current.count
+	if (current.phase === "result")
+		return current.mode === "reject" ? __("Rejected") : __("Approved")
+	if (current.mode === "reject")
+		return n === 1 ? __("Reject 1 request?") : __("Reject {0} requests?", [n])
+	return n === 1 ? __("Approve 1 request?") : __("Approve {0} requests?", [n])
+})
+// "Checking 20 of 100…" / "Approving 30 of 100…" / "Rejecting 30 of 100…", read out politely
+const progressText = computed(() => {
+	const current = sheet.value
+	if (!current?.progress) return ""
+	const [sent, total] = current.progress
+	if (current.phase === "check") return __("Checking {0} of {1}…", [sent, total])
+	if (current.phase !== "working") return ""
+	return current.mode === "reject"
+		? __("Rejecting {0} of {1}…", [sent, total])
+		: __("Approving {0} of {1}…", [sent, total])
+})
+const resultWords = computed(() => {
+	const current = sheet.value
+	if (!current) return ""
+	const n = current.done
+	return current.mode === "reject"
+		? __("{0} rejected", [n])
+		: n === 1
+		? __("1 approved")
+		: __("{0} approved", [n])
+})
+
+function closeSheet() {
+	sheet.value = null
+}
+
+function overCapToast() {
+	gToast({
+		title: __("Pick up to {0} at a time", [BULK_CAP]),
+		text: __("Untick some and try again."),
+		variant: "warning",
+	})
+}
 
 async function startApprove() {
-	if (overCap(ticked.value)) {
-		return gToast({
-			title: __("Approve up to 50 at a time"),
-			text: __("Untick some and try again."),
-			variant: "warning",
-		})
+	if (overCap(ticked.value)) return overCapToast()
+	const items = itemsFor(ticked.value, visibleRows.value)
+	console.info("[Approvals] checking", items.length)
+	sheet.value = {
+		mode: "approve",
+		phase: "check",
+		count: items.length,
+		ready: [],
+		refused: [],
+		progress: [0, items.length],
 	}
-	sheet.value = { phase: "check", ready: [], refused: [] }
 	try {
-		const result = await checkMany.submit({ items: itemsFor(ticked.value, visibleRows.value) })
-		sheet.value = { phase: "ready", ready: result.ready, refused: result.refused }
+		const checked = await sendInChunks(
+			items,
+			(part) => checkMany.submit({ items: part }),
+			"ready",
+			(sent, total) => {
+				if (sheet.value?.phase === "check")
+					sheet.value = { ...sheet.value, progress: [sent, total] }
+			}
+		)
+		const ready = checked.done
+		sheet.value = {
+			mode: "approve",
+			phase: "ready",
+			count: items.length,
+			ready,
+			refused: checked.refused,
+			summary: kindSummary(ready.map((req) => byKey.value.get(rowKey(req))).filter(Boolean), __),
+		}
 	} catch (error) {
 		console.warn("[Approvals] the check failed", error)
 		// stay in the sheet with a way to try again; the ticks are kept
-		sheet.value = { phase: "failed", ready: [], refused: [] }
+		sheet.value = { mode: "approve", phase: "failed", count: items.length, ready: [], refused: [] }
 	}
 }
 
 async function confirmApprove() {
 	const current = sheet.value
-	if (!current || current.phase !== "ready" || !current.ready.length) return
-	sheet.value = { ...current, phase: "working" }
+	if (!current || current.mode !== "approve" || current.phase !== "ready" || !current.ready.length)
+		return
+	console.info("[Approvals] approving", current.ready.length)
+	sheet.value = { ...current, phase: "working", progress: [0, current.ready.length] }
 	try {
 		// only the ones the check said would go through, with the revision the approver saw
-		const result = await decideMany.submit({ items: current.ready })
-		const done = afterApprove(ticked.value, result)
-		ticked.value = done.selected
-		sheet.value = null
-		gToast({
-			title: done.approved === 1 ? __("1 approved") : __("{0} approved", [done.approved]),
-			text: done.refused.length ? __("{0} stayed in your list.", [done.refused.length]) : "",
-			variant: done.refused.length ? "warning" : "success",
-		})
-		await waiting.reload()
+		const result = await sendInChunks(
+			current.ready,
+			(part) => decideMany.submit({ items: part }),
+			"approved",
+			(sent, total) => (sheet.value = { ...sheet.value, progress: [sent, total] })
+		)
+		await finish("approve", result, current.count)
 	} catch (error) {
 		console.warn("[Approvals] bulk approve failed", error)
 		// what went through is unknown until the list is read again; say so, keep the ticks
-		sheet.value = { phase: "failed-approve", ready: [], refused: [] }
-		try {
-			await waiting.reload()
-		} catch (reloadError) {
-			console.warn("[Approvals] reload after a failed approve failed", reloadError)
-		}
+		await failedWrite("failed-approve", current.count)
+	}
+}
+
+// Reject many: one shared reason, editable per request; empty own reason = use the shared one.
+const rejectShared = ref("")
+const rejectOwn = reactive({}) // rowKey -> the request's own reason
+const rejectEditing = reactive({}) // rowKey -> its "Edit reason" box is open
+const rejectReady = computed(
+	() =>
+		sheet.value?.mode === "reject" &&
+		sheet.value.phase === "ready" &&
+		canReject(sheet.value.items, rejectShared.value, rejectOwn)
+)
+
+function startReject() {
+	if (overCap(ticked.value)) return overCapToast()
+	const items = itemsFor(ticked.value, visibleRows.value)
+	console.info("[Approvals] rejecting sheet", items.length)
+	rejectShared.value = ""
+	for (const key of Object.keys(rejectOwn)) delete rejectOwn[key]
+	for (const key of Object.keys(rejectEditing)) delete rejectEditing[key]
+	sheet.value = {
+		mode: "reject",
+		phase: "ready",
+		count: items.length,
+		items,
+		refused: [],
+		summary: kindSummary(items.map((req) => byKey.value.get(rowKey(req))).filter(Boolean), __),
+	}
+}
+
+async function confirmReject() {
+	const current = sheet.value
+	if (!current || current.mode !== "reject" || current.phase !== "ready" || !rejectReady.value)
+		return
+	const items = rejectItems(current.items, rejectShared.value, rejectOwn)
+	console.info("[Approvals] rejecting", items.length)
+	sheet.value = { ...current, phase: "working", progress: [0, items.length] }
+	try {
+		const result = await sendInChunks(
+			items,
+			(part) => rejectMany.submit({ items: part, reason: sharedFor(part, rejectShared.value) }),
+			"rejected",
+			(sent, total) => (sheet.value = { ...sheet.value, progress: [sent, total] })
+		)
+		await finish("reject", result, current.count)
+	} catch (error) {
+		console.warn("[Approvals] bulk reject failed", error)
+		await failedWrite("failed-reject", current.count)
+	}
+}
+
+// After the last chunk: what went through leaves the ticks; refused ones stay ticked and pending and,
+// when there are any, the sheet stays open and names each with its reason.
+async function finish(mode, result, count) {
+	const done = afterApprove(ticked.value, { approved: result.done, refused: result.refused })
+	ticked.value = done.selected
+	gToast({
+		title:
+			mode === "reject"
+				? __("{0} rejected", [done.approved])
+				: done.approved === 1
+				? __("1 approved")
+				: __("{0} approved", [done.approved]),
+		text: done.refused.length ? __("{0} stayed in your list.", [done.refused.length]) : "",
+		variant: done.refused.length ? "warning" : "success",
+	})
+	sheet.value = done.refused.length
+		? { mode, phase: "result", count, ready: [], refused: done.refused, done: done.approved }
+		: null
+	await waiting.reload()
+}
+
+// A chunk threw: the ones before it may have been written, so the page cannot say what went through.
+async function failedWrite(phase, count) {
+	sheet.value = {
+		mode: phase === "failed-reject" ? "reject" : "approve",
+		phase,
+		count,
+		ready: [],
+		refused: [],
+	}
+	try {
+		await waiting.reload()
+	} catch (reloadError) {
+		console.warn("[Approvals] reload after a failed bulk write failed", reloadError)
 	}
 }
 
@@ -689,13 +994,16 @@ async function refresh(event) {
 }
 .g-approvals__chips {
 	display: flex;
+	min-width: 0;
 	gap: 8px;
 	overflow-x: auto;
 	scrollbar-width: none;
 }
 .g-approvals__chip,
-.g-approvals__select,
 .g-approvals__clear {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
 	min-height: var(--g-touch-target-min);
 	padding: 0 12px;
 	border: 1px solid var(--g-hair);
@@ -709,10 +1017,44 @@ async function refresh(event) {
 	background: var(--g-ink);
 	color: var(--g-bg);
 }
-.g-approvals__select,
 .g-approvals__clear {
 	border-color: transparent;
 	color: var(--g-accent-ink);
+}
+/* one request: its own 44 pt tick, then the row that opens it. The wrapper draws the divider the
+   theme draws between sibling rows (.g-row + .g-row), which a wrapped row no longer has. */
+.g-approvals__req {
+	position: relative;
+	display: flex;
+	align-items: center;
+	padding-left: 4px;
+}
+.g-approvals__req + .g-approvals__req::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 16px;
+	right: 16px;
+	height: 1px;
+	background: var(--g-hair);
+}
+.g-approvals__tickbtn {
+	display: grid;
+	place-items: center;
+	flex: none;
+	min-width: var(--g-touch-target-min);
+	min-height: var(--g-touch-target-min);
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+}
+.g-approvals__reqbody {
+	flex: 1;
+	min-width: 0;
+	padding-left: 0;
+}
+.g-approvals__reason {
+	padding: 0 16px 12px;
 }
 .g-approvals__tick {
 	display: grid;
@@ -745,7 +1087,7 @@ async function refresh(event) {
 	color: var(--g-danger-ink);
 }
 .g-approvals__page--barred {
-	padding-bottom: 88px;
+	padding-bottom: 136px;
 }
 .g-approvals__bar {
 	position: sticky;
@@ -755,21 +1097,16 @@ async function refresh(event) {
 	bottom: max(var(--padding-bottom, 0px), env(safe-area-inset-bottom, 0px));
 	z-index: 3;
 	display: flex;
-	align-items: center;
-	gap: 12px;
+	flex-direction: column;
+	gap: 8px;
 	padding: 12px 16px;
 	border-top: 1px solid var(--g-hair);
 	background: var(--g-sheet-bg);
 }
-.g-approvals__toggle {
+.g-approvals__bar-head,
+.g-approvals__bar-actions {
 	display: flex;
-	width: 100%;
 	align-items: center;
-	justify-content: space-between;
-	min-height: var(--g-touch-target-min);
-	background: transparent;
-	border: 0;
-	padding: 0;
-	cursor: pointer;
+	gap: 12px;
 }
 </style>

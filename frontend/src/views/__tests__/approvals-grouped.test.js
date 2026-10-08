@@ -1,5 +1,5 @@
 // The grouped Approvals page, as the owner approved it (23 Sep 2026):
-// YOURS then OTHER TEAMS; department, then kind; one line per person;
+// YOURS (Other teams was removed on 8 Oct 2026); department, then kind; one line per person;
 // five lines then "See all"; "Show more (N left)" in twenties; never an
 // endless list (NN/g infinite scrolling; Baymard load-more).
 import { test } from "node:test"
@@ -15,10 +15,11 @@ test("the page is grouped by the shared module, not a flat list", () => {
 	assert.doesNotMatch(template, /v-for="row in rows"/)
 })
 
-test("two sections, in plain words", () => {
+test("one section, in plain words: Other teams is gone (owner ruling 8 Oct 2026)", () => {
+	// 23 Sep asked for two sections; 8 Oct: "the page lists only requests sent to the approver"
 	assert.match(template, /__\("Yours"\)/)
-	assert.match(template, /__\("Other teams"\)/)
-	assert.match(template, /__\("\{0\}'s team", \[team\.approverName\]\)/)
+	assert.doesNotMatch(template.replace(/<!--[\s\S]*?-->/g, ""), /__\("Other teams"\)/)
+	assert.doesNotMatch(template, /'s team"/)
 })
 
 test("a group shows five, then See all; expanded pages in twenties with what is left", () => {
@@ -33,17 +34,12 @@ test("one line per person; tapping it lists that person's requests, each opening
 	assert.match(template, /v-for="row in person\.rows"|v-for="row in personOpen\.rows"/)
 })
 
-test("Other teams folds shut when it is long", () => {
-	assert.match(page, /startCollapsed/)
+test("nothing is folded: with Other teams gone there is no collapsed section", () => {
+	// 8 Oct 2026: startCollapsed belonged to Other teams
+	assert.doesNotMatch(page, /startCollapsed/)
 })
 
 test("Home counts only check-ins sent to you (Yours), from the same server answer", () => {
 	const needs = readFileSync(fileURLToPath(new URL("../../components/NeedsYou.vue", import.meta.url)), "utf8")
 	assert.match(needs, /needsYouResource\.data\?\.checkins/)
-})
-
-test("Other teams is a heading too, with a wired disclosure (heading navigation finds it)", () => {
-	assert.match(template, /<h2 class="m-0">\s*<button[\s\S]*aria-controls="approvals-other-teams"/)
-	// v-show, not v-if: aria-controls must point at an element that exists
-	assert.match(template, /v-show="otherOpen" id="approvals-other-teams"/)
 })
