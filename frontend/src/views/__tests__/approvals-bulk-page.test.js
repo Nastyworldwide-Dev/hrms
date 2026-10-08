@@ -374,3 +374,16 @@ test("a long label wraps and keeps the dates; the page bar clears the taller bar
 		/\.g-approvals__page--barred\s*\{[^}]*padding-bottom: 136px/
 	)
 })
+
+test("each control is told apart by a screen reader (design review of b47084495)", () => {
+	// a tick names the kind: two requests of one person on one date must not sound the same
+	assert.match(template, /role="checkbox"[\s\S]{0,200}:aria-label="rowLabel\(req\)"/)
+	// the two Clear buttons say what they clear
+	assert.match(template, /__\('Clear filters'\)/)
+	assert.match(template, /__\('Clear selection'\)/)
+	// every "Edit reason" names its person
+	assert.match(template, /__\('Edit reason for \{0\}', \[req\.who\]\)/)
+	// a disabled Reject says why, on screen, and is described by it
+	assert.match(template, /id="approvals-reject-hint"[\s\S]{0,120}Add a reason to continue\./)
+	assert.match(template, /:aria-describedby="rejectReady \? undefined : 'approvals-reject-hint'"/)
+})

@@ -82,6 +82,7 @@
 								v-if="filterCount"
 								type="button"
 								class="g-focusable g-approvals__clear"
+								:aria-label="__('Clear filters')"
 								@click="clearFilters"
 							>
 								{{ __("Clear") }}
@@ -168,7 +169,7 @@
 														role="checkbox"
 														class="g-focusable g-approvals__tickbtn"
 														:aria-checked="String(ticked.has(rowKey(req)))"
-														:aria-label="reqLabel(req)"
+														:aria-label="rowLabel(req)"
 														@click="ticked = toggle(ticked, req)"
 													>
 														<span
@@ -293,7 +294,12 @@
 							{{ __("Each one is checked before it is approved.") }}
 						</p>
 					</div>
-					<button type="button" class="g-focusable g-approvals__clear" @click="ticked = new Set()">
+					<button
+						type="button"
+						class="g-focusable g-approvals__clear"
+						@click="ticked = new Set()"
+						:aria-label="__('Clear selection')"
+					>
 						{{ __("Clear") }}
 					</button>
 				</div>
@@ -447,6 +453,7 @@
 											class="g-focusable g-approvals__clear"
 											:aria-expanded="String(Boolean(rejectEditing[rowKey(req)]))"
 											:aria-controls="`approvals-reason-${at}`"
+											:aria-label="__('Edit reason for {0}', [req.who])"
 											:disabled="sheet.phase === 'working'"
 											@click="rejectEditing[rowKey(req)] = !rejectEditing[rowKey(req)]"
 										>
@@ -471,8 +478,16 @@
 								</div>
 							</div>
 						</GListPanel>
+						<p
+							v-if="!rejectReady && sheet.phase !== 'working'"
+							id="approvals-reject-hint"
+							class="m-0 text-caption text-ink-600"
+						>
+							{{ __("Add a reason to continue.") }}
+						</p>
 						<GButton
 							danger
+							:aria-describedby="rejectReady ? undefined : 'approvals-reject-hint'"
 							:label="__('Reject {0}', [sheet.items.length])"
 							:pending="sheet.phase === 'working'"
 							:pending-label="__('Rejecting…')"
