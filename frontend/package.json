@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.41",
-	"releaseName": "Clean Glass",
+	"version": "2.0.0-alpha.42",
+	"releaseName": "Steady Screens",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

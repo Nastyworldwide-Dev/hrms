@@ -10,6 +10,28 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.42] — Steady Screens — 2026-10-08
+
+Screens hold still while they load, text sits on the type scale, and every
+design check passes on a running site.
+
+### Fixed
+- **Approvals no longer jumps.** "Requests you've already answered" stayed
+  put only until the queue arrived, then moved down 136 px; the space for the
+  deadline banner and the filter row is now held while it loads.
+- **Help no longer jumps** 16 px at the end of loading.
+- **Text line spacing matches the type scale** on Home's date, the calendar
+  and row amounts.
+
+### Changed
+- The screenshot checks were re-taken: the old ones predated the dark theme
+  (a "dark" login picture was light). All 11 design checks pass on a running
+  site: lint, usage, contrast, surfaces, tokens, scale, motion, accessibility,
+  screenshots, consistency and the iOS audits.
+
+### Deploy
+- No migrate needed for this release (alpha.41 still needs its migrate).
+
 ## [2.0.0-alpha.41] — Clean Glass — 2026-10-07
 
 Managers who approve for another company see their people's requests, and

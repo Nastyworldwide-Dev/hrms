@@ -233,3 +233,21 @@ NEXT: wait for the owner's next Nadi task.
 - 2026-10-07T11:01:55Z COMMIT: cf6e15bd0 refactor(pwa): service worker start-up moves out of main.js → review+design dispatched
 2026-10-07T11:33:04Z EVIDENCE: 4 gates — alpha.41 full served run (fresh.local, final bundle, AUDIT_PW): lint 47/0 new, usage 0, contrast 20/0, surfaces 46/0, tokens 19 known, scale ok, motion ok, a11y 76 screens 0 serious; visual FAIL 94 (baselines from alpha.14), coherence FAIL 2 (dash-attendance), ios FAIL 1 (/approvals banner radius) — all three predate alpha.41, ticket-served-gates-stale.md
 2026-10-07T11:33:04Z NEXT: release alpha.41 tagged; owner deploys + migrate. Then ticket-served-gates-stale.md before alpha.42; S12 items 4-5 (approvalToast table, attendance_list dialog) still open.
+- 2026-10-07T11:33:14Z COMMIT: 6feb489e8 chore(release): 2.0.0-alpha.41 Clean Glass → review+deps dispatched
+- 2026-10-07T11:33:19Z PUSH: nz-glass @ 6feb489e8
+- 2026-10-07T11:34:00Z COMMIT: 0944e3a86 docs(handoff): alpha.41 released → review dispatched
+- 2026-10-07T11:34:11Z PUSH: nz-glass @ 0944e3a86
+- 2026-10-07T11:46:48Z PUSH: nz-glass @ 811837e4d
+- 2026-10-07T11:46:49Z COMMIT: 811837e4d docs(plans): the full ios gate result after the alpha.41 tag → review dispatched
+- 2026-10-08T02:20:21Z COMMIT: 5af5235cb fix(pwa): four text styles drew a line height off the type scale → review+design dispatched
+- 2026-10-08T02:20:36Z COMMIT: c1996e5ff test(design): two audits counted a calendar day and a banner as the wrong thing → review+design dispatched
+- 2026-10-08T02:37:16Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-10-08T02:37:18Z COMMIT: d0b7f29a1 fix(pwa): the Help list's empty state jumped 16px as it finished loading → review+design dispatched
+- 2026-10-08T02:37:37Z EVIDENCE: 2 correct — mapped tests green (bun ) for 2 file(s) ⟂758fda180142
+- 2026-10-08T02:37:40Z COMMIT: 08d20a979 fix(pwa): Approvals' "already answered" jumped 136px when the queue loaded → review+design dispatched
+- 2026-10-08T02:37:50Z EVIDENCE: 2 correct — mapped tests green (bun ) for 1 file(s) ⟂447b403db931
+- 2026-10-08T02:37:50Z EVIDENCE: 3 works — blast radius green: 1 dependent(s), 1 extra test file(s) ⟂625bfdf0dc98
+- 2026-10-08T02:37:52Z COMMIT: c2e04f3dc fix(pwa): the loudRequest split left classifyFailure exported with no importer → review+design dispatched
+- 2026-10-08T02:45:26Z COMMIT: 0ce55b3ba test(visual): re-baseline 94 screens for alpha.42 → review+security dispatched
+2026-10-08T03:15:58Z EVIDENCE: 5 looks right — alpha.42 full served run (fresh.local, AUDIT_PW, final bundle): all 11 gates OK — lint 47/0 new, usage 0, contrast 20/0, surfaces 46/0, tokens 19, scale, motion, a11y 76 screens 0 serious, visual 0 differing (94 re-baselined, sampled), coherence 0/38, ios 9 audits 0 findings
+2026-10-08T03:15:58Z NEXT: alpha.42 tagged; owner deploys (no migrate; alpha.41 migrate still required). Open: S12 items 4-5 (approvalToast table, attendance_list dialog).
