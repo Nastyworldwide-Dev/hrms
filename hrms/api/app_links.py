@@ -15,12 +15,17 @@ logger = logging.getLogger(__name__)
 
 #: Owner, 30 Sep 2026: a role for the special case of someone who needs
 #: Approva and nothing else (no accounting, no HR). Created by
-#: patches/v16_0/add_approva_user_role. The roles before it keep Approva.
+#: patches/v16_0/add_approva_user_role. Since 9 Oct 2026 every employee is
+#: offered Approva through "Employee", so this role no longer changes what
+#: Nadi shows; it stays so the existing grants and the patch remain valid.
 APPROVA_USER_ROLE = "Approva User"
 
 #: App key -> roles that are offered it. Order is the order shown.
+#: Owner, 9 Oct 2026: "Employee" is on every employee (ensure_employee_role),
+#: so listing it offers Approva to all of them with no per-person grant.
 APP_ROLES = {
 	"approva": (
+		"Employee",
 		"Accounts Manager",
 		"Accounts User",
 		"System Manager",

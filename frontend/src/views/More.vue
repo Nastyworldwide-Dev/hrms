@@ -199,8 +199,8 @@ const teamItems = computed(() => [
 		: []),
 ])
 
-// Offered by the server (hrms.api.app_links; audit F-15). An employee with neither the finance nor the
-// projects roles gets no Apps group at all — the heading goes with the rows,
+// Offered by the server (hrms.api.app_links; audit F-15). Every employee is offered Approva; someone
+// the server offers nothing gets no Apps group at all — the heading goes with the rows,
 // because a labelled empty panel reads as a fault rather than as "not for you".
 const appItems = computed(() =>
 	visibleAppItems(myApps.data).map((item) => ({

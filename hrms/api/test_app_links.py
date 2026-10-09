@@ -29,8 +29,13 @@ class TestMyApps(unittest.TestCase):
 		):
 			return app_links.get_my_apps()
 
-	def test_an_employee_is_offered_no_app(self):
-		self.assertEqual(self._apps(["Employee"]), [])
+	def test_every_employee_is_offered_approva_and_not_the_board(self):
+		# Owner, 9 Oct 2026: everyone can open Approva (and send a request), so
+		# the baseline Employee role is enough. The board stays role-gated.
+		self.assertEqual(self._apps(["Employee"]), ["approva"])
+
+	def test_someone_with_no_role_here_is_offered_nothing(self):
+		self.assertEqual(self._apps(["Guest"]), [])
 
 	def test_finance_gets_approva_only(self):
 		self.assertEqual(self._apps(["Employee", "Accounts User"]), ["approva"])
