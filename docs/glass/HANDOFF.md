@@ -1,12 +1,12 @@
 # HANDOFF
-prompt:   alpha.42 Steady Screens (served design checks green)
-status:   done
-commit:   05d958fa5 on nz-glass (tag v2.0.0-alpha.42)
-files:    frontend/src/views/Approvals.vue (loading holds banner + chips)
-          frontend/src/theme/glass-components.css (refresher, line heights)
-          frontend/e2e/{coherence.spec.js,ios-consistency-audit.mjs,page-audit.mjs}
-          frontend/src/utils/requestFailure.js
-          design/baselines/ (94 re-shot)
-verify:   cd frontend && set -a && . ../.env && set +a && yarn gates  (all 11 OK on a served site)
-flags:    no migrate for alpha.42; alpha.41's migrate still required if not yet run
-next:     S12 leftovers: approvalToast outcome table, attendance_list Mark Attendance dialog module
+prompt:   alpha.43 Bulk Approvals and Approva for All
+status:   partial
+commit:   9ce5f16bc on nz-glass (tag v2.0.0-alpha.43, GitHub Release made)
+files:    hrms/api/app_links.py (Employee offered Approva)
+          hrms/api/test_app_links.py
+          frontend/src/views/More.vue (comment only)
+          frontend/package.json, docs/glass/CHANGELOG.md
+          bulk approvals v2: ef7fee8b4 1b7ff59d4 b47084495 437ad2d92 214832d0b
+verify:   PYTHONPATH=. python3 -m pytest -q hrms/api/test_app_links.py (8 pass)
+flags:    served design gates NOT run; more-* baselines stale (staff More gets an Apps group); Approva's own access rule unverified; no migrate
+next:     run yarn gates served, re-shoot design/baselines/more-*, confirm Approva opens for a plain employee
