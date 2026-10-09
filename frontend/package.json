@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.42",
-	"releaseName": "Steady Screens",
+	"version": "2.0.0-alpha.43",
+	"releaseName": "Bulk Approvals and Approva for All",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

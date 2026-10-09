@@ -10,6 +10,44 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.43] — Bulk Approvals and Approva for All — 2026-10-09
+
+Approvers can decide many requests in a few taps, and every employee now
+sees the Approva link.
+
+### Added
+- **Reject many requests at once.** Tick requests on Approvals, add a reason
+  (one for all, or edit it per request) and reject them together. Before,
+  only approving worked in bulk.
+- **Filter, tick and decide up to 100 at once.** Filter by type, department,
+  employee or request dates. "Select all" ticks the oldest 100 and says how
+  many more are waiting. Requests go out ten at a time with a line such as
+  "Approving 30 of 100…". Any that are refused stay ticked, and the sheet
+  says why for each.
+- **Each row says what it is,** so you can decide without opening it: leave
+  balance after approval, days, half day, file or receipt, expense items,
+  shift change, and in and out times.
+- **Every employee is offered Approva** in the Apps list under More. Nobody
+  needs the "Approva User" role to see the link any more; those who have it
+  keep it. Project Board stays limited to its own roles.
+
+### Changed
+- Approvals lists only the requests sent to you. Stepping in from Desk or
+  from a notification works as before.
+- Ticks are always on. The "Select" button is gone. The tick ticks and the
+  row opens the request. "Approve 5 requests?" still asks before it sends.
+
+### Fixed
+- **Older step-in requests no longer hide your own.** Someone with 100 or
+  more older requests routed to them as a step-in saw none of their own.
+- **Screen readers can tell the bulk controls apart.** A tick says the kind
+  of request, each "Clear" says what it clears, each "Edit reason" names its
+  person, and a disabled Reject says "Add a reason to continue."
+
+### Not checked yet
+- The link is offered to every employee. Approva decides what each person
+  can do once it opens; that rule was not re-checked in this release.
+
 ## [2.0.0-alpha.42] — Steady Screens — 2026-10-08
 
 Screens hold still while they load, text sits on the type scale, and every
