@@ -620,10 +620,10 @@ def create_or_update_attendance(
 					"actual_overtime_duration": overtime_data.get("actual_overtime_duration"),
 				}
 			)
-	if repair_attendance is not None:
-		attendance.save(ignore_permissions=True)
-	else:
-		attendance.save()
+	# Automation writes this row whoever queued the job: an employee's own punch
+	# runs the re-mark as that employee, who may not create Attendance. The flag
+	# stays on the doc, so the submit below skips the check too.
+	attendance.save(ignore_permissions=True)
 	if repair_attendance is None or was_new:
 		attendance.submit()
 
