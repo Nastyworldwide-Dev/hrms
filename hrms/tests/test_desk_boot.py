@@ -76,7 +76,8 @@ class TestBootHookNeverBreaksThePage(unittest.TestCase):
 	def test_a_surprise_inside_the_hook_is_logged_not_raised(self):
 		boot = _boot(["Home"])
 		boot.desktop_icons = [object()]  # no .label
-		send_plain_staff_to_pwa(boot)
+		with self.assertLogs("hrms.desk_boot", level="ERROR"):
+			send_plain_staff_to_pwa(boot)
 
 if __name__ == "__main__":
 	unittest.main()
