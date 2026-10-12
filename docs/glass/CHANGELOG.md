@@ -10,6 +10,35 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.44] — Hotfix: Reminders, Attendance and Desk — 2026-10-12
+
+Three errors seen on the live site, fixed. No screen changes.
+
+### Fixed
+- **Staff no longer get a 500 on Desk and Project Board.** A start-up step
+  for the Nadi tile stopped the whole page when the list of Desk icons was
+  missing. It now skips what is missing, and logs instead of failing.
+- **Daily reminders reach phones again.** A reminder has no request type, so
+  its push went out with no title and was refused. It is now titled "Nadi".
+- **A day is marked even when an employee's own punch started the job.** The
+  background re-mark ran as that employee, who may not create Attendance, so
+  it stopped with a permission error and the day stayed unmarked. Automation
+  now writes the row itself. HR's Fix Day and the HR-only re-mark preview keep
+  their role checks.
+
+### Deploy
+- No migrate, no patch.
+
+### Not checked yet
+- Why the Desk icon list was empty on live is unknown. The fix makes it
+  harmless; clearing the site cache and checking the live Frappe version
+  would show the cause.
+- The permission change on the attendance write had no independent security
+  review. Every path to it was traced by hand: scheduled jobs, HR-only Fix
+  Day, and the HR-only preview.
+- The "no holiday list" overtime message for one employee is a setting, not
+  a fault: attach a holiday list, then re-run the overtime backfill.
+
 ## [2.0.0-alpha.43] — Bulk Approvals and Approva for All — 2026-10-09
 
 Approvers can decide many requests in a few taps, and every employee now
