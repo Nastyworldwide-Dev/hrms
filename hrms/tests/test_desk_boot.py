@@ -16,12 +16,14 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _frappe_stub
 
 _frappe_stub.install()
+import frappe
 
 from hrms.desk_boot import PWA_HOME, send_plain_staff_to_pwa
 
 
 def _boot(pages):
-	return SimpleNamespace(
+	# frappe._dict, as the real bootinfo is: hooks read it with .get() and attributes
+	return frappe._dict(
 		workspaces={"pages": [SimpleNamespace(name=p) for p in pages]},
 		desktop_icons=[
 			SimpleNamespace(label="Nadi", link="/desk/shift-&-attendance"),
@@ -54,6 +56,27 @@ class TestPlainStaffGoToPwa(unittest.TestCase):
 		self.assertEqual(boot.app_data[0]["app_route"], "/desk/home")
 		self.assertIsNone(boot.desktop_icons[1].link)
 
+
+class TestBootHookNeverBreaksThePage(unittest.TestCase):
+	"""Live, 12 Oct 2026: bootinfo.desktop_icons was None for a Projects-only user, the hook
+	raised TypeError, Frappe turned it into SessionBootFailed, and /desk and /board gave 500."""
+
+	def test_no_desktop_icons_is_not_an_error(self):
+		boot = _boot(["Home"])
+		boot.desktop_icons = None
+		send_plain_staff_to_pwa(boot)
+		self.assertEqual(boot.app_data[1]["app_route"], PWA_HOME)
+
+	def test_missing_keys_are_not_an_error(self):
+		send_plain_staff_to_pwa(frappe._dict(workspaces={"pages": []}))
+
+	def test_no_workspaces_is_not_an_error(self):
+		send_plain_staff_to_pwa(frappe._dict(workspaces=None, desktop_icons=None, app_data=None))
+
+	def test_a_surprise_inside_the_hook_is_logged_not_raised(self):
+		boot = _boot(["Home"])
+		boot.desktop_icons = [object()]  # no .label
+		send_plain_staff_to_pwa(boot)
 
 if __name__ == "__main__":
 	unittest.main()
