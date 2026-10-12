@@ -50,7 +50,8 @@ class PWANotification(Document):
 				relay_call(
 					push_notification.send_notification_to_user,
 					self.to_user,
-					self.reference_document_type,
+					# a reminder has no reference doctype; the relay refuses a push with no title
+					self.reference_document_type or "Nadi",
 					push_body(self.message),
 					link=self.get_notification_link(),
 					icon=f"{frappe.utils.get_url()}/assets/hrms/manifest/favicon-196.png",
