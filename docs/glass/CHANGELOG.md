@@ -10,6 +10,36 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.46] — Expense Cost Centers by Claim Type — 2026-10-14
+
+Each claim type can say which cost centers its costs go to. Project is no
+longer asked on a claim.
+
+### Added
+- **Cost Centers on Expense Claim Type.** In Desk, HR adds rows of Company
+  and Cost Center under Accounts. Only that company's cost centers are offered.
+- **The type decides a line's cost center**, in Nadi and in Desk:
+  - one listed for the claim's company: filled in and locked;
+  - two or more: only those are offered, starting empty, and the employee
+    must pick one;
+  - none: as before (the employee's own cost center, or the company default).
+- Saving refuses a cost center that is not listed for the type, and a type
+  that lists another company's cost center or the same one twice.
+
+### Removed
+- **Project** (and Task) on expense claims: hidden in Desk, not asked in
+  Nadi. Values already saved are kept.
+
+### Fixed before release
+- A claim sent before HR listed several cost centers on its type can still
+  be approved or rejected. Only new or changed lines must follow the list.
+
+### Deploy
+- **Migrate needed**: a new table on Expense Claim Type, and a patch that
+  hides Project.
+- Then HR: create any missing cost centers in Cost Center Tree, and fill
+  Cost Centers on each Expense Claim Type.
+
 ## [2.0.0-alpha.45] — Shift Attendance for Company Viewers — 2026-10-14
 
 Someone outside HR can now read one company's attendance without asking HR.
