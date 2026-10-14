@@ -247,7 +247,7 @@ import { getCompanyCurrency } from "@/data/currencies"
 import { canOfferCancel } from "@/utils/cancelRule"
 import { formatCurrency, formatHours } from "@/utils/formatters"
 import { requestStatus } from "@/utils/requestStatus"
-import { REQUEST_KIND } from "@/utils/requestKind"
+import { requestKind } from "@/utils/requestKind"
 import { requestDates } from "@/utils/requestDates"
 import { plainLabel } from "@/utils/plainLabel"
 import { sentenceCase } from "@/utils/sentenceCase"
@@ -496,7 +496,7 @@ const fieldsWithValues = computed(() => {
 const whenLine = computed(() => requestDates(document?.doc))
 
 //: The person's word for this request, not its doctype (plan P1-5).
-const kindLabel = computed(() => REQUEST_KIND[document?.doctype] || document?.doctype || "")
+const kindLabel = computed(() => requestKind(document?.doctype, document?.doc))
 
 const leaveShortNotice = computed(() =>
 	props.modelValue.doctype === "Leave Application"

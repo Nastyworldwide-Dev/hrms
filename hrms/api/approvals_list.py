@@ -49,7 +49,7 @@ SCAN_CAP = 50
 LIST_CAP = 100
 
 #: The types whose row says "a file is attached" (receipt, medical certificate).
-ATTACHABLE = ("Leave Application", "Expense Claim")
+ATTACHABLE = ("Leave Application", "Expense Claim", "Attendance Request")
 
 #: The request's own first and last day, which the page's date filter reads. One-day types name
 #: the same field twice; Replacement Leave names its bank month.
@@ -299,6 +299,12 @@ def _row(
 	elif doc.doctype == "Shift Request":
 		detail = doc.get("shift_type") or ""
 		extra.update(new_shift=detail, current_shift=_current_shift(doc))
+	elif doc.doctype == "Attendance Request" and doc.get("reason") == "Time Slip":
+		# a late arrival excused by a slip, not a day to fix (owner, 14 Oct 2026):
+		# the approver reads why, and opens the slip itself
+		kind = "Time slip"
+		detail = doc.get("time_slip_reason") or ""
+		reason = doc.get("explanation") or ""
 	elif doc.doctype == "Attendance Request":
 		detail = doc.get("reason") or ""
 		reason = doc.get("explanation") or ""

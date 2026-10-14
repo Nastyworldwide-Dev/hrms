@@ -1147,6 +1147,38 @@ class TestAttendanceRowDetails(unittest.TestCase):
 		self.assertEqual(row["reason"], "Client visit")
 
 
+class TestTimeSlipRow(unittest.TestCase):
+	"""Owner, 14 Oct 2026: the approver sees a time slip as one, with its reason."""
+
+	def test_a_slip_reads_as_a_time_slip_with_its_reason(self):
+		slip = FakeDocument(
+			"Attendance Request",
+			name="AR-2",
+			employee="E1",
+			employee_name="Aisyah",
+			from_date="2026-10-14",
+			to_date="2026-10-14",
+			reason="Time Slip",
+			time_slip_reason="Clinic Visit",
+			modified="2026-10-14 10:00:00",
+		)
+		row = a_row(slip, attached=set())
+		self.assertEqual((row["kind"], row["detail"]), ("Time slip", "Clinic Visit"))
+		self.assertNotIn("in_time", row)
+
+	def test_a_fix_a_day_still_reads_as_one(self):
+		day = FakeDocument(
+			"Attendance Request",
+			name="AR-3",
+			employee="E1",
+			from_date="2026-10-14",
+			to_date="2026-10-14",
+			reason="On Duty",
+			modified="2026-10-14 10:00:00",
+		)
+		self.assertEqual(a_row(day, attached=set())["kind"], "Fix a day")
+
+
 class TestOvertimeRowKeepsItsNote(unittest.TestCase):
 	def test_the_page_gets_the_explanation_as_the_reason(self):
 		ot = FakeDocument(

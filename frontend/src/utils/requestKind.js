@@ -12,3 +12,12 @@ export const REQUEST_KIND = {
 	"Compensatory Leave Request": "Time off in lieu",
 	"Remote Checkin Request": "Check-in outside the area",
 }
+
+/**
+ * The word for one request: a Fix a day sent as a time slip is a "Time slip"
+ * (owner, 14 Oct 2026; same rule as approvals_list._row).
+ */
+export function requestKind(doctype, doc) {
+	if (doctype === "Attendance Request" && doc?.reason === "Time Slip") return "Time slip"
+	return REQUEST_KIND[doctype] || doctype || ""
+}
