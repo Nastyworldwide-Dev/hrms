@@ -10,6 +10,24 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.45] — Shift Attendance for Company Viewers — 2026-10-14
+
+Someone outside HR can now read one company's attendance without asking HR.
+
+### Added
+- **New role: Attendance Report Viewer.** Its holder opens the Shift
+  Attendance report in Desk and sees every employee in the companies of
+  their Company User Permissions. Nothing else opens: no leave, claims or
+  employee records, and the report's edit buttons stay HR-only.
+- With no Company User Permission the report is empty, so a missed step
+  cannot show every company.
+- First use: Shenzhen Qiguangda Technology Co., Ltd., for its monthly count.
+
+### Deploy
+- **Migrate needed**: a patch creates the role.
+- Then in Desk, for each person: add the role on their User, and a User
+  Permission (Allow: Company, For Value: their company).
+
 ## [2.0.0-alpha.44] — Hotfix: Reminders, Attendance and Desk — 2026-10-12
 
 Three errors seen on the live site, fixed. No screen changes.

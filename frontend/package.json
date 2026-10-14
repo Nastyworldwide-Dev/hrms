@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.44",
-	"releaseName": "Hotfix: Reminders, Attendance and Desk",
+	"version": "2.0.0-alpha.45",
+	"releaseName": "Shift Attendance for Company Viewers",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
