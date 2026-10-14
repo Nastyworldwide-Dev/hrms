@@ -519,9 +519,7 @@ def create_or_update_attendance(
 		logger.info("[checkin] %s on %s: late excused by an approved time slip", employee, attendance_date)
 		late_entry = False
 	if repair_attendance is None and existing_attendance is not None:
-		if _same_day_result(
-			existing_attendance, attendance_status, working_hours, in_time, out_time, shift, late_entry
-		):
+		if _same_day_result(existing_attendance, attendance_status, working_hours, in_time, out_time, shift):
 			logger.info(
 				"[checkin] %s for %s on %s unchanged (%s, %sh) — linking the re-read punches to it",
 				existing_attendance.name,
@@ -653,12 +651,8 @@ def excused_late(employee, attendance_date) -> bool:
 	)
 
 
-def _same_day_result(existing, status, working_hours, in_time, out_time, shift=None, late_entry=None) -> bool:
-	"""Whether re-marking would produce the row that already exists.
-
-	`late_entry` is compared when given: a time slip cancelled after approval
-	re-marks the day, and a row kept as "the same" would stay excused for good.
-	"""
+def _same_day_result(existing, status, working_hours, in_time, out_time, shift=None) -> bool:
+	"""Whether re-marking would produce the row that already exists."""
 	same_times = all(
 		(a is None and b is None) or (a is not None and b is not None and get_datetime(a) == get_datetime(b))
 		for a, b in ((existing.in_time, in_time), (existing.out_time, out_time))
@@ -668,7 +662,6 @@ def _same_day_result(existing, status, working_hours, in_time, out_time, shift=N
 		and (not getattr(existing, "shift", None) or not shift or existing.shift == shift)
 		and abs(flt(existing.working_hours) - flt(working_hours)) < 0.01
 		and same_times
-		and (late_entry is None or bool(cint(existing.get("late_entry"))) == bool(late_entry))
 	)
 
 

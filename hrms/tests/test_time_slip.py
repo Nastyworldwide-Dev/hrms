@@ -163,37 +163,51 @@ class TestEveryLateWriter(unittest.TestCase):
 
 
 class TestCancelRestoresLate(unittest.TestCase):
-	"""Review of 37f2d86f4: cancelling an approved slip re-marks the day, but a
-	row with the same status, hours and times was kept, late flag and all."""
+	"""Review of 37f2d86f4 and 980c1586d: a cancelled slip must bring the late
+	mark back, by working that day's flag out again, not by re-marking the day
+	(a late-only change would cancel a row that may be paid)."""
 
+	def test_cancel_of_a_slip_withdraws_the_excuse_only(self):
+		fn = next(
+			n
+			for n in _class_body(REQUEST, "AttendanceRequest")
+			if isinstance(n, ast.FunctionDef) and n.name == "on_cancel"
+		)
+		first = fn.body[0]
+		self.assertIn("is_time_slip", ast.unparse(first.test))
+		self.assertIn("withdraw_late_excuse", ast.unparse(first.body))
+		self.assertIsInstance(first.body[-1], ast.Return)
+
+	def test_the_excuse_is_withdrawn_from_the_rows_own_times(self):
+		src = REQUEST.read_text()
+		body = src[src.index("def withdraw_late_excuse") : src.index("def create_attendance_records")]
+		self.assertIn("late_early_for_row(row, approved_session(", body)
+		self.assertNotIn("cancel()", body)
+
+	def test_a_re_mark_still_ignores_a_late_only_difference(self):
+		src = CHECKIN.read_text()
+		fn = src[src.index("def _same_day_result") : src.index("def _replace_automation_attendance")]
+		self.assertNotIn("late_entry", fn)
+
+
+class TestPatch(unittest.TestCase):
 	def setUp(self):
-		tree = ast.parse(CHECKIN.read_text())
-		fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_same_day_result")
-		ns = {
-			"get_datetime": lambda v: v,
-			"flt": lambda v: float(v or 0),
-			"cint": lambda v: int(v or 0),
-		}
-		exec(compile(ast.Module(body=[fn], type_ignores=[]), str(CHECKIN), "exec"), ns)
-		self.same = ns["_same_day_result"]
-		row = {
-			"status": "Present",
-			"working_hours": 8,
-			"in_time": "09:42",
-			"out_time": "18:00",
-			"shift": "S",
-			"late_entry": 0,
-		}
-		self.row = SimpleNamespace(**row, get=lambda f, d=None: row.get(f, d))
+		path = (
+			pathlib.Path(__file__).resolve().parent.parent / "patches" / "v16_0" / "add_time_slip_reason.py"
+		)
+		tree = ast.parse(path.read_text())
+		ns = {"TIME_SLIP": "Time Slip"}
+		fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "with_time_slip")
+		exec(compile(ast.Module(body=[fn], type_ignores=[]), str(path), "exec"), ns)
+		self.add = ns["with_time_slip"]
 
-	def test_a_late_change_is_not_the_same_day(self):
-		self.assertFalse(self.same(self.row, "Present", 8, "09:42", "18:00", "S", True))
+	def test_hrs_own_reasons_are_kept(self):
+		self.assertEqual(
+			self.add("Work From Home\nOn Duty\nTraining"), "Work From Home\nOn Duty\nTraining\nTime Slip"
+		)
 
-	def test_an_unchanged_late_flag_is_the_same_day(self):
-		self.assertTrue(self.same(self.row, "Present", 8, "09:42", "18:00", "S", False))
-
-	def test_callers_that_do_not_say_late_are_unaffected(self):
-		self.assertTrue(self.same(self.row, "Present", 8, "09:42", "18:00", "S"))
+	def test_it_is_added_once(self):
+		self.assertEqual(self.add("On Duty\nTime Slip"), "On Duty\nTime Slip")
 
 
 if __name__ == "__main__":

@@ -226,8 +226,7 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 
 		The nightly re-mark keeps it that way (employee_checkin.excused_late);
 		if the day is not marked yet, the marking reads the same rule. Cancelling
-		the slip re-marks the day (day_remark_hooks.remark_request_days), so the
-		late mark comes back.
+		the slip works the late mark out again (withdraw_late_excuse).
 		"""
 		rows = frappe.get_all(
 			"Attendance",
@@ -281,6 +280,9 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 			frappe.throw(_("Self-approval for Attendance Requests is not allowed"))
 
 	def on_cancel(self):
+		if self.is_time_slip():
+			self.withdraw_late_excuse()
+			return
 		attendance_list = frappe.get_all(
 			"Attendance", {"employee": self.employee, "attendance_request": self.name, "docstatus": 1}
 		)
@@ -293,6 +295,27 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 				# created is part of that cancel, not a separate authority question.
 				attendance_obj.flags.ignore_permissions = True
 				attendance_obj.cancel()
+
+	def withdraw_late_excuse(self):
+		"""A cancelled slip no longer excuses the day: its late mark is worked out
+		again from the row's own times, under any approved half-day leave.
+
+		Only the flag is written. A re-mark of the whole day would treat a late-only
+		difference as a new day and cancel a row that may already be paid
+		(review of 980c1586d).
+		"""
+		from hrms.utils.half_day_session import approved_session, late_early_for_row
+
+		for name in frappe.get_all(
+			"Attendance",
+			filters={"employee": self.employee, "attendance_date": self.from_date, "docstatus": 1},
+			pluck="name",
+		):
+			row = frappe.get_doc("Attendance", name)
+			late = late_early_for_row(row, approved_session(self.employee, self.from_date)).get("late_entry")
+			if late is not None and int(late) != int(row.late_entry or 0):
+				frappe.db.set_value("Attendance", name, "late_entry", late)
+				logger.info("[attendance_request] time slip %s cancelled: %s late=%s", self.name, name, late)
 
 	def create_attendance_records(self):
 		request_days = date_diff(self.to_date, self.from_date) + 1
