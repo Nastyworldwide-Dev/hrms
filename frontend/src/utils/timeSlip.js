@@ -69,6 +69,18 @@ async function uploadFile(file, name) {
  * insert throws an Error saying the slip was saved without its file (`slipName` carries its name).
  * `deps` (insert, upload, __) are injectable so this is testable without a browser.
  */
+//: What the server's upload takes (hrms.api.upload_base64_file): an iPhone's HEIC or a
+//: WebP would be refused after the punch (review of c9a824c15).
+export const SLIP_FILE_TYPES = "image/jpeg,image/png,application/pdf"
+
+/** Attach the slip file to a slip already saved (Today's "Add the file"). */
+export async function attachSlipFile(name, file, deps = {}) {
+	const { upload = uploadFile } = deps
+	await upload(file, name)
+	console.info("[timeSlip] file added to", name)
+	return name
+}
+
 export async function sendTimeSlip({ employee, day, file }, deps = {}) {
 	const { insert = insertRequest, upload = uploadFile, __ = plain } = deps
 	if (!file) throw new Error(__("Add the file for your time slip first."))
@@ -86,7 +98,7 @@ export async function sendTimeSlip({ employee, day, file }, deps = {}) {
 	} catch (cause) {
 		console.warn("[timeSlip] saved", name, "but its file did not upload", cause)
 		const error = new Error(
-			__("Your time slip was saved without its file. Add the file from Today.")
+			__("Your time slip was saved without its file. Add it from Today: Add the file to your time slip.")
 		)
 		error.slipName = name
 		error.cause = cause

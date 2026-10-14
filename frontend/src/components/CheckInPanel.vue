@@ -136,27 +136,6 @@
 				<div class="checkin-sheet__where-detail">{{ locationVerdict.detail }}</div>
 			</div>
 
-			<!-- Late by the shift's own rule: offer the time slip HERE, before the punch, so a
-			     clinic visit is said once, at the door, not discovered as a late mark later
-			     (owner, 14 Oct 2026). The clock is the device's, so this is a hint; Today
-			     reads the server's own count (utils/timeSlip.js). -->
-			<div v-if="minutesLate > 0" class="checkin-sheet__slip">
-				<span class="checkin-sheet__slip-pill" role="status">
-					{{ slipLabel(minutesLate, nowResource.data?.shift?.start, __) }}
-				</span>
-				<div class="g-form-group">
-					<div class="g-form-row">
-						<span class="g-form-row__label">{{ __("I have a time slip") }}</span>
-						<GSwitch
-							v-model="slipOn"
-							class="g-form-row__switch"
-							:aria-label="__('I have a time slip')"
-						/>
-					</div>
-				</div>
-				<TimeSlipFields v-if="slipOn" v-model:file="slipFile" />
-			</div>
-
 			<!-- Live selfie preview — camera auto-starts when the modal opens;
 			     Confirm tap captures the frame, uploads, and submits the log
 			     in one action (mirrors the React CheckInDialog UX). -->
@@ -179,6 +158,30 @@
 				</div>
 			</GSelfiePanel>
 			<canvas ref="canvasEl" class="hidden"></canvas>
+
+			<!-- Late by the shift's own rule: offer the time slip HERE, before the punch, so a
+			     clinic visit is said once, at the door, not discovered as a late mark later
+			     (owner, 14 Oct 2026). The clock is the device's, so this is a hint; Today
+			     reads the server's own count (utils/timeSlip.js). -->
+			<div v-if="minutesLate > 0" class="checkin-sheet__slip">
+				<span class="checkin-sheet__slip-pill" role="status">
+					{{ slipLabel(minutesLate, nowResource.data?.shift?.start, __) }}
+				</span>
+				<div class="g-form-group">
+					<div class="g-form-row">
+						<span class="g-form-row__label">{{ __("I have a time slip") }}</span>
+						<GSwitch
+							v-model="slipOn"
+							class="g-form-row__switch"
+							:aria-label="__('I have a time slip')"
+						/>
+					</div>
+				</div>
+				<TimeSlipFields v-if="slipOn" v-model:file="slipFile" />
+				<p v-if="slipOn" class="g-form-footer">
+					{{ __("Your approver is asked to approve it. If they do, today is not marked late.") }}
+				</p>
+			</div>
 
 			<GButton
 				:label="
@@ -434,7 +437,15 @@ async function sendSlipAfterPunch(file) {
 		gToast({ title: __("Time slip sent"), variant: "success" })
 	} catch (error) {
 		console.warn("[CheckInPanel] time slip not sent", error)
-		gToast({
+		// a failed upload has already toasted; the slip itself is saved, Today offers the file
+		if (error?.slipName)
+			gToast({
+				title: __("Time slip saved without its file"),
+				text: __("Add the file from Today."),
+				variant: "error",
+			})
+		else
+			gToast({
 			title: __("Time slip not sent"),
 			text: firstMessage(error, __("Could not send your time slip.")),
 			variant: "error",

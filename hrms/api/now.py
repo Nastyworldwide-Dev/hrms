@@ -107,6 +107,18 @@ def _time_slip(employee, now, session):
 		"late_minutes": late,
 		"name": slip[0].name if slip else None,
 		"status": slip[0].status if slip else None,
+		# a slip saved without its file can still get one from Today (review of c9a824c15)
+		"has_file": bool(
+			slip
+			and frappe.db.exists(
+				"File",
+				{
+					"attached_to_doctype": "Attendance Request",
+					"attached_to_name": slip[0].name,
+					"file_url": ("is", "set"),
+				},
+			)
+		),
 	}
 
 

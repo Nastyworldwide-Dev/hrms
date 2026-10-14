@@ -173,3 +173,11 @@ test("no file means nothing is saved", async () => {
 	)
 	assert.equal(inserted, false)
 })
+
+test("a file added later goes to the slip already saved", async () => {
+	const { attachSlipFile } = await import("../timeSlip.js")
+	const uploaded = []
+	const name = await attachSlipFile("HR-ARQ-1", { name: "slip.jpg" }, { upload: async (f, n) => uploaded.push([f.name, n]) })
+	assert.equal(name, "HR-ARQ-1")
+	assert.deepEqual(uploaded, [["slip.jpg", "HR-ARQ-1"]])
+})

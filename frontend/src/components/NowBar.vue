@@ -99,6 +99,14 @@
 			<span class="g-badge" :class="`g-chip--${slipLine.chip}`">{{ slipLine.text }}</span>
 		</p>
 		<button
+			v-if="slipNeedsFile"
+			type="button"
+			class="g-now__slip-add g-focusable"
+			@click="slipOpen = true"
+		>
+			{{ __("Add the file to your time slip") }}
+		</button>
+		<button
 			v-else-if="slipOffered"
 			type="button"
 			class="g-now__slip-add g-focusable"
@@ -112,7 +120,10 @@
 		<div class="g-form-body">
 			<section class="g-form-section">
 				<TimeSlipFields v-model:file="slipFile" />
-				<p class="g-form-footer">
+				<p v-if="slipNeedsFile" class="g-form-footer">
+					{{ __("Your time slip is saved. Add its file so your approver can see it.") }}
+				</p>
+				<p v-else class="g-form-footer">
 					{{ __("Your approver is asked to approve it. If they do, today is not marked late.") }}
 				</p>
 			</section>
@@ -143,7 +154,7 @@ import { gToast } from "@/components/glass/toast"
 import { useOnline } from "@/composables/useOnline"
 import { nowResource } from "@/data/now"
 import { firstMessage } from "@/utils/loudRequest"
-import { sendTimeSlip, slipStatusLine } from "@/utils/timeSlip"
+import { attachSlipFile, sendTimeSlip, slipStatusLine } from "@/utils/timeSlip"
 
 const __ = inject("$translate")
 const employee = inject("$employee")
@@ -308,6 +319,11 @@ const slipLine = computed(() => {
 	return line ? { ...line, chip: CHIPS[line.tone] } : null
 })
 const slipOffered = computed(() => Number(slip.value?.late_minutes) > 0 && !slip.value?.name)
+//: a waiting slip saved without its file (the upload failed): the file can still go
+//: (review of c9a824c15: "Add the file from Today" led nowhere)
+const slipNeedsFile = computed(
+	() => Boolean(slip.value?.name) && slip.value.status === "Open" && !slip.value.has_file
+)
 
 const slipOpen = ref(false)
 const slipFile = ref(null)
@@ -322,20 +338,24 @@ async function sendSlip() {
 	if (slipSending.value || !slipFile.value || !slip.value) return
 	slipSending.value = true
 	try {
-		await sendTimeSlip({
-			employee: employee.data.name,
-			day: slip.value.day,
-			file: slipFile.value,
-		})
+		if (slipNeedsFile.value) await attachSlipFile(slip.value.name, slipFile.value)
+		else
+			await sendTimeSlip({
+				employee: employee.data.name,
+				day: slip.value.day,
+				file: slipFile.value,
+			})
 		gToast({ title: __("Time slip sent"), variant: "success" })
 		closeSlip()
 	} catch (error) {
 		console.warn("[NowBar] time slip not sent", error)
-		gToast({
-			title: __("Time slip not sent"),
-			text: firstMessage(error, __("Could not send your time slip.")),
-			variant: "error",
-		})
+		// a failed upload has already said so (FileAttachment toasts); say only what is left
+		if (!error?.slipName && !slipNeedsFile.value)
+			gToast({
+				title: __("Time slip not sent"),
+				text: firstMessage(error, __("Could not send your time slip.")),
+				variant: "error",
+			})
 		// saved without its file: the request exists, so the offer is over
 		if (error?.slipName) closeSlip()
 	} finally {

@@ -76,7 +76,7 @@ test("sending the slip reloads what Today reads, even when the file did not go",
 test("both screens ask in the same words, through the shared rows", () => {
 	assert.match(panel, /<TimeSlipFields\b/)
 	assert.match(bar, /<TimeSlipFields\b/)
-	assert.match(fields, /accept="image\/\*,application\/pdf"/)
+	assert.match(fields, /:accept="SLIP_FILE_TYPES"/)
 	assert.match(fields, /Clinic visit/)
 })
 
@@ -92,4 +92,33 @@ test("Today offers a slip only for a late day with none filed, and sends it for 
 	assert.match(bar, /const slip = computed\(\(\) => data\.value\.time_slip/)
 	assert.match(bar, /day: slip\.value\.day/)
 	assert.match(bar, /finally \{[\s\S]*nowResource\.reload\(\)/)
+})
+
+// Design review of c9a824c15: the required file was display:none, so a keyboard or
+// screen reader could never reach it, and the slip sat above the camera (mockup: below).
+test("the slip file is reachable and the slip follows the camera, with its hint", () => {
+	const fields = readFileSync(fileURLToPath(new URL("../TimeSlipFields.vue", import.meta.url)), "utf8")
+	assert.match(fields, /class="g-sr"\s+type="file"/)
+	assert.doesNotMatch(fields, /class="hidden"\s+type="file"/)
+	assert.match(fields, /:has\(input:focus-visible\)/)
+	const panel = readFileSync(fileURLToPath(new URL("../CheckInPanel.vue", import.meta.url)), "utf8")
+	assert.ok(panel.indexOf("<GSelfiePanel") < panel.indexOf("checkin-sheet__slip\""))
+	assert.match(panel, /If they do, today is not marked late/)
+})
+
+// Code review of c9a824c15: the picker offered files the server refuses, and a slip
+// saved without its file had nowhere to get one.
+test("the picker takes only what the server accepts", () => {
+	const fields = readFileSync(fileURLToPath(new URL("../TimeSlipFields.vue", import.meta.url)), "utf8")
+	assert.match(fields, /:accept="SLIP_FILE_TYPES"/)
+	const util = readFileSync(fileURLToPath(new URL("../../utils/timeSlip.js", import.meta.url)), "utf8")
+	assert.match(util, /SLIP_FILE_TYPES = "image\/jpeg,image\/png,application\/pdf"/)
+})
+
+test("Today offers the file for a waiting slip saved without one", () => {
+	const bar = readFileSync(fileURLToPath(new URL("../NowBar.vue", import.meta.url)), "utf8")
+	assert.match(bar, /slip\.value\.status === "Open" && !slip\.value\.has_file/)
+	assert.match(bar, /if \(slipNeedsFile\.value\) await attachSlipFile\(slip\.value\.name, slipFile\.value\)/)
+	const api = readFileSync(fileURLToPath(new URL("../../../../hrms/api/now.py", import.meta.url)), "utf8")
+	assert.match(api, /"has_file": bool\(/)
 })

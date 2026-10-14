@@ -18,10 +18,12 @@
 				{{ file ? file.name : __("Required") }}
 			</span>
 			<Upload class="g-form-row__switch h-5 w-5 text-ink-600" aria-hidden="true" />
+			<!-- g-sr, not display:none: a keyboard or screen reader reaches the
+			     required proof (design review of c9a824c15), as GFileUpload does -->
 			<input
-				class="hidden"
+				class="g-sr"
 				type="file"
-				accept="image/*,application/pdf"
+				:accept="SLIP_FILE_TYPES"
 				:aria-label="__('Add a file')"
 				@change="pick"
 			/>
@@ -34,7 +36,7 @@ import { Upload } from "lucide-vue-next"
 import { computed, inject } from "vue"
 
 import GSelect from "@/components/glass/GSelect.vue"
-import { TIME_SLIP_REASON } from "@/utils/timeSlip"
+import { SLIP_FILE_TYPES, TIME_SLIP_REASON } from "@/utils/timeSlip"
 
 defineProps({ file: { type: Object, default: null } })
 const emit = defineEmits(["update:file"])
@@ -51,6 +53,10 @@ function pick(event) {
 <style>
 .timeslip-file {
 	cursor: pointer;
+}
+/* the hidden input takes the focus; the row shows it, as .g-focusable does */
+.timeslip-file:has(input:focus-visible) {
+	box-shadow: var(--g-shadow-focus-ring);
 }
 .timeslip-file__name {
 	overflow: hidden;
