@@ -26,6 +26,7 @@
   "reason",
   "column_break_4",
   "explanation",
+  "time_slip_reason",
   "amended_from"
  ],
  "fields": [
@@ -117,7 +118,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Reason",
-   "options": "Work From Home\nOn Duty",
+   "options": "Work From Home\nOn Duty\nTime Slip",
    "reqd": 1
   },
   {
@@ -128,6 +129,14 @@
    "fieldname": "explanation",
    "fieldtype": "Small Text",
    "label": "Explanation"
+  },
+  {
+   "depends_on": "eval:doc.reason=='Time Slip'",
+   "fieldname": "time_slip_reason",
+   "fieldtype": "Select",
+   "label": "Time Slip Reason",
+   "mandatory_depends_on": "eval:doc.reason=='Time Slip'",
+   "options": "\nClinic Visit"
   },
   {
    "fieldname": "amended_from",
@@ -167,7 +176,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-15 11:00:00.000000",
+ "modified": "2026-10-14 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Attendance Request",

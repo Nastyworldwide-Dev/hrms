@@ -83,7 +83,7 @@ def on_expense_claim_submit(doc, method=None):
 # Standard `Attendance Request.reason` Select options. Anything outside this set
 # (e.g. a site that customised the field into free-text) is coarsened to "other"
 # so raw user-entered notes never leave the site.
-ATTENDANCE_REQUEST_REASONS = {"Work From Home", "On Duty"}
+ATTENDANCE_REQUEST_REASONS = {"Work From Home", "On Duty", "Time Slip"}
 
 
 def on_attendance_request_submit(doc, method=None):

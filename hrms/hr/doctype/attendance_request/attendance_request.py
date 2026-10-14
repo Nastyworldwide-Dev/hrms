@@ -19,6 +19,9 @@ from hrms.mixins.pwa_notifications import PWANotificationsMixin
 
 logger = logging.getLogger(__name__)
 
+#: A late arrival excused by a slip, filed from the check-in sheet.
+TIME_SLIP = "Time Slip"
+
 
 class OverlappingAttendanceRequestError(frappe.ValidationError):
 	pass
@@ -35,10 +38,43 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 		validate_active_employee(self.employee)
 		validate_dates(self, self.from_date, self.to_date, False)
 		self.validate_shifts()
+		if self.is_time_slip():
+			self.validate_time_slip()
+			return
 		self.validate_half_day()
 		self.validate_in_out_times()
 		self.validate_request_overlap()
 		self.validate_no_attendance_to_create()
+
+	def is_time_slip(self) -> bool:
+		return self.reason == TIME_SLIP
+
+	def validate_time_slip(self):
+		"""A late arrival excused by a slip (owner, 14 Oct 2026): one day, today
+		or earlier, no hours of its own, one slip per day. It does not block a
+		later Fix a day for the same day, and a Fix a day does not block it: the
+		slip only touches the late mark."""
+		if getdate(self.from_date) != getdate(self.to_date):
+			frappe.throw(_("A time slip is for one day."))
+		if getdate(self.from_date) > getdate():
+			frappe.throw(_("A time slip is for a day you have already come in."))
+		self.half_day = 0
+		self.in_time = self.out_time = None
+		if not self.time_slip_reason:
+			frappe.throw(_("Choose why you were late."))
+		other = frappe.db.exists(
+			"Attendance Request",
+			{
+				"employee": self.employee,
+				"reason": TIME_SLIP,
+				"from_date": self.from_date,
+				"docstatus": ("<", 2),
+				"status": ("!=", "Rejected"),
+				"name": ("!=", self.name or ""),
+			},
+		)
+		if other:
+			frappe.throw(_("You already sent a time slip for this day: {0}").format(other))
 
 	def validate_half_day(self):
 		if self.half_day:
@@ -139,6 +175,8 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 				# a rejected request reaches docstatus 1 (rejection is a decision,
 				# not a cancellation) and must not go on reserving its dates
 				& (Request.status != "Rejected")
+				# a time slip only touches the late mark (owner, 14 Oct 2026)
+				& (Request.reason != TIME_SLIP)
 				& (Request.name != self.name)
 				& (self.to_date >= Request.from_date)
 				& (self.from_date <= Request.to_date)
@@ -178,13 +216,43 @@ class AttendanceRequest(Document, PWANotificationsMixin):
 		logger.info("[attendance_request] %s decided %s by %s", self.name, self.status, frappe.session.user)
 		self.notify_approval_status()
 		if self.status == "Approved":
-			self.create_attendance_records()
+			if self.is_time_slip():
+				self.excuse_late_arrival()
+			else:
+				self.create_attendance_records()
+
+	def excuse_late_arrival(self):
+		"""Approved: the day is not late. Nothing else on the row changes.
+
+		The nightly re-mark keeps it that way (employee_checkin.excused_late);
+		if the day is not marked yet, the marking reads the same rule. Cancelling
+		the slip re-marks the day (day_remark_hooks.remark_request_days), so the
+		late mark comes back.
+		"""
+		rows = frappe.get_all(
+			"Attendance",
+			filters={
+				"employee": self.employee,
+				"attendance_date": self.from_date,
+				"docstatus": 1,
+				"late_entry": 1,
+			},
+			pluck="name",
+		)
+		for name in rows:
+			frappe.db.set_value("Attendance", name, "late_entry", 0)
+		logger.info(
+			"[attendance_request] time slip %s excused late on %s: %s", self.name, self.from_date, rows
+		)
 
 	def validate_mandatory_attachment(self):
 		# a request may be required to carry supporting evidence before an approver
 		# can turn it into attendance — gated by the HR Setting
 		# `require_supporting_attachment`, off by default (HR confirmed optional).
-		if not frappe.utils.cint(frappe.db.get_single_value("HR Settings", "require_supporting_attachment")):
+		# A time slip always needs its slip (owner, 14 Oct 2026).
+		if not self.is_time_slip() and not frappe.utils.cint(
+			frappe.db.get_single_value("HR Settings", "require_supporting_attachment")
+		):
 			logger.debug("[attendance_request] attachment not required by HR Settings: %s", self.name)
 			return
 		if not frappe.db.exists(

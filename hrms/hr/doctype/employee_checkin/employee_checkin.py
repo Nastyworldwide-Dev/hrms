@@ -513,6 +513,11 @@ def create_or_update_attendance(
 	after the day was marked) collided with the row as a duplicate and was
 	stamped skip_auto_attendance for good.
 	"""
+	# an approved time slip excuses the late arrival for good: every marking
+	# routes through here, so the nightly re-mark cannot bring the mark back
+	if late_entry and excused_late(employee, attendance_date):
+		logger.info("[checkin] %s on %s: late excused by an approved time slip", employee, attendance_date)
+		late_entry = False
 	if repair_attendance is None and existing_attendance is not None:
 		if _same_day_result(existing_attendance, attendance_status, working_hours, in_time, out_time, shift):
 			logger.info(
@@ -628,6 +633,22 @@ def create_or_update_attendance(
 		attendance.submit()
 
 	return attendance
+
+
+def excused_late(employee, attendance_date) -> bool:
+	"""Whether an approved time slip excuses `employee`'s late arrival on that day."""
+	return bool(
+		frappe.db.exists(
+			"Attendance Request",
+			{
+				"employee": employee,
+				"reason": "Time Slip",
+				"from_date": getdate(attendance_date),
+				"status": "Approved",
+				"docstatus": 1,
+			},
+		)
+	)
 
 
 def _same_day_result(existing, status, working_hours, in_time, out_time, shift=None) -> bool:
