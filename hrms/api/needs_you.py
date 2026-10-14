@@ -99,6 +99,7 @@ def get_needs_you() -> dict:
 			continue
 		try:
 			count, slips = _pending_for(doctype, field, pending)
+			more = count > SCAN_CAP
 		except Exception:
 			# One unavailable type must not take the whole block down — Home is
 			# the first screen and a 500 here is the app looking broken.
@@ -129,14 +130,16 @@ def get_needs_you() -> dict:
 				},
 			)
 			count -= slips
-			if not count:
+			# past the cap the rest is "20+" whatever the slips took out of it
+			# (review of 8645c8056: a long queue read as an exact, smaller number)
+			if not count and not more:
 				continue
 		rows.append(
 			{
 				"key": doctype,
 				"doctype": doctype,
 				"count": min(count, SCAN_CAP),
-				"capped": count > SCAN_CAP,
+				"capped": more,
 				"noun": noun,
 				"nouns": nouns,
 				"route": route,

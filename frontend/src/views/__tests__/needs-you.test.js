@@ -124,7 +124,10 @@ test("a capped count says so rather than lying", () => {
 	// same decision an approver makes anyway.
 	assert.match(component, /row\.capped/)
 	assert.match(component, /\{0\}\+ \{1\} to approve/)
-	assert.match(py(api), /"capped": count > SCAN_CAP/)
+	// read before the time slips are taken out of the count (review of 8645c8056);
+	// the behaviour is driven in hrms/tests/test_needs_you_time_slips.py
+	assert.match(py(api), /more = count > SCAN_CAP/)
+	assert.match(py(api), /"capped": more/)
 })
 
 test("the queue is cached per person", () => {
