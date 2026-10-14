@@ -15,6 +15,14 @@ REASON_NOTICE_MAX = 500
 class PWANotificationsMixin:
 	"""Mixin class for managing PWA updates"""
 
+	def notification_kind(self) -> str:
+		"""The request's name in a notice: its doctype, except a Fix a day sent as a
+		time slip, which the reader knows as a time slip (owner, 14 Oct 2026). The
+		app reads this word back (frontend/src/utils/notificationLine.js)."""
+		if self.doctype == "Attendance Request" and self.get("reason") == "Time Slip":
+			return "Time Slip"
+		return self.doctype
+
 	def notify_approval_status(self):
 		"""Tell the employee a decision was TRANSACTED (docstatus 1), and when.
 
@@ -46,7 +54,7 @@ class PWANotificationsMixin:
 
 			decided_at = format_datetime(now_datetime())
 			notification.message = (
-				f"{bold('Your')} {bold(self.doctype)} {self.name} has been {bold(status)} "
+				f"{bold('Your')} {bold(self.notification_kind())} {self.name} has been {bold(status)} "
 				f"by {bold(from_user_name)} on {decided_at}"
 			)
 			# WHY, for a rejection: the approver was made to write one and the employee was never told it.
@@ -75,9 +83,7 @@ class PWANotificationsMixin:
 			return
 
 		notification = frappe.new_doc("PWA Notification")
-		notification.message = (
-			f"{bold(self.employee_name)} raised a new {bold(self.doctype)} for approval: {self.name}"
-		)
+		notification.message = f"{bold(self.employee_name)} raised a new {bold(self.notification_kind())} for approval: {self.name}"
 		notification.from_user = from_user
 		notification.to_user = to_user
 

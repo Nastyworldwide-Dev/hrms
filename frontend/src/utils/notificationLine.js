@@ -67,7 +67,8 @@ function splitReason(body) {
 function lineFor(item, { t = (s, a) => fill(s, a), remoteStatus } = {}) {
 	const { sentence: body, reason } = splitReason(text(item?.message))
 	const doctype = item?.reference_document_type || ""
-	const subject = SUBJECT[doctype] || ""
+	// a Fix a day sent as a time slip names itself in the text (pwa_notifications.notification_kind)
+	const subject = /\bTime Slip\b/.test(body) ? "Time slip" : SUBJECT[doctype] || ""
 
 	// "Your <kind> <id> has been <Status> by <Name> [on <datetime>]"
 	let m = body.match(/^Your .+? has been (\w[\w ]*?) by (.+?)(?: on [\d-]+ [\d:]+)?$/)

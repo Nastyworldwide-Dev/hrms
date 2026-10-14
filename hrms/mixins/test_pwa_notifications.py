@@ -47,6 +47,32 @@ def _fn(path, name):
 	return fn
 
 
+class TestATimeSlipIsNamedInItsNotices(unittest.TestCase):
+	"""Owner, 14 Oct 2026: a Fix a day sent as a time slip is called one in the feed."""
+
+	def setUp(self):
+		ns = {}
+		exec(
+			compile(ast.Module(body=[_fn(MIXIN, "notification_kind")], type_ignores=[]), str(MIXIN), "exec"),
+			ns,
+		)
+		self.kind = ns["notification_kind"]
+
+	def _doc(self, doctype, reason=None):
+		return type("D", (), {"doctype": doctype, "get": lambda self, f: reason if f == "reason" else None})()
+
+	def test_a_time_slip_is_a_time_slip(self):
+		self.assertEqual(self.kind(self._doc("Attendance Request", "Time Slip")), "Time Slip")
+
+	def test_everything_else_keeps_its_doctype(self):
+		self.assertEqual(self.kind(self._doc("Attendance Request", "On Duty")), "Attendance Request")
+		self.assertEqual(self.kind(self._doc("Leave Application")), "Leave Application")
+
+	def test_both_notices_use_it(self):
+		src = MIXIN.read_text()
+		self.assertEqual(src.count("bold(self.notification_kind())"), 2)
+
+
 class TestTheMixinToleratesNoApproverField(unittest.TestCase):
 	"""`_get_doc_approver` indexed APPROVER_FIELD directly, so any doctype
 	without one raised KeyError the moment it tried to notify."""

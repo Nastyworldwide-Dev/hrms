@@ -125,3 +125,28 @@ test("other kinds of notice carry an empty reason too", () => {
 	})
 	assert.equal(line.reason, "")
 })
+
+// Owner, 14 Oct 2026: a Fix a day sent as a time slip is called a time slip in the feed.
+test("a time slip decision reads as a time slip, not a fix a day", () => {
+	const line = notificationLine({
+		reference_document_type: "Attendance Request",
+		message: "<b>Your</b> <b>Time Slip</b> HR-ARQ-26-10-00001 has been <b>Approved</b> by <b>Hafiz</b>",
+	})
+	assert.equal(line.title, "Time slip approved")
+})
+
+test("a time slip raised for approval names itself", () => {
+	const line = notificationLine({
+		reference_document_type: "Attendance Request",
+		message: "<b>Aisyah</b> raised a new <b>Time Slip</b> for approval: HR-ARQ-26-10-00001",
+	})
+	assert.equal(line.title, "Aisyah asked for time slip")
+})
+
+test("any other fix a day keeps its word", () => {
+	const line = notificationLine({
+		reference_document_type: "Attendance Request",
+		message: "<b>Your</b> <b>Attendance Request</b> HR-ARQ-26-10-00002 has been <b>Approved</b> by <b>Hafiz</b>",
+	})
+	assert.equal(line.title, "Fix a day approved")
+})
