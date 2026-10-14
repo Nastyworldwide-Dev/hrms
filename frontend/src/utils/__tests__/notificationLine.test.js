@@ -140,7 +140,7 @@ test("a time slip raised for approval names itself", () => {
 		reference_document_type: "Attendance Request",
 		message: "<b>Aisyah</b> raised a new <b>Time Slip</b> for approval: HR-ARQ-26-10-00001",
 	})
-	assert.equal(line.title, "Aisyah asked for time slip")
+	assert.equal(line.title, "Aisyah asked for a time slip")
 })
 
 test("any other fix a day keeps its word", () => {

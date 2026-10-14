@@ -85,7 +85,11 @@ function lineFor(item, { t = (s, a) => fill(s, a), remoteStatus } = {}) {
 	m = body.match(/^(.+?) raised a new .+? for approval/)
 	if (m)
 		return {
-			title: t("{0} asked for {1}", [m[1], t(subject || "a request").toLowerCase()]),
+			// "a time slip": countable, unlike "time off" (design review of 82836508c)
+			title: t("{0} asked for {1}", [
+				m[1],
+				subject === "Time slip" ? t("a time slip") : t(subject || "a request").toLowerCase(),
+			]),
 			who: "",
 		}
 	// "<Name> reported a new <type> issue: <id>"

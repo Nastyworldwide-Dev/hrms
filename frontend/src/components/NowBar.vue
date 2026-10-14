@@ -92,7 +92,41 @@
 		     starts, a session passes an hour. Polite: not worth interrupting a
 		     sentence that is already being read. -->
 		<p class="sr-only" role="status">{{ stateLine }}{{ detail ? `. ${detail}` : "" }}</p>
+		<!-- The time slip, last on the card (owner, 14 Oct 2026). Its word is the server's
+		     (time_slip.status); the sheet's clock check was only a hint. -->
+		<p v-if="slipLine" class="g-now__slip" data-visual-mask>
+			<span>{{ __("Time slip") }} ·</span>
+			<span class="g-badge" :class="`g-chip--${slipLine.chip}`">{{ slipLine.text }}</span>
+		</p>
+		<button
+			v-else-if="slipOffered"
+			type="button"
+			class="g-now__slip-add g-focusable"
+			@click="slipOpen = true"
+		>
+			{{ __("Late today? Add a time slip") }}
+		</button>
 	</div>
+
+	<GModal :is-open="slipOpen" :title="__('Time slip')" @did-dismiss="closeSlip">
+		<div class="g-form-body">
+			<section class="g-form-section">
+				<TimeSlipFields v-model:file="slipFile" />
+				<p class="g-form-footer">
+					{{ __("Your approver is asked to approve it. If they do, today is not marked late.") }}
+				</p>
+			</section>
+			<GButton
+				:label="__('Send')"
+				:pending="slipSending"
+				:disabled="slipSending || !slipFile || !online"
+				@click="sendSlip"
+			/>
+			<p v-if="!online" class="g-form-footer" role="status">
+				{{ __("You need signal to send a time slip.") }}
+			</p>
+		</div>
+	</GModal>
 </template>
 
 <script setup>
@@ -101,10 +135,19 @@ import { shiftGauge } from "@/utils/shiftGauge"
 import { clockTime } from "@/utils/daySheet"
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
+import GButton from "@/components/glass/GButton.vue"
+import GModal from "@/components/glass/GModal.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
+import TimeSlipFields from "@/components/TimeSlipFields.vue"
+import { gToast } from "@/components/glass/toast"
+import { useOnline } from "@/composables/useOnline"
 import { nowResource } from "@/data/now"
+import { firstMessage } from "@/utils/loudRequest"
+import { sendTimeSlip, slipStatusLine } from "@/utils/timeSlip"
 
 const __ = inject("$translate")
+const employee = inject("$employee")
+const online = useOnline()
 const $dayjs = inject("$dayjs")
 const today = computed(() => $dayjs().format("dddd, D MMMM"))
 
@@ -255,6 +298,52 @@ const stateWord = computed(() => {
 	return stateClock.value ? line.slice(0, line.length - stateClock.value.length) : line
 })
 
+//: The time slip, as the SERVER counts it (now.py _time_slip): its status once filed, or the
+//: offer to file one when the day was late and none exists. The status word is slipStatusLine's;
+//: its tone picks the chip the rest of the app already draws.
+const slip = computed(() => data.value.time_slip || null)
+const CHIPS = { warn: "attention", success: "success", danger: "danger" }
+const slipLine = computed(() => {
+	const line = slip.value?.status ? slipStatusLine(slip.value.status, __) : null
+	return line ? { ...line, chip: CHIPS[line.tone] } : null
+})
+const slipOffered = computed(() => Number(slip.value?.late_minutes) > 0 && !slip.value?.name)
+
+const slipOpen = ref(false)
+const slipFile = ref(null)
+const slipSending = ref(false)
+
+function closeSlip() {
+	slipOpen.value = false
+	slipFile.value = null
+}
+
+async function sendSlip() {
+	if (slipSending.value || !slipFile.value || !slip.value) return
+	slipSending.value = true
+	try {
+		await sendTimeSlip({
+			employee: employee.data.name,
+			day: slip.value.day,
+			file: slipFile.value,
+		})
+		gToast({ title: __("Time slip sent"), variant: "success" })
+		closeSlip()
+	} catch (error) {
+		console.warn("[NowBar] time slip not sent", error)
+		gToast({
+			title: __("Time slip not sent"),
+			text: firstMessage(error, __("Could not send your time slip.")),
+			variant: "error",
+		})
+		// saved without its file: the request exists, so the offer is over
+		if (error?.slipName) closeSlip()
+	} finally {
+		slipSending.value = false
+		await Promise.allSettled([nowResource.reload()])
+	}
+}
+
 onMounted(() => {
 	nowResource.fetch()
 	timer = setInterval(() => {
@@ -266,3 +355,30 @@ onMounted(() => {
 //: the employee visits after this one.
 onBeforeUnmount(() => clearInterval(timer))
 </script>
+
+<style>
+/* The time slip line and its quiet add button, last on the Today card. */
+.g-now__slip {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 8px 0 0;
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	line-height: var(--g-type-caption-line-height);
+	color: var(--g-ink2);
+}
+.g-now__slip-add {
+	min-height: var(--g-touch-target-min);
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	text-align: left;
+	cursor: pointer;
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	line-height: var(--g-type-caption-line-height);
+	color: var(--g-ink2);
+}
+</style>

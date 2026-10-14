@@ -1,0 +1,95 @@
+// A late arrival can be excused by a time slip, sent from the check-in sheet before the punch
+// and from Today after it (owner, 14 Oct 2026). Source-asserted because the node runner does not
+// compile SFCs (see ExpensesTable.test.js). The rules themselves are utils/__tests__/timeSlip.test.js.
+// Run: cd frontend && node --test src/components/__tests__/TimeSlip.wiring.test.js
+import { test } from "node:test"
+import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+
+const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8")
+const panel = read("../CheckInPanel.vue")
+const bar = read("../NowBar.vue")
+const fields = read("../TimeSlipFields.vue")
+
+// the punch's success handler: from `async onSuccess(doc) {` to its `onError(error) {`
+// (searched from onSuccess on: "onError(error)" also occurs inside describeGeolocationError(error))
+const successAt = panel.indexOf("async onSuccess(doc)")
+const onSuccess = panel.slice(successAt, panel.indexOf("onError(error) {", successAt))
+
+test("the check-in sheet imports the late rule and the sender", () => {
+	assert.match(panel, /import \{[^}]*\blateMinutes\b[^}]*\} from "@\/utils\/timeSlip"/)
+	assert.match(panel, /import \{[^}]*\bsendTimeSlip\b[^}]*\} from "@\/utils\/timeSlip"/)
+})
+
+// the helper that sends the slip: from its declaration to the next top-level comment block
+const helperAt = panel.indexOf("async function sendSlipAfterPunch(")
+const helper = panel.slice(helperAt, panel.indexOf("\n}\n", helperAt))
+
+test("the slip is sent only from the punch's success path, never before it", () => {
+	assert.ok(onSuccess.length > 100, "found the punch's onSuccess")
+	assert.ok(helper.length > 50, "found the sender")
+	// one call to the library sender, inside the helper; one call to the helper, inside onSuccess
+	assert.equal((panel.match(/\bsendTimeSlip\(/g) || []).length, 1, "one sendTimeSlip call site")
+	assert.ok(helper.includes("sendTimeSlip("), "it is inside the helper")
+	assert.equal(
+		(panel.match(/\bsendSlipAfterPunch\(/g) || []).length,
+		2,
+		"declared once, called once"
+	)
+	assert.ok(onSuccess.includes("sendSlipAfterPunch("), "the helper is called inside onSuccess")
+})
+
+test("a slip that fails to send never blocks or undoes the punch", () => {
+	// caught and toasted, never rethrown: the punch is already stored by then
+	assert.match(helper, /try \{[\s\S]*await sendTimeSlip\([\s\S]*\} catch/)
+	assert.doesNotMatch(helper, /throw /)
+	// and not awaited by the punch: a slow upload must not hold the sheet or the approval dialog
+	assert.doesNotMatch(onSuccess, /await sendSlipAfterPunch/)
+})
+
+test("a late check-in offers the slip only when the next action is a check-in", () => {
+	assert.match(panel, /nextAction\.value\?\.action === "IN"/)
+	assert.match(panel, /lateMinutes\(\s*new Date\(\)/)
+})
+
+test("the button names the slip when it goes with the check-in, and waits for the file", () => {
+	assert.match(panel, /Check in and send the slip/)
+	// on AND no file yet -> the Confirm button is disabled
+	assert.match(
+		panel,
+		/slipMissingFile = computed\(\(\) => slipActive\.value && !slipFile\.value\)/
+	)
+	assert.match(panel, /slipActive = computed\(\(\) => minutesLate\.value > 0 && slipOn\.value\)/)
+	assert.match(panel, /:disabled="cameraStatus === 'starting' \|\| !online \|\| slipMissingFile"/)
+})
+
+test("the switch and the file are cleared when the sheet closes", () => {
+	const dismiss = panel.slice(panel.indexOf("function onModalDismiss"))
+	assert.match(dismiss.slice(0, dismiss.indexOf("\n}\n")), /resetSlip\(\)/)
+})
+
+test("sending the slip reloads what Today reads, even when the file did not go", () => {
+	assert.match(helper, /finally \{[\s\S]*nowResource\.reload\(\)/)
+})
+
+test("both screens ask in the same words, through the shared rows", () => {
+	assert.match(panel, /<TimeSlipFields\b/)
+	assert.match(bar, /<TimeSlipFields\b/)
+	assert.match(fields, /accept="image\/\*,application\/pdf"/)
+	assert.match(fields, /Clinic visit/)
+})
+
+test("Today says the slip's status with the one status-line rule", () => {
+	assert.match(bar, /import \{[^}]*\bslipStatusLine\b[^}]*\} from "@\/utils\/timeSlip"/)
+	assert.match(bar, /slipStatusLine\(slip\.value\.status/)
+	assert.match(bar, /__\("Time slip"\) \}\} ·/)
+})
+
+test("Today offers a slip only for a late day with none filed, and sends it for that day", () => {
+	assert.match(bar, /Late today\? Add a time slip/)
+	assert.match(bar, /Number\(slip\.value\?\.late_minutes\) > 0 && !slip\.value\?\.name/)
+	assert.match(bar, /const slip = computed\(\(\) => data\.value\.time_slip/)
+	assert.match(bar, /day: slip\.value\.day/)
+	assert.match(bar, /finally \{[\s\S]*nowResource\.reload\(\)/)
+})

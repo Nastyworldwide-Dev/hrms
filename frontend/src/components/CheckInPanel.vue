@@ -136,6 +136,27 @@
 				<div class="checkin-sheet__where-detail">{{ locationVerdict.detail }}</div>
 			</div>
 
+			<!-- Late by the shift's own rule: offer the time slip HERE, before the punch, so a
+			     clinic visit is said once, at the door, not discovered as a late mark later
+			     (owner, 14 Oct 2026). The clock is the device's, so this is a hint; Today
+			     reads the server's own count (utils/timeSlip.js). -->
+			<div v-if="minutesLate > 0" class="checkin-sheet__slip">
+				<span class="checkin-sheet__slip-pill" role="status">
+					{{ slipLabel(minutesLate, nowResource.data?.shift?.start, __) }}
+				</span>
+				<div class="g-form-group">
+					<div class="g-form-row">
+						<span class="g-form-row__label">{{ __("I have a time slip") }}</span>
+						<GSwitch
+							v-model="slipOn"
+							class="g-form-row__switch"
+							:aria-label="__('I have a time slip')"
+						/>
+					</div>
+				</div>
+				<TimeSlipFields v-if="slipOn" v-model:file="slipFile" />
+			</div>
+
 			<!-- Live selfie preview — camera auto-starts when the modal opens;
 			     Confirm tap captures the frame, uploads, and submits the log
 			     in one action (mirrors the React CheckInDialog UX). -->
@@ -160,8 +181,10 @@
 			<canvas ref="canvasEl" class="hidden"></canvas>
 
 			<GButton
-				:label="__('Confirm {0}', [nextAction.label])"
-				:disabled="cameraStatus === 'starting' || !online"
+				:label="
+					slipActive ? __('Check in and send the slip') : __('Confirm {0}', [nextAction.label])
+				"
+				:disabled="cameraStatus === 'starting' || !online || slipMissingFile"
 				:pending="submitting || punchCheckin.loading || cameraStatus === 'submitting'"
 				@click="submitLog(nextAction.action)"
 			>
@@ -214,6 +237,8 @@ import { holdScreen, releaseScreen } from "@/utils/wakeLock"
 import { Check, ChevronRight, Clock, TriangleAlert } from "lucide-vue-next"
 import GSelfiePanel from "@/components/glass/GSelfiePanel.vue"
 import GClock from "@/components/glass/GClock.vue"
+import GSwitch from "@/components/glass/GSwitch.vue"
+import TimeSlipFields from "@/components/TimeSlipFields.vue"
 import GModal from "@/components/glass/GModal.vue"
 import { useOnline } from "@/composables/useOnline"
 import PushNotificationPrompt from "@/components/PushNotificationPrompt.vue"
@@ -248,6 +273,7 @@ import { firstMessage } from "@/utils/loudRequest"
 import { nowResource } from "@/data/now"
 import { homeWeek } from "@/data/home"
 import { nearestSite } from "@/utils/nearestSite"
+import { lateMinutes, slipLabel, sendTimeSlip } from "@/utils/timeSlip"
 
 const DOCTYPE = "Employee Checkin"
 
@@ -368,6 +394,55 @@ function refreshAfterPunch() {
 	checkins.reload()
 	unresolvedStaleIn.reload()
 	return Promise.allSettled([nowResource.reload(), homeWeek.reload()])
+}
+
+// The time slip offered on the sheet when the check-in would turn the day late (owner, 14 Oct 2026).
+// minutesLate is read ONCE when the sheet opens (handleEmployeeCheckin), from the shift Today
+// already holds: a check-OUT never offers it, and a shift that does not mark late is 0.
+const minutesLate = ref(0)
+const slipOn = ref(false)
+const slipFile = ref(null)
+//: the slip goes with the punch only while it is offered AND switched on
+const slipActive = computed(() => minutesLate.value > 0 && slipOn.value)
+//: on, but no file yet: the file is the proof, so the button waits for it
+const slipMissingFile = computed(() => slipActive.value && !slipFile.value)
+
+function readMinutesLate() {
+	const shift = nowResource.data?.shift
+	minutesLate.value =
+		shift && nextAction.value?.action === "IN"
+			? lateMinutes(new Date(), shift.start, shift.late_grace, shift.late_marking)
+			: 0
+}
+
+function resetSlip() {
+	slipOn.value = false
+	slipFile.value = null
+}
+
+// Called ONLY from the punch's onSuccess, after the punch is stored, and not awaited there: a slow
+// upload must not hold the sheet open or delay the approval dialog, and a refused slip must never
+// undo or block a punch that already happened. It catches everything, so nothing here can reject
+// into the punch's success path.
+async function sendSlipAfterPunch(file) {
+	try {
+		await sendTimeSlip({
+			employee: employee.data.name,
+			day: nowResource.data?.date || dayjs().format("YYYY-MM-DD"),
+			file,
+		})
+		gToast({ title: __("Time slip sent"), variant: "success" })
+	} catch (error) {
+		console.warn("[CheckInPanel] time slip not sent", error)
+		gToast({
+			title: __("Time slip not sent"),
+			text: firstMessage(error, __("Could not send your time slip.")),
+			variant: "error",
+		})
+	} finally {
+		// the slip may exist even when its file did not go: Today reads the server's word
+		await Promise.allSettled([nowResource.reload()])
+	}
 }
 
 // Staff lockdown: desk create perms on Employee Checkin are stripped, so the
@@ -938,6 +1013,7 @@ const online = useOnline()
 const handleEmployeeCheckin = async () => {
 	sheetSession += 1
 	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
+	readMinutesLate()
 	if (!settings.data?.allow_geolocation_tracking) {
 		stopWatchingLocation()
 		return
@@ -1088,6 +1164,9 @@ const submitLog = async (logType) => {
 const runSubmitLog = async (logType) => {
 	const session = sheetSession
 	const generation = geoGeneration
+	// What the person chose at the tap. Taken before any await: the sheet closes (and clears the
+	// switch) while the slip is still going out.
+	const slipToSend = logType === "IN" && slipActive.value ? slipFile.value : null
 	const tracking = settings.data?.allow_geolocation_tracking
 	const fix = tracking
 		? usablePosition(
@@ -1221,6 +1300,9 @@ const runSubmitLog = async (logType) => {
 		async onSuccess(doc) {
 			punchOk = true
 			clearPendingTap()
+			// The punch is stored; now the slip, off to the side. Not when the server turned the
+			// tap into a check-OUT (an open session): that day is not late.
+			if (slipToSend && doc?.log_type !== "OUT") sendSlipAfterPunch(slipToSend)
 
 			// The label must be right NOW, not one round trip from now. The
 			// reload below is the authority, but until it lands `lastKnownLog`
@@ -1429,6 +1511,8 @@ function onModalPresent() {
 
 function onModalDismiss() {
 	committedAction.value = null
+	resetSlip()
+	minutesLate.value = 0
 	stopCamera()
 	cameraStatus.value = "idle"
 	cameraError.value = null
@@ -1502,6 +1586,23 @@ onBeforeUnmount(() => {
 	font-weight: var(--g-type-caption-weight);
 	line-height: var(--g-type-caption-line-height);
 	color: var(--g-ink2);
+}
+/* The time slip offer: a warning pill, then the switch row and, when on, the reason and file rows. */
+.checkin-sheet__slip {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.checkin-sheet__slip-pill {
+	align-self: flex-start;
+	padding: 2px 10px;
+	border-radius: var(--g-radius-pill);
+	background: rgba(var(--g-warn-rgb) / 0.16);
+	color: var(--g-warn-ink);
+	font-family: var(--g-type-caption-family);
+	font-size: var(--g-type-caption-size);
+	font-weight: 600;
+	line-height: var(--g-type-caption-line-height);
 }
 .checkin-sheet__camera {
 	position: relative;

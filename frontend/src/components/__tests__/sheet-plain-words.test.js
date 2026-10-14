@@ -14,7 +14,8 @@ const fields = read("../../data/config/requestSummaryFields.js")
 
 test("the heading is the plain kind, not the doctype", () => {
 	assert.match(sheet, /:label="__\(kindLabel\)"/)
-	assert.match(sheet, /REQUEST_KIND\[document\?\.doctype\]/)
+	// one word per request, a time slip included (requestKind, 14 Oct 2026)
+	assert.match(sheet, /requestKind\(document\?\.doctype, document\?\.doc\)/)
 	assert.doesNotMatch(sheet, /\{\{ __\(document\?\.doctype\) \}\}/)
 })
 
