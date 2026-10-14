@@ -55,6 +55,7 @@
 				:label="row.label"
 				:sublabel="row.sublabel"
 				:tint="row.tint"
+				:class="{ 'g-needs-you__row--urgent': row.urgent }"
 				@click="row.go()"
 			>
 				<template #icon>
@@ -84,6 +85,7 @@
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import {
+	AlarmClock,
 	CalendarCheck,
 	CalendarClock,
 	CircleCheckBig,
@@ -161,8 +163,9 @@ const rows = computed(() => {
 	for (const row of needsYouResource.data?.rows || []) {
 		out.push({
 			key: row.key,
-			icon: ICONS[row.doctype] || FileText,
+			icon: row.urgent ? AlarmClock : ICONS[row.doctype] || FileText,
 			tint: tileFor(row.doctype),
+			urgent: Boolean(row.urgent),
 			// The NOUN comes from the server so the wording lives in one place,
 			// and the count is stated rather than left to be counted by eye.
 			// "20+" when the scan capped: an approver reading that makes the
@@ -170,10 +173,16 @@ const rows = computed(() => {
 			label: row.capped
 				? __("{0}+ {1} to approve", [row.count, row.nouns || `${row.noun}s`])
 				: __("{0} to approve", [countOf(row.count, row.noun, row.nouns)]),
-			sublabel: null,
+			// a time slip leaves someone marked late until it is decided (owner,
+			// 14 Oct 2026: "approver have to know, like really act on it")
+			sublabel: row.urgent ? __("Marked late until you decide") : null,
 			// Every request to approve opens the Approvals page, where it can be
-			// decided (owner ruling 23 Sep: approvals only where they can be done).
-			go: () => router.push({ name: "Approvals" }),
+			// decided (owner ruling 23 Sep: approvals only where they can be done);
+			// a time slip opens it on the time slips
+			go: () =>
+				router.push(
+					row.urgent ? { name: "Approvals", query: { kind: "Time slip" } } : { name: "Approvals" }
+				),
 		})
 	}
 

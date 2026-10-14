@@ -4695,6 +4695,13 @@ html {
 	line-height: 22px;
 	color: var(--g-ink2);
 }
+/* Time slip waiting on the approver (owner, 14 Oct 2026: "really act on it"):
+   the second line is in the warning ink, so the row reads as urgent, not as
+   one more count. */
+.g-needs-you__row--urgent .g-row__sub {
+	color: var(--g-warn-ink);
+	font-weight: 600;
+}
 /* Mileage (owner mockup, 14 Oct 2026): "You will claim" is the answer the
    employee came for, so it is tinted and set larger than a plain read-only value. */
 .g-form-row.g-form-row--claim {

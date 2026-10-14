@@ -132,3 +132,15 @@ test("the queue is cached per person", () => {
 	// one approver's queue to the next person on the same device.
 	assert.match(code(read("data/needsYou.js")), /personalCacheKey\(/)
 })
+
+// Owner, 14 Oct 2026: "their own count, so approver see the urgent ... really act on it".
+test("waiting time slips are their own row, first, marked urgent, opening Approvals on them", () => {
+	const server = py(api)
+	assert.match(server, /"key": "Time Slip"/)
+	assert.match(server, /rows\.insert\(\s*0,/)
+	assert.match(server, /"urgent": True/)
+	assert.match(server, /count -= slips/)
+	assert.match(component, /row\.urgent \? __\("Marked late until you decide"\)/)
+	assert.match(component, /query: \{ kind: "Time slip" \}/)
+	assert.match(code(read("views/Approvals.vue")), /ref\(typeof route\.query\.kind === "string"/)
+})

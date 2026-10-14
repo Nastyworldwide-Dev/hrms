@@ -66,8 +66,9 @@ ROW_COPY = {
 }
 
 
-def _pending_for(doctype: str, field: str, pending: str) -> int:
-	"""How many `doctype` rows are waiting on THIS caller.
+def _pending_for(doctype: str, field: str, pending: str) -> tuple[int, int]:
+	"""How many `doctype` rows are waiting on THIS caller, and how many of them
+	are time slips (a Fix a day sent for a late arrival; 0 for other types).
 
 	The SAME scan the Approvals page lists (approvals_list._mine_of): the cap
 	counts the caller's rows, not the site's, so an approver's own request
@@ -80,7 +81,7 @@ def _pending_for(doctype: str, field: str, pending: str) -> int:
 	# YOURS only (owner-approved grouped Approvals, 23 Sep 2026): Home says
 	# what was SENT to you; other teams you can also see wait on the page.
 	mine, more = _mine_of(doctype, field, pending, cap=SCAN_CAP, yours_only=True)
-	return SCAN_CAP + 1 if more else len(mine)
+	return SCAN_CAP + 1 if more else len(mine), sum(1 for doc in mine if doc.get("reason") == "Time Slip")
 
 
 @frappe.whitelist(methods=["GET", "POST"])
@@ -97,7 +98,7 @@ def get_needs_you() -> dict:
 			# A site without the app that owns a type must not 500 Home.
 			continue
 		try:
-			count = _pending_for(doctype, field, pending)
+			count, slips = _pending_for(doctype, field, pending)
 		except Exception:
 			# One unavailable type must not take the whole block down — Home is
 			# the first screen and a 500 here is the app looking broken.
@@ -111,6 +112,25 @@ def get_needs_you() -> dict:
 		if not count:
 			continue
 		noun, nouns, route = ROW_COPY.get(doctype, (doctype.lower(), f"{doctype.lower()}s", None))
+		if slips:
+			# its own row, first and urgent: the employee is marked late until the
+			# approver decides (owner, 14 Oct 2026: "really act on it")
+			rows.insert(
+				0,
+				{
+					"key": "Time Slip",
+					"doctype": doctype,
+					"count": slips,
+					"capped": False,
+					"noun": "time slip",
+					"nouns": "time slips",
+					"route": "Approvals",
+					"urgent": True,
+				},
+			)
+			count -= slips
+			if not count:
+				continue
 		rows.append(
 			{
 				"key": doctype,

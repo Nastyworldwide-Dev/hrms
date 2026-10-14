@@ -554,7 +554,7 @@
 
 <script setup>
 import { computed, defineAsyncComponent, h, inject, reactive, ref, watch } from "vue"
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import { createResource } from "frappe-ui"
 
 import BaseLayout from "@/components/BaseLayout.vue"
@@ -620,6 +620,7 @@ import { siteTimeZone } from "@/utils/siteTime"
 
 const __ = inject("$translate")
 const router = useRouter()
+const route = useRoute()
 const $dayjs = inject("$dayjs")
 
 // The server decides who sees what: only requests routed to the caller, by the same check
@@ -639,7 +640,8 @@ const rows = computed(() => onlyYours(waiting.data?.rows || []))
 // The chips count what is waiting; the filters narrow what the groups below show, so "See all",
 // the group counts and select-all all follow them.
 const ticked = ref(new Set())
-const kindFilter = ref("")
+// Home's urgent "time slips" row opens the page on that kind (owner, 14 Oct 2026)
+const kindFilter = ref(typeof route.query.kind === "string" ? route.query.kind : "")
 const chips = computed(() => typeChips(rows.value))
 const filters = reactive({ department: "", employee: "", from: "", to: "" })
 const filterOpen = ref(false)
