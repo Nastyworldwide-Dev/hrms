@@ -3,7 +3,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { mileageAmount, withMileageFields } from "../expenseMileage.js"
+import { mileageAmount, mileageExplainer, withMileageFields } from "../expenseMileage.js"
 
 const FIELDS = [
 	{ fieldname: "expense_type", fieldtype: "Link", reqd: 1 },
@@ -23,6 +23,7 @@ test("a mileage type asks the distance and shows the amount read-only", () => {
 	assert.equal(km.reqd, 1)
 	assert.equal(amount.read_only, 1)
 	assert.equal(amount.label, "You will claim")
+	assert.equal(amount.class, "g-form-row--claim")
 })
 
 test("an ordinary type does not ask the distance and leaves the amount editable", () => {
@@ -32,4 +33,12 @@ test("an ordinary type does not ask the distance and leaves the amount editable"
 		["expense_type", "amount"]
 	)
 	assert.equal(out[1].read_only, undefined)
+})
+
+test("the explainer says how the amount was reached", () => {
+	const rm = (n) => `RM ${n.toFixed(2)}`
+	assert.equal(mileageExplainer(70, 0.6, "Mileage · Car", rm), "70 km × RM 0.60 per km (Car)")
+	assert.equal(mileageExplainer(70, 0.6, "Travel", rm), "70 km × RM 0.60 per km (Travel)")
+	assert.equal(mileageExplainer(0, 0.6, "Mileage · Car", rm), "")
+	assert.equal(mileageExplainer(70, 0, "Parking", rm), "")
 })

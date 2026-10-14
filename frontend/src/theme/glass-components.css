@@ -4695,6 +4695,18 @@ html {
 	line-height: 22px;
 	color: var(--g-ink2);
 }
+/* Mileage (owner mockup, 14 Oct 2026): "You will claim" is the answer the
+   employee came for, so it is tinted and set larger than a plain read-only value. */
+.g-form-row.g-form-row--claim {
+	background: color-mix(in srgb, var(--g-brand) 10%, transparent);
+}
+.g-form-row.g-form-row--claim.g-form-row--readonly > .g-form-row__value {
+	font-size: 20px;
+	line-height: 26px;
+	font-weight: 700;
+	color: var(--g-ink);
+	font-variant-numeric: tabular-nums;
+}
 /* alpha.14 F: a value too long to sit beside its label goes under it,
    leading-aligned, as iOS's value cell does (utils/valueRow.js decides). */
 .g-form-row.g-form-row--value-under {

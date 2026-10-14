@@ -75,9 +75,13 @@
 								:reqd="field.reqd"
 								:default="field.default"
 								:readOnly="field.read_only || isReadOnly"
+								:class="field.class"
 								v-model="expenseItem[field.fieldname]"
 							/>
 						</div>
+						<p v-if="group.segments.some((seg) => seg.fields.some((f) => f.fieldname === 'amount')) && mileageLine" class="g-form-footer tabular-nums">
+							{{ mileageLine }}
+						</p>
 					</section>
 				</div>
 
@@ -116,7 +120,7 @@ import ResourceError from "@/components/ResourceError.vue"
 
 import { claimTypesByID, claimTypesResource } from "@/data/claims"
 import { formatCurrency } from "@/utils/formatters"
-import { mileageAmount, withMileageFields } from "@/utils/expenseMileage"
+import { mileageAmount, mileageExplainer, withMileageFields } from "@/utils/expenseMileage"
 import { groupFields } from "@/utils/formGroups"
 import { sentenceCase } from "@/utils/sentenceCase"
 import { withCostTagFields } from "@/utils/expenseCostTags"
@@ -267,6 +271,15 @@ const addButtonDisabled = computed(() => {
 		}
 	})
 })
+
+const mileageLine = computed(() =>
+	mileageExplainer(
+		expenseItem.value.distance_km,
+		mileageRate.value,
+		expenseItem.value.expense_type,
+		(rate) => formatCurrency(rate, props.expenseClaim.currency)
+	)
+)
 
 // mileage: the amount follows the distance (owner, 14 Oct 2026); the server
 // prices the line again on save, so this is what the employee sees, not the rule

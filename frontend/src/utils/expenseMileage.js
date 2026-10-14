@@ -19,7 +19,20 @@ export function withMileageFields(fields, rate) {
 		.map((field) => {
 			if (!(rate > 0)) return field
 			if (field.fieldname === "distance_km") return { ...field, reqd: 1, hidden: 0 }
-			if (field.fieldname === "amount") return { ...field, read_only: 1, label: "You will claim" }
+			if (field.fieldname === "amount")
+				return { ...field, read_only: 1, label: "You will claim", class: "g-form-row--claim" }
 			return field
 		})
+}
+
+/**
+ * "70 km × RM 0.60 per km (Car)": how the amount was reached, under it.
+ * `formatRate` writes the rate as money (formatCurrency with the claim's currency).
+ */
+export function mileageExplainer(km, rate, typeName, formatRate) {
+	const value = parseFloat(km) || 0
+	if (!(rate > 0) || !(value > 0)) return ""
+	const kind = (typeName || "").split("·").pop().trim()
+	const line = `${value} km × ${formatRate(rate)} per km`
+	return kind ? `${line} (${kind})` : line
 }
