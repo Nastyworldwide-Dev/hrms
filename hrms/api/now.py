@@ -19,7 +19,7 @@ Session-scoped by construction: no endpoint takes an employee.
 import logging
 
 import frappe
-from frappe.utils import flt, get_datetime
+from frappe.utils import cint, flt, get_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,45 @@ def _open_session(employee, now):
 		# 2026: late in, late out; early in, out as usual). Display only.
 		"first_in": str(first_in) if first_in else None,
 		"leave_by": str(leave) if leave else None,
+	}
+
+
+def late_minutes(first_in, shift_start, grace, marking) -> int:
+	"""Whole minutes `first_in` is past `shift_start` + `grace`; 0 when on time or
+	late marking is off for the shift. The same line the day is marked late by. Pure."""
+	if not (marking and first_in and shift_start):
+		return 0
+	over = (first_in - shift_start).total_seconds() / 60 - cint(grace)
+	return int(over) if over > 0 else 0
+
+
+def _time_slip(employee, now, session, shift):
+	"""How late today's first check-in was, and today's time slip if one was sent.
+
+	The check-in sheet offers a slip from the clock before the punch; this is
+	what Today shows after it (owner, 14 Oct 2026)."""
+	late = 0
+	if session and session.get("first_in") and shift:
+		start = get_datetime(f"{now.date()} {shift['start']}")
+		late = late_minutes(
+			get_datetime(session["first_in"]), start, shift["late_grace"], shift["late_marking"]
+		)
+	slip = frappe.get_all(
+		"Attendance Request",
+		filters={"employee": employee, "reason": "Time Slip", "from_date": now.date(), "docstatus": ("<", 2)},
+		fields=["name", "status"],
+		order_by="creation desc",
+		limit=1,
+		ignore_permissions=True,
+	)
+	if not late and not slip:
+		return None
+	logger.info("[now] employee=%s late=%s slip=%s", employee, late, slip and slip[0].status)
+	return {
+		"day": str(now.date()),
+		"late_minutes": late,
+		"name": slip[0].name if slip else None,
+		"status": slip[0].status if slip else None,
 	}
 
 
@@ -119,14 +158,19 @@ def _shift_window(employee, on_date):
 	if not shift_type:
 		logger.info("[now] employee=%s has no assignment and no default shift", employee)
 		return None
-	start, end = frappe.db.get_value("Shift Type", shift_type, ["start_time", "end_time"]) or (
-		None,
-		None,
-	)
+	start, end, grace, marking = frappe.db.get_value(
+		"Shift Type",
+		shift_type,
+		["start_time", "end_time", "late_entry_grace_period", "enable_late_entry_marking"],
+	) or (None, None, 0, 0)
 	if not start or not end:
 		return None
 	return {
 		"shift": shift_type,
+		# the late rule the day is marked by, so the check-in sheet can offer a
+		# time slip at the same moment the day would turn late (owner, 14 Oct 2026)
+		"late_grace": cint(grace),
+		"late_marking": bool(cint(marking)),
 		# Trimmed to HH:MM here rather than on the screen: a shift window is
 		# read, not computed with, and "19:00:00" is three characters of noise
 		# in a line that has to fit a phone.
@@ -251,6 +295,7 @@ def get_now() -> dict:
 		# and it was the first thing the owner saw.
 		"state": _state(session, shift, last_out, now),
 		"last_out": last_out,
+		"time_slip": _time_slip(employee, now, session, shift),
 	}
 	logger.info(
 		"[now] employee=%s shift=%s open=%s",
