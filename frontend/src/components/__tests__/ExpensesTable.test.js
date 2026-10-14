@@ -11,20 +11,16 @@ import { fileURLToPath } from "node:url"
 const src = readFileSync(fileURLToPath(new URL("../ExpensesTable.vue", import.meta.url)), "utf8")
 
 test("the sheet's fields go through withCostTagFields with the fenced cost tags", () => {
-	assert.match(src, /import \{ withCostTagFields[^}]*\} from "@\/utils\/expenseCostTags"/)
+	assert.match(src, /import \{ withCostTagFields \} from "@\/utils\/expenseCostTags"/)
 	assert.match(src, /url: "hrms\.api\.get_expense_cost_tags"/)
 	assert.match(src, /withCostTagFields\([\s\S]*?costTags\.data\s*\)/)
 })
 
-test("changing the expense type fills an empty cost center; only the type's own list overrides it", () => {
+test("changing the expense type fills an empty cost center, never overwrites a picked one", () => {
+	assert.doesNotMatch(src, /expenseItem\.value\.cost_center = /)
 	assert.match(src, /expenseItem\.value\.cost_center \|\|= /)
-	// the one overwrite goes through typeCostCenter (a type with no list keeps the pick)
-	const overwrites = src.match(/expenseItem\.value\.cost_center = [^\n]*/g) || []
-	assert.deepEqual(overwrites, ["expenseItem.value.cost_center = typeCostCenter("])
 })
 
-test("the cost center field and the Add check follow the type's cost centers; Project is not asked", () => {
-	assert.match(src, /withTypeCostCenters\(/)
+test("Project is not asked on an expense line (owner, 14 Oct 2026)", () => {
 	assert.match(src, /fieldname !== "project"/)
-	assert.match(src, /return expenseFields\.value\.some\(/)
 })

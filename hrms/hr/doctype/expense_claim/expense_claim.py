@@ -75,7 +75,6 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self.calculate_taxes()
 		self.set_status()
 		self.validate_company_and_department()
-		self.set_type_cost_centers()
 		self.validate_cost_center_company()
 		if self.task and not self.project:
 			self.project = frappe.db.get_value("Task", self.task, "project")
@@ -178,36 +177,6 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			if company and self.company != company:
 				frappe.throw(
 					_("Department {0} does not belong to company: {1}").format(self.department, self.company),
-					exc=MismatchError,
-				)
-
-	def set_type_cost_centers(self):
-		"""Each line's cost center follows its Expense Claim Type (owner, 14 Oct 2026).
-
-		HR lists the type's cost centers per company. One: the line is charged
-		there, whatever was sent. Several: the line must name one of them. None:
-		the line keeps the employee's or company default, as before.
-
-		A saved line whose type and cost center did not change is not refused:
-		approval re-runs validate, and a claim sent before HR listed several
-		cost centers on its type would otherwise be stuck (review of 0905145ea).
-		"""
-		before = self.get_doc_before_save()
-		saved = {r.name: (r.expense_type, r.cost_center) for r in (before.expenses if before else [])}
-		for row in self.expenses or []:
-			allowed = type_cost_centers(row.expense_type, self.company)
-			if not allowed:
-				continue
-			if len(allowed) == 1:
-				row.cost_center = allowed[0]
-			elif row.cost_center not in allowed and saved.get(row.name) != (
-				row.expense_type,
-				row.cost_center,
-			):
-				frappe.throw(
-					_("Row #{0}: pick a cost center for {1}: {2}").format(
-						row.idx, row.expense_type, ", ".join(allowed)
-					),
 					exc=MismatchError,
 				)
 
@@ -865,7 +834,6 @@ def near_duplicate_claims(others, lines) -> list[tuple]:
 			near.setdefault((other.expense_type, date, other.name), None)
 	return list(near)
 
-
 def near_duplicate_sentences(near, link=lambda name: name) -> list[str]:
 	"""One plain sentence per near duplicate; `link` turns a claim name into what is shown for it."""
 	return [
@@ -874,7 +842,6 @@ def near_duplicate_sentences(near, link=lambda name: name) -> list[str]:
 		)
 		for expense_type, date, name in near
 	]
-
 
 def update_reimbursed_amount(doc):
 	total_amount_reimbursed = get_total_reimbursed_amount(doc)
@@ -945,26 +912,10 @@ def expense_claim_payable_account(company_defaults) -> str | None:
 	return defaults.get("default_expense_claim_payable_account") or defaults.get("default_payable_account")
 
 
-def type_cost_centers(expense_claim_type: str | None, company: str | None) -> list[str]:
-	"""The cost centers HR listed on `expense_claim_type` for `company`, in table order."""
-	if not expense_claim_type or not company:
-		return []
-	return frappe.get_all(
-		"Expense Claim Type Cost Center",
-		filters={"parenttype": "Expense Claim Type", "parent": expense_claim_type, "company": company},
-		pluck="cost_center",
-		order_by="idx",
-	)
-
-
 @frappe.whitelist()
 def get_expense_claim_account_and_cost_center(expense_claim_type: str, company: str) -> dict:
 	data = get_expense_claim_account(expense_claim_type, company)
-	# one listed cost center wins; several leave the line for the user to pick
-	listed = type_cost_centers(expense_claim_type, company)
-	cost_center = (
-		listed[0] if len(listed) == 1 else None if listed else erpnext.get_default_cost_center(company)
-	)
+	cost_center = erpnext.get_default_cost_center(company)
 
 	return {"account": data.get("account"), "cost_center": cost_center}
 

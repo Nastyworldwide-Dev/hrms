@@ -11,7 +11,6 @@
   "deferred_expense_account",
   "expense_type",
   "accounts",
-  "cost_centers",
   "description"
  ],
  "fields": [
@@ -40,13 +39,6 @@
    "options": "Expense Claim Account"
   },
   {
-   "description": "One row: claims of this type in that company go to it. Two or more: the employee picks one of them. None: the employee's own cost center, as before.",
-   "fieldname": "cost_centers",
-   "fieldtype": "Table",
-   "label": "Cost Centers",
-   "options": "Expense Claim Type Cost Center"
-  },
-  {
    "default": "0",
    "fieldname": "deferred_expense_account",
    "fieldtype": "Check",
@@ -56,7 +48,7 @@
  "icon": "fa fa-flag",
  "idx": 1,
  "links": [],
- "modified": "2026-10-14 12:00:00.000000",
+ "modified": "2026-04-16 14:29:17.778497",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Expense Claim Type",
