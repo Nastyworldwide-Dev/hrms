@@ -142,5 +142,59 @@ class TestGuard(unittest.TestCase):
 			self.assertIn(needle, src)
 
 
+class TestEveryLateWriter(unittest.TestCase):
+	"""Review of 37f2d86f4: two writers computed late outside the shared
+	marking function, so HR's Fix Day and a half-day leave approval brought
+	the late mark back on an excused day."""
+
+	def test_fix_day_asks_excused_late(self):
+		src = (
+			pathlib.Path(__file__).resolve().parent.parent / "api" / "attendance_master_edit.py"
+		).read_text()
+		body = src[
+			src.index("def _edit(") : src.index("saved = _insert_attendance(", src.index("def _edit("))
+		]
+		self.assertIn("excused_late(emp.name, day)", body)
+
+	def test_half_day_leave_asks_excused_late(self):
+		src = (HR / "leave_application" / "leave_application.py").read_text()
+		at = src.index("late_early_for_row(doc, self.half_day_session)")
+		self.assertIn("excused_late(self.employee, date)", src[at : at + 400])
+
+
+class TestCancelRestoresLate(unittest.TestCase):
+	"""Review of 37f2d86f4: cancelling an approved slip re-marks the day, but a
+	row with the same status, hours and times was kept, late flag and all."""
+
+	def setUp(self):
+		tree = ast.parse(CHECKIN.read_text())
+		fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_same_day_result")
+		ns = {
+			"get_datetime": lambda v: v,
+			"flt": lambda v: float(v or 0),
+			"cint": lambda v: int(v or 0),
+		}
+		exec(compile(ast.Module(body=[fn], type_ignores=[]), str(CHECKIN), "exec"), ns)
+		self.same = ns["_same_day_result"]
+		row = {
+			"status": "Present",
+			"working_hours": 8,
+			"in_time": "09:42",
+			"out_time": "18:00",
+			"shift": "S",
+			"late_entry": 0,
+		}
+		self.row = SimpleNamespace(**row, get=lambda f, d=None: row.get(f, d))
+
+	def test_a_late_change_is_not_the_same_day(self):
+		self.assertFalse(self.same(self.row, "Present", 8, "09:42", "18:00", "S", True))
+
+	def test_an_unchanged_late_flag_is_the_same_day(self):
+		self.assertTrue(self.same(self.row, "Present", 8, "09:42", "18:00", "S", False))
+
+	def test_callers_that_do_not_say_late_are_unaffected(self):
+		self.assertTrue(self.same(self.row, "Present", 8, "09:42", "18:00", "S"))
+
+
 if __name__ == "__main__":
 	unittest.main()

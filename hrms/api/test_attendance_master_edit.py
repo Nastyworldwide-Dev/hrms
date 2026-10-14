@@ -305,7 +305,7 @@ class Store:
 			self.fix_logs,
 		) = copy.deepcopy(self.savepoints[save_point])
 
-	def patched(self, roles=("HR User",), fenced_out=False, user="hr.user@example.invalid"):
+	def patched(self, roles=("HR User",), fenced_out=False, user="hr.user@example.invalid", slip=False):
 		stack = ExitStack()
 		for seam in self.SEAMS:
 			stack.enter_context(patch.object(ame, seam, getattr(self, seam), create=True))
@@ -345,6 +345,11 @@ class Store:
 			patch.object(frappe, "get_cached_doc", side_effect=lambda doctype, name: self.shift_docs[name])
 		)
 		stack.enter_context(patch("hrms.utils.company_settings.get_company_setting", return_value=None))
+		# `slip`: an approved time slip excuses the day (a bare MagicMock db
+		# would otherwise say one exists for every day)
+		stack.enter_context(
+			patch("hrms.hr.doctype.employee_checkin.employee_checkin.excused_late", return_value=slip)
+		)
 		return stack
 
 	# --- calls -------------------------------------------------------------------
@@ -543,6 +548,17 @@ class TestEdit(unittest.TestCase):
 
 
 class TestAddRemoveMove(unittest.TestCase):
+	def test_a_day_excused_by_a_time_slip_is_not_marked_late_by_fix_day(self):
+		"""Review of 37f2d86f4: Fix Day put the late mark back on an excused day."""
+		store = Store()
+		store.add_assignment("Day")
+		result = store.edit(
+			{"status": "Present", "in_time": "09:20", "out_time": "18:00"}, action="add", slip=True
+		)
+		self.assertTrue(result["ok"], result)
+		[hr] = store.hr_rows()
+		self.assertFalse(hr.late_entry)
+
 	def test_add_a_missing_day_inserts_hr_punches_and_an_hr_row(self):
 		store = Store()
 		store.add_assignment("Day")

@@ -388,6 +388,11 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				from hrms.utils.half_day_session import late_early_for_row
 
 				values.update(late_early_for_row(doc, self.half_day_session))
+				# an approved time slip keeps the day excused (owner, 14 Oct 2026)
+				from hrms.hr.doctype.employee_checkin.employee_checkin import excused_late
+
+				if values.get("late_entry") and excused_late(self.employee, date):
+					values["late_entry"] = 0
 			doc.db_set(values)
 		else:
 			# make new attendance and submit it

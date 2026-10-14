@@ -335,6 +335,11 @@ def _edit(emp, day, changes, snap, is_sm, replaces=None) -> str:
 			half_holiday=_is_half_holiday(shift_doc, emp.name, day),
 		)
 		hours, late, early = result.working_hours, result.late_entry, result.early_exit
+		if late:
+			# an approved time slip excuses the day (owner, 14 Oct 2026)
+			from hrms.hr.doctype.employee_checkin.employee_checkin import excused_late
+
+			late = not excused_late(emp.name, day)
 		if values.derive_status:
 			values.status = result.status
 	saved = _insert_attendance(
