@@ -101,6 +101,7 @@ test("the slip file is reachable and the slip follows the camera, with its hint"
 	assert.match(fields, /class="g-sr"\s+type="file"/)
 	assert.doesNotMatch(fields, /class="hidden"\s+type="file"/)
 	assert.match(fields, /:has\(input:focus-visible\)/)
+	assert.match(fields, /\.timeslip-file \{[^}]*position: relative/)
 	const panel = readFileSync(fileURLToPath(new URL("../CheckInPanel.vue", import.meta.url)), "utf8")
 	assert.ok(panel.indexOf("<GSelfiePanel") < panel.indexOf("checkin-sheet__slip\""))
 	assert.match(panel, /If they do, today is not marked late/)

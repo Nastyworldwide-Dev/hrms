@@ -52,6 +52,9 @@ function pick(event) {
 
 <style>
 .timeslip-file {
+	/* the visually hidden input is positioned against its own row, so focusing it
+	   never scrolls the page elsewhere (design review of 364233f86) */
+	position: relative;
 	cursor: pointer;
 }
 /* the hidden input takes the focus; the row shows it, as .g-focusable does */
