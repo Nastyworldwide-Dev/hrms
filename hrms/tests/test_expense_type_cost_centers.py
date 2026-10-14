@@ -45,9 +45,30 @@ class TestClaimLines(unittest.TestCase):
 		}
 		self.apply = _lift(CLAIM, "ExpenseClaim", "set_type_cost_centers", self.ns)
 
-	def claim(self, *rows):
-		lines = [SimpleNamespace(idx=i + 1, expense_type=t, cost_center=cc) for i, (t, cc) in enumerate(rows)]
-		return SimpleNamespace(company="NW", expenses=lines)
+	def claim(self, *rows, saved=None):
+		lines = [
+			SimpleNamespace(name=f"row{i + 1}", idx=i + 1, expense_type=t, cost_center=cc)
+			for i, (t, cc) in enumerate(rows)
+		]
+		before = None
+		if saved is not None:
+			stored = [
+				SimpleNamespace(name=f"row{i + 1}", expense_type=t, cost_center=cc)
+				for i, (t, cc) in enumerate(saved)
+			]
+			before = SimpleNamespace(expenses=stored)
+		return SimpleNamespace(company="NW", expenses=lines, get_doc_before_save=lambda: before)
+
+	def test_a_saved_line_left_as_it_was_is_not_refused(self):
+		"""Review of 0905145ea: a claim sent before HR listed 2+ cost centers on
+		its type must still be approvable; approval re-runs validate."""
+		claim = self.claim(("Meals", "Main - NW"), saved=[("Meals", "Main - NW")])
+		self.apply(claim)
+		self.assertEqual(claim.expenses[0].cost_center, "Main - NW")
+
+	def test_a_saved_line_whose_cost_center_changed_is_still_refused(self):
+		with self.assertRaises(_Refused):
+			self.apply(self.claim(("Meals", "Main - NW"), saved=[("Meals", "Sales - NW")]))
 
 	def test_one_listed_cost_center_is_charged_whatever_was_sent(self):
 		claim = self.claim(("Travel", "Main - NW"))

@@ -187,14 +187,23 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		HR lists the type's cost centers per company. One: the line is charged
 		there, whatever was sent. Several: the line must name one of them. None:
 		the line keeps the employee's or company default, as before.
+
+		A saved line whose type and cost center did not change is not refused:
+		approval re-runs validate, and a claim sent before HR listed several
+		cost centers on its type would otherwise be stuck (review of 0905145ea).
 		"""
+		before = self.get_doc_before_save()
+		saved = {r.name: (r.expense_type, r.cost_center) for r in (before.expenses if before else [])}
 		for row in self.expenses or []:
 			allowed = type_cost_centers(row.expense_type, self.company)
 			if not allowed:
 				continue
 			if len(allowed) == 1:
 				row.cost_center = allowed[0]
-			elif row.cost_center not in allowed:
+			elif row.cost_center not in allowed and saved.get(row.name) != (
+				row.expense_type,
+				row.cost_center,
+			):
 				frappe.throw(
 					_("Row #{0}: pick a cost center for {1}: {2}").format(
 						row.idx, row.expense_type, ", ".join(allowed)
