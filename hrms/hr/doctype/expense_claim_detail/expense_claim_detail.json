@@ -76,7 +76,7 @@
    "label": "Distance (km)",
    "non_negative": 1,
    "precision": "1",
-   "depends_on": "eval:doc.distance_km"
+   "description": "Mileage types only: the amount is this distance times the type's rate."
   },
   {
    "fieldname": "amount",

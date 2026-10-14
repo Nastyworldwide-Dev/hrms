@@ -75,10 +75,11 @@ class TestLines(unittest.TestCase):
 			"flt": _flt,
 			"logger": MagicMock(),
 			"mileage_rate": lambda t, c: TYPE_RATE.get(t, 0),
+			"erpnext": SimpleNamespace(get_company_currency=lambda c: "MYR"),
 		}
 		self.price = _method("set_mileage_amounts", ns)
 
-	def claim(self, *rows, new=True, docstatus=0, saved=None):
+	def claim(self, *rows, new=True, docstatus=0, saved=None, currency="MYR"):
 		lines = []
 		for i, (t, km, amount, sanctioned) in enumerate(rows):
 			line = SimpleNamespace(
@@ -101,6 +102,7 @@ class TestLines(unittest.TestCase):
 		return SimpleNamespace(
 			name="HR-EXP-1",
 			company="NW",
+			currency=currency,
 			docstatus=docstatus,
 			expenses=lines,
 			get=lambda f: lines,
@@ -136,6 +138,21 @@ class TestLines(unittest.TestCase):
 		c = self.claim(("Mileage Car", 0, 25, 25), new=False, saved=[("r0", "Mileage Car", 0)])
 		self.price(c)
 		self.assertEqual(c.expenses[0].amount, 25)
+
+	def test_a_rate_change_alone_keeps_an_approvers_reduction(self):
+		"""Review of 047328879: HR changed the rate after the approver reduced a line."""
+		c = self.claim(("Mileage Car", 70, 35.0, 30.0), new=False, saved=[("r0", "Mileage Car", 70)])
+		self.price(c)
+		self.assertEqual((c.expenses[0].amount, c.expenses[0].sanctioned_amount), (42.0, 30.0))
+
+	def test_changed_km_is_sanctioned_in_full_again(self):
+		c = self.claim(("Mileage Car", 80, 42.0, 30.0), new=False, saved=[("r0", "Mileage Car", 70)])
+		self.price(c)
+		self.assertEqual(c.expenses[0].sanctioned_amount, 48.0)
+
+	def test_a_claim_in_another_currency_is_refused(self):
+		with self.assertRaises(_Refused):
+			self.price(self.claim(("Mileage Car", 70, 0, 0), currency="USD"))
 
 	def test_a_decided_claim_keeps_what_was_approved(self):
 		c = self.claim(("Mileage Car", 70, 50, 50), docstatus=1)

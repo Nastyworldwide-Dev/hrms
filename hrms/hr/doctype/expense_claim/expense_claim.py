@@ -224,15 +224,26 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			rate = mileage_rate(row.expense_type, self.company)
 			if not rate:
 				continue
-			if not flt(row.distance_km) and saved.get(row.name) == (row.expense_type, 0.0):
+			line = (row.expense_type, flt(row.distance_km))
+			if not line[1] and saved.get(row.name) == line:
 				continue
-			if flt(row.distance_km) <= 0:
+			if line[1] <= 0:
 				frappe.throw(
 					_("Row #{0}: enter the distance in km for {1}").format(row.idx, row.expense_type)
 				)
-			amount = flt(flt(row.distance_km) * rate, row.precision("amount"))
-			is_new_or_changed = self.is_new() or flt(row.amount) != amount
-			if is_new_or_changed:
+			# the rate is in the company's currency (review of 047328879)
+			company_currency = erpnext.get_company_currency(self.company)
+			if self.currency and self.currency != company_currency:
+				frappe.throw(
+					_("Row #{0}: a mileage claim is paid in {1}. Change the claim's currency to {1}.").format(
+						row.idx, company_currency
+					)
+				)
+			amount = flt(line[1] * rate, row.precision("amount"))
+			# a line whose km or type changed is sanctioned in full again; a rate
+			# change alone keeps an approver's reduction (review of 047328879)
+			is_new_or_changed = self.is_new() or saved.get(row.name) != line
+			if is_new_or_changed or flt(row.amount) != amount:
 				logger.info(
 					"[expense_claim] %s row %s: %s km x %s = %s",
 					self.name,
