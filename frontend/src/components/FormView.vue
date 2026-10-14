@@ -141,6 +141,7 @@
 									@handleFileSelect="handleFileSelect"
 									@handleFileDelete="handleFileDelete"
 									:readOnly="isFormReadOnly"
+									:required="requireAttachment"
 								/>
 							</div>
 						</template>
@@ -205,6 +206,7 @@
 							@handleFileSelect="handleFileSelect"
 							@handleFileDelete="handleFileDelete"
 							:readOnly="isFormReadOnly"
+							:required="requireAttachment"
 						/>
 
 						<!-- The request's story: sent, then each decision (alpha.13). -->
@@ -996,6 +998,11 @@ async function handleDocUpdate(action) {
 
 	if (!documentResource.doc) return
 	if (!validateMandatoryFields()) return
+	// a saved draft can lose its file before it is submitted (review of 1f5edf79c)
+	if (action === "submit" && props.requireAttachment && !fileAttachments.value.length) {
+		formErrorMessage.value = __("A supporting attachment is required")
+		return
+	}
 
 	if (action === "submit" || action === "cancel") {
 		try {

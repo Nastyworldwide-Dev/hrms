@@ -8,6 +8,8 @@
 			<div class="select-button cursor-pointer g-form-group">
 				<div class="g-form-row">
 					<span class="g-form-row__label">{{ __("Add a file") }}</span>
+					<!-- the rule is shown before Send, not only refused at it (owner mockup, 14 Oct 2026) -->
+					<span v-if="required && !modelValue.length" class="g-form-row__value">{{ __("Required") }}</span>
 					<Upload class="g-form-row__switch h-5 w-5 text-ink-600" aria-hidden="true" />
 				</div>
 				<input
@@ -69,6 +71,7 @@ defineProps({
 		required: true,
 	},
 	readOnly: { type: Boolean, default: false },
+	required: { type: Boolean, default: false },
 })
 let showDialog = ref(false)
 let showPreviewModal = ref(false)
