@@ -1,12 +1,14 @@
 # HANDOFF
-prompt:   shenzhen-attendance-viewer (14 Oct)
+prompt:   expense-cost-centers (14 Oct)
 status:   done
-commit:   76e9d25f1 on nz-glass (feat cd159d7d0, tag v2.0.0-alpha.45)
-files:    hrms/utils/report_scope.py
-          hrms/hr/report/shift_attendance/shift_attendance.py
-          hrms/patches/v16_0/add_attendance_report_viewer_role.py
-          hrms/patches.txt
-          hrms/tests/test_report_scope_filters.py
-verify:   python3 hrms/tests/test_report_scope_filters.py
-flags:    migrate needed (patch creates role). Mutation gate skipped: covered by fresh.local probe, not a unit test.
-next:     deploy with migrate; HR gives both users the role + Company UP "Shenzhen Qiguangda Technology Co., Ltd."
+commit:   5e1103aa8 on nz-glass (feat 0905145ea, fix 37c1dd17f, tag v2.0.0-alpha.46)
+files:    hrms/hr/doctype/expense_claim_type_cost_center/ (new child doctype)
+          hrms/hr/doctype/expense_claim_type/expense_claim_type.{json,py,js}
+          hrms/hr/doctype/expense_claim/expense_claim.py
+          hrms/api/__init__.py
+          hrms/patches/v16_0/hide_project_on_expense_claims.py
+          frontend/src/components/ExpensesTable.vue
+          frontend/src/utils/expenseCostTags.js
+verify:   python3 hrms/tests/test_expense_type_cost_centers.py && (cd frontend && node --test src/utils/__tests__/expenseCostTags.test.js)
+flags:    migrate needed. Desk: a 2+ type line gets the header cost center and save says "pick a cost center" (kept). alpha.45 also awaits deploy.
+next:     deploy alpha.45+46 with migrate; HR fills Cost Centers on each Expense Claim Type
