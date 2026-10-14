@@ -45,5 +45,24 @@ class TestLateMinutes(unittest.TestCase):
 		self.assertEqual(self.late(None, START, 0, True), 0)
 
 
+class TestNightShift(unittest.TestCase):
+	"""Review of 923609d67: a 19:00 shift checked in at 19:30 was "not late"
+	once Home was opened after midnight, and its slip was looked for on the
+	wrong day. The day is the check-in's own stamped shift start."""
+
+	def test_the_slip_day_is_the_shift_start_not_today(self):
+		src = SOURCE.read_text()
+		body = src[src.index("def _time_slip") : src.index("def _leave_by")]
+		self.assertIn('get_datetime(session["shift_start"])', body)
+		self.assertIn("day = start.date()", body)
+		self.assertNotIn("now.date()}", body)
+
+	def test_late_past_midnight_is_still_late(self):
+		late = _lift()
+		self.assertEqual(
+			late(dt.datetime(2026, 10, 13, 19, 30), dt.datetime(2026, 10, 13, 19, 0), 0, True), 30
+		)
+
+
 if __name__ == "__main__":
 	unittest.main()

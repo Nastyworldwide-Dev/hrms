@@ -59,6 +59,10 @@ def _open_session(employee, now):
 		# 2026: late in, late out; early in, out as usual). Display only.
 		"first_in": str(first_in) if first_in else None,
 		"leave_by": str(leave) if leave else None,
+		# the IN's own stamped shift: a night shift's day is the day it started,
+		# not the calendar day Home is opened on (review of 923609d67)
+		"shift": last[0].shift,
+		"shift_start": str(last[0].shift_start) if last[0].shift_start else None,
 	}
 
 
@@ -71,20 +75,25 @@ def late_minutes(first_in, shift_start, grace, marking) -> int:
 	return int(over) if over > 0 else 0
 
 
-def _time_slip(employee, now, session, shift):
-	"""How late today's first check-in was, and today's time slip if one was sent.
+def _time_slip(employee, now, session):
+	"""How late the open session's first check-in was, and that day's time slip.
 
-	The check-in sheet offers a slip from the clock before the punch; this is
-	what Today shows after it (owner, 14 Oct 2026)."""
-	late = 0
-	if session and session.get("first_in") and shift:
-		start = get_datetime(f"{now.date()} {shift['start']}")
-		late = late_minutes(
-			get_datetime(session["first_in"]), start, shift["late_grace"], shift["late_marking"]
-		)
+	Measured against the check-in's OWN stamped shift start, so a night shift
+	stays late past midnight and finds the slip filed on the day it started
+	(review of 923609d67). The check-in sheet offers a slip from the clock
+	before the punch; this is what Today shows after it (owner, 14 Oct 2026)."""
+	late, day = 0, now.date()
+	if session and session.get("shift_start"):
+		start = get_datetime(session["shift_start"])
+		day = start.date()
+		grace, marking = frappe.db.get_value(
+			"Shift Type", session.get("shift"), ["late_entry_grace_period", "enable_late_entry_marking"]
+		) or (0, 0)
+		if session.get("first_in"):
+			late = late_minutes(get_datetime(session["first_in"]), start, grace, marking)
 	slip = frappe.get_all(
 		"Attendance Request",
-		filters={"employee": employee, "reason": "Time Slip", "from_date": now.date(), "docstatus": ("<", 2)},
+		filters={"employee": employee, "reason": "Time Slip", "from_date": day, "docstatus": ("<", 2)},
 		fields=["name", "status"],
 		order_by="creation desc",
 		limit=1,
@@ -92,9 +101,9 @@ def _time_slip(employee, now, session, shift):
 	)
 	if not late and not slip:
 		return None
-	logger.info("[now] employee=%s late=%s slip=%s", employee, late, slip and slip[0].status)
+	logger.info("[now] employee=%s day=%s late=%s slip=%s", employee, day, late, slip and slip[0].status)
 	return {
-		"day": str(now.date()),
+		"day": str(day),
 		"late_minutes": late,
 		"name": slip[0].name if slip else None,
 		"status": slip[0].status if slip else None,
@@ -295,7 +304,7 @@ def get_now() -> dict:
 		# and it was the first thing the owner saw.
 		"state": _state(session, shift, last_out, now),
 		"last_out": last_out,
-		"time_slip": _time_slip(employee, now, session, shift),
+		"time_slip": _time_slip(employee, now, session),
 	}
 	logger.info(
 		"[now] employee=%s shift=%s open=%s",

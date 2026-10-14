@@ -30,7 +30,9 @@ def _db(default_shift=None):
 		if doctype == "Employee" and fieldname == "default_shift":
 			return default_shift
 		if doctype == "Shift Type":
-			return {"Day": ("09:00:00", "18:00:00"), "Roster": ("22:00:00", "06:00:00")}.get(name)
+			return {"Day": ("09:00:00", "18:00:00", 10, 1), "Roster": ("22:00:00", "06:00:00", 0, 0)}.get(
+				name
+			)
 		return None
 
 	return get_value
@@ -46,7 +48,10 @@ class TestShiftFallsBackToDefault(unittest.TestCase):
 			return now._shift_window("EMP-1", "2026-09-24")
 
 	def test_no_assignment_but_a_default_shift_is_a_shift(self):
-		self.assertEqual(self._window(None, "Day"), {"shift": "Day", "start": "09:00", "end": "18:00"})
+		self.assertEqual(
+			self._window(None, "Day"),
+			{"shift": "Day", "start": "09:00", "end": "18:00", "late_grace": 10, "late_marking": True},
+		)
 
 	def test_an_assignment_wins_over_the_default(self):
 		roster = frappe._dict(shift_type="Roster")
@@ -61,8 +66,6 @@ class TestShiftFallsBackToDefault(unittest.TestCase):
 
 	def test_neither_is_no_shift(self):
 		self.assertIsNone(self._window(None, None))
-
-
 
 
 class TestADayMarkedOffIsARestDay(unittest.TestCase):
@@ -91,6 +94,7 @@ class TestADayMarkedOffIsARestDay(unittest.TestCase):
 
 	def test_the_holiday_list_still_counts(self):
 		self.assertTrue(self._rest(holiday=True))
+
 
 if __name__ == "__main__":
 	unittest.main()
