@@ -1,11 +1,14 @@
 # HANDOFF
-prompt:   expense rollback + Project removal (14 Oct)
+prompt:   receipts, mileage, time slips (14 Oct)
 status:   done
-commit:   32c542d2a on nz-glass (refactor 6a13d0bfd, tag v2.0.0-alpha.47)
-files:    hrms/hr/doctype/expense_claim/expense_claim.py (back to pre-alpha.46)
-          hrms/hr/doctype/expense_claim_type/ (Cost Centers table removed)
-          hrms/patches/v16_0/hide_project_on_expense_claims.py (kept)
-          frontend/src/components/ExpensesTable.vue (Project filter kept)
-verify:   python3 hrms/tests/test_expense_cost_tags.py
-flags:    migrate needed. Deploy alpha.47, not alpha.46 alone. Task is hidden with Project.
-next:     plan mileage / receipt-per-claim / time slip from .claude/plans/claims-mileage-receipt-timeslip-rulings.md
+commit:   bff289765 on nz-glass (tag v2.0.0-alpha.48)
+files:    hrms/hr/doctype/expense_claim/expense_claim.py (mileage pricing)
+          hrms/hr/doctype/attendance_request/attendance_request.py (time slip)
+          hrms/hr/doctype/employee_checkin/employee_checkin.py (excused_late guard)
+          hrms/api/now.py, hrms/api/needs_you.py, hrms/api/approvals_list.py
+          frontend/src/components/CheckInPanel.vue, NowBar.vue, TimeSlipFields.vue
+          frontend/src/components/ExpensesTable.vue, views/expense_claim/Form.vue
+          hrms/patches/v16_0/add_time_slip_reason.py
+verify:   python3 hrms/tests/test_time_slip.py && python3 hrms/tests/test_expense_mileage.py
+flags:    migrate needed. HR: Rate per km on mileage types; untick Receipt Required where not needed. Deferred: file-row tick, night-shift sheet hint.
+next:     deploy alpha.45-48 with migrate; HR setup; watch first real time slips
