@@ -10,6 +10,25 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.47] — Expense Claims Without Project — 2026-10-14
+
+Owner, 14 Oct 2026: the cost-center-by-claim-type rule from alpha.46 is not
+needed for now, so it is taken back out. Project stays removed.
+
+### Removed
+- **Cost Centers on Expense Claim Type** (alpha.46). A claim line's cost
+  center works as on the live site: the employee's own, or the company
+  default, and it can be changed on the line.
+
+### Kept from alpha.46
+- **Project and Task are not asked on an expense claim**: hidden in Desk,
+  not shown in Nadi. Values already saved are kept.
+
+### Deploy
+- **Migrate needed**: it hides Project and Task. It also creates the
+  Attendance Report Viewer role from alpha.45, if that has not been deployed.
+- Deploy alpha.47 directly. Do not deploy alpha.46 on its own.
+
 ## [2.0.0-alpha.46] — Expense Cost Centers by Claim Type — 2026-10-14
 
 Each claim type can say which cost centers its costs go to. Project is no
