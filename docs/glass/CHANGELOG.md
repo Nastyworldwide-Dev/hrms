@@ -10,6 +10,42 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.48] — Receipts, Mileage and Time Slips — 2026-10-14
+
+Three changes from the 14 Oct discussion, built to the signed-off mockup.
+
+### Added
+- **A claim needs a receipt.** One file on the claim before Send; the file
+  row says "Required". HR can switch it off per claim type in Desk
+  ("Receipt Required", on by default for every type).
+- **Mileage.** HR sets a Rate per km on a claim type (for example Mileage ·
+  Car and Mileage · Motor), and may give a company its own rate on the
+  type's Accounts row. Staff type only the distance and see "You will
+  claim RM X" with how it was worked out; the amount cannot be typed over.
+- **Time slip.** Checking in late (after the shift start plus its grace),
+  the check-in sheet offers "I have a time slip": a reason (Clinic visit)
+  and the slip file, then "Check in and send the slip". The check-in is
+  saved as always; the slip goes after it. Today shows the slip's status,
+  or "Late today? Add a time slip" the same day, or "Add the file" when
+  the file did not go.
+- **Approvers.** A waiting time slip is its own row at the top of Home,
+  "Marked late until you decide", opening Approvals on the slips. The
+  approver sees "Time slip · Clinic Visit" and whether the file is there.
+  Approved: the day is not late, and no later re-mark brings it back.
+  Rejected: the day stays late. Cancelled: the late mark returns.
+
+### Deploy
+- **Migrate needed**: new fields on Expense Claim Type, Expense Claim
+  Account, Expense Claim Detail and Attendance Request, and a patch that
+  adds "Time Slip" to a customised Fix a day reason list.
+- Then HR: set Rate per km on the mileage types; untick Receipt Required
+  on any type that needs no receipt. Time slips need no setup.
+
+### Later
+- A "Tap to replace" tick on the slip's file row.
+- The sheet's late hint for a night shift checked in after midnight
+  (Today already counts it correctly).
+
 ## [2.0.0-alpha.47] — Expense Claims Without Project — 2026-10-14
 
 Owner, 14 Oct 2026: the cost-center-by-claim-type rule from alpha.46 is not
