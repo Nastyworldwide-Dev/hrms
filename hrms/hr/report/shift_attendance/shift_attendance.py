@@ -11,15 +11,20 @@ from frappe.utils import cint, flt, format_datetime, format_duration
 
 from erpnext.accounts.utils import build_qb_match_conditions
 
-from hrms.utils.report_scope import apply_employee_scope, scoped_companies
+from hrms.utils.report_scope import apply_employee_scope, attendance_viewer_companies, scoped_companies
 
 logger = logging.getLogger(__name__)
 
 
 def execute(filters=None):
 	# Script Report SQL bypasses row scope entirely, so the fence lives here:
-	# staff see only their own attendance, HR sees their permitted companies.
-	filters = apply_employee_scope(filters)
+	# staff see only their own attendance, HR sees their permitted companies,
+	# an Attendance Report Viewer sees everyone in theirs (none without a fence).
+	viewer = attendance_viewer_companies()
+	if viewer is None:
+		filters = apply_employee_scope(filters)
+	else:
+		filters = frappe._dict(filters or {}) if viewer else None
 	columns = get_columns()
 	if filters is None:
 		return columns, [], None, None, None
@@ -325,6 +330,12 @@ def get_base_attendance_query(filters):
 	# rather than inside `filters` on purpose: the loop above treats every
 	# filter value as an equality operand, so a sequence in there renders as
 	# `company=('in',[…])`, which MariaDB rejects.
+	viewer = attendance_viewer_companies()
+	if viewer is not None:
+		# The company fence only. A viewer's user permissions also carry ERPNext's
+		# self-only Employee row, which would cut the report back to themselves.
+		return query.where(attendance.company.isin(viewer or [""]))
+
 	companies = scoped_companies()
 	if companies:
 		query = query.where(attendance.company.isin(companies))

@@ -45,6 +45,11 @@ from hrms.utils.identity import get_employee
 #: A branch leader who rosters their team also reports its attendance.
 SUPERVISOR_ROLE = "Shift Supervisor"
 
+#: Reads Shift Attendance for everyone in their Company User Permissions, and
+#: nothing else (owner, 14 Oct 2026: Shenzhen staff count their own team's
+#: attendance monthly without HR's wider access).
+ATTENDANCE_VIEWER_ROLE = "Attendance Report Viewer"
+
 logger = logging.getLogger(__name__)
 
 
@@ -92,6 +97,22 @@ def report_employees(user: str | None = None) -> list[str] | None:
 		return []
 	return [own, *get_direct_report_employees(user)]
 
+
+def attendance_viewer_companies(user: str | None = None) -> list[str] | None:
+	"""Companies an Attendance Report Viewer reads in full. **None means the
+	caller is not a viewer** (HR keeps its own rule, staff stay pinned to self).
+
+	A viewer with no Company User Permission gets an empty list, which a report
+	must read as "no rows": forgetting the fence must not open every company.
+	"""
+	from hrms.overrides.company_scope import allowed_companies
+
+	user = user or frappe.session.user
+	if is_hr(user) or ATTENDANCE_VIEWER_ROLE not in frappe.get_roles(user):
+		return None
+	companies = allowed_companies(user)
+	logger.info("[report_scope] attendance viewer %s fenced to %s", user, companies)
+	return companies
 
 def fenced_companies(requested: str | None = None, user: str | None = None) -> list[str]:
 	"""The companies a report query may return rows for, given what the

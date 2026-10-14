@@ -47,7 +47,7 @@ REPORTS = HRMS_ROOT / "hr" / "report"
 STUBBED = ("frappe", "hrms.hr.utils", "hrms.utils.identity", "hrms.overrides.company_scope")
 
 
-def load_module(*, is_hr, employee, companies, cleanup):
+def load_module(*, is_hr, employee, companies, cleanup, roles=()):
 	"""report_scope with its three collaborators stubbed for ONE test.
 
 	`cleanup` is the test's addCleanup: the stubs stay in sys.modules while
@@ -59,6 +59,7 @@ def load_module(*, is_hr, employee, companies, cleanup):
 	frappe = types.ModuleType("frappe")
 	frappe._dict = dict
 	frappe.session = types.SimpleNamespace(user="someone@example.com")
+	frappe.get_roles = lambda user=None: list(roles)
 
 	hr_utils = types.ModuleType("hrms.hr.utils")
 	hr_utils.sees_all_employee_data = lambda user=None: is_hr
@@ -178,6 +179,33 @@ class TestConsumersUseTheList(unittest.TestCase):
 			and node.elts[0].value in ("in", "not in", "like", ">", "<", ">=", "<=")
 		]
 		self.assertEqual(offenders, [])
+
+
+class TestAttendanceViewer(unittest.TestCase):
+	"""Owner, 14 Oct 2026: an Attendance Report Viewer reads Shift Attendance
+	for everyone in their Company User Permissions, and nothing without one."""
+
+	VIEWER = ("Employee", "Attendance Report Viewer")
+
+	def test_a_viewer_reads_their_fenced_companies(self):
+		module = load_module(
+			cleanup=self.addCleanup, is_hr=False, employee="E1", companies=["Shenzhen"], roles=self.VIEWER
+		)
+		self.assertEqual(module.attendance_viewer_companies(), ["Shenzhen"])
+
+	def test_a_viewer_without_a_fence_reads_nothing_not_everything(self):
+		module = load_module(cleanup=self.addCleanup, is_hr=False, employee="E1", companies=[], roles=self.VIEWER)
+		self.assertEqual(module.attendance_viewer_companies(), [])
+
+	def test_staff_are_not_viewers(self):
+		module = load_module(
+			cleanup=self.addCleanup, is_hr=False, employee="E1", companies=["Shenzhen"], roles=("Employee",)
+		)
+		self.assertIsNone(module.attendance_viewer_companies())
+
+	def test_hr_keeps_its_own_rule(self):
+		module = load_module(cleanup=self.addCleanup, is_hr=True, employee=None, companies=[], roles=self.VIEWER)
+		self.assertIsNone(module.attendance_viewer_companies())
 
 
 if __name__ == "__main__":
