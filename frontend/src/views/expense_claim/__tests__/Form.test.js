@@ -54,3 +54,16 @@ test("the running total is shown once (the Expenses header), not in three boxes"
 	}
 	assert.match(src, /expenseClaim\.value\.total_claimed_amount = total_claimed_amount/, "still computed for the server")
 })
+
+// Owner, 14 Oct 2026: one receipt per claim, required before Send unless
+// every line's type has "Receipt Required" switched off in Desk.
+test("the claim requires a receipt through FormView's requireAttachment", () => {
+	assert.match(src, /:requireAttachment="receiptRequired"/)
+})
+
+test("a receipt is required unless every line's type switched it off", () => {
+	const rule = src.slice(src.indexOf("const receiptRequired"), src.indexOf("const companyCurrency"))
+	assert.match(rule, /\.some\(/, "one line needing a receipt is enough")
+	// a type whose flag is not loaded yet (undefined) counts as required
+	assert.match(rule, /receipt_required !== 0/)
+})

@@ -1591,7 +1591,9 @@ def configured_expense_claim_types(types: list, account_rows: list, company: str
 @frappe.whitelist(methods=["GET", "POST"])
 def get_expense_claim_types() -> list[dict]:
 	ClaimType = frappe.qb.DocType("Expense Claim Type")
-	types = (frappe.qb.from_(ClaimType).select(ClaimType.name, ClaimType.description)).run(as_dict=True)
+	types = (
+		frappe.qb.from_(ClaimType).select(ClaimType.name, ClaimType.description, ClaimType.receipt_required)
+	).run(as_dict=True)
 	own = get_employee_info(fields=("company",))
 	accounts = frappe.get_all("Expense Claim Account", fields=["parent", "company"], limit_page_length=0)
 	return configured_expense_claim_types(types, accounts, own.get("company") if own else None)
