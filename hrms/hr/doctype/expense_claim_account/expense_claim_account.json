@@ -6,7 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "company",
-  "default_account"
+  "default_account",
+  "rate_per_km"
  ],
  "fields": [
   {
@@ -23,11 +24,20 @@
    "label": "Default Account",
    "options": "Account",
    "reqd": 1
+  },
+  {
+   "description": "This company's rate per km, in its own currency. Empty: the type's rate.",
+   "fieldname": "rate_per_km",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Rate per km",
+   "non_negative": 1,
+   "precision": "2"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2024-03-27 13:09:43.837394",
+ "modified": "2026-10-14 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Expense Claim Account",

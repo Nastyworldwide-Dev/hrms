@@ -116,6 +116,7 @@ import ResourceError from "@/components/ResourceError.vue"
 
 import { claimTypesByID, claimTypesResource } from "@/data/claims"
 import { formatCurrency } from "@/utils/formatters"
+import { mileageAmount, withMileageFields } from "@/utils/expenseMileage"
 import { groupFields } from "@/utils/formGroups"
 import { sentenceCase } from "@/utils/sentenceCase"
 import { withCostTagFields } from "@/utils/expenseCostTags"
@@ -168,7 +169,8 @@ const updateExpenseItem = () => {
 function itemLine(item) {
 	const approved = __("{0}: {1}", [__("Approved"), formatCurrency(item.sanctioned_amount || 0, props.expenseClaim.currency)])
 	const day = item.expense_date ? dayjs(item.expense_date).format("D MMM") : ""
-	return [approved, day].filter(Boolean).join(" · ")
+	const km = item.distance_km ? __("{0} km", [item.distance_km]) : ""
+	return [km, approved, day].filter(Boolean).join(" · ")
 }
 
 function resetSelectedItem() {
@@ -230,9 +232,12 @@ watch(
 	{ immediate: true }
 )
 
+// the picked type's rate per km for this company; 0 for an ordinary type
+const mileageRate = computed(() => claimTypesByID[expenseItem.value.expense_type]?.rate_per_km || 0)
+
 const expenseFields = computed(() =>
 	withCostTagFields(
-		(expensesTableFields.data || [])
+		withMileageFields(expensesTableFields.data || [], mileageRate.value)
 			// Project is not asked (owner, 14 Oct 2026)
 			.filter((field) => field.fieldname !== "project")
 			.map((field) =>
@@ -262,6 +267,15 @@ const addButtonDisabled = computed(() => {
 		}
 	})
 })
+
+// mileage: the amount follows the distance (owner, 14 Oct 2026); the server
+// prices the line again on save, so this is what the employee sees, not the rule
+watch(
+	() => [expenseItem.value.distance_km, mileageRate.value],
+	([km, rate]) => {
+		if (rate > 0) expenseItem.value.amount = mileageAmount(km, rate)
+	}
+)
 
 // child table form scripts
 watch(

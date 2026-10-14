@@ -11,6 +11,7 @@
   "deferred_expense_account",
   "expense_type",
   "receipt_required",
+  "rate_per_km",
   "accounts",
   "description"
  ],
@@ -41,6 +42,14 @@
    "label": "Receipt Required"
   },
   {
+   "description": "Mileage: staff type the distance and are paid km \u00d7 this rate. Empty: an ordinary type, staff type the amount. A company's own rate in the Accounts table wins (owner, 14 Oct 2026).",
+   "fieldname": "rate_per_km",
+   "fieldtype": "Float",
+   "label": "Rate per km",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
    "fieldname": "accounts",
    "fieldtype": "Table",
    "label": "Accounts",
@@ -56,7 +65,7 @@
  "icon": "fa fa-flag",
  "idx": 1,
  "links": [],
- "modified": "2026-10-14 15:00:00.000000",
+ "modified": "2026-10-14 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Expense Claim Type",

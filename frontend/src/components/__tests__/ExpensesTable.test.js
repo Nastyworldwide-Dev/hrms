@@ -24,3 +24,13 @@ test("changing the expense type fills an empty cost center, never overwrites a p
 test("Project is not asked on an expense line (owner, 14 Oct 2026)", () => {
 	assert.match(src, /fieldname !== "project"/)
 })
+
+test("a mileage type asks km and prices the line from the type's rate", () => {
+	assert.match(src, /withMileageFields\(expensesTableFields\.data \|\| \[\], mileageRate\.value\)/)
+	assert.match(src, /claimTypesByID\[expenseItem\.value\.expense_type\]\?\.rate_per_km/)
+	assert.match(src, /expenseItem\.value\.amount = mileageAmount\(km, rate\)/)
+})
+
+test("a mileage line says its distance in the list", () => {
+	assert.match(src, /item\.distance_km \? __\("\{0\} km"/)
+})

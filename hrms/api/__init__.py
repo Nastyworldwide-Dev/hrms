@@ -167,7 +167,9 @@ def withdraw_request(doctype: str, name: str) -> None:
 	check_if_doc_is_dynamically_linked(doc)
 	links = get_linked_docs(doc)
 	for link in links:
-		link["docstatus"] = frappe.db.get_value(link["reference_doctype"], link["reference_docname"], "docstatus")
+		link["docstatus"] = frappe.db.get_value(
+			link["reference_doctype"], link["reference_docname"], "docstatus"
+		)
 	blockers = withdraw_blockers(links)
 	if blockers:
 		frappe.throw(
@@ -1563,6 +1565,7 @@ def near_duplicate_expenses(name: str) -> list[str]:
 		may_open=lambda other: bool(frappe.has_permission("Expense Claim", ptype="read", doc=other))
 	)
 
+
 def configured_expense_claim_types(types: list, account_rows: list, company: str | None) -> list:
 	"""Only the types an employee of `company` can actually save a claim with.
 
@@ -1592,11 +1595,20 @@ def configured_expense_claim_types(types: list, account_rows: list, company: str
 def get_expense_claim_types() -> list[dict]:
 	ClaimType = frappe.qb.DocType("Expense Claim Type")
 	types = (
-		frappe.qb.from_(ClaimType).select(ClaimType.name, ClaimType.description, ClaimType.receipt_required)
+		frappe.qb.from_(ClaimType).select(
+			ClaimType.name, ClaimType.description, ClaimType.receipt_required, ClaimType.rate_per_km
+		)
 	).run(as_dict=True)
 	own = get_employee_info(fields=("company",))
-	accounts = frappe.get_all("Expense Claim Account", fields=["parent", "company"], limit_page_length=0)
-	return configured_expense_claim_types(types, accounts, own.get("company") if own else None)
+	company = own.get("company") if own else None
+	accounts = frappe.get_all(
+		"Expense Claim Account", fields=["parent", "company", "rate_per_km"], limit_page_length=0
+	)
+	# the employee's company rate wins over the type's (owner, 14 Oct 2026)
+	own_rates = {r.parent: r.rate_per_km for r in accounts if r.company == company and r.rate_per_km}
+	for claim_type in types:
+		claim_type["rate_per_km"] = own_rates.get(claim_type["name"]) or claim_type.get("rate_per_km") or 0
+	return configured_expense_claim_types(types, accounts, company)
 
 
 @frappe.whitelist(methods=["GET", "POST"])

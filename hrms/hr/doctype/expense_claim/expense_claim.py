@@ -65,6 +65,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		set_employee_name(self)
 		self.set_payable_account()
 		self.validate_staff_approver()
+		self.set_mileage_amounts()
 		self.set_sanctioned_amount_default()
 		self.validate_sanctioned_amount()
 		self.calculate_total_amount()
@@ -204,6 +205,46 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 	def validate_staff_approver(self):
 		validate_staff_approver(self, "expense_approver", "expense_approver", "expense_approvers")
+
+	def set_mileage_amounts(self):
+		"""A mileage line is paid distance times the type's rate (owner, 14 Oct 2026).
+
+		HR sets the rate in Desk: on the type, or per company in its Accounts
+		row (that company's own currency). Staff type only the distance; the
+		amount is worked out here on every save, so it cannot be typed over.
+		Only a draft is priced: a decided claim keeps what was approved.
+		"""
+		if self.docstatus != 0:
+			return
+		# a line saved before its type had a rate, and untouched since, is left
+		# alone: approval re-runs validate, and it must not be stuck asking for km
+		before = self.get_doc_before_save()
+		saved = {r.name: (r.expense_type, flt(r.distance_km)) for r in (before.expenses if before else [])}
+		for row in self.get("expenses"):
+			rate = mileage_rate(row.expense_type, self.company)
+			if not rate:
+				continue
+			if not flt(row.distance_km) and saved.get(row.name) == (row.expense_type, 0.0):
+				continue
+			if flt(row.distance_km) <= 0:
+				frappe.throw(
+					_("Row #{0}: enter the distance in km for {1}").format(row.idx, row.expense_type)
+				)
+			amount = flt(flt(row.distance_km) * rate, row.precision("amount"))
+			is_new_or_changed = self.is_new() or flt(row.amount) != amount
+			if is_new_or_changed:
+				logger.info(
+					"[expense_claim] %s row %s: %s km x %s = %s",
+					self.name,
+					row.idx,
+					row.distance_km,
+					rate,
+					amount,
+				)
+			row.amount = amount
+			# the line is sanctioned in full unless an approver already reduced it
+			if is_new_or_changed or flt(row.sanctioned_amount) > amount:
+				row.sanctioned_amount = amount
 
 	def set_sanctioned_amount_default(self):
 		"""A NEW line with an amount and no sanctioned amount is sanctioned in full.
@@ -834,6 +875,7 @@ def near_duplicate_claims(others, lines) -> list[tuple]:
 			near.setdefault((other.expense_type, date, other.name), None)
 	return list(near)
 
+
 def near_duplicate_sentences(near, link=lambda name: name) -> list[str]:
 	"""One plain sentence per near duplicate; `link` turns a claim name into what is shown for it."""
 	return [
@@ -842,6 +884,7 @@ def near_duplicate_sentences(near, link=lambda name: name) -> list[str]:
 		)
 		for expense_type, date, name in near
 	]
+
 
 def update_reimbursed_amount(doc):
 	total_amount_reimbursed = get_total_reimbursed_amount(doc)
@@ -910,6 +953,19 @@ def expense_claim_payable_account(company_defaults) -> str | None:
 	expense-claim payable if set, else its ordinary payable (Creditors). Pure."""
 	defaults = company_defaults or {}
 	return defaults.get("default_expense_claim_payable_account") or defaults.get("default_payable_account")
+
+
+def mileage_rate(expense_claim_type: str | None, company: str | None) -> float:
+	"""The rate per km for `expense_claim_type` in `company`, or 0 for an ordinary type.
+
+	The company's own Accounts row wins; otherwise the type's rate.
+	"""
+	if not expense_claim_type:
+		return 0.0
+	own = frappe.db.get_value(
+		"Expense Claim Account", {"parent": expense_claim_type, "company": company}, "rate_per_km"
+	)
+	return flt(own) or flt(frappe.get_cached_value("Expense Claim Type", expense_claim_type, "rate_per_km"))
 
 
 @frappe.whitelist()
