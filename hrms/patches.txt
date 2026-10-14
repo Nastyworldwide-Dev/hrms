@@ -143,3 +143,4 @@ hrms.patches.v16_0.band_open_ot_claims_to_half_hours #2026-10-05 owner: open Ove
 hrms.patches.v16_0.clear_expense_claim_state_pills #2026-10-05 owner: Desk says Waiting / Approved · unpaid / Paid for an Expense Claim, like Nadi: Frappe's own state pills (Draft, Submitted, Unpaid) outrank the list script, so the site's state rows are cleared; stored words untouched
 hrms.patches.v16_0.approver_reads_past_company_user_permissions #2026-10-07 HR: a named approver in another company (TNME's manager, Dubai, South Africa) could not open a report's request: the company link on six request doctypes was fenced by User Permissions
 hrms.patches.v16_0.add_attendance_report_viewer_role #2026-10-14 owner: Shenzhen staff read Shift Attendance for their company without HR access
+hrms.patches.v16_0.hide_project_on_expense_claims #2026-10-14 owner: expense claims are not charged to projects, Project hidden in Desk

@@ -11,6 +11,22 @@ class ExpenseClaimType(Document):
 	def validate(self):
 		self.validate_accounts()
 		self.validate_repeating_companies()
+		self.validate_cost_centers()
+
+	def validate_cost_centers(self):
+		"""A listed cost center belongs to its row's company, once per company."""
+		seen = set()
+		for row in self.get("cost_centers") or []:
+			owner = frappe.get_cached_value("Cost Center", row.cost_center, "company")
+			if owner != row.company:
+				frappe.throw(
+					_("Row #{0}: Cost Center {1} belongs to {2}, not {3}").format(
+						row.idx, row.cost_center, owner, row.company
+					)
+				)
+			if (row.company, row.cost_center) in seen:
+				frappe.throw(_("Row #{0}: Cost Center {1} is listed twice").format(row.idx, row.cost_center))
+			seen.add((row.company, row.cost_center))
 
 	def validate_repeating_companies(self):
 		"""Error when Same Company is entered multiple times in accounts"""

@@ -118,7 +118,7 @@ import { claimTypesByID, claimTypesResource } from "@/data/claims"
 import { formatCurrency } from "@/utils/formatters"
 import { groupFields } from "@/utils/formGroups"
 import { sentenceCase } from "@/utils/sentenceCase"
-import { withCostTagFields } from "@/utils/expenseCostTags"
+import { withCostTagFields, withTypeCostCenters, typeCostCenter } from "@/utils/expenseCostTags"
 
 import { useCurrencyConversion } from "@/composables/useCurrencyConversion"
 
@@ -230,14 +230,25 @@ watch(
 	{ immediate: true }
 )
 
+// the cost centers HR listed on the picked type for this company (14 Oct 2026)
+const typeCostCenters = computed(
+	() => claimTypesByID[expenseItem.value.expense_type]?.cost_centers || []
+)
+
 const expenseFields = computed(() =>
-	withCostTagFields(
-		(expensesTableFields.data || []).map((field) =>
-			field.fieldname === "expense_type"
-				? { ...field, documentList: expenseTypeOptions.value }
-				: field
+	withTypeCostCenters(
+		withCostTagFields(
+			(expensesTableFields.data || [])
+				// Project is not asked (owner, 14 Oct 2026)
+				.filter((field) => field.fieldname !== "project")
+				.map((field) =>
+					field.fieldname === "expense_type"
+						? { ...field, documentList: expenseTypeOptions.value }
+						: field
+				),
+			costTags.data
 		),
-		costTags.data
+		typeCostCenters.value
 	)
 )
 
@@ -253,7 +264,7 @@ const modalTitle = computed(() => {
 const addButtonDisabled = computed(() => {
 	// no fields were read: nothing to add
 	if (expensesTableFields.error) return true
-	return expensesTableFields.data?.some((field) => {
+	return expenseFields.value.some((field) => {
 		if (field.reqd && !expenseItem.value[field.fieldname]) {
 			return true
 		}
@@ -268,8 +279,13 @@ watch(
 			expenseItem.value.description = claimTypesByID[value]?.description
 		}
 
-		// fill only: a cost tag picked on the line is the employee's choice
+		// fill only: a cost tag picked on the line is the employee's choice,
+		// unless the type lists its own cost centers
 		expenseItem.value.cost_center ||= props.expenseClaim.cost_center
+		expenseItem.value.cost_center = typeCostCenter(
+			expenseItem.value.cost_center,
+			typeCostCenters.value
+		)
 	}
 )
 

@@ -55,3 +55,31 @@ export function withCostTagFields(fields, costTags) {
 		...tagFields,
 	]
 }
+
+/**
+ * The cost center field once an expense type is picked (owner, 14 Oct 2026).
+ * `listed` = the cost centers HR set on that type for the claim's company.
+ * None: the field as it was. One: fixed to it, read-only. Several: only those,
+ * required, starting empty so the employee chooses.
+ */
+export function withTypeCostCenters(fields, listed) {
+	if (!listed?.length) return fields
+	return fields.map((field) => {
+		if (field.fieldname !== "cost_center") return field
+		const labels = new Map((field.documentList || []).map((o) => [o.value, o.label]))
+		return {
+			...field,
+			documentList: listed.map((value) => ({ value, label: labels.get(value) || value })),
+			default: listed.length === 1 ? listed[0] : undefined,
+			read_only: listed.length === 1 ? 1 : 0,
+			reqd: 1,
+		}
+	})
+}
+
+/** The line's cost center after the type changed to one listing `listed`. */
+export function typeCostCenter(current, listed) {
+	if (!listed?.length) return current
+	if (listed.length === 1) return listed[0]
+	return listed.includes(current) ? current : ""
+}

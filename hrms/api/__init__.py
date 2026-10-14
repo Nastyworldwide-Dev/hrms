@@ -167,7 +167,9 @@ def withdraw_request(doctype: str, name: str) -> None:
 	check_if_doc_is_dynamically_linked(doc)
 	links = get_linked_docs(doc)
 	for link in links:
-		link["docstatus"] = frappe.db.get_value(link["reference_doctype"], link["reference_docname"], "docstatus")
+		link["docstatus"] = frappe.db.get_value(
+			link["reference_doctype"], link["reference_docname"], "docstatus"
+		)
 	blockers = withdraw_blockers(links)
 	if blockers:
 		frappe.throw(
@@ -1563,6 +1565,7 @@ def near_duplicate_expenses(name: str) -> list[str]:
 		may_open=lambda other: bool(frappe.has_permission("Expense Claim", ptype="read", doc=other))
 	)
 
+
 def configured_expense_claim_types(types: list, account_rows: list, company: str | None) -> list:
 	"""Only the types an employee of `company` can actually save a claim with.
 
@@ -1593,8 +1596,20 @@ def get_expense_claim_types() -> list[dict]:
 	ClaimType = frappe.qb.DocType("Expense Claim Type")
 	types = (frappe.qb.from_(ClaimType).select(ClaimType.name, ClaimType.description)).run(as_dict=True)
 	own = get_employee_info(fields=("company",))
+	company = own.get("company") if own else None
 	accounts = frappe.get_all("Expense Claim Account", fields=["parent", "company"], limit_page_length=0)
-	return configured_expense_claim_types(types, accounts, own.get("company") if own else None)
+	offered = configured_expense_claim_types(types, accounts, company)
+	# the cost centers HR listed per type for this company (owner, 14 Oct 2026)
+	listed = frappe.get_all(
+		"Expense Claim Type Cost Center",
+		filters={"parenttype": "Expense Claim Type", "company": company or ""},
+		fields=["parent", "cost_center"],
+		order_by="idx",
+		limit_page_length=0,
+	)
+	for claim_type in offered:
+		claim_type["cost_centers"] = [r.cost_center for r in listed if r.parent == claim_type["name"]]
+	return offered
 
 
 @frappe.whitelist(methods=["GET", "POST"])
