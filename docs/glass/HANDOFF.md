@@ -1,13 +1,12 @@
 # HANDOFF
-prompt:   prod-errors-12-oct (push title, attendance permission, desk boot 500)
+prompt:   shenzhen-attendance-viewer (14 Oct)
 status:   done
-commit:   227755ca2 on nz-glass
-files:    hrms/hr/doctype/pwa_notification/pwa_notification.py
-          hrms/hr/doctype/employee_checkin/employee_checkin.py
-          hrms/desk_boot.py
-          hrms/tests/test_a_reminder_push_has_a_title.py
-          hrms/tests/test_an_automated_attendance_save_skips_the_users_permissions.py
-          hrms/tests/test_desk_boot.py
-verify:   for f in test_a_reminder_push_has_a_title test_an_automated_attendance_save_skips_the_users_permissions test_desk_boot; do PYTHONPATH=. python3 -m pytest -q hrms/tests/$f.py; done
-flags:    security reviewer never reported; bypass checked by hand only. Holiday-list error = config (HR-EMP-00435), not code. Why desktop_icons is None on live is unknown.
-next:     deploy on Frappe Cloud; attach a holiday list to HR-EMP-00435 and re-run the OT backfill
+commit:   76e9d25f1 on nz-glass (feat cd159d7d0, tag v2.0.0-alpha.45)
+files:    hrms/utils/report_scope.py
+          hrms/hr/report/shift_attendance/shift_attendance.py
+          hrms/patches/v16_0/add_attendance_report_viewer_role.py
+          hrms/patches.txt
+          hrms/tests/test_report_scope_filters.py
+verify:   python3 hrms/tests/test_report_scope_filters.py
+flags:    migrate needed (patch creates role). Mutation gate skipped: covered by fresh.local probe, not a unit test.
+next:     deploy with migrate; HR gives both users the role + Company UP "Shenzhen Qiguangda Technology Co., Ltd."
