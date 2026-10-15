@@ -1,12 +1,10 @@
 # HANDOFF
-prompt:   Shenzhen attendance download in Nadi (15 Oct)
+prompt:   SOPs empty for staff (15 Oct)
 status:   done
-commit:   11611231c on nz-glass (tag v2.0.0-alpha.49)
-files:    hrms/api/attendance_download.py (my_company, download -> xlsx)
-          hrms/api/app_links.py ("attendance" row for Attendance Report Viewer)
-          frontend/src/views/attendance/AttendanceDownload.vue
-          frontend/src/utils/attendanceDownload.js
-          frontend/src/views/More.vue, components/SideNav.vue, router/index.js
-verify:   python3 hrms/tests/test_attendance_download.py
-flags:    no migrate for alpha.49 itself (45-48 still need it if not live). Export grant 4c0a72124 reverted (e826c3c8f), never shipped.
-next:     deploy; Mia + Aida: role ticked, Company UP Shenzhen Qiguangda; they use Nadi > More > Shift Attendance
+commit:   e6c78f574 on nz-glass (tag v2.0.0-alpha.50)
+files:    hrms/api/sop.py (get_all + _sees instead of get_list / per-doc user permissions)
+          hrms/tests/test_sop_reads_without_strict_fence.py
+          hrms/hr/doctype/sop_document/test_sop_document.py (fake serves get_all)
+verify:   python3 hrms/tests/test_sop_reads_without_strict_fence.py
+flags:    no migrate. test_sop_document.py: 11 pre-existing failures (ticket-sop-document-tests-identity-stub.md). Company-fenced HR remove_attachment on a blank-company SOP still uses the strict check (HR-only gap).
+next:     deploy; as staff, Nadi > More > SOPs shows HR's published General SOPs
