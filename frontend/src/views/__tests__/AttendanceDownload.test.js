@@ -39,7 +39,7 @@ test("the app row offers the screen under the key the server offers", () => {
 test("the view downloads through downloadUrl and asks my_company who it is for", () => {
 	assert.match(view, /downloadUrl\(/)
 	assert.match(view, /hrms\.api\.attendance_download\.my_company/)
-	assert.match(view, /window\.location\.assign\(downloadUrl\(/)
+	assert.match(view, /fetch\(downloadUrl\(/)
 	// the address is built once, in the helper
 	assert.doesNotMatch(view, /attendance_download\.download/)
 	// my_company is GET-only on the server; frappe-ui's default is POST
@@ -79,4 +79,14 @@ test("the desktop side menu keeps a row with its own screen inside Nadi", () => 
 	const side = readFileSync(fileURLToPath(new URL("../../components/SideNav.vue", import.meta.url)), "utf8")
 	assert.match(side, /:is="item\.route \? 'router-link' : 'a'"/)
 	assert.match(side, /item\.route \? \{ to: item\.route \}/)
+})
+
+// Reviews of 399090a5a: a failed download left Nadi for a raw JSON page, and a
+// tap said nothing. It is fetched now; the result is a line on this screen.
+test("the download stays in Nadi and says what happened", () => {
+	const view = readFileSync(fileURLToPath(new URL("../attendance/AttendanceDownload.vue", import.meta.url)), "utf8")
+	assert.doesNotMatch(view, /window\.location\.assign\(downloadUrl/)
+	assert.match(view, /await fetch\(downloadUrl\(month\.value\)/)
+	assert.match(view, /role="status">✓ \{\{ saved \}\}/)
+	assert.match(view, /role="alert">\{\{ failed \}\}/)
 })

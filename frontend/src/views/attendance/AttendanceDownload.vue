@@ -47,7 +47,14 @@
 						</p>
 					</div>
 
-					<GButton :label="__('Download Excel')" :disabled="!canDownload" @click="download" />
+					<GButton
+						:label="__('Download Excel')"
+						:pending="saving"
+						:disabled="!canDownload || saving"
+						@click="download"
+					/>
+					<p v-if="saved" class="g-form-footer g-download__saved" role="status">✓ {{ saved }}</p>
+					<p v-if="failed" class="g-form-footer g-download__failed" role="alert">{{ failed }}</p>
 					<p v-if="!online" class="g-form-footer" role="status">
 						{{ __("You are offline. Connect to download.") }}
 					</p>
@@ -55,9 +62,10 @@
 					<button
 						type="button"
 						class="g-focusable g-list-more px-4 py-3 text-sm text-ink-600 bg-transparent border-none"
+						:disabled="!online"
 						@click="openDesk"
 					>
-						{{ __("Open the full report in Desk") }}
+						{{ __("Open the full report in Desk") }} ›
 					</button>
 				</template>
 			</div>
@@ -106,9 +114,48 @@ const canDownload = computed(
 	() => online.value && !company.loading && !company.error && Boolean(company.data)
 )
 
-function download() {
+// Fetched, not navigated to (reviews of 399090a5a): a refusal or an expired
+// session stays on this screen as a sentence, instead of leaving Nadi for a
+// raw error page. The file is saved the way the PDF download saves one.
+const saving = ref(false)
+const saved = ref("")
+const failed = ref("")
+
+async function download() {
+	if (saving.value) return
+	saving.value = true
+	saved.value = failed.value = ""
+	const name = `shift-attendance-${month.value}.xlsx`
 	console.info("[AttendanceDownload] downloading", month.value)
-	window.location.assign(downloadUrl(month.value))
+	try {
+		const response = await fetch(downloadUrl(month.value), { credentials: "same-origin" })
+		if (!response.ok) throw new Error(await refusalOf(response))
+		const blob = await response.blob()
+		const url = window.URL.createObjectURL(blob)
+		const link = document.createElement("a")
+		link.href = url
+		link.download = name
+		link.click()
+		setTimeout(() => window.URL.revokeObjectURL(url), 3000)
+		saved.value = __("{0} saved", [name])
+	} catch (error) {
+		console.warn("[AttendanceDownload] download failed", error)
+		failed.value = error?.message || __("Could not download the file. Try again.")
+	} finally {
+		saving.value = false
+	}
+}
+
+//: The server's own sentence for a refusal (frappe sends it in _server_messages / exception).
+async function refusalOf(response) {
+	try {
+		const body = await response.json()
+		const messages = body?._server_messages ? JSON.parse(body._server_messages) : []
+		const first = messages.length ? JSON.parse(messages[0])?.message : ""
+		return first || body?.exception || __("Could not download the file. Try again.")
+	} catch {
+		return __("Could not download the file. Try again.")
+	}
 }
 
 function openDesk() {
@@ -116,3 +163,13 @@ function openDesk() {
 	window.location.assign("/desk/query-report/Shift%20Attendance")
 }
 </script>
+
+<style>
+.g-download__saved {
+	color: var(--g-success-ink);
+	font-weight: 600;
+}
+.g-download__failed {
+	color: var(--g-danger-ink);
+}
+</style>
