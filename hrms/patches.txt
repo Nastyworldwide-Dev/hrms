@@ -145,3 +145,4 @@ hrms.patches.v16_0.approver_reads_past_company_user_permissions #2026-10-07 HR: 
 hrms.patches.v16_0.add_attendance_report_viewer_role #2026-10-14 owner: Shenzhen staff read Shift Attendance for their company without HR access
 hrms.patches.v16_0.hide_project_on_expense_claims #2026-10-14 owner: expense claims are not charged to projects, Project hidden in Desk
 hrms.patches.v16_0.add_time_slip_reason #2026-10-14 owner: a late arrival excused by a time slip; reason options must include Time Slip on a customised site
+hrms.patches.v16_0.let_attendance_report_viewer_export #2026-10-15 owner: Shenzhen viewers download Shift Attendance to Excel
