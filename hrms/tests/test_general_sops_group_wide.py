@@ -29,8 +29,10 @@ class TestPatch(unittest.TestCase):
 			'frappe.db.set_value("SOP Document", row.name, "company", "", update_modified=False)', self.src
 		)
 
-	def test_logs_what_each_had_so_it_can_be_put_back(self):
-		self.assertIn("(was company %s)", self.src)
+	def test_each_sop_keeps_a_comment_naming_the_company_it_had(self):
+		"""Review of 55477ff9f: a process log rotates; the SOP's own comment stays."""
+		self.assertIn('"reference_doctype": "SOP Document"', self.src)
+		self.assertIn("(was {row.company})", self.src)
 
 	def test_registered(self):
 		self.assertIn("hrms.patches.v16_0.make_general_sops_group_wide", (ROOT / "patches.txt").read_text())
