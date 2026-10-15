@@ -80,11 +80,11 @@ class TestGates(unittest.TestCase):
 class TestTeamStatus(unittest.TestCase):
 	"""get_team_status for a viewer: the company, plus any reports elsewhere."""
 
-	def _status(self, viewer, reports, **kwargs):
+	def _status(self, viewer, reports, me="MGR", **kwargs):
 		import datetime
 
 		with (
-			patch.object(team, "_my_employee", return_value="MGR"),
+			patch.object(team, "_my_employee", return_value=me),
 			patch.object(team, "employee_now", return_value=datetime.datetime(2026, 10, 15, 9)),
 			patch.object(team, "_is_hr", return_value=False),
 			patch.object(team, "_viewer_companies", return_value=viewer),
@@ -120,6 +120,9 @@ class TestTeamStatus(unittest.TestCase):
 		result = self._status([], [])
 		self.assertEqual(result["members"], [])
 		self.assertTrue(result["company_view"])
+
+	def test_a_viewer_with_no_employee_record_still_sees_their_company(self):
+		self.assertEqual(self.names(self._status(["Shenzhen"], ["E3"], me=None)), ["E1"])
 
 
 if __name__ == "__main__":
