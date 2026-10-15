@@ -10,6 +10,22 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.52] — Existing SOPs Open to All — 2026-10-15
+
+### Fixed
+- **General SOPs posted before alpha.51 still reached only HR's company.**
+  On migrate, every General SOP that names a company is made visible to every
+  company. Department SOPs keep their company. Each changed SOP gets a note on
+  its own form: "Made visible to every company (was <company>)", so one meant
+  for a single company can be set back.
+- **An empty SOP list now says why.** When a staff member has published SOPs
+  but sees none, Desk records one Error Log a day ("SOP list empty for …")
+  with how many are for another company or another department.
+
+### Deploy
+- **Migrate needed** (the migrate is what opens the existing SOPs).
+- Check: as a normal staff member, Nadi → More → SOPs shows HR's General SOPs.
+
 ## [2.0.0-alpha.51] — SOPs for All Companies — 2026-10-15
 
 ### Fixed
