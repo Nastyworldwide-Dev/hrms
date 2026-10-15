@@ -30,9 +30,15 @@ def month_range(month: str) -> tuple[str, str]:
 	return f"{year:04d}-{mon:02d}-01", f"{year:04d}-{mon:02d}-{last:02d}"
 
 
+#: Hidden in the Desk report (the Employee link already shows the name there), but
+#: a sheet has no link, so without it the file reads as bare IDs (owner, 15 Oct 2026)
+SHEET_SHOWS = ("employee_name",)
+
+
 def sheet_rows(columns: list, data: list) -> list[list]:
-	"""The report as a sheet: one header row, then a row per day; hidden columns left out. Pure."""
-	shown = [col for col in columns if not col.get("hidden")]
+	"""The report as a sheet: one header row, then a row per day; hidden columns left
+	out, except SHEET_SHOWS. Pure."""
+	shown = [col for col in columns if not col.get("hidden") or col.get("fieldname") in SHEET_SHOWS]
 	rows = [[col.get("label") for col in shown]]
 	for entry in data:
 		rows.append([_cell(entry.get(col["fieldname"])) for col in shown])

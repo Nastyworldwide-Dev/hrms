@@ -17,7 +17,7 @@ def _lift(*names):
 		n
 		for n in tree.body
 		if (isinstance(n, ast.FunctionDef) and n.name in names)
-		or (isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "FORMULA_START")
+		or (isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") in ("FORMULA_START", "SHEET_SHOWS"))
 	]
 	exec(compile(ast.Module(body=fns, type_ignores=[]), str(SOURCE), "exec"), ns)
 	return ns
@@ -42,7 +42,7 @@ class TestSheet(unittest.TestCase):
 	def setUp(self):
 		self.rows = _lift("sheet_rows", "_cell")["sheet_rows"]
 
-	def test_header_then_one_row_per_day_without_hidden_columns(self):
+	def test_the_sheet_names_each_employee_but_keeps_other_hidden_columns_out(self):
 		import datetime
 
 		cols = [
@@ -50,6 +50,7 @@ class TestSheet(unittest.TestCase):
 			{"fieldname": "employee_name", "label": "Employee Name", "hidden": 1},
 			{"fieldname": "attendance_date", "label": "Attendance Date"},
 			{"fieldname": "working_hours", "label": "Total Working Hours"},
+			{"fieldname": "hr_owned", "label": "HR Owned", "hidden": 1},
 		]
 		data = [
 			{
@@ -61,7 +62,10 @@ class TestSheet(unittest.TestCase):
 		]
 		self.assertEqual(
 			self.rows(cols, data),
-			[["Employee", "Attendance Date", "Total Working Hours"], ["E1", "2026-10-01", 8.5]],
+			[
+				["Employee", "Employee Name", "Attendance Date", "Total Working Hours"],
+				["E1", "Mia", "2026-10-01", 8.5],
+			],
 		)
 
 
