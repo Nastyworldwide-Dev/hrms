@@ -45,6 +45,20 @@
 				<p v-if="errors.department" class="g-form-footer g-field__error" role="alert">
 					{{ __("Pick a department for a department-scoped SOP.") }}
 				</p>
+				<!-- Which companies (15 Oct 2026). Left out, Frappe filled in the HR
+				     user's own company from their Company permission, so an SOP meant
+				     for everyone reached one company only. Sent on every save. -->
+				<div class="g-form-group">
+					<label class="g-form-row">
+						<span class="g-form-row__label">{{ __("Companies") }}</span>
+						<GSelect
+							:options="companyOptions"
+							:model-value="sopCompany"
+							:aria-label="__('Companies')"
+							@update:model-value="(v) => (sopCompany = v || '')"
+						/>
+					</label>
+				</div>
 				<p class="g-form-footer" aria-live="polite">{{ whoSees }}</p>
 			</section>
 
@@ -204,7 +218,7 @@ const errors = reactive({ title: false, department: false })
 const saving = ref(false)
 const mode = ref("write")
 const contentLabelId = useId()
-// get_sop does not carry the company; it only narrows who sees a General SOP
+// the SOP's company ("" = every company); get_sop does not carry it, so it is read separately
 const sopCompany = ref("")
 const selectedFile = ref(null)
 const existingAttachment = ref(null)
@@ -252,6 +266,15 @@ const detail = createResource({
 		console.warn("[SOP] Failed to load for edit:", error)
 	},
 })
+
+// every company the site has, as the picker's choices; "" = all of them
+const companies = createResource({ url: "hrms.api.get_company_currencies", auto: true })
+const companyOptions = computed(() => [
+	{ value: "", label: __("All companies") },
+	...Object.keys(companies.data || {})
+		.sort()
+		.map((name) => ({ value: name, label: name })),
+])
 
 const companyLookup = createResource({
 	url: "frappe.client.get_value",
@@ -385,6 +408,9 @@ const save = async () => {
 			pinned: form.pinned ? 1 : 0,
 			published: form.published ? 1 : 0,
 			content: contentForSave(form.content),
+			// "" (not missing) is "all companies": a missing company is filled in
+			// from the saver's Company permission (frappe update_if_missing)
+			company: sopCompany.value || "",
 		}
 		if (attachmentCleared.value) values.attachment = ""
 
