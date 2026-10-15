@@ -50,11 +50,12 @@
 				     for everyone reached one company only. Sent on every save. -->
 				<div class="g-form-group">
 					<label class="g-form-row">
-						<span class="g-form-row__label">{{ __("Companies") }}</span>
+						<span class="g-form-row__label">{{ __("Company") }}</span>
 						<GSelect
 							:options="companyOptions"
 							:model-value="sopCompany"
-							:aria-label="__('Companies')"
+							:disabled="!companyReady"
+							:aria-label="__('Company')"
 							@update:model-value="(v) => (sopCompany = v || '')"
 						/>
 					</label>
@@ -220,6 +221,9 @@ const mode = ref("write")
 const contentLabelId = useId()
 // the SOP's company ("" = every company); get_sop does not carry it, so it is read separately
 const sopCompany = ref("")
+// an edit only sends a company once the SOP's own company has been read: saving
+// before that would send "" and widen it to every company (security review of e6e42d136)
+const companyReady = ref(true)
 const selectedFile = ref(null)
 const existingAttachment = ref(null)
 const attachmentCleared = ref(false)
@@ -227,9 +231,11 @@ const attachmentCleared = ref(false)
 // One plain line under Scope: who will actually see this SOP.
 const whoSees = computed(() => {
 	if (form.scope === "Department") {
-		return form.department
+		const dept = form.department
 			? __("Only {0}", [departmentLabel(form.department)])
 			: __("Only the department you pick")
+		// the company row narrows a department SOP too, so the line says so
+		return sopCompany.value ? __("{0}, in {1}", [dept, sopCompany.value]) : dept
 	}
 	return sopCompany.value ? __("Everyone in {0}", [sopCompany.value]) : __("Everyone")
 })
@@ -269,17 +275,22 @@ const detail = createResource({
 
 // every company the site has, as the picker's choices; "" = all of them
 const companies = createResource({ url: "hrms.api.get_company_currencies", auto: true })
-const companyOptions = computed(() => [
-	{ value: "", label: __("All companies") },
-	...Object.keys(companies.data || {})
-		.sort()
-		.map((name) => ({ value: name, label: name })),
-])
+// the SOP's own company is always a choice, even before (or without) the list:
+// otherwise an SOP for one company showed "All companies" (design review of e6e42d136)
+const companyOptions = computed(() => {
+	const names = new Set(Object.keys(companies.data || {}))
+	if (sopCompany.value) names.add(sopCompany.value)
+	return [
+		{ value: "", label: __("All companies") },
+		...[...names].sort().map((name) => ({ value: name, label: name })),
+	]
+})
 
 const companyLookup = createResource({
 	url: "frappe.client.get_value",
 	onSuccess(row) {
 		sopCompany.value = row?.company || ""
+		companyReady.value = true
 	},
 	onError(error) {
 		console.warn("[SOP] Could not read the SOP's company:", error)
@@ -302,6 +313,7 @@ const prefill = () => {
 	attachmentCleared.value = false
 	mode.value = "write"
 	sopCompany.value = ""
+	companyReady.value = !props.sopName
 	if (props.sopName) {
 		detail.fetch({ name: props.sopName })
 		companyLookup.fetch({
@@ -408,10 +420,11 @@ const save = async () => {
 			pinned: form.pinned ? 1 : 0,
 			published: form.published ? 1 : 0,
 			content: contentForSave(form.content),
-			// "" (not missing) is "all companies": a missing company is filled in
-			// from the saver's Company permission (frappe update_if_missing)
-			company: sopCompany.value || "",
 		}
+		// "" (not missing) is "all companies": a missing company is filled in from
+		// the saver's Company permission (frappe update_if_missing). Left out of an
+		// edit whose company was never read, so the stored one stays.
+		if (companyReady.value) values.company = sopCompany.value || ""
 		if (attachmentCleared.value) values.attachment = ""
 
 		let docname = props.sopName
