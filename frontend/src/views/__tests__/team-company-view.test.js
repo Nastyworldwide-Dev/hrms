@@ -25,11 +25,11 @@ test("the side nav offers Team to a company viewer", () => {
 	)
 })
 
-test("the dashboard hides the roster link and says view only in company view", () => {
+test("the roster link follows the Roster gate, and company view says view only", () => {
 	const view = read("views/team/TeamDashboard.vue")
 	assert.match(
 		view,
-		/v-if="teamStatus\.data\?\.members\?\.length && !teamStatus\.data\?\.company_view"\s*:to="\{ name: 'TeamRosterView' \}"/
+		/v-if="teamStatus\.data\?\.members\?\.length && hasTeam\.data"\s*:to="\{ name: 'TeamRosterView' \}"/
 	)
 	assert.match(view, /You see everyone in your company, view only\./)
 })

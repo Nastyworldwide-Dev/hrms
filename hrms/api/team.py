@@ -165,14 +165,19 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 	# your team submits". That is a false statement about a team they do not
 	# have, and it is exactly the shape the owner named: respect the backend,
 	# and say the truth the backend actually knows.
+	# an Attendance Report Viewer's own view adds everyone in their Company User
+	# Permission (owner, 15 Oct 2026: Mia sees the whole Shenzhen team); never
+	# when browsing someone else's team, and no Company permission = nobody
+	viewer = _viewer_companies() if team_of == employee else None
 	empty = {
 		"date": str(day),
 		"manager": team_of,
 		"members": [],
 		"summary": {},
 		"entitled": False,
+		"company_view": viewer is not None,
 	}
-	if not team_of:
+	if not team_of and viewer is None:
 		return empty
 
 	# Everything below runs ignore_permissions, so the company fence must be
@@ -181,13 +186,11 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 	# A manager browsing their OWN team is never fenced: their reports are
 	# their reports whichever company employs them.
 	fence = allowed_companies() if team_of != employee else []
-	members = own_team_members(team_of, fence)
-	viewer = _viewer_companies() if not manager else None
+	members = own_team_members(team_of, fence) if team_of else []
 	if viewer is not None:
-		# an Attendance Report Viewer's team is everyone in their Company User
-		# Permission (owner, 15 Oct 2026: Mia sees the whole Shenzhen team); no
-		# Company permission = nobody, never everybody
-		members = company_members(viewer)
+		# a manager who is also a viewer keeps their reports in other companies
+		seen = {m.name for m in members}
+		members = members + [m for m in company_members(viewer) if m.name not in seen]
 	if not members:
 		# NO MEMBERS IS NOT THE SAME QUESTION as "is this person a manager".
 		#
@@ -200,7 +203,7 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 		# The honest test is whether anything routes to them, which is what
 		# `is_approver` already answers for the RequestPanel's team tabs. One
 		# definition of "does this person manage anybody", not two.
-		entitled = is_approver()
+		entitled = is_approver() or bool(viewer)
 		logger.info("[team] %s has no members on %s (entitled=%s)", frappe.session.user, day, entitled)
 		return {**empty, "entitled": entitled}
 	out, summary = member_statuses(members, day)

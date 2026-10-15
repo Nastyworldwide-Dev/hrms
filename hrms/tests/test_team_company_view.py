@@ -24,6 +24,13 @@ import frappe
 
 from hrms.api import team
 
+
+class _Row(dict):
+	"""frappe.get_all's row: a dict read by attribute too."""
+
+	__getattr__ = dict.get
+
+
 TABLE = [
 	{"name": "E1", "employee_name": "Ana", "company": "Shenzhen", "status": "Active"},
 	{"name": "E2", "employee_name": "Bo", "company": "Shenzhen", "status": "Left"},
@@ -34,7 +41,7 @@ TABLE = [
 def _get_all(doctype, filters=None, **kwargs):
 	assert doctype == "Employee"
 	companies = filters["company"][1]
-	return [r for r in TABLE if r["company"] in companies and r["status"] == filters["status"]]
+	return [_Row(r) for r in TABLE if r["company"] in companies and r["status"] == filters["status"]]
 
 
 class TestCompanyMembers(unittest.TestCase):
@@ -68,6 +75,51 @@ class TestGates(unittest.TestCase):
 			patch.object(team, "_my_employee", return_value=None),
 		):
 			self.assertFalse(team.has_team())
+
+
+class TestTeamStatus(unittest.TestCase):
+	"""get_team_status for a viewer: the company, plus any reports elsewhere."""
+
+	def _status(self, viewer, reports, **kwargs):
+		import datetime
+
+		with (
+			patch.object(team, "_my_employee", return_value="MGR"),
+			patch.object(team, "employee_now", return_value=datetime.datetime(2026, 10, 15, 9)),
+			patch.object(team, "_is_hr", return_value=False),
+			patch.object(team, "_viewer_companies", return_value=viewer),
+			patch.object(team, "own_team_members", return_value=[_Row(name=n) for n in reports]),
+			patch.object(frappe, "get_all", side_effect=_get_all),
+			patch.object(
+				team, "member_statuses", side_effect=lambda m, d: ([{"employee": x.name} for x in m], {})
+			),
+			patch.object(team, "is_approver", return_value=False),
+		):
+			return team.get_team_status(**kwargs)
+
+	def names(self, result):
+		return [m["employee"] for m in result["members"]]
+
+	def test_a_viewer_sees_their_company(self):
+		result = self._status(["Shenzhen"], [])
+		self.assertEqual(self.names(result), ["E1"])
+		self.assertTrue(result["company_view"])
+
+	def test_a_manager_who_is_a_viewer_keeps_reports_in_other_companies(self):
+		self.assertEqual(self.names(self._status(["Shenzhen"], ["E3", "E1"])), ["E3", "E1"])
+
+	def test_naming_themselves_as_manager_changes_nothing(self):
+		self.assertEqual(self.names(self._status(["Shenzhen"], [], manager="MGR")), ["E1"])
+
+	def test_anyone_else_gets_only_their_reports(self):
+		result = self._status(None, ["E3"])
+		self.assertEqual(self.names(result), ["E3"])
+		self.assertFalse(result["company_view"])
+
+	def test_a_viewer_with_no_company_sees_nobody(self):
+		result = self._status([], [])
+		self.assertEqual(result["members"], [])
+		self.assertTrue(result["company_view"])
 
 
 if __name__ == "__main__":

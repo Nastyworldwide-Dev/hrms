@@ -69,7 +69,7 @@
 						{{ dayLabel }}
 					</h2>
 					<router-link
-						v-if="teamStatus.data?.members?.length && !teamStatus.data?.company_view"
+						v-if="teamStatus.data?.members?.length && hasTeam.data"
 						:to="{ name: 'TeamRosterView' }"
 						class="g-seclink g-focusable text-kra-label text-accent-ink"
 					>
@@ -166,7 +166,11 @@
 				/>
 				<GEmptyState
 					v-else-if="!teamStatus.loading && !teamStatus.error"
-					:title="__('Nobody on your team today')"
+					:title="
+						teamStatus.data?.company_view
+							? __('Nobody in your company today')
+							: __('Nobody on your team today')
+					"
 					:body="__('Pick another day on the calendar, or check back tomorrow.')"
 				/>
 
@@ -200,7 +204,7 @@ import { dateFromRoute } from "@/utils/dateFromRoute"
 import { clockTime } from "@/utils/daySheet"
 
 import BaseLayout from "@/components/BaseLayout.vue"
-import { teamManagers, teamStatus } from "@/data/team"
+import { hasTeam, teamManagers, teamStatus } from "@/data/team"
 import {
 	buildManagerOptions,
 	buildTeamCalendarDays,
