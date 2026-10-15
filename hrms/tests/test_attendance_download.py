@@ -13,7 +13,12 @@ SOURCE = pathlib.Path(__file__).resolve().parent.parent / "api" / "attendance_do
 def _lift(*names):
 	tree = ast.parse(SOURCE.read_text())
 	ns = {"calendar": __import__("calendar")}
-	fns = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in names]
+	fns = [
+		n
+		for n in tree.body
+		if (isinstance(n, ast.FunctionDef) and n.name in names)
+		or (isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "FORMULA_START")
+	]
 	exec(compile(ast.Module(body=fns, type_ignores=[]), str(SOURCE), "exec"), ns)
 	return ns
 
@@ -58,6 +63,39 @@ class TestSheet(unittest.TestCase):
 			self.rows(cols, data),
 			[["Employee", "Attendance Date", "Total Working Hours"], ["E1", "2026-10-01", 8.5]],
 		)
+
+
+class TestNoFormulas(unittest.TestCase):
+	"""Security review of 5bff5d377: Frappe 16 writes a "=..." string as a live formula."""
+
+	def setUp(self):
+		ns = {}
+		tree = ast.parse(SOURCE.read_text())
+		nodes = [
+			n
+			for n in tree.body
+			if (isinstance(n, ast.FunctionDef) and n.name == "_cell")
+			or (isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "FORMULA_START")
+		]
+		exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE), "exec"), ns)
+		self.cell = ns["_cell"]
+
+	def test_text_that_would_run_as_a_formula_is_written_as_text(self):
+		for bad in ('=HYPERLINK("http://x","y")', "+1", "-2+3", "@SUM(A1)", "\tx"):
+			self.assertTrue(self.cell(bad).startswith("'"), bad)
+
+	def test_plain_text_numbers_and_blanks_are_unchanged(self):
+		self.assertEqual(self.cell("Shenzhen"), "Shenzhen")
+		self.assertEqual(self.cell(8.5), 8.5)
+		self.assertIsNone(self.cell(None))
+
+
+class TestMonthShape(unittest.TestCase):
+	def test_only_yyyy_mm_reaches_the_report_and_the_file_name(self):
+		src = SOURCE.read_text()
+		self.assertIn('MONTH = re.compile(r"\\d{4}-\\d{2}", re.ASCII)', src)
+		self.assertIn("MONTH.fullmatch(month)", src)
+		self.assertIn('f"shift-attendance-{from_date[:7]}"', src)
 
 
 class TestOnlyTheViewer(unittest.TestCase):

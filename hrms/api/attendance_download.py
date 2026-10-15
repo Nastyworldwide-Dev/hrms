@@ -8,6 +8,7 @@ the report's, never restated here. One month at a time, the way they count.
 
 import calendar
 import logging
+import re
 
 import frappe
 from frappe import _
@@ -15,6 +16,9 @@ from frappe import _
 from hrms.utils.report_scope import ATTENDANCE_VIEWER_ROLE, attendance_viewer_companies
 
 logger = logging.getLogger(__name__)
+
+#: "2026-10" and nothing else: int() also takes " 10", "+10", "1_0" and other digits
+MONTH = re.compile(r"\d{4}-\d{2}", re.ASCII)
 
 
 def month_range(month: str) -> tuple[str, str]:
@@ -35,11 +39,19 @@ def sheet_rows(columns: list, data: list) -> list[list]:
 	return rows
 
 
+#: A cell starting with one of these is read as a formula by Excel. Frappe 16's
+#: make_xlsx (xlsxwriter) no longer escapes them, unlike 15 (security review of
+#: 5bff5d377): a name typed as =HYPERLINK(...) would run on the viewer's machine.
+FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
 def _cell(value):
-	"""A sheet cell: numbers and text as they are, anything else (dates, times) as text."""
-	if value is None or isinstance(value, (int, float, str)):
+	"""A sheet cell: numbers as they are, text as text (never a formula), anything
+	else (dates, times) as text. Pure."""
+	if value is None or isinstance(value, (int, float)):
 		return value
-	return str(value)
+	text = str(value)
+	return "'" + text if text.startswith(FORMULA_START) else text
 
 
 @frappe.whitelist(methods=["GET"])
@@ -53,9 +65,11 @@ def my_company() -> dict:
 def download(month: str):
 	"""Send `month` ("YYYY-MM") of Shift Attendance as .xlsx to an Attendance Report Viewer."""
 	_require_viewer()
+	if not isinstance(month, str) or not MONTH.fullmatch(month):
+		frappe.throw(_("Choose a month."), frappe.ValidationError)
 	try:
 		from_date, to_date = month_range(month)
-	except (ValueError, AttributeError):
+	except ValueError:
 		frappe.throw(_("Choose a month."), frappe.ValidationError)
 
 	from frappe.utils.xlsxutils import build_xlsx_response
@@ -66,7 +80,8 @@ def download(month: str):
 		{"from_date": from_date, "to_date": to_date, "include_attendance_without_checkins": 1}
 	)
 	logger.info("[attendance_download] %s %s: %d row(s)", frappe.session.user, month, len(data))
-	build_xlsx_response(sheet_rows(columns, data), f"shift-attendance-{month}")
+	# the name from the checked dates, never the raw argument
+	build_xlsx_response(sheet_rows(columns, data), f"shift-attendance-{from_date[:7]}")
 
 
 def _require_viewer():
