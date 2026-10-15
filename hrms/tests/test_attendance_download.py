@@ -89,6 +89,11 @@ class TestNoFormulas(unittest.TestCase):
 		self.assertEqual(self.cell(8.5), 8.5)
 		self.assertIsNone(self.cell(None))
 
+	def test_a_negative_number_stays_a_number_but_text_like_it_does_not(self):
+		"""Review of e7119aeaa: pin the number-versus-text split."""
+		self.assertEqual(self.cell(-5), -5)
+		self.assertEqual(self.cell("-0h 5m"), "'-0h 5m")
+
 
 class TestMonthShape(unittest.TestCase):
 	def test_only_yyyy_mm_reaches_the_report_and_the_file_name(self):

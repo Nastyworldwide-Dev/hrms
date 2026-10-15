@@ -23,6 +23,16 @@ export const APP_LINKS = [
 		href: "/approva",
 	},
 	{
+		// In-app, not a link-out: `route` is the screen (views/attendance/
+		// AttendanceDownload.vue), reached by router push. `href` stays the
+		// same-origin fallback / address of the screen under the PWA's base.
+		key: "attendance",
+		title: "Shift Attendance",
+		sublabel: "Your company's attendance, to download",
+		href: "/hrms/attendance-download",
+		route: "/attendance-download",
+	},
+	{
 		key: "board",
 		title: "Project Board",
 		sublabel: "NPD kanban & project chat",

@@ -97,20 +97,26 @@
 			     the accessible-name fallback would then read the `title`
 			     (the sublabel), announcing "Purchase requests…" for Approva. -->
 			<hr v-if="appItems.length" class="g-sidenav__divider" />
-			<a
+			<!-- a row with its own Nadi screen (Shift Attendance) stays in Nadi, as on More;
+			     a sibling app opens in a new tab -->
+			<component
+				:is="item.route ? 'router-link' : 'a'"
 				v-for="item in appItems"
 				:key="item.key"
-				:href="item.href"
-				target="_blank"
-				rel="noopener"
+				v-bind="item.route ? { to: item.route } : { href: item.href, target: '_blank', rel: 'noopener' }"
 				class="g-sidenav__item g-focusable"
 				:aria-label="item.title"
 				:title="item.sublabel"
 			>
 				<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
 				<span v-show="!collapsed" class="whitespace-nowrap flex-1">{{ item.title }}</span>
-				<ExternalLink v-show="!collapsed" class="flex-none text-ink-3" aria-hidden="true" />
-			</a>
+				<ExternalLink
+					v-if="!item.route"
+					v-show="!collapsed"
+					class="flex-none text-ink-3"
+					aria-hidden="true"
+				/>
+			</component>
 		</div>
 
 		<!-- Profile -->

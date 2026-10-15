@@ -20,6 +20,16 @@ test("the rows shown are exactly the keys the server offered", () => {
 	assert.deepEqual(visibleAppLinks([]), [])
 })
 
+test("the attendance row is offered when the server says so, and carries an in-app route", () => {
+	const [row] = visibleAppLinks(["attendance"])
+	assert.equal(row.key, "attendance")
+	assert.equal(row.route, "/attendance-download")
+	assert.deepEqual(
+		visibleAppLinks(["board", "attendance", "approva"]).map((l) => l.key),
+		["approva", "attendance", "board"]
+	)
+})
+
 test("an unknown key offers nothing (the PWA only links what it knows)", () => {
 	assert.deepEqual(visibleAppLinks(["somewhere-else"]), [])
 })

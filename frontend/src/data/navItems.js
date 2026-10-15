@@ -9,6 +9,7 @@ import {
 	Kanban,
 	Megaphone,
 	FileText,
+	Sheet,
 } from "lucide-vue-next"
 import { markRaw } from "vue"
 
@@ -136,6 +137,7 @@ export const MORE_ITEMS = NAV_ITEMS.filter((item) => !TAB_ROUTES.has(item.route)
 // phone tab bar, whose five destinations are fixed.
 const APP_ICONS = {
 	approva: markRaw(CircleCheckBig),
+	attendance: markRaw(Sheet),
 	board: markRaw(Kanban),
 }
 

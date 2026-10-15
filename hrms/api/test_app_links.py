@@ -49,6 +49,13 @@ class TestMyApps(unittest.TestCase):
 		for role in ("Accounts Manager", "Accounts User", "System Manager", "HR Manager", "HR User"):
 			self.assertIn("approva", self._apps([role]), role)
 
+	def test_attendance_report_viewer_gets_the_download_row(self):
+		# Owner, 14 Oct 2026: the Shift Attendance download is for the role HR
+		# hands out, not for every employee.
+		self.assertEqual(self._apps(["Employee", "Attendance Report Viewer"]), ["approva", "attendance"])
+		self.assertNotIn("attendance", self._apps(["Employee"]))
+		self.assertNotIn("attendance", self._apps(["HR Manager", "System Manager"]))
+
 	def test_projects_gets_the_board_only(self):
 		self.assertEqual(self._apps(["Projects User"]), ["board"])
 

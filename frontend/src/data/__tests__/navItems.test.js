@@ -45,5 +45,5 @@ test("every app key has an icon, so a gated row never renders blank", () => {
 	const block = source.match(/const APP_ICONS = \{([\s\S]*?)\}/)
 	assert.ok(block, "APP_ICONS block not found")
 	const keys = [...block[1].matchAll(/(\w+): markRaw\(/g)].map((m) => m[1])
-	assert.deepEqual(keys.sort(), ["approva", "board"])
+	assert.deepEqual(keys.sort(), ["approva", "attendance", "board"])
 })

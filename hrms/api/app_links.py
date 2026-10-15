@@ -33,6 +33,7 @@ APP_ROLES = {
 		"HR User",
 		APPROVA_USER_ROLE,
 	),
+	"attendance": ("Attendance Report Viewer",),
 	"board": ("Projects User", "Projects Manager", "HR Manager", "System Manager"),
 }
 

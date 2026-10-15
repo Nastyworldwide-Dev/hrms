@@ -119,6 +119,13 @@ const routes = [
 				name: "MoreView",
 				component: () => import("@/views/More.vue"),
 			},
+			{
+				// Shift Attendance to Excel, for the Attendance Report Viewer role;
+				// offered as an Apps row on More (data/appLinks.js `route`)
+				path: "/attendance-download",
+				name: "AttendanceDownload",
+				component: () => import("@/views/attendance/AttendanceDownload.vue"),
+			},
 		],
 	},
 	{

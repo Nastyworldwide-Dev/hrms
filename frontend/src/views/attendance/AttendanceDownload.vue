@@ -1,0 +1,118 @@
+<!--
+  Shift Attendance, to download (owner, 14 Oct 2026).
+
+  For the "Attendance Report Viewer" role: pick a month, get the company's
+  Shift Attendance as an Excel file. Reached from More > Apps (data/appLinks.js
+  `route`). The server (hrms/api/attendance_download.py) fixes the company to
+  the viewer's own Company permission and refuses everyone else, so this screen
+  only shows what it is told and never chooses a company.
+
+  The download is a plain GET of the method, handed to the browser: it saves the
+  attachment, and being the same origin the session cookie goes with it.
+-->
+<template>
+	<GPage>
+		<ShellHeader :title="__('Shift Attendance')" />
+		<ion-content class="ion-padding g-page__content">
+			<div class="w-full max-w-content-column-lg mx-auto p-4 flex flex-col gap-3">
+				<!-- Not a viewer: a plain line, no button (the download refuses too) -->
+				<p v-if="noAccess" class="g-form-footer" role="status">
+					{{ __("This is for staff HR has given the Attendance Report Viewer role.") }}
+				</p>
+
+				<ResourceError v-else-if="company.error" :resource="company" what="your company" />
+
+				<template v-else>
+					<div class="g-form-section">
+						<div class="g-form-group">
+							<div class="g-form-row">
+								<span class="g-form-row__label">{{ __("Month") }}</span>
+								<GSelect v-model="month" :options="months" :aria-label="__('Month')" />
+							</div>
+							<div v-value-row class="g-form-row g-form-row--readonly">
+								<span class="g-form-row__label">{{ __("Company") }}</span>
+								<span class="g-form-row__value">{{ companyName }}</span>
+							</div>
+							<div v-value-row class="g-form-row g-form-row--readonly">
+								<span class="g-form-row__label">{{ __("Dates") }}</span>
+								<span class="g-form-row__value">{{ dates }}</span>
+							</div>
+						</div>
+						<p class="g-form-footer">
+							{{
+								__(
+									"Everyone in your company, one row per person per day: shift, status, in, out, hours, late, early."
+								)
+							}}
+						</p>
+					</div>
+
+					<GButton :label="__('Download Excel')" :disabled="!canDownload" @click="download" />
+					<p v-if="!online" class="g-form-footer" role="status">
+						{{ __("You are offline. Connect to download.") }}
+					</p>
+
+					<button
+						type="button"
+						class="g-focusable g-list-more px-4 py-3 text-sm text-ink-600 bg-transparent border-none"
+						@click="openDesk"
+					>
+						{{ __("Open the full report in Desk") }}
+					</button>
+				</template>
+			</div>
+		</ion-content>
+	</GPage>
+</template>
+
+<script setup>
+import { computed, inject, ref } from "vue"
+import { IonContent } from "@ionic/vue"
+import { createResource } from "frappe-ui"
+
+import GButton from "@/components/glass/GButton.vue"
+import GPage from "@/components/glass/GPage.vue"
+import GSelect from "@/components/glass/GSelect.vue"
+import ResourceError from "@/components/ResourceError.vue"
+import ShellHeader from "@/components/ShellHeader.vue"
+import { useOnline } from "@/composables/useOnline"
+import { downloadUrl, monthDates, monthOptions } from "@/utils/attendanceDownload"
+import { sessionUser } from "@/utils/personalCache"
+import { isNoAccess } from "@/utils/sessionLost"
+
+const __ = inject("$translate")
+const online = useOnline()
+
+// The current month and the 11 before it; opens on the current month.
+const months = monthOptions(new Date())
+const month = ref(months[0].value)
+const dates = computed(() => monthDates(month.value))
+
+// The server's own answer (GET only; frappe-ui defaults to POST). Not cached:
+// it is a small read and a stale company name on a download screen would lie.
+const company = createResource({
+	url: "hrms.api.attendance_download.my_company",
+	method: "GET",
+	auto: true,
+})
+const companyName = computed(() => (company.data?.companies || []).join(", ") || "—")
+
+// A refusal from someone still signed in: they do not hold the role.
+const noAccess = computed(() =>
+	isNoAccess(company.error, { signedIn: Boolean(sessionUser()) })
+)
+
+const canDownload = computed(
+	() => online.value && !company.loading && !company.error && Boolean(company.data)
+)
+
+function download() {
+	console.info("[AttendanceDownload] downloading", month.value)
+	window.location.assign(downloadUrl(month.value))
+}
+
+function openDesk() {
+	console.info("[AttendanceDownload] opening the full report in Desk")
+	window.location.assign("/desk/query-report/Shift%20Attendance")
+}
+</script>

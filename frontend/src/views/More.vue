@@ -75,13 +75,13 @@
 							:key="item.key"
 							:label="item.title"
 							:sublabel="item.sublabel"
-							:chevron="false"
+							:chevron="Boolean(item.route)"
 							@click="openApp(item)"
 						>
 							<template #icon>
 								<component :is="item.icon" class="h-icon-md w-icon-md" />
 							</template>
-							<template #badge>
+							<template v-if="!item.route" #badge>
 								<ExternalLink class="flex-none text-ink-3" aria-hidden="true" />
 							</template>
 						</GListRow>
@@ -219,7 +219,12 @@ const externalItems = EXTERNAL_LINKS.map((item) => ({
 // Full navigation on purpose: the target SPA is outside vue-router's /hrms
 // base. Same origin, so the session cookie carries over. From an installed
 // PWA this opens in the OS in-app browser (out of scope) — accepted.
+// A row with a `route` is one of OUR screens (Shift Attendance): pushed in-app.
 const openApp = (item) => {
+	if (item.route) {
+		router.push(item.route)
+		return
+	}
 	if (!isSameOriginPath(item.href)) {
 		console.warn("[More] refusing non-local app link:", item.href)
 		return

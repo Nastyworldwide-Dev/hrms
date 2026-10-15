@@ -11,12 +11,14 @@ const src = readFileSync(
 	fileURLToPath(new URL("../../components/SideNav.vue", import.meta.url)),
 	"utf8"
 )
-const anchor = src.slice(src.indexOf('v-for="item in appItems"'), src.indexOf("</a>"))
+// the app row is a <component> (an <a> for a sibling app, a router-link for a Nadi screen)
+const anchor = src.slice(src.indexOf('v-for="item in appItems"'), src.indexOf("</component>", src.indexOf('v-for="item in appItems"')))
 
 test("SideNav app anchors name themselves by title, not by the sublabel", () => {
 	assert.ok(anchor.length > 0, "app anchors block must exist")
 	assert.match(anchor, /:aria-label="item\.title"/)
-	assert.match(anchor, /rel="noopener"/)
+	// a sibling app still opens in a new tab with noopener
+	assert.match(anchor, /target: '_blank', rel: 'noopener'/)
 })
 
 // Amended 22 Sep 2026 (plan slice S4): `ExternalLinkIcon` was one of fourteen
