@@ -1,9 +1,10 @@
 # HANDOFF
-prompt:   SOPs still empty after alpha.50 (15 Oct)
+prompt:   General SOPs still invisible after alpha.51 (15 Oct)
 status:   done
-commit:   8a9222d70 on nz-glass (tag v2.0.0-alpha.51)
-files:    frontend/src/views/sop/SopFormSheet.vue (Company row, All companies default, sent once read)
-          frontend/src/views/__tests__/sop-form-company.test.js
-verify:   node --test frontend/src/views/__tests__/sop-form-company.test.js
-flags:    root cause = Frappe filled HR's own company into a Nadi-made SOP (update_if_missing from the Company UP). Strict UP is OFF on live (owner). Existing SOPs NOT changed: HR re-saves each with Company = All companies.
-next:     deploy alpha.51; HR re-saves existing SOPs; check as staff in another company
+commit:   55975de6a on nz-glass (tag v2.0.0-alpha.52)
+files:    hrms/patches/v16_0/make_general_sops_group_wide.py (General + company -> blank, Comment per SOP)
+          hrms/api/sop.py (_record_why_empty: Error Log "SOP list empty for <user>")
+          hrms/tests/test_general_sops_group_wide.py
+verify:   python3 hrms/tests/test_general_sops_group_wide.py
+flags:    MIGRATE NEEDED (the patch opens existing SOPs). Department SOPs untouched. Ticket: ticket-sop-api-refactor.md (one "who sees it" field).
+next:     deploy with migrate; Nadi > More > SOPs as staff; if empty, Desk Error Log "SOP list empty"
