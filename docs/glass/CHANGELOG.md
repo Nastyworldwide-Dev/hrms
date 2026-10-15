@@ -10,6 +10,22 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.51] — SOPs for All Companies — 2026-10-15
+
+### Fixed
+- **SOPs HR posted for everyone reached only HR's own company.** The Nadi
+  SOP form sent no company, and Frappe filled in the HR user's own company
+  from their Company permission, so staff in the other companies saw none.
+  The form now has a **Company** row: **All companies** (the default) or one
+  company, and always saves it.
+- Editing an SOP can no longer widen it to every company by saving before its
+  company has loaded.
+
+### After deploying
+- No migrate needed (deploy with migrate if alpha.45–48 are not live yet).
+- HR, once: open each existing SOP in Nadi (More → SOPs → Edit), set
+  **Company** to **All companies** (or the right company), and Save.
+
 ## [2.0.0-alpha.50] — SOPs Reach Every Staff — 2026-10-15
 
 ### Fixed
