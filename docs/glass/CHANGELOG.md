@@ -10,6 +10,22 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.50] — SOPs Reach Every Staff — 2026-10-15
+
+### Fixed
+- **Staff saw an empty SOP list although HR had published SOPs.** Every SOP
+  posted from Nadi is for the whole group (no company), and on a site that
+  applies strict user permissions, staff with a Company permission were
+  refused every such SOP. Nadi now reads SOPs with its own rule: a published
+  SOP that is General, or for the reader's own department, in their company
+  or for the whole group. Drafts, other departments' and other companies'
+  SOPs stay hidden, as before.
+
+### Deploy
+- No migrate needed.
+- Check: as a normal staff member, Nadi → More → SOPs shows HR's published
+  General SOPs.
+
 ## [2.0.0-alpha.49] — Shift Attendance Download — 2026-10-15
 
 For staff HR gives the Attendance Report Viewer role (first users: the
