@@ -53,7 +53,7 @@
 						:disabled="!canDownload || saving"
 						@click="download"
 					/>
-					<p v-if="saved" class="g-form-footer g-download__saved" role="status">✓ {{ saved }}</p>
+					<p v-if="saved" class="g-form-footer g-download__saved" role="status"><span aria-hidden="true">✓</span> {{ saved }}</p>
 					<p v-if="failed" class="g-form-footer g-download__failed" role="alert">{{ failed }}</p>
 					<p v-if="!online" class="g-form-footer" role="status">
 						{{ __("You are offline. Connect to download.") }}
@@ -137,7 +137,8 @@ async function download() {
 		link.download = name
 		link.click()
 		setTimeout(() => window.URL.revokeObjectURL(url), 3000)
-		saved.value = __("{0} saved", [name])
+		// iPhone shows a preview to save from, so "started", not "saved" (review of cddd5c784)
+		saved.value = __("Download started: {0}", [name])
 	} catch (error) {
 		console.warn("[AttendanceDownload] download failed", error)
 		failed.value = error?.message || __("Could not download the file. Try again.")
@@ -152,7 +153,9 @@ async function refusalOf(response) {
 		const body = await response.json()
 		const messages = body?._server_messages ? JSON.parse(body._server_messages) : []
 		const first = messages.length ? JSON.parse(messages[0])?.message : ""
-		return first || body?.exception || __("Could not download the file. Try again.")
+		// never a Python class path ("frappe.exceptions.PermissionError: ..."): only its sentence
+		const plain = String(body?.exception || "").split(": ").pop()
+		return first || plain || __("Could not download the file. Try again.")
 	} catch {
 		return __("Could not download the file. Try again.")
 	}
