@@ -164,7 +164,11 @@ class _Ctx:
 			return [frappe._dict(row) for row in self.sops]
 
 		def get_all(doctype, filters=None, fields=None, pluck=None, **kwargs):
-			# only the File-table attachment fallback queries get_all here
+			# the SOP list reads with get_all since 847881b3a (its own rule, not the
+			# strict user-permission check) and ignores filters for the same reason
+			# as get_list above
+			if doctype == "SOP Document":
+				return [frappe._dict(row) for row in self.sops]
 			if doctype != "File":
 				return []
 			rows = [frappe._dict(row) for row in self.file_rows]
