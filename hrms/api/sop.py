@@ -102,6 +102,8 @@ def get_sops() -> dict:
 	)
 
 	visible_rows = [row for row in rows if _sees(row, is_hr, user, department, company)]
+	if rows and not visible_rows:
+		_record_why_empty(user, rows, department, company)
 	attached_names = _names_with_file_rows([row.name for row in visible_rows if not row.attachment])
 
 	pinned, general, by_department = [], [], {}
@@ -130,6 +132,26 @@ def get_sops() -> dict:
 		"general": general,
 		"departments": [{"department": dept, "sops": by_department[dept]} for dept in sorted(by_department)],
 	}
+
+
+def _record_why_empty(user: str, rows, department, company) -> None:
+	"""Published SOPs exist but this reader sees none: say why, once a day per
+	reader, as an Error Log HR can read. The SOP list was empty twice before
+	anyone could tell why (15 Oct 2026); nobody should have to guess again."""
+	key = f"hrms:sop_empty:{user}"
+	if frappe.cache.get_value(key):
+		return
+	frappe.cache.set_value(key, 1, expires_in_sec=86400)
+	other_company = sum(1 for row in rows if row.get("company") and row.get("company") != company)
+	other_department = sum(1 for row in rows if row.scope == "Department" and row.department != department)
+	frappe.log_error(
+		title=f"SOP list empty for {user}",
+		message=(
+			f"{len(rows)} published SOP(s), none visible to {user} "
+			f"(company {company}, department {department}). "
+			f"For another company: {other_company}. For another department: {other_department}."
+		),
+	)
 
 
 def _sees(row, is_hr: bool, user: str, department, company) -> bool:
