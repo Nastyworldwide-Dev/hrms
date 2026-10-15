@@ -10,6 +10,31 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.49] — Shift Attendance Download — 2026-10-15
+
+For staff HR gives the Attendance Report Viewer role (first users: the
+Shenzhen Qiguangda team, who count the month themselves).
+
+### Added
+- **Nadi → More → Shift Attendance.** Pick a month (this one or the 11
+  before), then **Download Excel**: the month's Shift Attendance for their
+  own company only, one row per person per day. "Open the full report in
+  Desk" stays for reading it on screen. Only holders of the role see the
+  row; the server refuses anyone else.
+- On a computer the same row is in the side menu and opens inside Nadi.
+
+### Safety
+- The file is the report's own rows and company lock, never wider.
+- A name or department that looks like a spreadsheet formula is written as
+  plain text.
+- A refused or failed download stays in Nadi and says why.
+
+### Deploy
+- **No migrate needed for alpha.49 itself.** Deploy with migrate anyway if
+  alpha.45–48 are not live yet (they need it).
+- HR, for each viewer: tick **Attendance Report Viewer** on the User, and
+  add a User Permission: Allow **Company**, For Value their company.
+
 ## [2.0.0-alpha.48] — Receipts, Mileage and Time Slips — 2026-10-14
 
 Three changes from the 14 Oct discussion, built to the signed-off mockup.
