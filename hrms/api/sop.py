@@ -22,6 +22,7 @@ from frappe import _
 # single source of truth for "who is unrestricted", "who is asking" and "what
 # may they see" — the row-scope hook module owns all three (see FIX B rationale
 # in sop_document_row_scope.record_visible)
+from hrms.overrides.company_scope import company_visible
 from hrms.overrides.sop_document_row_scope import _active_employee, _unrestricted, record_visible
 
 logger = logging.getLogger(__name__)
@@ -87,7 +88,12 @@ def get_sops() -> dict:
 	department = employee.department if employee else None
 	company = employee.company if employee else None
 	filters = {} if is_hr else {"published": 1}
-	rows = frappe.get_list(
+	# Read with our own rule, not get_list: with "Apply Strict User Permissions"
+	# on, a reader holding a Company User Permission was refused every SOP whose
+	# company is blank, i.e. every SOP saved from Nadi ("for the whole group"),
+	# and staff saw an empty list (owner, 15 Oct 2026). The role gate stays.
+	frappe.has_permission("SOP Document", "read", throw=True)
+	rows = frappe.get_all(
 		"SOP Document",
 		filters=filters,
 		fields=list(LIST_FIELDS),
@@ -95,12 +101,7 @@ def get_sops() -> dict:
 		limit_page_length=0,
 	)
 
-	visible_rows = [
-		row
-		for row in rows
-		if is_hr
-		or record_visible(row.published, row.scope, row.department, department, row.get("company"), company)
-	]
+	visible_rows = [row for row in rows if _sees(row, is_hr, user, department, company)]
 	attached_names = _names_with_file_rows([row.name for row in visible_rows if not row.attachment])
 
 	pinned, general, by_department = [], [], {}
@@ -131,6 +132,16 @@ def get_sops() -> dict:
 	}
 
 
+def _sees(row, is_hr: bool, user: str, department, company) -> bool:
+	"""Whether this reader may see this SOP: the one rule for the list and the
+	reader. HR sees their companies' SOPs and the group-wide ones; everyone else
+	a published SOP for their company (or the whole group) that is General or
+	for their own department (sop_document_row_scope.record_visible)."""
+	if is_hr:
+		return company_visible(row.get("company"), user, allow_blank=True)
+	return record_visible(row.published, row.scope, row.department, department, row.get("company"), company)
+
+
 def _get_visible_doc(name: str, caller: str) -> tuple:
 	"""Shared guard for the detail endpoints: same predicate as the list, plus
 	the framework's own permission check. Returns (doc, is_hr)."""
@@ -144,10 +155,9 @@ def _get_visible_doc(name: str, caller: str) -> tuple:
 	doc = frappe.get_doc("SOP Document", name)
 	department = employee.department if employee else None
 	company = employee.company if employee else None
-	visible = is_hr or record_visible(
-		doc.published, doc.scope, doc.department, department, getattr(doc, "company", None), company
-	)
-	if not visible or not frappe.has_permission("SOP Document", "read", doc=doc):
+	# the same rule as the list; the role gate without the per-document user
+	# permission check that hid group-wide SOPs (see get_sops)
+	if not _sees(doc, is_hr, user, department, company) or not frappe.has_permission("SOP Document", "read"):
 		logger.warning("[sop] denying %s(%s) for %s — out of scope", caller, name, user)
 		raise frappe.PermissionError(_(OUT_OF_SCOPE_MSG))
 	return doc, is_hr
