@@ -136,7 +136,7 @@ import GListRow from "@/components/glass/GListRow.vue"
 import { MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { isSameOriginPath } from "@/data/appLinks"
 import { EXTERNAL_LINKS, openExternal } from "@/data/externalLinks"
-import { hasTeam, isApprover } from "@/data/team"
+import { hasCompanyView, hasTeam, isApprover } from "@/data/team"
 import { needsYouResource } from "@/data/needsYou"
 import GBadge from "@/components/glass/GBadge.vue"
 import { myApps } from "@/data/myApps"
@@ -164,7 +164,8 @@ const moreItems = computed(() => {
 })
 
 //: Approvals, Team and Roster (alpha.14 O). The server decides each:
-//: isApprover (anyone something is routed to), hasTeam (direct reports, or HR).
+//: isApprover (anyone something is routed to), hasTeam (direct reports, or HR),
+//: hasCompanyView (an Attendance Report Viewer: Team only, never Roster).
 //: The Approvals number is everything waiting on you, as Home's Needs you.
 const waitingOnYou = computed(
 	() =>
@@ -185,9 +186,11 @@ const teamItems = computed(() => [
 				},
 		  ]
 		: []),
+	...(hasTeam.data || hasCompanyView.data
+		? [{ key: "team", icon: markRaw(Users), title: __("Team"), route: "/team", to: "/team" }]
+		: []),
 	...(hasTeam.data
 		? [
-				{ key: "team", icon: markRaw(Users), title: __("Team"), route: "/team", to: "/team" },
 				{
 					key: "roster",
 					icon: markRaw(CalendarRange),

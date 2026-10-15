@@ -1,3 +1,3 @@
-GOAL: Fahmie (Shift Supervisor) can delete and update shifts on the Desk Roster (screenshot: "does not have doctype access via role permission for document Shift Assignment").
-DONE WHEN: Delete -> All Consecutive Shifts, Delete -> Shift Schedule Assignment and Update work for a supervisor's own team and are refused for a stranger; no roster screen writes through frappe.client.
-CHECK: fresh.local console test_roster 21/21; node --test roster/src/components/__tests__/ShiftAssignmentDialog.test.js
+GOAL: Mia (Attendance Report Viewer) sees her whole company on Nadi Team, view only.
+DONE WHEN: team-company-view (js + py) + team-entitlement tests green; fresh.local probe28 7/7 PASS; vite build passes.
+CHECK: PYTHONPATH=. python3 -m pytest -q -p no:cacheprovider hrms/tests/test_team_company_view.py && node --test frontend/src/views/__tests__/team-company-view.test.js frontend/src/views/__tests__/team-entitlement.test.js

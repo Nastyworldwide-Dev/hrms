@@ -162,7 +162,7 @@ import { markRaw } from "vue"
 
 import { TAB_ITEMS, MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { myApps } from "@/data/myApps"
-import { hasTeam } from "@/data/team"
+import { hasCompanyView, hasTeam } from "@/data/team"
 
 const __ = inject("$translate")
 const user = inject("$user")
@@ -200,7 +200,9 @@ const directItems = computed(() =>
 // direct reports (or the caller is HR browsing via the selector).
 const moreItems = computed(() => [
 	...MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) })),
-	...(hasTeam.data ? [{ icon: markRaw(Users), title: __("Team"), route: "/team" }] : []),
+	...(hasTeam.data || hasCompanyView.data
+		? [{ icon: markRaw(Users), title: __("Team"), route: "/team" }]
+		: []),
 ])
 
 // Role-gated (data/appLinks.js); same list the More screen renders.

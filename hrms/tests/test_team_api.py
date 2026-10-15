@@ -9,7 +9,7 @@ from frappe.tests.utils import FrappeTestCase
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
-from hrms.api.team import get_managers, get_team_status, has_team
+from hrms.api.team import get_managers, get_team_status, has_company_view, has_team
 
 test_dependencies = ["Employee"]
 
@@ -69,3 +69,50 @@ class TestTeamApi(FrappeTestCase):
 		result = get_team_status(manager=self.manager)
 		self.assertEqual(result["manager"], self.manager)
 		self.assertIn(self.report, [m["employee"] for m in result["members"]])
+
+
+class TestAttendanceViewerCompanyTeam(FrappeTestCase):
+	"""Owner, 15 Oct 2026: an Attendance Report Viewer (Mia, Shenzhen) sees on Team
+	everyone in their Company User Permission, view only, and no Roster."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+		cls.colleague = make_employee("viewer_colleague@example.com", company="_Test Company")
+		cls.elsewhere = make_employee("viewer_elsewhere@example.com", company="_Test Company 1")
+		cls.viewer = make_employee("team_viewer@example.com", company="_Test Company")
+		frappe.get_doc("User", "team_viewer@example.com").add_roles("Attendance Report Viewer")
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def _company_permission(self, company):
+		frappe.get_doc(
+			{
+				"doctype": "User Permission",
+				"user": "team_viewer@example.com",
+				"allow": "Company",
+				"for_value": company,
+			}
+		).insert(ignore_permissions=True)
+
+	def test_viewer_sees_everyone_in_their_company_and_no_one_else(self):
+		self._company_permission("_Test Company")
+		frappe.set_user("team_viewer@example.com")
+		result = get_team_status()
+		names = [m["employee"] for m in result["members"]]
+		self.assertIn(self.colleague, names)
+		self.assertNotIn(self.elsewhere, names)
+		self.assertTrue(result["company_view"])
+		self.assertTrue(has_company_view())
+		self.assertFalse(has_team())  # the Roster's gate stays shut
+
+	def test_viewer_without_a_company_permission_sees_nobody(self):
+		frappe.set_user("team_viewer@example.com")
+		self.assertEqual(get_team_status()["members"], [])
+
+	def test_viewer_cannot_browse_another_managers_team(self):
+		self._company_permission("_Test Company")
+		frappe.set_user("team_viewer@example.com")
+		self.assertRaises(frappe.PermissionError, get_team_status, manager=self.colleague)

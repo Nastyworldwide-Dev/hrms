@@ -34,7 +34,9 @@ def _is_hr() -> bool:
 
 @frappe.whitelist(methods=["GET", "POST"])
 def has_team() -> bool:
-	"""Nav gate: direct reports, or HR (who browse teams via the selector)."""
+	"""Nav gate: direct reports, or HR (who browse teams via the selector). Also
+	the Roster's gate, so an Attendance Report Viewer is not here: their Team
+	entry comes from has_company_view (15 Oct 2026)."""
 	if _is_hr():
 		return True
 	employee = _my_employee()
@@ -42,6 +44,13 @@ def has_team() -> bool:
 		logger.debug("[team] has_team: no employee for %s", frappe.session.user)
 		return False
 	return bool(frappe.db.exists("Employee", {"reports_to": employee, "status": "Active"}))
+
+
+@frappe.whitelist(methods=["GET", "POST"])
+def has_company_view() -> bool:
+	"""Nav gate for an Attendance Report Viewer: the Team screen shows everyone in
+	their Company User Permission, read only, and no Roster (owner, 15 Oct 2026)."""
+	return _viewer_companies() is not None
 
 
 #: The explicit approver fields on Employee — how leave, expense and shift
@@ -173,6 +182,12 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 	# their reports whichever company employs them.
 	fence = allowed_companies() if team_of != employee else []
 	members = own_team_members(team_of, fence)
+	viewer = _viewer_companies() if not manager else None
+	if viewer is not None:
+		# an Attendance Report Viewer's team is everyone in their Company User
+		# Permission (owner, 15 Oct 2026: Mia sees the whole Shenzhen team); no
+		# Company permission = nobody, never everybody
+		members = company_members(viewer)
 	if not members:
 		# NO MEMBERS IS NOT THE SAME QUESTION as "is this person a manager".
 		#
@@ -196,7 +211,32 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 		"members": out,
 		"summary": summary,
 		"entitled": True,
+		# the whole company, read only: no roster, no approvals (Attendance Report Viewer)
+		"company_view": viewer is not None,
 	}
+
+
+def _viewer_companies() -> list | None:
+	"""The companies an Attendance Report Viewer sees as their team, or None for
+	anyone else (hrms.utils.report_scope: HR keeps its own rule)."""
+	from hrms.utils.report_scope import attendance_viewer_companies
+
+	return attendance_viewer_companies()
+
+
+def company_members(companies: list) -> list:
+	"""Active employees of `companies`, in the shape own_team_members returns."""
+	if not companies:
+		return []
+	members = frappe.get_all(
+		"Employee",
+		filters={"company": ("in", companies), "status": "Active"},
+		fields=["name", "employee_name", "designation", "department", "default_shift", "holiday_list"],
+		order_by="employee_name asc",
+		ignore_permissions=True,
+	)
+	logger.info("[team] company view of %s: %d active", companies, len(members))
+	return members
 
 
 def own_team_members(team_of: str, fence: list | None = None) -> list:
@@ -455,10 +495,10 @@ def get_team_roster(start_date: str, end_date: str, manager: str | None = None) 
 		"end_date": str(end),
 		"manager": team_of,
 		"members": [
-			{**m, "shifts": by_employee.get(m.name, []), "markers": markers.get(m.name, {})}
-			for m in members
+			{**m, "shifts": by_employee.get(m.name, []), "markers": markers.get(m.name, {})} for m in members
 		],
 	}
+
 
 def _day_markers(employees: list[str], start, end) -> dict[str, dict[str, str]]:
 	"""{employee: {iso date: day_type}} for the Roster Day markers (Off / Rest /

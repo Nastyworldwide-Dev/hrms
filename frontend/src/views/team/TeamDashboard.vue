@@ -69,7 +69,7 @@
 						{{ dayLabel }}
 					</h2>
 					<router-link
-						v-if="teamStatus.data?.members?.length"
+						v-if="teamStatus.data?.members?.length && !teamStatus.data?.company_view"
 						:to="{ name: 'TeamRosterView' }"
 						class="g-seclink g-focusable text-kra-label text-accent-ink"
 					>
@@ -175,7 +175,13 @@
 				</div>
 
 				<p class="g-form-footer" v-if="teamStatus.data?.members?.length">
-					{{ __("You see your direct reports. Tap a day on the calendar to browse other dates.") }}
+					{{
+						teamStatus.data?.company_view
+							? __(
+									"You see everyone in your company, view only. Tap a day on the calendar to browse other dates."
+							  )
+							: __("You see your direct reports. Tap a day on the calendar to browse other dates.")
+					}}
 				</p>
 			</div>
 		</template>

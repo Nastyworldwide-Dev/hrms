@@ -8,6 +8,14 @@ export const hasTeam = createResource({
 	cache: personalCacheKey("hrms:has_team"),
 })
 
+// nav gate for an Attendance Report Viewer: Team shows their whole company,
+// read only, and Roster stays hidden (owner, 15 Oct 2026)
+export const hasCompanyView = createResource({
+	url: "hrms.api.team.has_company_view",
+	auto: true,
+	cache: personalCacheKey("hrms:has_company_view"),
+})
+
 // gate for the RequestPanel's Team tabs: true when ANY approval work can
 // route here (HR, direct reports, or named in an approver field/table).
 // Deliberately not hasTeam — an assigned approver may manage nobody.
