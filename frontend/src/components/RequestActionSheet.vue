@@ -220,12 +220,10 @@
 	<!-- Never an empty frame (owner, 16 Oct 2026): a failed or slow read used to
 	     leave only the sheet's X, and the approver could not tell it apart from
 	     a frozen app. -->
-	<div v-else-if="document.get?.error" class="g-form-body g-request-sheet" role="alert">
-		<p class="m-0">{{ __("This request could not be loaded.") }}</p>
-		<p class="m-0 text-caption text-ink-600">
-			{{ __("It may have been answered or withdrawn already.") }}
-		</p>
-		<GButton :label="__('Try again')" @click="document.reload()" />
+	<!-- document.get is the request that ran: its error and loading; ResourceError
+	     tells a refusal from a failure and guards Try again against a double tap -->
+	<div v-else-if="document.get?.error" class="g-form-body g-request-sheet">
+		<ResourceError :resource="document.get" :what="__('this request')" />
 	</div>
 	<div v-else class="g-form-body g-request-sheet" aria-busy="true">
 		<GSkeleton height="20px" />
@@ -245,6 +243,7 @@ import GSkeleton from "@/components/glass/GSkeleton.vue"
 import { computed, defineAsyncComponent, inject, onBeforeUnmount, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import FilePreviewModal from "@/components/FilePreviewModal.vue"
+import ResourceError from "@/components/ResourceError.vue"
 import GAttachmentRow from "@/components/glass/GAttachmentRow.vue"
 import FormattedField from "@/components/FormattedField.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"

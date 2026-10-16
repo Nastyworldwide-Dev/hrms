@@ -275,7 +275,7 @@
 				</div>
 			</GModal>
 
-			<GModal :is-open="!!selected" @did-dismiss="close">
+			<GModal :is-open="!!selected && selectedOpen" @did-dismiss="close">
 				<CheckinDecisionSheet
 					v-if="selected?.doctype === 'Remote Checkin Request'"
 					:row="selected.row"
@@ -288,7 +288,7 @@
 					:key="`${selected.doctype}:${selected.name}`"
 					:fields="REQUEST_SUMMARY_FIELDS[selected.doctype]"
 					v-model="selected"
-					@close="selected = null"
+					@close="selectedOpen = false"
 				/>
 			</GModal>
 
@@ -767,12 +767,17 @@ function openPerson(person) {
 }
 
 const selected = ref(null)
+//: Closing and clearing are two steps: the sheet slides out with its content,
+//: and `selected` is cleared on did-dismiss. Clearing it at once emptied the
+//: sheet for the length of the slide (review of d3be5595d).
+const selectedOpen = ref(false)
 function open(row) {
 	console.info("[Approvals] opening", row.doctype)
 	personOpen.value = null
 	// A check-in carries its photo and reason on the row; the request sheet
 	// loads its own document.
 	selected.value = { doctype: row.doctype, name: row.name, row }
+	selectedOpen.value = true
 }
 function close() {
 	selected.value = null

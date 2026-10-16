@@ -353,7 +353,7 @@
 	     the form shows what the server did. -->
 	<GModal :is-open="showReviewSheet" @did-dismiss="closeReviewSheet">
 		<RequestActionSheet
-			v-if="showReviewSheet && reviewRequest"
+			v-if="reviewRequest"
 			:fields="REQUEST_SUMMARY_FIELDS[props.doctype]"
 			:showOpenForm="false"
 			v-model="reviewRequest"
@@ -928,6 +928,9 @@ function openReviewSheet() {
 }
 function closeReviewSheet() {
 	showReviewSheet.value = false
+	// cleared once the sheet has slid out, so it never draws empty mid-slide;
+	// the next open builds a fresh sheet, not one still showing "Approved"
+	reviewRequest.value = null
 	console.info("[FormView] review sheet closed, reloading", props.doctype, props.id)
 	reloadDoc()
 }
