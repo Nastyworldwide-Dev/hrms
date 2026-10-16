@@ -10,6 +10,30 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.55] — Nothing Gets Stuck — 2026-10-16
+
+### Fixed
+- **After Approve, the request sheet stayed empty and the next one would not
+  open** (owner report: "Dia taknak bukak"). The sheet closed "whichever popup
+  was on top" instead of itself. It now closes itself, a failed load says so
+  with Try again, and each request opens a fresh sheet.
+- **The same wrong close in four more places**: the check-in card, list
+  filters, the workflow menu, and the check-in decision sheet. Each closes
+  only itself now.
+- **Bulk approve could spin forever** if the server never answered. After a
+  minute it says it could not confirm what was approved and reloads the list.
+- **A login with no employee record crashed the check-in card.** Seven
+  screens read the employee without a guard; none can crash now.
+- **Team told a viewer with no company "people who report to you".** It now
+  says no company is set and to ask HR.
+- The time slip no longer loads frappe-ui's unescaped toast.
+
+### Deploy
+- No migrate needed.
+- Check on an iPhone: Approvals, approve two overtime requests in a row. The
+  sheet closes after each and the second opens.
+- Check: a login with no Employee record opens Home with no crash.
+
 ## [2.0.0-alpha.54] — Home Load Loop Fix — 2026-10-16
 
 ### Fixed

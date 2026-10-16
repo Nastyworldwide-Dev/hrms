@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.54",
-	"releaseName": "Home Load Loop Fix",
+	"version": "2.0.0-alpha.55",
+	"releaseName": "Nothing Gets Stuck",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
