@@ -24,6 +24,7 @@
 				:tint="TINT[step.what] || TILE.neutral"
 				:tappable="false"
 				:chevron="false"
+				wrap
 			>
 				<template #icon>
 					<component :is="ICON[step.what] || Clock" class="g-row-icon" />

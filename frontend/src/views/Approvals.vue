@@ -241,8 +241,8 @@
 				     worded for what is behind it: requests on the Requests page,
 				     check-ins in a sheet here. -->
 				<GListPanel v-if="isApprover.data">
-					<GListRow :label="requestsAnsweredLabel" @click="openAnsweredRequests" />
-					<GListRow :label="answeredLabel" @click="openAnswered" />
+					<GListRow :label="requestsAnsweredLabel" wrap @click="openAnsweredRequests" />
+					<GListRow :label="answeredLabel" wrap @click="openAnswered" />
 				</GListPanel>
 			</div>
 

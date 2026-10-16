@@ -51,5 +51,5 @@ test("the check-in time is shown as the server wrote it, never re-parsed", () =>
 
 test("the answered link is a full-size row, not a small text button (44px target)", () => {
 	assert.doesNotMatch(page, /<button[^>]*openAnswered|@click="openAnswered"[^>]*text-caption/)
-	assert.match(page, /<GListRow :label="answeredLabel" @click="openAnswered"/)
+	assert.match(page, /<GListRow :label="answeredLabel"( wrap)? @click="openAnswered"/)
 })
