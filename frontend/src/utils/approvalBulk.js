@@ -213,18 +213,40 @@ export function chunks(list, size = CHUNK_SIZE) {
 	return parts
 }
 
+//: Longest one piece may take before the run stops. The bulk sheet cannot be closed while it
+//: works, so a call the server never answered (signal lost mid-call) spun for good (alpha.55).
+//: A minute is far beyond a normal piece of ten.
+// ceiling: a piece that times out may still finish on the server; upgrade: none needed, the
+// caller reloads the list and names nothing as done.
+export const CHUNK_TIMEOUT_MS = 60 * 1000
+
+//: `send(part)`, or a rejection once `ms` has passed with no answer.
+function withinLimit(promise, ms) {
+	let timer
+	const limit = new Promise((_, reject) => {
+		timer = setTimeout(() => reject(new Error(`The server did not answer within ${ms} ms`)), ms)
+	})
+	return Promise.race([promise, limit]).finally(() => clearTimeout(timer))
+}
+
 //: Send `items` to the server one piece at a time, in order, and merge the answers:
 //: {done: what `doneKey` ("ready", "approved" or "rejected") listed, refused}. `onProgress(finished,
 //: total)` is called before the first piece and as each piece comes back, so it counts only what the
-//: server answered. A piece that throws stops the rest and the error goes to the caller: what went
+//: server answered. A piece that throws, or takes longer than CHUNK_TIMEOUT_MS, stops the rest and the error goes to the caller: what went
 //: through is then unknown, so nothing is guessed here.
-export async function sendInChunks(items, send, doneKey, onProgress = () => {}) {
+export async function sendInChunks(
+	items,
+	send,
+	doneKey,
+	onProgress = () => {},
+	{ timeoutMs = CHUNK_TIMEOUT_MS } = {}
+) {
 	const done = []
 	const refused = []
 	let finished = 0
 	onProgress(finished, items.length)
 	for (const part of chunks(items)) {
-		const result = await send(part)
+		const result = await withinLimit(send(part), timeoutMs)
 		finished += part.length
 		onProgress(finished, items.length)
 		done.push(...(result?.[doneKey] || []))

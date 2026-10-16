@@ -29,6 +29,7 @@ import {
 	sharedFor,
 	rowDetails,
 	sendInChunks,
+	CHUNK_TIMEOUT_MS,
 	siteToday,
 	searchRows,
 	keepVisible,
@@ -712,4 +713,30 @@ test("Select all ticks at most BULK_CAP and says how many it left (review of b47
 	assert.equal(toggleAll(selected, many).size, 0)
 	assert.equal(leftOver(many), 50)
 	assert.equal(leftOver(many.slice(0, 10)), 0)
+})
+
+// alpha.55: the "working" sheet cannot be closed, and a piece the server never
+// answers (a phone that lost signal mid-call) left it spinning for good. A piece
+// that takes longer than the limit throws like any failed piece, so the caller's
+// existing "what went through is unknown, list reloaded" path runs.
+test("a piece the server never answers stops the run instead of hanging", async () => {
+	let calls = 0
+	await assert.rejects(
+		sendInChunks(
+			[{ name: "a" }, ...Array.from({ length: 10 }, (_, i) => ({ name: `b${i}` }))],
+			() => {
+				calls += 1
+				return new Promise(() => {})
+			},
+			"approved",
+			() => {},
+			{ timeoutMs: 20 }
+		),
+		/did not answer/
+	)
+	assert.equal(calls, 1, "nothing more is sent after a piece times out")
+})
+
+test("each piece is given the default limit when none is passed", () => {
+	assert.equal(CHUNK_TIMEOUT_MS, 60 * 1000)
 })
