@@ -81,3 +81,17 @@ test("every return from the status endpoint carries the flag", () => {
 	assert.ok(returns.length >= 2, "there are several ways out of this function")
 	assert.ok(flags.length >= 2, "and each says whether the caller is entitled")
 })
+
+// Mia, 16 Oct 2026: a viewer whose role came without a Company permission was told
+// "people who report to you". The server flags it (no_company) and the screen says the
+// real cause and who fixes it, ahead of the generic not-entitled line.
+test("a viewer with no company is told to ask HR for a company", () => {
+	const src = readFileSync(
+		fileURLToPath(new URL("../team/TeamDashboard.vue", import.meta.url)),
+		"utf8"
+	)
+	const noCompany = src.indexOf('v-else-if="teamStatus.data?.no_company"')
+	assert.ok(noCompany > 0, "the no-company state exists")
+	assert.ok(noCompany < src.indexOf('v-else-if="notEntitled"'), "and wins over the generic line")
+	assert.match(src, /__\('No company is set for you yet'\)/)
+})

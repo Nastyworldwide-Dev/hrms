@@ -121,6 +121,13 @@ class TestTeamStatus(unittest.TestCase):
 		self.assertEqual(result["members"], [])
 		self.assertTrue(result["company_view"])
 
+	def test_a_viewer_with_no_company_is_told_that_not_that_nobody_reports_to_them(self):
+		# Mia, 16 Oct 2026: her account had the role but no Company permission, and Team
+		# said "people who report to you". The screen needs to know the cause is the company.
+		self.assertTrue(self._status([], [])["no_company"])
+		self.assertFalse(self._status(["Shenzhen"], [])["no_company"])
+		self.assertFalse(self._status(None, [])["no_company"])
+
 	def test_a_viewer_with_no_employee_record_still_sees_their_company(self):
 		self.assertEqual(self.names(self._status(["Shenzhen"], ["E3"], me=None)), ["E1"])
 

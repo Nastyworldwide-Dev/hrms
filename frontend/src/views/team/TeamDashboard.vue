@@ -155,6 +155,17 @@
 
 				     The role is NEVER decided here (revamp P5): `entitled` is
 				     the server's answer, and the screen has no opinion. -->
+				<!-- An Attendance Report Viewer whose role came without a Company
+				     permission: the honest cause, and who fixes it (Mia, 16 Oct 2026). -->
+				<GEmptyState
+					v-else-if="teamStatus.data?.no_company"
+					:title="__('No company is set for you yet')"
+					:body="
+						__(
+							'This screen shows everyone in your company. Ask HR to add your company to your account.'
+						)
+					"
+				/>
 				<GEmptyState
 					v-else-if="notEntitled"
 					:title="__('You do not have a team here')"

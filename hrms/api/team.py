@@ -176,6 +176,9 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 		"summary": {},
 		"entitled": False,
 		"company_view": viewer is not None,
+		# a viewer whose role came without a Company permission: the screen says
+		# that, not "nobody reports to you" (Mia, 16 Oct 2026)
+		"no_company": viewer == [],
 	}
 	if not team_of and viewer is None:
 		return empty
@@ -216,6 +219,7 @@ def get_team_status(date: str | None = None, manager: str | None = None) -> dict
 		"entitled": True,
 		# the whole company, read only: no roster, no approvals (Attendance Report Viewer)
 		"company_view": viewer is not None,
+		"no_company": viewer == [],
 	}
 
 
