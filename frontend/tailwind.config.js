@@ -19,6 +19,17 @@ export default {
 		"./node_modules/frappe-ui/src/components/{ErrorMessage.vue,toast.js,Toast.vue,TextEditor/**/*.{vue,js,ts}}",
 	],
 	theme: {
+		// Spacing in px, not Tailwind's default rem (alpha.56): text grows with the
+		// reader's text size, the layout does not. A rem gutter widened at large
+		// text, off the 4-pt grid, and squeezed the 320px floor (text-scaling.test.js).
+		spacing: Object.fromEntries(
+			[
+				0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20, 24, 28, 32, 36,
+				40, 44, 48, 52, 56, 60, 64, 72, 80, 96,
+			]
+				.map((n) => [String(n), `${n * 4}px`])
+				.concat([["px", "1px"]])
+		),
 		// Remapped onto the Glass radius ladder (spec v1.3 §16.2). Previously all
 		// zeroed for the Modernist flat look. NOT Tailwind's defaults: those sit
 		// off-ladder. This makes frappe-ui — 89 utilities across 47 of its

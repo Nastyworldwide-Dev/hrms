@@ -14,6 +14,7 @@ import { vValueRow } from "@/utils/valueRow"
 import { applyProductName } from "@/utils/productName"
 import { blockZoom } from "@/utils/blockZoom"
 import { noOverscroll } from "@/utils/noOverscroll"
+import { dynamicType } from "@/utils/dynamicType"
 import { keyboardSafe } from "@/utils/keyboardSafe"
 
 import { IonicVue } from "@ionic/vue"
@@ -50,6 +51,7 @@ import { registerAppWorker } from "@/utils/serviceWorker"
 // Zoom off (owner ruling, 25 Sep 2026); see utils/blockZoom.js.
 blockZoom()
 noOverscroll()
+dynamicType()
 keyboardSafe()
 const app = createApp(App)
 

@@ -814,8 +814,8 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-empty__title {
 	font-family: var(--g-font-ui);
-	font-size: 22px;
-	line-height: 28px;
+	font-size: 1.375rem;
+	line-height: 1.75rem;
 	font-weight: 700;
 	color: var(--g-ink);
 	text-wrap: balance;
@@ -824,8 +824,8 @@ html[data-theme="dark"] .g-badge--open {
 	margin-top: 4px;
 	max-width: 320px;
 	font-family: var(--g-font-ui);
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	color: var(--g-ink2);
 	text-wrap: balance;
 }
@@ -1070,9 +1070,9 @@ html[data-theme="dark"] .g-badge--open {
 	min-width: 0;
 }
 .g-row__label {
-	font-size: 17px;
+	font-size: 1.0625rem;
 	font-weight: var(--g-type-row-label-weight);
-	line-height: 22px;
+	line-height: 1.375rem;
 	letter-spacing: -0.4px;
 	color: var(--g-ink);
 }
@@ -1748,7 +1748,7 @@ svg.lucide {
 	font-family: var(--g-type-caption-family);
 	/* 15 = iOS Subhead (alpha.6 T1/T4). It was 10.5px, under Apple's 11pt
 	   minimum; iOS Calendar draws day numbers large. Fits 7 columns at 320px. */
-	font-size: 15px;
+	font-size: 0.9375rem;
 	font-weight: var(--g-type-card-title-weight);
 	line-height: var(--g-type-card-title-line-height);
 	font-variant-numeric: tabular-nums;
@@ -1841,8 +1841,8 @@ html[data-theme="dark"] .g-cal__day--present {
 }
 .g-form-row.g-cal__key {
 	gap: 12px;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	color: var(--g-ink);
 }
 /* The swatch keeps its size: the form row's "control fills the rest" rule
@@ -1902,8 +1902,8 @@ html[data-theme="dark"] .g-cal__day--present {
 	padding: 0;
 	border: 0;
 	background: transparent;
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	color: var(--g-ink2);
 	cursor: pointer;
 }
@@ -2602,8 +2602,8 @@ html[data-transparency="reduce"] .g-modal::part(content) {
 }
 .g-undo__text {
 	flex: 1;
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 }
 .g-undo__action {
 	min-height: 44px;
@@ -2613,7 +2613,7 @@ html[data-transparency="reduce"] .g-modal::part(content) {
 	border-radius: var(--g-radius-well);
 	background: transparent;
 	color: var(--g-bg);
-	font-size: 15px;
+	font-size: 0.9375rem;
 	font-weight: 600;
 }
 .g-undo-enter-active,
@@ -2679,15 +2679,15 @@ html[data-transparency="reduce"] #frappeui-toast-root .pointer-events-auto > div
 }
 #frappeui-toast-root p:first-child {
 	font-family: var(--g-font-ui);
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	font-weight: 600;
 	color: var(--g-ink);
 }
 #frappeui-toast-root p + p {
 	font-family: var(--g-font-ui);
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	color: var(--g-ink2);
 }
 /* alpha.10 (owner screenshot, 25 Sep 2026): the banner sat over the header
@@ -3040,8 +3040,8 @@ textarea {
 	min-width: 0;
 }
 .g-team-row__name {
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	color: var(--g-ink);
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -3049,8 +3049,8 @@ textarea {
 }
 .g-team-row__sub,
 .g-team-row__detail {
-	font-size: 13px;
-	line-height: 18px;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
 	color: var(--g-ink2);
 }
 .g-team-row__sub {
@@ -3438,9 +3438,9 @@ ion-router-outlet {
 	max-width: 100%;
 	overflow: hidden;
 	min-height: 12px;
-	font-size: 11px;
+	font-size: 0.6875rem;
 	font-weight: 500;
-	line-height: 12px;
+	line-height: 0.75rem;
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 	pointer-events: none;
@@ -4008,18 +4008,18 @@ ion-router-outlet {
 	padding: 0 16px;
 	/* iOS section header: Footnote, secondary, sentence case (rulebook R4). */
 	font-family: var(--g-font-ui);
-	font-size: 13px;
+	font-size: 0.8125rem;
 	font-weight: 400;
-	line-height: 18px;
+	line-height: 1.125rem;
 	color: var(--g-ink2);
 }
 /* A heading over several sections (the day sheet's "Your team · 4 of 6 in"):
    the same place as a section header, one step stronger, so the groups under
    it read as its parts rather than as its siblings. */
 .g-form-section__title--lead {
-	font-size: 15px;
+	font-size: 0.9375rem;
 	font-weight: 600;
-	line-height: 20px;
+	line-height: 1.25rem;
 	color: var(--g-ink);
 }
 .g-form-group {
@@ -4055,8 +4055,8 @@ ion-router-outlet {
 	max-width: 70%;
 	/* iOS Body: 17/22 regular */
 	font-family: var(--g-font-ui);
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	font-weight: 400;
 	color: var(--g-ink);
 }
@@ -4101,8 +4101,8 @@ ion-router-outlet {
 	background: transparent;
 	box-shadow: none;
 	text-align: right;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	color: var(--g-ink2);
 }
 .g-form-group .g-select__native {
@@ -4195,8 +4195,8 @@ ion-router-outlet {
 	flex: 0 0 100%;
 	min-width: 0;
 	text-align: left;
-	font-size: 13px;
-	line-height: 18px;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
 }
 /* A read-only form shows values as quiet text, not disabled grey boxes. */
 .g-form-group .g-input:disabled,
@@ -4210,8 +4210,8 @@ ion-router-outlet {
 	margin: 0;
 	padding: 0 16px;
 	font-family: var(--g-font-ui);
-	font-size: 13px;
-	line-height: 18px;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
 	color: var(--g-ink2);
 }
 /* A footer that closes the page (the version under Log out), centred as
@@ -4226,8 +4226,8 @@ ion-router-outlet {
 	border: 0;
 	background: transparent;
 	font-family: var(--g-font-ui);
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	cursor: pointer;
 }
 .g-form-row--action:active {
@@ -4282,14 +4282,14 @@ ion-router-outlet {
 }
 .g-sheet__rowtitle {
 	font-family: var(--g-font-ui);
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	color: var(--g-ink);
 }
 .g-sheet__hint {
 	font-family: var(--g-font-ui);
-	font-size: 13px;
-	line-height: 18px;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
 	color: var(--g-ink2);
 }
 .g-sheet__chevron {
@@ -4306,14 +4306,14 @@ ion-router-outlet {
 }
 .g-ot-empty {
 	margin: 0;
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	color: var(--g-ink2);
 }
 .g-ot-paidas {
 	color: var(--g-ink);
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 }
 .g-ot-day,
 .g-ot-fold {
@@ -4329,8 +4329,8 @@ ion-router-outlet {
 .g-ot-day__value {
 	margin-left: auto;
 	text-align: right;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	color: var(--g-ink2);
 }
 .g-ot-day__check {
@@ -4348,8 +4348,8 @@ ion-router-outlet {
 	color: var(--g-ink2);
 }
 .g-ot-reason {
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	color: var(--g-ink2);
 }
 
@@ -4417,6 +4417,21 @@ html {
 	font-family: var(--g-font-ui) !important;
 }
 
+/* alpha.56 (Apple HIG Typography, Dynamic Type): on an iPhone the root size follows
+   Settings > Display & Brightness > Text Size, and every size in the app is rem, so
+   the whole app grows with it. iOS's default body is 17px; the app is drawn on a 16px
+   root, so the system size is scaled by 16/17 to keep the default look unchanged.
+   iPhone/iPad only (-webkit-touch-callout): on a Mac the same font is 13px.
+   Text fields keep their own 16px floor above, so a tap never zooms the page.
+   Sources: furbo.org/2024/07/04/dynamic-type-on-the-web, Airbnb "Rethinking text
+   resizing on web". */
+@supports (font: -apple-system-body) and (-webkit-touch-callout: default) {
+	html {
+		font: -apple-system-body;
+		font-family: var(--g-font-ui) !important;
+	}
+}
+
 /* alpha.7 0.10: the iPhone "Add to Home Screen" row on Home. */
 .g-install-hint .g-form-row {
 	padding-top: 11px;
@@ -4438,8 +4453,8 @@ html {
 	color: var(--g-ink2);
 }
 .g-install-hint__text {
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	color: var(--g-ink);
 }
 .g-install-hint__close {
@@ -4464,8 +4479,8 @@ html {
 	border: 0;
 	background: transparent;
 	font-family: var(--g-font-ui);
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	font-weight: 600;
 	color: var(--g-ink);
 	white-space: nowrap;
@@ -4490,8 +4505,8 @@ html {
 .g-form-row.g-checkin-row > .g-checkin-row__time {
 	flex: 1 1 auto;
 	text-align: right;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	font-variant-numeric: tabular-nums;
 	color: var(--g-ink2);
 }
@@ -4539,8 +4554,8 @@ html {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	text-align: center;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	font-weight: 600;
 	letter-spacing: -0.4px;
 }
@@ -4601,13 +4616,21 @@ html {
 	justify-content: space-between;
 	text-align: left;
 }
-.g-form-row.g-ann-quiet > .g-ann-quiet__all {
+/* "See all" is a link, not a control that fills the row: the rule that gives every
+   non-label child of a form row `flex: 1 1 0` (.g-form-row > :not(...) x4) shrank it
+   to 37px at large text and cut it off. Stated at the same specificity, after it. */
+.g-form-row.g-ann-quiet > .g-ann-quiet__all:not(.g-form-row__label):not(.g-form-row__switch) {
 	flex: 0 0 auto;
 	color: var(--g-ink2);
+	/* alpha.56: a short link stays on one line at large text; the label wraps */
+	white-space: nowrap;
 }
 .g-ann-quiet > .g-form-row__label {
 	max-width: none;
 	flex: 1 1 auto;
+	/* alpha.56: at large text the label wraps; it never pushes See all off the row */
+	min-width: 0;
+	white-space: normal;
 }
 /* The forgotten check-out, as a row of the Today card (alpha.7 §3). */
 .g-today__issue {
@@ -4636,14 +4659,14 @@ html {
 	min-width: 0;
 }
 .g-today__issue-title {
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	font-weight: 600;
 	color: var(--g-ink);
 }
 .g-today__issue-hint {
-	font-size: 13px;
-	line-height: 18px;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
 	color: var(--g-ink2);
 }
 .g-today__issue-chevron {
@@ -4691,8 +4714,8 @@ html {
 .g-form-row.g-form-row--readonly > .g-form-row__value {
 	flex: 1 1 auto;
 	text-align: right;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	color: var(--g-ink2);
 }
 /* Time slip waiting on the approver (owner, 14 Oct 2026: "really act on it"):
@@ -4708,8 +4731,8 @@ html {
 	background: color-mix(in srgb, var(--g-brand) 10%, transparent);
 }
 .g-form-row.g-form-row--claim.g-form-row--readonly > .g-form-row__value {
-	font-size: 20px;
-	line-height: 26px;
+	font-size: 1.25rem;
+	line-height: 1.625rem;
 	font-weight: 700;
 	color: var(--g-ink);
 	font-variant-numeric: tabular-nums;
@@ -4793,8 +4816,8 @@ ion-modal.g-mustread {
 	padding: 12px 16px;
 }
 .g-mustread__tag {
-	font-size: 13px;
-	line-height: 18px;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
 	font-weight: 600;
 	color: var(--g-warn-ink);
 }
@@ -4804,22 +4827,22 @@ ion-modal.g-mustread {
 	padding: 8px 20px 24px;
 }
 .g-mustread__title {
-	font-size: 28px;
-	line-height: 34px;
+	font-size: 1.75rem;
+	line-height: 2.125rem;
 	font-weight: 700;
 	color: var(--g-ink);
 	text-wrap: balance;
 }
 .g-mustread__summary {
 	margin-top: 8px;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	color: var(--g-ink2);
 }
 .g-mustread__body {
 	margin-top: 20px;
-	font-size: 17px;
-	line-height: 24px;
+	font-size: 1.0625rem;
+	line-height: 1.5rem;
 }
 .g-mustread__body img {
 	max-width: 100%;
@@ -4847,8 +4870,8 @@ ion-modal.g-mustread {
 	min-height: var(--g-touch-target-min);
 	border: 0;
 	background: transparent;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	color: var(--g-ink2);
 	cursor: pointer;
 }
@@ -4877,8 +4900,8 @@ ion-modal.g-mustread {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	font-weight: 600;
 	color: var(--g-ink);
 	opacity: 0;
@@ -4949,15 +4972,15 @@ ion-modal.g-mustread {
 }
 .g-balance-tile__number {
 	font-family: var(--g-font-display);
-	font-size: 34px;
-	line-height: 41px;
+	font-size: 2.125rem;
+	line-height: 2.5625rem;
 	font-weight: 700;
 	font-variant-numeric: tabular-nums;
 	color: var(--g-ink);
 }
 .g-balance-tile__label {
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	color: var(--g-ink2);
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -4972,8 +4995,8 @@ ion-modal.g-mustread {
 	flex-wrap: wrap;
 }
 .g-balance__unit {
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	color: var(--g-ink2);
 }
 
@@ -4984,8 +5007,8 @@ ion-modal.g-mustread {
 	margin: 0;
 	padding: 2px var(--g-screen-gutter) 8px;
 	font-family: var(--g-font-ui);
-	font-size: 34px;
-	line-height: 41px;
+	font-size: 2.125rem;
+	line-height: 2.5625rem;
 	font-weight: 700;
 	letter-spacing: 0.4px;
 	color: var(--g-ink);
@@ -5045,15 +5068,15 @@ ion-modal.g-mustread {
 }
 .g-account__name {
 	font-family: var(--g-font-ui);
-	font-size: 22px;
-	line-height: 28px;
+	font-size: 1.375rem;
+	line-height: 1.75rem;
 	font-weight: 700;
 	color: var(--g-ink);
 	overflow-wrap: anywhere;
 }
 .g-account__sub {
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	color: var(--g-ink2);
 }
 /* A separator under the account row, from the text (60 + 12 + 16 = 88). */
@@ -5112,8 +5135,8 @@ ion-modal.g-mustread {
 .g-checkin-sheet__title {
 	margin: 0;
 	font-family: var(--g-font-ui);
-	font-size: 22px;
-	line-height: 28px;
+	font-size: 1.375rem;
+	line-height: 1.75rem;
 	font-weight: 700;
 	color: var(--g-ink);
 }
@@ -5124,8 +5147,8 @@ ion-modal.g-mustread {
 }
 .g-checkin-sheet__day.g-form-footer {
 	padding: 0;
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 }
 .g-checkin-sheet__photo {
 	display: block;
@@ -5186,8 +5209,8 @@ ion-modal.g-mustread {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 11px;
-	line-height: 13px;
+	font-size: 0.6875rem;
+	line-height: 0.8125rem;
 	font-weight: 600;
 	color: var(--g-ink2);
 }
@@ -5197,8 +5220,8 @@ ion-modal.g-mustread {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	color: var(--g-ink);
 }
 .g-attachment__remove {
@@ -5223,8 +5246,8 @@ ion-modal.g-mustread {
 .g-form-status .g-badge {
 	margin-left: auto;
 	padding: 0;
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	font-weight: 600;
 	letter-spacing: -0.4px;
 }
@@ -5270,8 +5293,8 @@ ion-modal.g-mustread {
 .g-request-sheet__guide {
 	width: 100%;
 	margin: 0;
-	font-size: 15px;
-	line-height: 20px;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
 	color: var(--g-ink);
 }
 /* In a row, a value is a value (body 17, secondary ink), whether it is a
@@ -5281,8 +5304,8 @@ ion-modal.g-mustread {
 .g-request-sheet .g-form-row__value,
 .g-request-sheet .g-form-row__value .g-badge,
 .g-request-sheet .g-form-row__value .text-row-label {
-	font-size: 17px;
-	line-height: 22px;
+	font-size: 1.0625rem;
+	line-height: 1.375rem;
 	letter-spacing: -0.4px;
 }
 .g-request-sheet .g-form-row__value .g-badge {
@@ -5304,7 +5327,7 @@ ion-modal.g-mustread {
 /* document-grade rendering for the Text Editor body — headings, lists,
    tables and quotes read like a print format, not chat text */
 .sop-prose {
-	font-size: 13px;
+	font-size: 0.8125rem;
 	line-height: 1.75;
 	color: var(--g-ink2);
 }
@@ -5321,20 +5344,20 @@ ion-modal.g-mustread {
 	line-height: 1.3;
 }
 .sop-prose h1 {
-	font-size: 19px;
+	font-size: 1.1875rem;
 	padding-bottom: 6px;
 	border-bottom: 2px solid var(--g-hair);
 }
 .sop-prose h2 {
-	font-size: 16px;
+	font-size: 1rem;
 }
 .sop-prose h3 {
-	font-size: 14.5px;
+	font-size: 0.9062rem;
 }
 .sop-prose h4,
 .sop-prose h5,
 .sop-prose h6 {
-	font-size: 13px;
+	font-size: 0.8125rem;
 	letter-spacing: 0.04em;
 }
 .sop-prose h1:first-child,
@@ -5392,14 +5415,14 @@ ion-modal.g-mustread {
 	width: 100%;
 	border-collapse: collapse;
 	margin: 4px 0 16px;
-	font-size: 12.5px;
+	font-size: 0.7812rem;
 	display: block;
 	overflow-x: auto;
 }
 .sop-prose th {
 	font-family: var(--g-font-display);
 	font-weight: 800;
-	font-size: 11px;
+	font-size: 0.6875rem;
 	letter-spacing: 0.05em;
 	text-align: left;
 	color: var(--g-ink);
@@ -5418,7 +5441,7 @@ ion-modal.g-mustread {
 }
 .sop-prose pre,
 .sop-prose code {
-	font-size: 12px;
+	font-size: 0.75rem;
 	background: var(--g-icon-bg);
 	padding: 2px 4px;
 }

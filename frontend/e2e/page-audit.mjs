@@ -4,6 +4,7 @@
 // ramp and weights, contrast (WCAG 1.4.3), tap targets (44 pt), sideways
 // overflow and clipped text. One JSON line per screen; the gate reads counts.
 //   cd frontend && set -a && . ../.env && set +a && W=402 H=874 SCHEME=light node e2e/page-audit.mjs
+//   TEXT_PX=23 (optional): measure at a large iPhone Text Size (135%)
 import { writeFileSync, mkdirSync } from "node:fs"
 import { webkit } from "playwright"
 import { BASE, PW, screens, undersizedTargets } from "./screens.mjs"
@@ -19,8 +20,14 @@ const b = await webkit.launch()
 const ctx = await b.newContext({ viewport: { width: W, height: H }, hasTouch: W < 1024, colorScheme: SCHEME })
 await ctx.addInitScript((s) => {
 	localStorage.setItem("hrms:install-prompt-dismissed", String(Date.now()))
-	localStorage.setItem("hrms:theme", s)
-}, SCHEME)
+	localStorage.setItem("hrms:theme", s.scheme)
+	// TEXT_PX: the root size an iPhone's Text Size setting would give (utils/dynamicType.js),
+	// so the pages can be measured at a large text setting; desktop WebKit has no such setting
+	if (s.textPx)
+		document.addEventListener("DOMContentLoaded", () => {
+			document.documentElement.style.fontSize = `${s.textPx}px`
+		})
+}, { scheme: SCHEME, textPx: Number(process.env.TEXT_PX || 0) })
 await ctx.request.post(`${BASE}/api/method/login`, { form: { usr: process.env.WHO_USER || "nadi.w0.approver@example.invalid", pwd: PW } })
 const p = await ctx.newPage()
 const list = [...new Map((await screens(ctx.request)).filter((s) => !s.anon && s.path).map((s) => [s.path, s])).values()]

@@ -82,3 +82,29 @@ test("the iOS zoom rule is still a literal", () => {
 	const rule = components.slice(components.indexOf("iOS Safari zooms"))
 	assert.match(rule, /font-size:\s*16px/, "the input floor stays in px")
 })
+
+// alpha.56: the ramp was rem but 62 component rules still set font-size in px, so
+// most of the app ignored the reader's text size. Every font-size and every
+// line-height that paces text is rem now; the exceptions are boxes of a fixed size
+// whose text must fit them (the tab bar's badge capsule and the label row it sits
+// in) and the 16px floor that stops iOS zooming into a text field.
+test("component text is sized in rem, so it follows the reader's text size", () => {
+	const components = read("theme/glass-components.css")
+	const FIXED = [".g-tabbar__badge", "textarea"]
+	const offenders = []
+	let selector = ""
+	for (const line of components.split("\n")) {
+		if (line.includes("{")) selector = line
+		if (/^\s*font-size:\s*[0-9.]+px/.test(line) && !FIXED.some((s) => selector.includes(s)))
+			offenders.push(`${selector.trim()} ${line.trim()}`)
+	}
+	assert.deepEqual(offenders, [])
+})
+
+test("on an iPhone the root follows the system text size", () => {
+	const components = read("theme/glass-components.css")
+	assert.match(
+		components,
+		/@supports \(font: -apple-system-body\) and \(-webkit-touch-callout: default\) \{\s*html \{\s*font: -apple-system-body;/
+	)
+})

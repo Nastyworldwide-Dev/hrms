@@ -9,13 +9,18 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import postcss from "postcss"
 
+//: A CSS size in px at the default root (16px), so a size written in rem (alpha.56:
+//: text follows the reader's text size) is still checked against the iOS point value.
+const px = (v) => (String(v).endsWith("rem") ? `${parseFloat(v) * 16}px` : v)
+
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8")
 const header = read("../GAppHeader.vue")
 const root = postcss.parse(read("../../../theme/glass-components.css"))
 function decls(selector) {
 	const out = {}
 	root.walkRules((r) => {
-		if (r.parent.type === "root" && r.selectors.includes(selector)) r.walkDecls((d) => (out[d.prop] = d.value))
+		if (r.parent.type === "root" && r.selectors.includes(selector))
+			r.walkDecls((d) => (out[d.prop] = d.value))
 	})
 	return out
 }
@@ -25,10 +30,10 @@ test("a tab root has a large title; a pushed screen an inline, centred one", () 
 	assert.match(header, /'g-header--inline': showBack/)
 	// alpha.8: the tab root's large title is drawn by the page (BaseLayout)
 	const large = decls(".g-large-title")
-	assert.equal(large["font-size"], "34px")
+	assert.equal(px(large["font-size"]), "34px")
 	assert.equal(large["font-weight"], "700")
 	const inline = decls(".g-header--inline .g-header__title")
-	assert.equal(inline["font-size"], "17px")
+	assert.equal(px(inline["font-size"]), "17px")
 	assert.equal(inline["font-weight"], "600")
 	assert.equal(inline["text-align"], "center")
 })

@@ -8,13 +8,18 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import postcss from "postcss"
 
+//: A CSS size in px at the default root (16px), so a size written in rem (alpha.56:
+//: text follows the reader's text size) is still checked against the iOS point value.
+const px = (v) => (String(v).endsWith("rem") ? `${parseFloat(v) * 16}px` : v)
+
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8")
 const tokens = JSON.parse(read("../../../../../design/tokens.json"))
 const root = postcss.parse(read("../../../theme/glass-components.css"))
 function decls(selector) {
 	const out = {}
 	root.walkRules((r) => {
-		if (r.parent.type === "root" && r.selectors.includes(selector)) r.walkDecls((d) => (out[d.prop] = d.value))
+		if (r.parent.type === "root" && r.selectors.includes(selector))
+			r.walkDecls((d) => (out[d.prop] = d.value))
 	})
 	return out
 }
@@ -28,7 +33,7 @@ test("groups: 26 corner, 35 apart", () => {
 
 test("rows: 17 pt title, 44 plain, 54 with an icon tile of 29", () => {
 	assert.equal(tokens.layout["row-height-icon"].value, "54px")
-	assert.equal(decls(".g-row__label")["font-size"], "17px")
+	assert.equal(px(decls(".g-row__label")["font-size"]), "17px")
 	assert.equal(decls(".g-row")["min-height"], "var(--g-touch-target-min)")
 	assert.equal(decls(".g-row:has(.g-row__well)")["min-height"], "var(--g-row-height-icon)")
 	assert.equal(decls(".g-row__well").width, "29px")
