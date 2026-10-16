@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.52",
-	"releaseName": "Existing SOPs Open to All",
+	"version": "2.0.0-alpha.53",
+	"releaseName": "Company Team View",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

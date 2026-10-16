@@ -10,6 +10,24 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.53] — Company Team View — 2026-10-16
+
+### Added
+- **An Attendance Report Viewer sees their whole company on Team.** Nadi →
+  More → Team lists every active employee in their Company User Permission,
+  with the day's status, shift, first in and last out. View only: no Roster,
+  no approvals. No Company permission = nobody, never everybody. A manager who
+  also holds the role keeps their own reports in other companies.
+
+### Fixed
+- **The Shift Attendance Excel showed employee IDs only.** The sheet now has
+  an Employee Name column next to the ID.
+
+### Deploy
+- No migrate needed.
+- Check: as Mia (mia@qgdsz.com), Nadi → More → Team lists the Shenzhen staff;
+  More → Apps → Shift Attendance → Download has names.
+
 ## [2.0.0-alpha.52] — Existing SOPs Open to All — 2026-10-15
 
 ### Fixed
