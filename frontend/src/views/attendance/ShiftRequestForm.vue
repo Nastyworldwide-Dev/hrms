@@ -100,7 +100,7 @@ watch(
 
 // helper functions
 function setFormReadOnly() {
-	if (employee.data?.user_id && shiftRequest.value.approver === employee.data.user_id) return
+	if (employee.data?.user_id && shiftRequest.value.approver === employee.data?.user_id) return
 	formFields.data.map((field) => (field.read_only = true))
 }
 
