@@ -47,7 +47,6 @@
 import { Check, ChevronUp, X } from "lucide-vue-next"
 import GButton from "@/components/glass/GButton.vue"
 import GGhostButton from "@/components/glass/GGhostButton.vue"
-import { modalController } from "@ionic/vue"
 import { computed, ref, onMounted, inject } from "vue"
 import GActionSheet from "@/components/glass/GActionSheet.vue"
 
@@ -120,15 +119,19 @@ const showTransitions = () => {
 	showActionSheet.value = true
 }
 
+//: Closes ITS OWN menu. A blind dismiss of "the top overlay" closed the wrong
+//: one (alpha.55). A failed transition already toasts (composables/workflow)
+//: and rethrows; the menu still closes and the host is told only on success.
 const applyWorkflow = async ({ workflowAction = "" }) => {
 	const action = workflowAction
-	if (action) {
-		await props.workflow.applyWorkflow(props.doc, action)
-		modalController.dismiss()
-		emit("workflow-applied")
-	}
-
 	showActionSheet.value = false
+	if (!action) return
+	try {
+		await props.workflow.applyWorkflow(props.doc, action)
+		emit("workflow-applied")
+	} catch (error) {
+		console.warn("[WorkflowActionSheet] transition failed", action, error?.exc_type || "")
+	}
 }
 
 onMounted(() => getTransitions())

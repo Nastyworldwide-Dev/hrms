@@ -61,7 +61,7 @@
 				class="mt-3"
 				:label="justSaved ? __('Saved') : nextAction.label"
 				:disabled="!online"
-				@click="handleEmployeeCheckin"
+				@click="openCheckinSheet"
 			>
 				<!-- A saved punch, confirmed where the person tapped: a tick draws
 				     itself once (Apple: Draw On), then the button settles on the
@@ -97,10 +97,11 @@
 	     focus-trap workaround (§16.3) the raw ion-modal did not. -->
 	<GModal
 		v-if="settings.data?.allow_employee_checkin_from_mobile_app"
-		trigger="open-checkin-modal"
+		:is-open="checkinSheetOpen"
 		:title="__(nextAction.label)"
 		@did-present="onModalPresent"
 		@will-dismiss="onModalDismiss"
+		@did-dismiss="checkinSheetOpen = false"
 	>
 		<div class="checkin-sheet__stack">
 			<div class="flex flex-col gap-1">
@@ -250,7 +251,6 @@ import { createResource, createListResource, debounce } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
 import { computed, inject, nextTick, ref, shallowRef, watch, onBeforeUnmount } from "vue"
 import { useListUpdate } from "@/composables/realtime"
-import { modalController } from "@ionic/vue"
 
 import { formatTimestamp } from "@/utils/formatters"
 import {
@@ -1021,6 +1021,15 @@ const askForNotifications = ref(false)
 //: the buttons are disabled offline with the reason beside them (audit P0-7).
 const online = useOnline()
 
+//: Open state owned here, so a strict block or a saved punch closes THIS sheet;
+//: the "top overlay" dismiss they used could close a dialog opened over it
+//: instead (alpha.55).
+const checkinSheetOpen = ref(false)
+function openCheckinSheet() {
+	checkinSheetOpen.value = true
+	handleEmployeeCheckin()
+}
+
 const handleEmployeeCheckin = async () => {
 	sheetSession += 1
 	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
@@ -1241,7 +1250,7 @@ const runSubmitLog = async (logType) => {
 			if (result && result.ok === false && result.mode === "strict_block") {
 				console.info("[Preflight] strict block:", result)
 				stopCamera()
-				modalController.dismiss()
+				checkinSheetOpen.value = false
 				strictRejection.value = {
 					reason: result.reason || "outside_radius",
 					shiftType: result.shift_type || "",
@@ -1328,7 +1337,7 @@ const runSubmitLog = async (logType) => {
 			// (disconnected/backgrounded), so reload explicitly like the dialogs do.
 			refreshAfterPunch()
 			if (generation !== geoGeneration) return
-			modalController.dismiss()
+			checkinSheetOpen.value = false
 
 			if (doc?.requires_remote_approval) {
 				try {

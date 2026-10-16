@@ -10,10 +10,10 @@
 			     so this stayed the last button-name violation in the app after
 			     every other icon-only control was fixed. -->
 			<GIconButton
-				id="show-filter-modal"
 				:label="__('Filter list')"
 				class="g-iconbtn--boxed"
 				:class="areFiltersApplied ? 'g-iconbtn--on' : ''"
+				@click="filtersOpen = true"
 			>
 				<Funnel class="h-5 w-5" aria-hidden="true" />
 			</GIconButton>
@@ -146,7 +146,9 @@
 			</div>
 		</div>
 
-		<GModal trigger="show-filter-modal" :title="__('Filters')">
+		<!-- Open state owned here, so applying a filter closes THIS sheet: the
+		     "top overlay" dismiss it used could close a different one (alpha.55). -->
+		<GModal :is-open="filtersOpen" :title="__('Filters')" @did-dismiss="filtersOpen = false">
 			<template #confirm>
 				<button type="button" class="g-sheet__done g-focusable" @click="applyFilters">
 					{{ __("Done") }}
@@ -180,7 +182,7 @@ import {
 	Plus,
 	Receipt,
 } from "lucide-vue-next"
-import { IonContent, modalController } from "@ionic/vue"
+import { IonContent } from "@ionic/vue"
 import ShellHeader from "@/components/ShellHeader.vue"
 import { createResource, debounce } from "frappe-ui"
 import {
@@ -515,17 +517,19 @@ function prepareFilters() {
 	}
 }
 
+const filtersOpen = ref(false)
+
 function applyFilters() {
 	prepareFilters()
 	fetchDocumentList()
-	modalController.dismiss()
+	filtersOpen.value = false
 	areFiltersApplied.value = appliedFilters.value.length ? true : false
 }
 
 function clearFilters() {
 	initializeFilters()
 	fetchDocumentList()
-	modalController.dismiss()
+	filtersOpen.value = false
 	areFiltersApplied.value = false
 }
 
