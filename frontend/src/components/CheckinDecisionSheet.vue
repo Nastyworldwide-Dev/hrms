@@ -74,7 +74,7 @@
 </template>
 
 <script setup>
-import { inject, ref } from "vue"
+import { inject, onBeforeUnmount, ref } from "vue"
 import { gToast } from "@/components/glass/toast"
 
 import GButton from "@/components/glass/GButton.vue"
@@ -98,6 +98,10 @@ const submitting = ref(false)
 //: "approve" | "reject" while its mark draws on the button.
 const decidedAs = ref("")
 const DECIDED_MS = 650
+//: Cancelled if the sheet goes first (its X, a route change): a late "decided"
+//: closed whatever the host had opened next (alpha.55).
+let decidedTimer = null
+onBeforeUnmount(() => clearTimeout(decidedTimer))
 
 async function decide(kind, submit) {
 	submitting.value = true
@@ -115,7 +119,7 @@ async function decide(kind, submit) {
 		pendingCountResource.reload()
 		// The mark draws on the button pressed, then the sheet closes (alpha.13).
 		decidedAs.value = kind
-		setTimeout(() => emit("decided"), DECIDED_MS)
+		decidedTimer = setTimeout(() => emit("decided"), DECIDED_MS)
 	} catch (err) {
 		console.error("[CheckinDecisionSheet] decision failed:", err)
 		gToast({

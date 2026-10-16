@@ -44,3 +44,21 @@ test("the workflow menu closes before it acts, and a failure stays inside it", (
 	assert.match(fn, /showActionSheet\.value = false\s*if \(!action\) return\s*try \{/)
 	assert.match(fn, /emit\("workflow-applied"\)\s*\} catch/)
 })
+
+// A delayed close outlives its sheet unless it is cancelled: the approval sheet's
+// 650 ms "decided" fired into a host that had already opened the next request.
+test("every delayed close after a decision is cancelled when its sheet goes", () => {
+	for (const file of [
+		"components/RequestActionSheet.vue",
+		"components/CheckinDecisionSheet.vue",
+	]) {
+		const src = readFileSync(join(SRC, file), "utf8")
+		const timer = src.match(/(\w+) = setTimeout\(\(\) => emit\(/)
+		assert.ok(timer, `${file} keeps its close timer`)
+		assert.match(
+			src,
+			new RegExp(`onBeforeUnmount\\(\\(\\) => clearTimeout\\(${timer[1]}\\)\\)`),
+			file
+		)
+	}
+})
