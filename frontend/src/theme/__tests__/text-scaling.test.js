@@ -101,10 +101,13 @@ test("component text is sized in rem, so it follows the reader's text size", () 
 	assert.deepEqual(offenders, [])
 })
 
+// The font shorthand resets line-height to "normal" (about 1.2): without restating
+// the app's 1.5, every unstyled paragraph on an iPhone would tighten (review of
+// 6bf1b1b9d; desktop WebKit does not match the @supports, so no screenshot saw it).
 test("on an iPhone the root follows the system text size", () => {
 	const components = read("theme/glass-components.css")
 	assert.match(
 		components,
-		/@supports \(font: -apple-system-body\) and \(-webkit-touch-callout: default\) \{\s*html \{\s*font: -apple-system-body;/
+		/@supports \(font: -apple-system-body\) and \(-webkit-touch-callout: default\) \{\s*html \{\s*font: -apple-system-body;[^}]*line-height: 1\.5;/
 	)
 })

@@ -15,12 +15,19 @@
 
 const IOS_DEFAULT_BODY_PX = 17
 const APP_ROOT_PX = 16
+//: iOS body at the largest standard Text Size (xxxLarge, 135%). The Larger
+//: Accessibility Sizes go to about 310%, where a 320pt phone overflowed and cut text
+//: on most screens (measured 16 Oct 2026); 135% was measured clean. Past it, the
+//: app holds at 135%.
+// ceiling: 135% of the default; upgrade: lift it screen by screen once each is
+// measured clean at the accessibility sizes (page-audit TEXT_PX).
+const MAX_SYSTEM_BODY_PX = 23
 
 //: The root size for a system body size, or null when there is none to follow.
 export function rootSizeFor(systemPx) {
 	const px = Number(systemPx)
 	if (!Number.isFinite(px) || px <= 0) return null
-	return px * (APP_ROOT_PX / IOS_DEFAULT_BODY_PX)
+	return Math.min(px, MAX_SYSTEM_BODY_PX) * (APP_ROOT_PX / IOS_DEFAULT_BODY_PX)
 }
 
 //: Same condition as the CSS rule: the system body font exists and this is a touch

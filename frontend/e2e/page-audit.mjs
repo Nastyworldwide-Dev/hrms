@@ -4,7 +4,8 @@
 // ramp and weights, contrast (WCAG 1.4.3), tap targets (44 pt), sideways
 // overflow and clipped text. One JSON line per screen; the gate reads counts.
 //   cd frontend && set -a && . ../.env && set +a && W=402 H=874 SCHEME=light node e2e/page-audit.mjs
-//   TEXT_PX=23 (optional): measure at a large iPhone Text Size (135%)
+//   TEXT_PX=21.6 (optional): the root at the largest standard iPhone Text Size
+//   (135%, the ceiling utils/dynamicType.js holds the app at)
 import { writeFileSync, mkdirSync } from "node:fs"
 import { webkit } from "playwright"
 import { BASE, PW, screens, undersizedTargets } from "./screens.mjs"

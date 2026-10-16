@@ -21,8 +21,11 @@ const decl = (selector, prop) => {
 	return v
 }
 
+// alpha.56: text follows the reader's Text Size, so the height is a floor: 48 at
+// the default size, as before, and taller only when a large label needs it.
 test("the primary button has a fixed height, not padding + text", () => {
-	assert.equal(decl(".g-btn", "height"), "48px")
+	assert.equal(decl(".g-btn", "min-height"), "48px")
+	assert.equal(decl(".g-btn", "height"), "auto")
 	assert.match(decl(".g-btn", "padding"), /^0 /)
 })
 
@@ -31,6 +34,6 @@ test("it is a capsule (radius = half the height)", () => {
 })
 
 test("the compact button is the 44px regular size, also a capsule", () => {
-	assert.equal(decl(".g-btn--compact", "height"), "44px")
+	assert.equal(decl(".g-btn--compact", "min-height"), "44px")
 	assert.equal(decl(".g-btn--compact", "border-radius"), "22px")
 })

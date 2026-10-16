@@ -454,7 +454,7 @@ html[data-transparency="reduce"] .g-sidenav {
    a title and must not take the row. Same fill, same component, same role. */
 .g-btn--compact {
 	width: auto;
-	height: 44px; /* the iOS regular control, the 44pt minimum target */
+	min-height: 44px; /* the iOS regular control, the 44pt minimum target */
 	padding: 0 16px;
 	border-radius: 22px; /* half of 44 */
 	white-space: nowrap;
@@ -532,8 +532,12 @@ html[data-transparency="reduce"] .g-sidenav {
 	   every type change (41-61px measured). 48 is the large control on the 4pt
 	   grid (Apple's current HIG text publishes no fixed button height). A
 	   capsule: radius = half the height (WWDC25 356), drawn as a pill so it
-	   stays a capsule at any height. */
-	height: 48px;
+	   stays a capsule at any height.
+	   alpha.56: 48 is the floor, not a ceiling. Text follows the reader's Text
+	   Size, and a fixed height with overflow: hidden cut a large label off; the
+	   button grows with its label and is 48 at the default size, as before. */
+	height: auto;
+	min-height: 48px;
 	padding: 0 20px;
 	border: 0;
 	border-radius: 24px; /* half of 48: a capsule */
@@ -1176,7 +1180,8 @@ html[data-theme="dark"] .g-badge--open {
 }
 .g-input--textarea {
 	align-items: flex-start;
-	height: 64px;
+	/* a floor, so a larger Text Size still shows its first lines (alpha.56) */
+	min-height: 64px;
 	resize: none;
 }
 .g-input:disabled {
@@ -4429,6 +4434,9 @@ html {
 	html {
 		font: -apple-system-body;
 		font-family: var(--g-font-ui) !important;
+		/* the font shorthand also resets line-height to normal; the app's base is
+		   1.5 (Tailwind preflight), and unstyled text must keep it (review of 6bf1b1b9d) */
+		line-height: 1.5;
 	}
 }
 

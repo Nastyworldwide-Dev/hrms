@@ -16,6 +16,13 @@ test("larger and smaller system sizes scale the app in proportion", () => {
 	assert.equal(rootSizeFor(14), 14 * (16 / 17))
 })
 
+test("the Larger Accessibility Sizes hold at the largest standard size", () => {
+	// 53px is iOS body at the largest accessibility size; 23px is xxxLarge (135%)
+	assert.equal(rootSizeFor(53), rootSizeFor(23))
+	assert.equal(rootSizeFor(30), rootSizeFor(23))
+	assert.ok(rootSizeFor(22) < rootSizeFor(23))
+})
+
 test("no system size (not an iPhone, or unreadable) leaves the root alone", () => {
 	for (const px of [0, NaN, undefined, null]) assert.equal(rootSizeFor(px), null)
 })
