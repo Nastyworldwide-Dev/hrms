@@ -10,6 +10,30 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.56] — Text Follows Your Phone — 2026-10-16
+
+### Added
+- **Text follows the iPhone's Text Size** (Settings > Display & Brightness >
+  Text Size), as in any iPhone app. At the default size nothing changes: all
+  36 screens, phone and desktop, measured pixel-identical to alpha.55. Larger
+  settings grow the text up to the largest standard size (135%); margins and
+  spacing stay the same, and long labels wrap instead of being cut off.
+  The tab bar stays its fixed size (its labels collide at large sizes).
+
+### Fixed
+- At large text, buttons, two Approvals rows, a request's history line and
+  Home's "See all" were cut off. They grow or wrap now.
+
+### Not yet
+- The Larger Accessibility Sizes (above 135%) hold at 135%: on a small phone
+  they overflowed most screens. Each screen will be measured and opened up.
+
+### Deploy
+- No migrate needed.
+- Check on an iPhone: Settings > Display & Brightness > Text Size, two steps
+  up, reopen Nadi: text is larger, nothing cut off. Back to default: Nadi
+  looks exactly as before.
+
 ## [2.0.0-alpha.55] — Nothing Gets Stuck — 2026-10-16
 
 ### Fixed
