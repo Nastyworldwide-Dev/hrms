@@ -12,7 +12,7 @@
 -->
 <template>
 	<GPage>
-		<ShellHeader :title="__('Shift attendance')" />
+		<ShellHeader :title="__('Shift Attendance')" />
 		<ion-content class="ion-padding g-page__content">
 			<div class="w-full max-w-content-column-lg mx-auto p-4 flex flex-col gap-3">
 				<!-- Not a viewer: a plain line, no button (the download refuses too) -->
