@@ -1,14 +1,13 @@
 # HANDOFF
-prompt:   OT approve sheet stuck ("Dia taknak bukak") + its bug family; Mia no-company Team
+prompt:   alpha.56: text follows the iPhone Text Size (Apple HIG Dynamic Type)
 status:   done
-commit:   d4c1a12ec on nz-glass (tag v2.0.0-alpha.55)
-files:    frontend/src/components/RequestActionSheet.vue
+commit:   067e584c7 on nz-glass (tag v2.0.0-alpha.56)
+files:    frontend/src/theme/glass-components.css
+          frontend/src/utils/dynamicType.js
+          frontend/src/main.js
+          frontend/tailwind.config.js
           frontend/src/views/Approvals.vue
-          frontend/src/components/CheckInPanel.vue
-          frontend/src/utils/approvalBulk.js
-          hrms/api/team.py
-          frontend/src/views/team/TeamDashboard.vue
-          docs/glass/plan/NADI_2.0.0-alpha.55_PLAN.md
-verify:   iPhone: Approvals, approve two overtime requests in a row; the second opens
-flags:    stuck sheet not browser-reproduced (code trace); confirm Frappe Cloud worker timeout > 60 s
-next:     deploy alpha.55 (no migrate); then slice 7 (rem text + 44 pt) as alpha.56 with screenshots
+          frontend/src/components/RequestTimeline.vue
+verify:   iPhone: Text Size two steps up, reopen Nadi: larger, nothing cut off; default looks as before
+flags:    iPhone rule not exercised by desktop WebKit (simulated on 4 screens); sizes above 135% held at 135%
+next:     deploy alpha.56 (no migrate); then open the accessibility sizes screen by screen (page-audit TEXT_PX)
