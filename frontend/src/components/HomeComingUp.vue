@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted } from "vue"
+import { computed, inject } from "vue"
 import { useRouter } from "vue-router"
 import { CalendarDays, GraduationCap, Palmtree, Plane } from "lucide-vue-next"
 
@@ -72,8 +72,4 @@ function open() {
 	console.info("[HomeComingUp] open", { kind: next.value?.kind })
 	router.push({ name: target.value })
 }
-
-onMounted(() => {
-	homeComingUp.fetch()
-})
 </script>

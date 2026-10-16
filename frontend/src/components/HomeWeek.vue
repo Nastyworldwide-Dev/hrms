@@ -28,7 +28,7 @@
 
 <script setup>
 import GRollNumber from "@/components/glass/GRollNumber.vue"
-import { computed, inject, onMounted } from "vue"
+import { computed, inject } from "vue"
 import { useRouter } from "vue-router"
 import { CalendarCheck } from "lucide-vue-next"
 
@@ -57,8 +57,4 @@ function claim() {
 	console.info("[HomeWeek] open OT form", { hours: overtime.value })
 	router.push({ name: "OTRequestFormView" })
 }
-
-onMounted(() => {
-	homeWeek.fetch()
-})
 </script>

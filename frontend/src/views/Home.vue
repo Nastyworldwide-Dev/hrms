@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { defineAsyncComponent } from "vue"
+import { defineAsyncComponent, onMounted } from "vue"
 import { homeAnnouncements } from "@/data/announcements"
 import { homeComingUp, homeWeek } from "@/data/home"
 import { needsYouResource } from "@/data/needsYou"
@@ -80,6 +80,15 @@ const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPull
 
 //: Pull to refresh reloads what HOME shows. It reloaded the request lists,
 //: which left Home with the Requests panel (review of 1cdd9ff56).
+//: Fetched HERE, not by HomeWeek / HomeComingUp. Those two sit inside the
+//: GListPanel whose skeleton unmounts them while homeWeek loads; fetching on
+//: their own mount made a failed read (a login with no Employee: 403) mount,
+//: refetch, unmount and fail again, thousands of requests a second (Mia, 16 Oct).
+onMounted(() => {
+	homeWeek.fetch()
+	homeComingUp.fetch()
+})
+
 async function refresh(event) {
 	console.info("[Home] pull-to-refresh")
 	await Promise.allSettled([
