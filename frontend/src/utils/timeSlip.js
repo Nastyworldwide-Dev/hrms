@@ -54,7 +54,9 @@ export function slipStatusLine(status, __ = plain) {
 
 //: frappe-ui and the upload helper are pulled in when a slip is actually sent, never at load.
 async function insertRequest(doc) {
-	const { createResource } = await import("frappe-ui")
+	// the resources module only: a whole-package import also reaches frappe-ui's raw toast,
+	// which renders text unescaped (no-unsanitised-html.test.js)
+	const { createResource } = await import("frappe-ui/src/resources/index.js")
 	return createResource({ url: "frappe.client.insert" }).submit({ doc })
 }
 

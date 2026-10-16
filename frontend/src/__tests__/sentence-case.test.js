@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url"
 
 const root = fileURLToPath(new URL("..", import.meta.url))
 const KEEP =
-	/\{|\bHR\b|\bIT\b|\bOT\b|SOPs?\b|KPIs?\b|KRAs?\b|PDF|PWA|CEO|\bRM\b|Nadi|Frappe|ERPNext|Desk\b|Approva|Google|Microsoft|Bahasa|English|Malaysia|\bNew\b|Home\b|Settings\b|Requests\b|Calendar\b|Score\b|More\b|You\b/
+	/\{|\bHR\b|\bIT\b|\bOT\b|SOPs?\b|KPIs?\b|KRAs?\b|PDF|PWA|CEO|\bRM\b|Nadi|Frappe|ERPNext|Desk\b|Approva|Google|Microsoft|Excel|Bahasa|English|Malaysia|\bNew\b|Home\b|Settings\b|Requests\b|Calendar\b|Score\b|More\b|You\b/
 
 function files(dir) {
 	return readdirSync(dir).flatMap((name) => {
