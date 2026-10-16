@@ -10,6 +10,20 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.54] — Home Load Loop Fix — 2026-10-16
+
+### Fixed
+- **Home could flood the server when "Your week" failed to load.** If the
+  week read failed (for example, a login with no Employee record), the two
+  cards reloaded themselves without end, thousands of requests a second.
+  Home now loads them once; a failure shows "could not be loaded" and stops.
+
+### Deploy
+- No migrate needed.
+- Check: as any employee, Home shows "Your week" as before. A login with no
+  Employee record sees one "could not be loaded" line, and the browser
+  console stops growing.
+
 ## [2.0.0-alpha.53] — Company Team View — 2026-10-16
 
 ### Added
