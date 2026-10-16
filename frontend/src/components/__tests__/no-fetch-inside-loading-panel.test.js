@@ -26,11 +26,15 @@ const byName = new Map(
 	])
 )
 
-//: Fetches when it mounts: an onMounted (or immediate watch) whose body starts a read.
+//: Fetches when it mounts: a read started from onMounted (inline or a named function),
+//: an immediate watch, or a resource built with auto: true. Matched on the whole file
+//: with [\s\S] so a nested {} cannot hide the call (review of 1872bb07d).
+const READ = /\.(fetch|reload|submit)\(/
 const fetchesOnMount = (src) =>
-	/onMounted\(\s*(async\s*)?\(\)\s*=>\s*\{[^}]*\.(fetch|reload|submit)\(/.test(src) ||
-	/onMounted\(\s*(async\s*)?\(\)\s*=>\s*\w+\.(fetch|reload|submit)\(/.test(src) ||
-	/createResource\(\{[^}]*\bauto:\s*true/.test(src)
+	/onMounted\(\s*(async\s*)?\([^)]*\)\s*=>[\s\S]{0,400}?\.(fetch|reload|submit)\(/.test(src) ||
+	/onMounted\(\s*[A-Za-z_]\w*\s*\)/.test(src) ||
+	/immediate:\s*true/.test(src) ||
+	/createResource\(\{[\s\S]{0,400}?\bauto:\s*true/.test(src)
 
 test("nothing inside a loading panel starts a read when it mounts", () => {
 	const offenders = []
@@ -52,5 +56,9 @@ test("nothing inside a loading panel starts a read when it mounts", () => {
 test("the rule recognises the alpha.54 shape", () => {
 	assert.ok(fetchesOnMount("onMounted(() => {\n\thomeWeek.fetch()\n})"))
 	assert.ok(fetchesOnMount('createResource({ url: "x", auto: true })'))
+	assert.ok(fetchesOnMount("onMounted(load)"))
+	assert.ok(fetchesOnMount("watch(x, () => r.reload(), { immediate: true })"))
+	assert.ok(fetchesOnMount("createResource({ makeParams() { return {} }, auto: true })"))
 	assert.ok(!fetchesOnMount("onMounted(() => {\n\tconsole.info('hi')\n})"))
+	assert.ok(READ.test("a.fetch()"))
 })
