@@ -17,7 +17,7 @@ test("a decision draws its mark on the button before the sheet closes", () => {
 	const sheet = read("../RequestActionSheet.vue")
 	assert.match(sheet, /decidedAs\.value = status/)
 	assert.match(sheet, /class="g-btn__tick"/)
-	assert.match(sheet, /setTimeout\(\s*\(\) =>\s*modalController\.dismiss\(\)/)
+	assert.match(sheet, /setTimeout\(\s*\(\) =>\s*emit\("close"\),\s*DECIDED_MS\)/)
 	const checkin = read("../CheckinDecisionSheet.vue")
 	assert.match(checkin, /decidedAs\.value = /)
 })

@@ -217,18 +217,32 @@
 
 
 	</div>
+	<!-- Never an empty frame (owner, 16 Oct 2026): a failed or slow read used to
+	     leave only the sheet's X, and the approver could not tell it apart from
+	     a frozen app. -->
+	<div v-else-if="document.get?.error" class="g-form-body g-request-sheet" role="alert">
+		<p class="m-0">{{ __("This request could not be loaded.") }}</p>
+		<p class="m-0 text-caption text-ink-600">
+			{{ __("It may have been answered or withdrawn already.") }}
+		</p>
+		<GButton :label="__('Try again')" @click="document.reload()" />
+	</div>
+	<div v-else class="g-form-body g-request-sheet" aria-busy="true">
+		<GSkeleton height="20px" />
+		<GSkeleton height="20px" width="60%" />
+	</div>
 </template>
 
 <script setup>
 import { ExternalLink } from "lucide-vue-next"
-import { modalController } from "@ionic/vue"
 import { createDocumentResource, createResource } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
 import GButton from "@/components/glass/GButton.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
-import { computed, defineAsyncComponent, inject, onMounted, ref } from "vue"
+import GSkeleton from "@/components/glass/GSkeleton.vue"
+import { computed, defineAsyncComponent, inject, onBeforeUnmount, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import FilePreviewModal from "@/components/FilePreviewModal.vue"
 import GAttachmentRow from "@/components/glass/GAttachmentRow.vue"
@@ -270,6 +284,11 @@ const props = defineProps({
 		required: true,
 	},
 })
+//: The host owns the sheet's open state, so the sheet ASKS to be closed.
+//: emit("close") closed whichever overlay was on top (this sheet's
+//: own confirm, a preview, or nothing mid-animation), and when it missed the host
+//: kept the request "open": the next one would not open (owner, 16 Oct 2026).
+const emit = defineEmits(["close"])
 const router = useRouter()
 
 let showPreviewModal = ref(false)
@@ -355,6 +374,8 @@ const finalize = createResource({ url: "hrms.api.approval.finalize" })
 const decidedAs = ref("")
 //: Long enough to see the mark draw, short enough not to wait for it.
 const DECIDED_MS = 650
+let closeTimer = null
+onBeforeUnmount(() => clearTimeout(closeTimer))
 
 //: In flight, or already decided while its mark draws: either way no second
 //: tap may reach the server (alpha.13 kept the sheet open 650 ms for the mark).
@@ -417,7 +438,7 @@ function withdrawWithUndo() {
 	const { doctype, name } = props.modelValue
 	console.info("[RequestActionSheet] withdraw with undo", name)
 	hideRequest(name)
-	modalController.dismiss()
+	emit("close")
 	const pending = undoable(() =>
 		withdraw.submit(
 			{ doctype, name },
@@ -536,8 +557,8 @@ const onActionSuccess = ({ status, docstatus, dismiss }) => {
 	if (dismiss && status) {
 		decidedAs.value = status
 		console.info("[RequestActionSheet] decided:", status)
-		setTimeout(() => modalController.dismiss(), DECIDED_MS)
-	} else if (dismiss) modalController.dismiss()
+		closeTimer = setTimeout(() => emit("close"), DECIDED_MS)
+	} else if (dismiss) emit("close")
 	gToast({
 		title: __("Success"),
 		text: getSuccessMessage({ status, docstatus }),
@@ -632,7 +653,7 @@ const updateDocumentStatus = (
 }
 
 const openFormView = () => {
-	modalController.dismiss()
+	emit("close")
 	router.push({
 		name: `${props.modelValue.doctype.replace(/\s+/g, "")}DetailView`,
 		params: { id: props.modelValue.name },

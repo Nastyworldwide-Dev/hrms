@@ -281,10 +281,14 @@
 					:row="selected.row"
 					@decided="close"
 				/>
+				<!-- keyed: each request gets a fresh sheet, never the last one's
+				     document or its "Approved" mark (owner, 16 Oct 2026) -->
 				<RequestActionSheet
 					v-else-if="selected"
+					:key="`${selected.doctype}:${selected.name}`"
 					:fields="REQUEST_SUMMARY_FIELDS[selected.doctype]"
 					v-model="selected"
+					@close="selected = null"
 				/>
 			</GModal>
 

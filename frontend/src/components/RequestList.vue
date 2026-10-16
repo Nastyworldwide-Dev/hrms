@@ -79,7 +79,13 @@
 	/>
 
 	<GModal :is-open="isRequestModalOpen" @did-dismiss="closeRequestModal">
-		<RequestActionSheet :fields="fieldsMap[selectedRequest?.doctype]" v-model="selectedRequest" />
+		<RequestActionSheet
+			v-if="selectedRequest"
+			:key="`${selectedRequest.doctype}:${selectedRequest.name}`"
+			:fields="fieldsMap[selectedRequest?.doctype]"
+			v-model="selectedRequest"
+			@close="isRequestModalOpen = false"
+		/>
 	</GModal>
 </template>
 

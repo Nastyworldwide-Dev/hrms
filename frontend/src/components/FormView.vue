@@ -357,6 +357,7 @@
 			:fields="REQUEST_SUMMARY_FIELDS[props.doctype]"
 			:showOpenForm="false"
 			v-model="reviewRequest"
+			@close="showReviewSheet = false"
 		/>
 	</GModal>
 
