@@ -84,7 +84,7 @@ watch(() => formFields.data, applyApproverOptions)
 watch(
 	() => shiftRequest.value.employee,
 	(employee_id) => {
-		if (props.id && employee_id !== employee.data.name) {
+		if (props.id && employee_id !== employee.data?.name) {
 			// if employee is not the current user, set form as read only
 			setFormReadOnly()
 		}
@@ -100,7 +100,7 @@ watch(
 
 // helper functions
 function setFormReadOnly() {
-	if (shiftRequest.value.approver === employee.data.user_id) return
+	if (shiftRequest.value.approver === employee.data?.user_id) return
 	formFields.data.map((field) => (field.read_only = true))
 }
 
@@ -115,6 +115,6 @@ function validateDates(from_date, to_date) {
 }
 
 function validateForm() {
-	shiftRequest.value.employee = employee.data.name
+	shiftRequest.value.employee = employee.data?.name
 }
 </script>

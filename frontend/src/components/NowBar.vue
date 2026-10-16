@@ -341,7 +341,7 @@ async function sendSlip() {
 		if (slipNeedsFile.value) await attachSlipFile(slip.value.name, slipFile.value)
 		else
 			await sendTimeSlip({
-				employee: employee.data.name,
+				employee: employee.data?.name,
 				day: slip.value.day,
 				file: slipFile.value,
 			})

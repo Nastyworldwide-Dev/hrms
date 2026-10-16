@@ -62,7 +62,7 @@ const formFields = createResource({
 watch(
 	() => attendanceRequest.value.employee,
 	(employee_id) => {
-		if (props.id && employee_id !== employee.data.name) {
+		if (props.id && employee_id !== employee.data?.name) {
 			// if employee is not the current user, set form as read only
 			setFormReadOnly()
 		}
@@ -119,6 +119,6 @@ function validateDates(from_date, to_date) {
 }
 
 function validateForm() {
-	attendanceRequest.value.employee = employee.data.name
+	attendanceRequest.value.employee = employee.data?.name
 }
 </script>

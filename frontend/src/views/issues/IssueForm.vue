@@ -103,6 +103,6 @@ watch(
 )
 
 function validateForm() {
-	issue.value.employee = employee.data.name
+	issue.value.employee = employee.data?.name
 }
 </script>

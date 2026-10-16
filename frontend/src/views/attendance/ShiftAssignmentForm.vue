@@ -57,7 +57,7 @@ const formFields = createResource({
 watch(
 	() => shiftAssignment.value.employee,
 	(employee_id) => {
-		if (props.id && employee_id !== employee.data.name) {
+		if (props.id && employee_id !== employee.data?.name) {
 			// if employee is not the current user, set form as read only
 			setFormReadOnly()
 		}
@@ -87,6 +87,6 @@ function validateDates(start_date, end_date) {
 }
 
 function validateForm() {
-	shiftAssignment.value.employee = employee.data.name
+	shiftAssignment.value.employee = employee.data?.name
 }
 </script>

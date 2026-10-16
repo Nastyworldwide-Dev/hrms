@@ -350,7 +350,7 @@ const shiftLocationState = ref("loading")
 const shiftLocation = createResource({
 	url: "hrms.api.geofence.get_active_shift_location",
 	makeParams() {
-		return { employee: employee.data.name }
+		return { employee: employee.data?.name }
 	},
 })
 
@@ -382,7 +382,7 @@ const checkins = createListResource({
 		"shift_actual_end",
 	],
 	filters: {
-		employee: employee.data.name,
+		employee: employee.data?.name,
 	},
 	orderBy: "time desc",
 })
@@ -430,7 +430,7 @@ function resetSlip() {
 async function sendSlipAfterPunch(file) {
 	try {
 		await sendTimeSlip({
-			employee: employee.data.name,
+			employee: employee.data?.name,
 			day: nowResource.data?.date || dayjs().format("YYYY-MM-DD"),
 			file,
 		})
@@ -1080,7 +1080,9 @@ const lastSubmit = ref({ action: null, at: 0 })
 // already holds instead of judging a second tap.
 // Keyed by employee, not by phone: on a shared device the next person must
 // not inherit — and replay — somebody else's tap.
-const PENDING_TAP_KEY = `checkin.pendingTap:${employee.data.name}`
+//: Read at the tap, not at setup: an employee not yet known (or none at all)
+//: would fix the key as "...:undefined", one shared by every person on the phone.
+const pendingTapKey = () => `checkin.pendingTap:${employee.data?.name || ""}`
 // A pending id older than this, or from another calendar day, is not this
 // tap's retry: a replay would answer with yesterday's stored punch and today
 // would get none. Except right around midnight: a lost answer at 23:58 and
@@ -1094,7 +1096,7 @@ const PENDING_TAP_GRACE_MS = 10 * 60 * 1000
 function pendingTapId(logType) {
 	let pending = null
 	try {
-		pending = JSON.parse(window.localStorage.getItem(PENDING_TAP_KEY) || "null")
+		pending = JSON.parse(window.localStorage.getItem(pendingTapKey()) || "null")
 	} catch {
 		pending = null
 	}
@@ -1112,7 +1114,7 @@ function pendingTapId(logType) {
 		`${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 	try {
 		window.localStorage.setItem(
-			PENDING_TAP_KEY,
+			pendingTapKey(),
 			JSON.stringify({ id, action: logType, at: Date.now(), day: today })
 		)
 	} catch {
@@ -1122,7 +1124,7 @@ function pendingTapId(logType) {
 }
 function clearPendingTap() {
 	try {
-		window.localStorage.removeItem(PENDING_TAP_KEY)
+		window.localStorage.removeItem(pendingTapKey())
 	} catch {
 		// nothing kept, nothing to clear
 	}
@@ -1236,7 +1238,7 @@ const runSubmitLog = async (logType) => {
 	if (tracking) {
 		try {
 			const result = await preflightGeofence.submit({
-				employee: employee.data.name,
+				employee: employee.data?.name,
 				log_type: logType,
 				latitude: location.latitude,
 				longitude: location.longitude,
@@ -1304,7 +1306,7 @@ const runSubmitLog = async (logType) => {
 
 	// no `time` in the payload — the punch endpoint stamps the server clock
 	const payload = {
-		employee: employee.data.name,
+		employee: employee.data?.name,
 		log_type: logType,
 		latitude: location.latitude ?? null,
 		longitude: location.longitude ?? null,
