@@ -53,7 +53,9 @@
 						:disabled="!canDownload || saving"
 						@click="download"
 					/>
-					<p v-if="saved" class="g-form-footer g-download__saved" role="status"><span aria-hidden="true">✓</span> {{ saved }}</p>
+					<p v-if="saved" class="g-form-footer g-download__saved" role="status">
+						<span aria-hidden="true">✓</span> {{ saved }}
+					</p>
 					<p v-if="failed" class="g-form-footer g-download__failed" role="alert">{{ failed }}</p>
 					<p v-if="!online" class="g-form-footer" role="status">
 						{{ __("You are offline. Connect to download.") }}
@@ -106,9 +108,7 @@ const company = createResource({
 const companyName = computed(() => (company.data?.companies || []).join(", ") || "—")
 
 // A refusal from someone still signed in: they do not hold the role.
-const noAccess = computed(() =>
-	isNoAccess(company.error, { signedIn: Boolean(sessionUser()) })
-)
+const noAccess = computed(() => isNoAccess(company.error, { signedIn: Boolean(sessionUser()) }))
 
 const canDownload = computed(
 	() => online.value && !company.loading && !company.error && Boolean(company.data)
@@ -154,7 +154,9 @@ async function refusalOf(response) {
 		const messages = body?._server_messages ? JSON.parse(body._server_messages) : []
 		const first = messages.length ? JSON.parse(messages[0])?.message : ""
 		// never a Python class path ("frappe.exceptions.PermissionError: ..."): only its sentence
-		const plain = String(body?.exception || "").split(": ").pop()
+		const plain = String(body?.exception || "")
+			.split(": ")
+			.pop()
 		return first || plain || __("Could not download the file. Try again.")
 	} catch {
 		return __("Could not download the file. Try again.")
