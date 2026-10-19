@@ -14,10 +14,18 @@
 		</div>
 		<label class="g-form-row timeslip-file">
 			<span class="g-form-row__label">{{ __("Add a file") }}</span>
+			<!-- A picked file: its name, a tick, and that a tap replaces it
+			     (alpha.48 "Later"). The name stays the value a screen reader hears. -->
 			<span class="timeslip-file__name" :class="{ 'is-empty': !file }">
 				{{ file ? file.name : __("Required") }}
+				<span v-if="file" class="timeslip-file__hint">{{ __("Tap to replace") }}</span>
 			</span>
-			<Upload class="g-form-row__switch h-5 w-5 text-ink-600" aria-hidden="true" />
+			<Check
+				v-if="file"
+				class="g-form-row__switch h-5 w-5 timeslip-file__tick"
+				aria-hidden="true"
+			/>
+			<Upload v-else class="g-form-row__switch h-5 w-5 text-ink-600" aria-hidden="true" />
 			<!-- g-sr, not display:none: a keyboard or screen reader reaches the
 			     required proof (design review of c9a824c15), as GFileUpload does -->
 			<input
@@ -32,7 +40,7 @@
 </template>
 
 <script setup>
-import { Upload } from "lucide-vue-next"
+import { Check, Upload } from "lucide-vue-next"
 import { computed, inject } from "vue"
 
 import GSelect from "@/components/glass/GSelect.vue"
@@ -67,6 +75,15 @@ function pick(event) {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	color: var(--g-ink);
+}
+/* name above, the hint under it: the row grows rather than truncating the hint */
+.timeslip-file__hint {
+	display: block;
+	font-size: var(--g-type-caption-size);
+	color: var(--g-ink2);
+}
+.timeslip-file__tick {
+	color: var(--g-success-ink);
 }
 .timeslip-file__name.is-empty {
 	color: var(--g-ink2);

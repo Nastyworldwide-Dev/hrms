@@ -123,3 +123,11 @@ test("Today offers the file for a waiting slip saved without one", () => {
 	const api = readFileSync(fileURLToPath(new URL("../../../../hrms/api/now.py", import.meta.url)), "utf8")
 	assert.match(api, /"has_file": bool\(/)
 })
+
+// alpha.48 "Later", done in alpha.57: once a file is picked the row says so with a tick, and that a
+// tap replaces it; the empty row keeps "Required" and the upload icon.
+test("a picked slip file shows a tick and Tap to replace", () => {
+	assert.match(fields, /<Check\b[^>]*v-if="file"/)
+	assert.match(fields, /<Upload\b[^>]*v-else/)
+	assert.match(fields, /__\("Tap to replace"\)/)
+})
