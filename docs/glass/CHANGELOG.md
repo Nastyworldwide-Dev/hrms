@@ -10,6 +10,43 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.57] — Smoother Edges — 2026-10-19
+
+### Added
+- **Announcements reach everyone.** A notice set for a later day is pushed on
+  that day, not when HR saves it, and each notice is pushed once only.
+- **Nudge to turn on notifications.** People who have notifications off see
+  "Turn on notifications so you hear about the next announcement" on the
+  board and on each notice, with a Turn on button. If the phone blocked
+  them, it says how to allow them.
+- **Must-read notices are ticked as understood.** For notices HR marks
+  *Acknowledge required*: read to the end, tick "I have read and understood
+  this", then Confirm. The same on the full-screen notice and on a notice
+  opened from the board. The button says what is still missing.
+
+### Fixed
+- **A login with no employee record** no longer lands on a broken Home.
+  Staff go to the "not linked" page. An Attendance Report Viewer opens on
+  More, with Team and Shift Attendance, and can open You to log out. An HR
+  login with no employee record works as before.
+- **Night shifts:** a late check-in after midnight is offered a time slip on
+  the check-in sheet. The slip is filed on the day the shift started, from
+  the punch's own time, so it shows on Today and excuses the late.
+- **VoiceOver** says which time-slip file is picked, when a slip's status
+  changes on Today, and why a must-read tick is not open yet.
+
+### Changed
+- A picked time-slip file shows a tick and "Tap to replace".
+
+### Checked, nothing to fix
+- The check-in button placeholder and the small buttons at large text:
+  measured at 135%, no jump and nothing cut off.
+- Announcements are not hidden by HR's company (they use their own audience).
+
+### Deploy
+- **Migrate needed** (a patch marks notices already pushed, so they are not
+  pushed again).
+
 ## [2.0.0-alpha.56] — Text Follows Your Phone — 2026-10-16
 
 ### Added
