@@ -70,7 +70,8 @@ test("one CSS rule hides every ring while the person is tapping, and main.js arm
 	const { readFileSync } = await import("node:fs")
 	const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8")
 	const css = read("../../theme/glass-components.css")
-	const rule = css.match(/html\[data-input="pointer"\]\s+:focus-visible[\s\S]*?\{[^}]*\}/)?.[0] || ""
+	const rule =
+		css.match(/html\[data-input="pointer"\]\s+:focus-visible[\s\S]*?\{[^}]*\}/)?.[0] || ""
 	assert.match(rule, /box-shadow: none !important/)
 	// a text field keeps its own focus cue while someone types in it
 	assert.match(
@@ -97,4 +98,17 @@ test("a switch or checkbox is a control, not a text field (review of 34ed069cd)"
 	typed.fire("pointerdown")
 	typed.fire("keydown", { key: "a", target: { tagName: "INPUT", type: "text" } })
 	assert.equal(typed.documentElement.dataset.input, "pointer")
+})
+
+test("the code and the stylesheet name the same control inputs", async () => {
+	// The list lives in focusModality.js and in the CSS :not(); if one gains a
+	// type the other lacks, a keyboard user loses the ring or a tap shows it.
+	const { readFileSync } = await import("node:fs")
+	const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8")
+	const js = read("../focusModality.js").match(/CONTROL_INPUTS = new Set\(\[([^\]]*)\]\)/)[1]
+	const fromJs = [...js.matchAll(/"([a-z]+)"/g)].map((m) => m[1]).sort()
+	const css = read("../../theme/glass-components.css").match(/input:not\(([^)]*\])\)\)/)[1]
+	const fromCss = [...css.matchAll(/\[type="([a-z]+)"\]/g)].map((m) => m[1]).sort()
+	assert.deepEqual(fromCss, fromJs)
+	assert.ok(fromJs.includes("checkbox"), "the switch is a control")
 })
