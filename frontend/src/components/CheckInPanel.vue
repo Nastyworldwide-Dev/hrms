@@ -276,7 +276,7 @@ import { firstMessage } from "@/utils/loudRequest"
 import { nowResource } from "@/data/now"
 import { homeWeek } from "@/data/home"
 import { nearestSite } from "@/utils/nearestSite"
-import { lateMinutes, slipLabel, sendTimeSlip } from "@/utils/timeSlip"
+import { lateMinutes, slipDay, slipLabel, sendTimeSlip } from "@/utils/timeSlip"
 
 const DOCTYPE = "Employee Checkin"
 
@@ -431,7 +431,13 @@ async function sendSlipAfterPunch(file) {
 	try {
 		await sendTimeSlip({
 			employee: employee.data?.name,
-			day: nowResource.data?.date || dayjs().format("YYYY-MM-DD"),
+			// the shift's own day: after midnight on a night shift, yesterday (review of 2c32b184d)
+			day: slipDay(
+				nowResource.data?.date || dayjs().format("YYYY-MM-DD"),
+				new Date(),
+				nowResource.data?.shift?.start,
+				nowResource.data?.shift?.end
+			),
 			file,
 		})
 		gToast({ title: __("Time slip sent"), variant: "success" })

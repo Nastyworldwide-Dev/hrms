@@ -149,3 +149,8 @@ test("Today's slip line is a status a screen reader hears change", () => {
 	assert.match(bar, /\.g-now__slip-live \{\s*display: contents;/)
 	assert.match(panel, /class="checkin-sheet__slip-pill" role="status"/)
 })
+
+// Review of 2c32b184d (Critical): the sheet files the slip on the shift's own day.
+test("the check-in sheet files the slip on the shift's own day", () => {
+	assert.match(helper, /day: slipDay\(/)
+})

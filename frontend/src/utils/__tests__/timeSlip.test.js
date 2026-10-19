@@ -7,7 +7,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { lateMinutes, slipLabel, slipStatusLine, sendTimeSlip } from "../timeSlip.js"
+import { lateMinutes, slipDay, slipLabel, slipStatusLine, sendTimeSlip } from "../timeSlip.js"
 
 const at = (h, m, s = 0) => new Date(2026, 9, 14, h, m, s)
 
@@ -199,4 +199,25 @@ test("after a night shift has ended, the clock is not counted against it", () =>
 test("a day shift is unchanged by its end", () => {
 	assert.equal(lateMinutes(at(9, 42), "09:00", 15, true, "18:00"), 27)
 	assert.equal(lateMinutes(at(8, 0), "09:00", 15, true, "18:00"), 0)
+})
+
+// Review of 2c32b184d: a 24 h shift (start == end) is not a night shift; 07:50 on an 08:00-08:00
+// shift is early, not 23 h 35 min late.
+test("a shift that starts and ends at the same time is not carried past midnight", () => {
+	assert.equal(lateMinutes(at(7, 50), "08:00", 15, true, "08:00"), 0)
+})
+
+// Review of 2c32b184d (Critical): the slip for a night shift checked in after midnight belongs to
+// the day the shift STARTED, as the server files and finds it (now.py _time_slip: from_date is the
+// stamped shift start's date). Filed under the calendar day it never excused the late and Today
+// never showed it.
+test("a night shift's slip after midnight is filed on the day the shift started", () => {
+	assert.equal(slipDay("2026-10-20", at(0, 30), "22:00", "06:00"), "2026-10-19")
+	assert.equal(slipDay("2026-10-19", at(23, 0), "22:00", "06:00"), "2026-10-19")
+	assert.equal(slipDay("2026-10-01", at(1, 0), "22:00", "06:00"), "2026-09-30")
+})
+
+test("a day shift's slip is filed on its own day", () => {
+	assert.equal(slipDay("2026-10-19", at(9, 42), "09:00", "18:00"), "2026-10-19")
+	assert.equal(slipDay("2026-10-19", at(9, 42), "09:00", undefined), "2026-10-19")
 })

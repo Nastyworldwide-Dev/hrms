@@ -24,16 +24,34 @@ const clockSec = (hhmm) => {
 	return match ? (Number(match[1]) * 60 + Number(match[2])) * 60 : null
 }
 
+//: The small hours before a night shift's end (its end strictly before its start) belong to the
+//: shift that began last night. Start == end is a 24 h shift, not a night one (review of 2c32b184d).
+function inLastNightsShift(now, start, end) {
+	const startSec = clockSec(start)
+	const endSec = clockSec(end)
+	if (startSec === null || endSec === null || endSec >= startSec) return false
+	return now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() < endSec
+}
+
 export function lateMinutes(now, start, graceMin, markingOn, end) {
 	if (!markingOn) return 0
 	const startSec = clockSec(start)
 	if (startSec === null) return 0
 	let nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
-	const endSec = clockSec(end)
-	// the small hours before a night shift's end belong to the shift that began last night
-	if (endSec !== null && endSec <= startSec && nowSec < endSec) nowSec += 24 * 3600
+	if (inLastNightsShift(now, start, end)) nowSec += 24 * 3600
 	const over = (nowSec - startSec) / 60 - (Number(graceMin) || 0)
 	return over > 0 ? Math.floor(over) : 0
+}
+
+/**
+ * The day a slip is filed under: the day the shift STARTED, which is where the server files and
+ * finds it (now.py _time_slip) and the day it excuses. `today` is "YYYY-MM-DD" (the site's day).
+ */
+export function slipDay(today, now, start, end) {
+	if (!inLastNightsShift(now, start, end)) return today
+	const [y, m, d] = today.split("-").map(Number)
+	const day = new Date(Date.UTC(y, m - 1, d - 1))
+	return day.toISOString().slice(0, 10)
 }
 
 /** "42 min after your 9:00 shift"; "1 h 5 min after your 9:00 shift" past an hour. */
