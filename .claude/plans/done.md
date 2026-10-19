@@ -1,3 +1,3 @@
-GOAL: All balances rings sit on the sheet's own group (iOS gate sheet-consistency)
-DONE WHEN: balances-rings group test red on HEAD, green now; sheet-consistency-audit light and dark report 0
-CHECK: node --test frontend/src/components/__tests__/balances-rings.test.js
+GOAL: release 2.0.0-alpha.58 Leave at a Glance (rings + ticket #4855)
+DONE WHEN: version + changelog committed; tag v2.0.0-alpha.58 pushed; GitHub Release exists
+CHECK: node --test design/gates/version.test.mjs design/gates/release-tags.test.mjs

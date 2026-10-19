@@ -10,6 +10,23 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.58] — Leave at a Glance — 2026-10-19
+
+### Changed
+- **All balances shows a ring for each leave type.** Lime is the days you
+  have left, grey is the days you have taken. The number left and "of 14"
+  sit inside the ring. Under it: when the leave expires (if soon), or how
+  many days you took. Two rings across; VoiceOver reads each as one
+  sentence, e.g. "Annual Leave: 6 of 14 left, 8 taken".
+
+### Fixed
+- **Forgot to check out no longer looks frozen** (ticket #4855). After an
+  evening check-in, the time used to start at 6:00 pm, before the
+  check-in, so the sheet opened with an error and Send stayed grey. It now
+  starts just after the check-in.
+- **Send on Forgot to check out always says why it is off:** "Add a reason
+  to send." or "Pick the time you left." VoiceOver reads the reason too.
+
 ## [2.0.0-alpha.57] — Smoother Edges — 2026-10-19
 
 ### Added
