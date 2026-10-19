@@ -31,3 +31,9 @@ test("never in the future", () => {
 test("no check-in time, no default", () => {
 	assert.equal(defaultCheckoutTime("", at("2026-10-19T07:00")), null)
 })
+
+test("a check-in under a minute old leaves the time for the person to pick", () => {
+	// now would be at or before the check-in once the field drops the seconds,
+	// and the sheet would open red again (review of 2e617bb0a).
+	assert.equal(defaultCheckoutTime("2026-10-18 09:00:20", at("2026-10-18T09:00:50")), null)
+})

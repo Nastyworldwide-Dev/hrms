@@ -32,6 +32,9 @@ export function defaultCheckoutTime(inTime, now = new Date()) {
 	const evening = new Date(checkedIn)
 	evening.setHours(18, 0, 0, 0)
 	const floor = new Date(checkedIn.getTime() + 60000)
+	// Under a minute old: no valid minute exists yet, so leave it empty (the
+	// field then says "Pick the time you left.") rather than open it red.
+	if (floor > now) return null
 	const start = evening > checkedIn ? evening : floor
 	return start < now ? start : now
 }

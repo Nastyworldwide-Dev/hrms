@@ -56,6 +56,10 @@
 			<p v-if="!online" class="g-form-footer" role="status">
 				{{ __("You need signal to check in.") }}
 			</p>
+			<!-- Send is off until a reason is in; say so (#4855 family). -->
+			<p v-else-if="missingReason" class="g-form-footer">
+				{{ __("Add a reason to send.") }}
+			</p>
 		</div>
 	</GModal>
 </template>
@@ -108,7 +112,8 @@ const minCheckoutTime = computed(() => {
 const maxCheckoutTime = computed(() => toInputValue(new Date()))
 
 const checkoutError = computed(() => {
-	if (!checkoutTime.value) return ""
+	// A greyed-out Send with nothing said reads as a frozen app (#4855).
+	if (!checkoutTime.value) return __("Pick the time you left.")
 	const out = new Date(checkoutTime.value)
 	if (Number.isNaN(out.getTime())) return __("Invalid date/time.")
 	if (props.inCheckinTime) {
@@ -119,8 +124,9 @@ const checkoutError = computed(() => {
 	return ""
 })
 
+const missingReason = computed(() => !reason.value.trim())
 const canSubmit = computed(
-	() => !!checkoutTime.value && !!reason.value.trim() && !checkoutError.value
+	() => !!checkoutTime.value && !missingReason.value && !checkoutError.value
 )
 
 watch(

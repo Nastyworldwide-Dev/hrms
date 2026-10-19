@@ -1,5 +1,5 @@
-CLASS: a time field's starting value is a fixed clock time that can fall outside the field's own min/max, so the sheet opens invalid with its submit off
-frontend/src/components/LateCheckoutDialog.vue same-root — 18:00 default fell before a check-in after 18:00; now defaultCheckoutTime (clamped to IN+1min and now)
+CLASS: the Forgot to check out sheet can show a greyed-out Send with no visible reason, which staff read as a frozen app (#4855)
+frontend/src/components/LateCheckoutDialog.vue same-root — empty reason now says "Add a reason to send."; cleared time says "Pick the time you left."
+frontend/src/utils/checkinSession.js same-root — a check-in under a minute old has no valid default; returns null instead of a red "now"
+frontend/src/components/RemoteCheckinDialog.vue ticket 4855-remote — same disabled-Send pattern not audited here; check in the next pass
 frontend/src/components/CheckInPanel.vue not-affected — opens the dialog; picks no time
-frontend/src/components/FormField.vue not-affected — time/datetime fields start from the doctype default or empty, no min/max set
-frontend/src/components/glass/GDateTimePicker.vue not-affected — no default of its own; value comes from the caller
