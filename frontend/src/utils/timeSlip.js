@@ -43,6 +43,15 @@ export function lateMinutes(now, start, graceMin, markingOn, end) {
 	return over > 0 ? Math.floor(over) : 0
 }
 
+/** A Date at "HH:MM" (the server's wall clock for the employee); the device clock without one. */
+export function wallClock(hhmm) {
+	const sec = clockSec(hhmm)
+	if (sec === null) return new Date()
+	const at = new Date()
+	at.setHours(Math.floor(sec / 3600), (sec % 3600) / 60, 0, 0)
+	return at
+}
+
 /**
  * The day a slip is filed under: the day the shift STARTED, which is where the server files and
  * finds it (now.py _time_slip) and the day it excuses. `today` is "YYYY-MM-DD" (the site's day).

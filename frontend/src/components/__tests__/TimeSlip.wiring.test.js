@@ -153,4 +153,6 @@ test("Today's slip line is a status a screen reader hears change", () => {
 // Review of 2c32b184d (Critical): the sheet files the slip on the shift's own day.
 test("the check-in sheet files the slip on the shift's own day", () => {
 	assert.match(helper, /day: slipDay\(/)
+	// the site's date with the site's clock (review of 10781a529), never the phone's
+	assert.match(helper, /wallClock\(nowResource\.data\?\.time\)/)
 })

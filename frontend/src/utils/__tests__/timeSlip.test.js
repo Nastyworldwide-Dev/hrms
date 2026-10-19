@@ -7,7 +7,14 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { lateMinutes, slipDay, slipLabel, slipStatusLine, sendTimeSlip } from "../timeSlip.js"
+import {
+	lateMinutes,
+	slipDay,
+	slipLabel,
+	slipStatusLine,
+	sendTimeSlip,
+	wallClock,
+} from "../timeSlip.js"
 
 const at = (h, m, s = 0) => new Date(2026, 9, 14, h, m, s)
 
@@ -220,4 +227,14 @@ test("a night shift's slip after midnight is filed on the day the shift started"
 test("a day shift's slip is filed on its own day", () => {
 	assert.equal(slipDay("2026-10-19", at(9, 42), "09:00", "18:00"), "2026-10-19")
 	assert.equal(slipDay("2026-10-19", at(9, 42), "09:00", undefined), "2026-10-19")
+})
+
+// Review of 10781a529: the slip's day pairs the site's date with the site's clock, never the
+// phone's, so a phone in another time zone cannot file it on a day the server never reads.
+test("the wall clock is the server's HH:MM, the device clock without one", () => {
+	const c = wallClock("00:30")
+	assert.equal(c.getHours(), 0)
+	assert.equal(c.getMinutes(), 30)
+	assert.equal(slipDay("2026-10-20", wallClock("00:30"), "22:00", "06:00"), "2026-10-19")
+	assert.ok(wallClock(undefined) instanceof Date)
 })

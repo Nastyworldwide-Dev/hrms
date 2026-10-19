@@ -276,7 +276,7 @@ import { firstMessage } from "@/utils/loudRequest"
 import { nowResource } from "@/data/now"
 import { homeWeek } from "@/data/home"
 import { nearestSite } from "@/utils/nearestSite"
-import { lateMinutes, slipDay, slipLabel, sendTimeSlip } from "@/utils/timeSlip"
+import { lateMinutes, slipDay, slipLabel, sendTimeSlip, wallClock } from "@/utils/timeSlip"
 
 const DOCTYPE = "Employee Checkin"
 
@@ -432,9 +432,11 @@ async function sendSlipAfterPunch(file) {
 		await sendTimeSlip({
 			employee: employee.data?.name,
 			// the shift's own day: after midnight on a night shift, yesterday (review of 2c32b184d)
+			// day and clock from the same server payload (the employee's own wall clock): a phone
+			// in another time zone must not move the slip to a day the server never reads
 			day: slipDay(
 				nowResource.data?.date || dayjs().format("YYYY-MM-DD"),
-				new Date(),
+				wallClock(nowResource.data?.time),
 				nowResource.data?.shift?.start,
 				nowResource.data?.shift?.end
 			),
