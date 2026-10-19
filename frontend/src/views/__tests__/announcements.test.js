@@ -76,7 +76,8 @@ test("unread and waiting are said in words, not only in colour", () => {
 test("acknowledgement is a sentence, not an OK button", () => {
 	// "I've read and understood this" is a statement a person makes; "OK" is a
 	// dialog being dismissed. For a safety notice that is the whole feature.
-	assert.match(detail, /I've read and understood this/)
+	// one wording in both places a must-read is confirmed (the tick, alpha.57)
+	assert.match(detail, /I have read and understood this/)
 	assert.match(detail, /acknowledge_required/, "and only when HR asked for it")
 })
 

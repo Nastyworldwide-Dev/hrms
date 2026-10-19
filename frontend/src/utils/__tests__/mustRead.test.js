@@ -20,14 +20,12 @@ test("the first notice not put off opens; urgent ones cannot be put off", () => 
 test("confirm says why it is waiting until the end is reached", () => {
 	assert.deepEqual(confirmState({ reachedEnd: false, pending: false }), {
 		ready: false,
+		canTick: false,
 		label: "Read to the end to confirm",
 	})
-	assert.deepEqual(confirmState({ reachedEnd: true, pending: false }), {
-		ready: true,
-		label: "I have read this",
-	})
-	assert.deepEqual(confirmState({ reachedEnd: true, pending: true }), {
+	assert.deepEqual(confirmState({ reachedEnd: true, pending: true, ticked: true }), {
 		ready: false,
+		canTick: true,
 		label: "Recording…",
 	})
 })
@@ -42,5 +40,31 @@ test("a notice whose text did not load cannot be confirmed", () => {
 })
 
 test("a loaded notice read to the end can still be confirmed", () => {
-	assert.equal(confirmState({ reachedEnd: true, pending: false, failed: false }).ready, true)
+	assert.equal(
+		confirmState({ reachedEnd: true, pending: false, failed: false, ticked: true }).ready,
+		true
+	)
+})
+
+// Owner, 19 Oct 2026: "they must scroll to finish, and press tickbox to ensure they read". The
+// tick is a statement the person makes; it can be made only once the end is reached, and the
+// confirm waits for it.
+test("the tickbox can be ticked only once the end is reached", () => {
+	assert.equal(confirmState({ reachedEnd: false, pending: false }).canTick, false)
+	assert.equal(confirmState({ reachedEnd: true, pending: false }).canTick, true)
+	assert.equal(confirmState({ reachedEnd: true, pending: false, failed: true }).canTick, false)
+})
+
+test("read to the end but not ticked: confirm says to tick the box", () => {
+	const s = confirmState({ reachedEnd: true, pending: false, ticked: false })
+	assert.equal(s.ready, false)
+	assert.equal(s.label, "Tick the box to confirm")
+})
+
+test("read to the end and ticked: confirm is ready", () => {
+	assert.deepEqual(confirmState({ reachedEnd: true, pending: false, ticked: true }), {
+		ready: true,
+		canTick: true,
+		label: "Confirm",
+	})
 })

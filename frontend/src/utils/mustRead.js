@@ -8,10 +8,15 @@ export function nextMustRead(queue, snoozed) {
 
 //: The confirm button stays focusable before the end is reached (a disabled
 //: button hides the reason from VoiceOver); it says why and scrolls on tap.
-export function confirmState({ reachedEnd, pending, failed = false }) {
-	if (pending) return { ready: false, label: "Recording…" }
+//: The "I have read and understood this" tick opens only once the end is
+//: reached, and Confirm waits for it (owner, 19 Oct 2026: scroll to finish,
+//: then tick).
+export function confirmState({ reachedEnd, pending, failed = false, ticked = false }) {
+	const canTick = Boolean(reachedEnd) && !failed
+	if (pending) return { ready: false, canTick, label: "Recording…" }
 	// the text did not load: nothing was read, so nothing can be confirmed
-	if (failed) return { ready: false, label: "Load it to confirm" }
-	if (!reachedEnd) return { ready: false, label: "Read to the end to confirm" }
-	return { ready: true, label: "I have read this" }
+	if (failed) return { ready: false, canTick, label: "Load it to confirm" }
+	if (!reachedEnd) return { ready: false, canTick, label: "Read to the end to confirm" }
+	if (!ticked) return { ready: false, canTick, label: "Tick the box to confirm" }
+	return { ready: true, canTick, label: "Confirm" }
 }

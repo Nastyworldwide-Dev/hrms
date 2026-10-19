@@ -38,6 +38,13 @@
 				<div ref="endMarker" class="g-mustread__end" aria-hidden="true" />
 			</div>
 			<footer class="g-mustread__foot">
+				<!-- The tick is the person's own statement, open once the end is
+				     reached (owner, 19 Oct 2026); Confirm waits for it. -->
+				<GCheckbox
+					v-model="ticked"
+					:label="__('I have read and understood this')"
+					:disabled="!state.canTick"
+				/>
 				<GButton
 					:label="__(state.label)"
 					:class="{ 'g-mustread__waiting': !state.ready }"
@@ -64,6 +71,7 @@ import { createResource } from "frappe-ui"
 import GButton from "@/components/glass/GButton.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import ResourceError from "@/components/ResourceError.vue"
+import GCheckbox from "@/components/glass/GCheckbox.vue"
 import { gToast } from "@/components/glass/toast"
 import { acknowledgeAnnouncement, reloadAnnouncements } from "@/data/announcements"
 import { sessionUser } from "@/data/session"
@@ -82,8 +90,14 @@ const body = computed(() => (detail.data?.name === current.value?.name ? detail.
 
 const reachedEnd = ref(false)
 const pending = ref(false)
+const ticked = ref(false)
 const state = computed(() =>
-	confirmState({ reachedEnd: reachedEnd.value, pending: pending.value, failed: Boolean(detail.error) })
+	confirmState({
+		reachedEnd: reachedEnd.value,
+		pending: pending.value,
+		failed: Boolean(detail.error),
+		ticked: ticked.value,
+	})
 )
 
 const scroller = ref(null)
@@ -93,6 +107,8 @@ let observer = null
 function watchEnd() {
 	observer?.disconnect()
 	reachedEnd.value = false
+	// each notice is ticked for itself
+	ticked.value = false
 	if (!endMarker.value || !scroller.value) return
 	observer = new IntersectionObserver(
 		(entries) => {
@@ -135,6 +151,8 @@ async function onConfirm() {
 		endMarker.value?.scrollIntoView?.({ behavior: "smooth", block: "end" })
 		return
 	}
+	// read to the end, not yet ticked: the label says so; nothing is recorded
+	if (!state.value.ready) return
 	pending.value = true
 	try {
 		await acknowledgeAnnouncement.submit({ name: current.value.name })

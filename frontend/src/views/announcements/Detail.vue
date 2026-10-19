@@ -47,21 +47,28 @@
 					     server-side: this is rich text an author controls, and
 					     safeHtml is the one place that decision lives. -->
 					<div class="prose-sm text-inkbase" v-html="safeHtml(doc.body)" />
+					<!-- the end of the text: reaching it opens the tick (owner, 19 Oct 2026) -->
+					<div ref="endMarker" class="g-mustread__end" aria-hidden="true" />
 
 					<GBanner v-if="acknowledged" variant="info">
 						{{ __("You confirmed you read this.") }}
 					</GBanner>
 
-					<!-- A real sentence, not "OK". "I've read and understood this"
-					     is a statement a person makes; a dialog dismissal is not,
-					     and for a safety notice that difference is the feature. -->
-					<GButton
-						v-else-if="doc.acknowledge_required && !preview"
-						:label="__(`I've read and understood this`)"
-						:pending="acknowledgeAnnouncement.loading"
-						:pending-label="__('Recording…')"
-						@click="confirm"
-					/>
+					<!-- The same gate as the full-screen must-read: read to the end,
+					     tick "I have read and understood this" (a statement the person
+					     makes, not a dismissal), then Confirm. -->
+					<template v-else-if="doc.acknowledge_required && !preview">
+						<GCheckbox
+							v-model="ticked"
+							:label="__('I have read and understood this')"
+							:disabled="!state.canTick"
+						/>
+						<GButton
+							:label="__(state.label)"
+							:class="{ 'g-mustread__waiting': !state.ready }"
+							@click="confirm"
+						/>
+					</template>
 
 					<!-- after the body and its confirm: the nudge never stands between a
 					     person and what they must read (owner, 19 Oct 2026) -->
@@ -73,7 +80,7 @@
 </template>
 
 <script setup>
-import { computed, inject, ref, watch } from "vue"
+import { computed, inject, onBeforeUnmount, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { CalendarDays, Megaphone, ShieldAlert, TriangleAlert } from "lucide-vue-next"
 
@@ -82,9 +89,11 @@ import PushNudge from "@/components/PushNudge.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
+import GCheckbox from "@/components/glass/GCheckbox.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import { gToast } from "@/components/glass/toast"
 
+import { confirmState } from "@/utils/mustRead"
 import { safeHtml } from "@/utils/safeHtml"
 import {
 	acknowledgeAnnouncement,
@@ -134,7 +143,39 @@ function categoryLabel(category) {
 	return __(CATEGORY_LABELS[category] || "Notice")
 }
 
+const endMarker = ref(null)
+const reachedEnd = ref(false)
+const ticked = ref(false)
+const state = computed(() =>
+	confirmState({
+		reachedEnd: reachedEnd.value,
+		pending: acknowledgeAnnouncement.loading,
+		failed: Boolean(announcementDetail.error),
+		ticked: ticked.value,
+	})
+)
+//: Rooted on the viewport: the page scrolls inside BaseLayout's ion-content, and the
+//: marker entering the screen is the same fact either way.
+let observer = null
+function watchEnd() {
+	observer?.disconnect()
+	if (!endMarker.value || typeof IntersectionObserver === "undefined") return
+	observer = new IntersectionObserver((entries) => {
+		if (entries.some((e) => e.isIntersecting)) reachedEnd.value = true
+	})
+	observer.observe(endMarker.value)
+}
+watch(endMarker, watchEnd)
+onBeforeUnmount(() => observer?.disconnect())
+
 async function confirm() {
+	if (!reachedEnd.value) {
+		// never a dead button: it takes the reader to the end
+		endMarker.value?.scrollIntoView?.({ behavior: "smooth", block: "end" })
+		return
+	}
+	// read to the end, not yet ticked: the label says so; nothing is recorded
+	if (!state.value.ready) return
 	try {
 		await acknowledgeAnnouncement.submit({ name: props.id })
 		justAcknowledged.value = true
@@ -157,6 +198,9 @@ watch(
 	() => props.id,
 	(id) => {
 		justAcknowledged.value = false
+		// each notice is read and ticked for itself
+		reachedEnd.value = false
+		ticked.value = false
 		// Fetching is what marks it read, which is why this runs on every
 		// open rather than only when the payload is missing.
 		announcementDetail.fetch({ name: id, preview: preview.value ? 1 : 0 })
