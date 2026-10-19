@@ -131,3 +131,10 @@ test("a picked slip file shows a tick and Tap to replace", () => {
 	assert.match(fields, /<Upload\b[^>]*v-else/)
 	assert.match(fields, /__\("Tap to replace"\)/)
 })
+
+// Design review of 873f5e139: the input's aria-label replaced the row's text, so VoiceOver never
+// said which file was picked, or that one is required.
+test("the file input names the picked file to a screen reader", () => {
+	assert.match(fields, /__\('Add a file, \{0\}\. Tap to replace', \[file\.name\]\)/)
+	assert.match(fields, /__\('Add a file, required'\)/)
+})

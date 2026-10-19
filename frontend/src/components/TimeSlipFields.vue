@@ -15,7 +15,8 @@
 		<label class="g-form-row timeslip-file">
 			<span class="g-form-row__label">{{ __("Add a file") }}</span>
 			<!-- A picked file: its name, a tick, and that a tap replaces it
-			     (alpha.48 "Later"). The name stays the value a screen reader hears. -->
+			     (alpha.48 "Later"). The input's own label says the same to a screen
+			     reader, since an aria-label replaces the row's text. -->
 			<span class="timeslip-file__name" :class="{ 'is-empty': !file }">
 				{{ file ? file.name : __("Required") }}
 				<span v-if="file" class="timeslip-file__hint">{{ __("Tap to replace") }}</span>
@@ -32,7 +33,9 @@
 				class="g-sr"
 				type="file"
 				:accept="SLIP_FILE_TYPES"
-				:aria-label="__('Add a file')"
+				:aria-label="
+					file ? __('Add a file, {0}. Tap to replace', [file.name]) : __('Add a file, required')
+				"
 				@change="pick"
 			/>
 		</label>
@@ -79,6 +82,7 @@ function pick(event) {
 /* name above, the hint under it: the row grows rather than truncating the hint */
 .timeslip-file__hint {
 	display: block;
+	white-space: normal;
 	font-size: var(--g-type-caption-size);
 	color: var(--g-ink2);
 }
