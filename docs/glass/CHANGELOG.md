@@ -10,6 +10,14 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.59] — Clean Focus — 2026-10-19
+
+### Fixed
+- **No lime outline after a tap.** Rows, buttons and switches no longer show
+  the lime outline after you tap them, close a sheet, or press Escape.
+  People using a keyboard still see it: Tab, the arrow keys, Enter and
+  Space bring it back. Text boxes keep their outline while you type.
+
 ## [2.0.0-alpha.58] — Leave at a Glance — 2026-10-19
 
 ### Changed

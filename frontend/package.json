@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.58",
-	"releaseName": "Leave at a Glance",
+	"version": "2.0.0-alpha.59",
+	"releaseName": "Clean Focus",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
