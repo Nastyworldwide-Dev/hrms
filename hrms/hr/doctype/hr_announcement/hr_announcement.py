@@ -126,19 +126,19 @@ class HRAnnouncement(Document):
 
 	def on_update(self):
 		"""Notify once, when it is first published (alpha.7 §10.1). An edit to
-		a published notice does not buzz everybody's phone again."""
+		a published notice does not buzz everybody's phone again.
+
+		Only a notice live TODAY: one published for a later day was pushed at
+		once, and the tap opened a board that did not show it yet (alpha.57).
+		push_notices_going_live_today sends that one on its day."""
 		before = self.get_doc_before_save()
 		just_published = self.published and not (before and before.published)
 		if not (just_published and cint(self.notify_on_publish)):
 			return
-		frappe.enqueue(
-			"hrms.hr.doctype.hr_announcement.hr_announcement.send_publish_push",
-			name=self.name,
-			enqueue_after_commit=True,
-			job_id=f"announcement_publish_push::{self.name}",
-			deduplicate=True,
-		)
-		logger.info("[announcement] %s published; push queued", self.name)
+		if getdate(self.publish_from) > getdate(nowdate()):
+			logger.info("[announcement] %s published for %s; push waits", self.name, self.publish_from)
+			return
+		_queue_publish_push(self.name)
 
 	def on_trash(self):
 		"""The read rows are about a thing that no longer exists. Left behind
@@ -146,6 +146,30 @@ class HRAnnouncement(Document):
 		link."""
 		deleted = frappe.db.delete("HR Announcement Read", {"announcement": self.name})
 		logger.info("[announcement] %s deleted, read rows removed: %s", self.name, deleted)
+
+
+def _queue_publish_push(name: str) -> None:
+	"""One push job per notice, ever: the job id dedupes a second save or run."""
+	frappe.enqueue(
+		"hrms.hr.doctype.hr_announcement.hr_announcement.send_publish_push",
+		name=name,
+		enqueue_after_commit=True,
+		job_id=f"announcement_publish_push::{name}",
+		deduplicate=True,
+	)
+	logger.info("[announcement] %s published; push queued", name)
+
+
+def push_notices_going_live_today() -> None:
+	"""Daily: push each published notice whose Publish From is today (alpha.57)."""
+	names = frappe.get_all(
+		"HR Announcement",
+		filters={"published": 1, "notify_on_publish": 1, "publish_from": nowdate()},
+		pluck="name",
+	)
+	for name in names:
+		_queue_publish_push(name)
+	logger.info("[announcement] %d notice(s) go live today", len(names))
 
 
 def send_publish_push(name: str) -> None:

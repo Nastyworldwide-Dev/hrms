@@ -677,6 +677,9 @@ scheduler_events = {
 		"hrms.hr.doctype.interview.interview.send_daily_feedback_reminder",
 		"hrms.hr.doctype.shift_assignment.shift_assignment.mark_expired_shift_assignments_as_inactive",
 		"hrms.hr.doctype.job_opening.job_opening.close_expired_job_openings",
+		# A notice published for a later day is pushed on that day, not when HR
+		# saved it (alpha.57); one push per notice ever (job id dedupes).
+		"hrms.hr.doctype.hr_announcement.hr_announcement.push_notices_going_live_today",
 		"hrms.telemetry.capture_daily_attendance_pulse",
 		# Re-reconcile fence-role users against the instance registry and
 		# report HR users the fail-open fence default leaves unfenced.
