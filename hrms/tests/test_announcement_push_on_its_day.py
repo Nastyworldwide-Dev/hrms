@@ -3,9 +3,11 @@
 
 A notice published today with Publish From next Monday was pushed the moment HR ticked
 Published: staff tapped the notification, and the board did not show it until Monday. Now
-on_update pushes only a notice that is live today; a daily job pushes each notice whose
-Publish From is today and that has not been pushed yet. "Pushed once" is the job id per
-notice, as before, so an edit or a second run never buzzes twice.
+on_update pushes only a notice that is live today; a daily job pushes each notice that went
+live in the last two days and has not been pushed yet (a skipped scheduler day, or a date
+edited to today, still pushes). "Pushed once" is a "Push sent" Comment on the notice: a job id
+only dedupes while the job is queued, so a finished push could be sent again (review of
+22e6b92ac).
 
     PYTHONPATH=. python3 -m pytest -q hrms/tests/test_announcement_push_on_its_day.py
 """
@@ -81,11 +83,49 @@ class PushOnItsDay(unittest.TestCase):
 		filters = get_all.call_args.kwargs["filters"]
 		self.assertEqual(filters["published"], 1)
 		self.assertEqual(filters["notify_on_publish"], 1)
-		self.assertEqual(filters["publish_from"], TODAY)
+		self.assertEqual(filters["publish_from"], ("between", ["2026-10-17", TODAY]))
 		self.assertEqual(
 			[c.kwargs["job_id"] for c in enqueue.call_args_list],
 			["announcement_publish_push::ANN-7", "announcement_publish_push::ANN-8"],
 		)
+
+	def test_a_notice_already_pushed_is_never_pushed_again(self):
+		doc = _Announcement()
+		with (
+			patch.object(
+				frappe.db, "exists", side_effect=lambda dt, f=None: dt == "Comment" or dt == "HR Announcement"
+			),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch("hrms.api.announcements._push_to_users") as push,
+		):
+			ann.send_publish_push("ANN-1")
+		push.assert_not_called()
+
+	def test_a_push_leaves_its_mark(self):
+		doc = _Announcement()
+		doc.add_comment = MagicMock()
+		with (
+			patch.object(frappe.db, "exists", side_effect=lambda dt, f=None: dt == "HR Announcement"),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch.object(frappe, "get_all", return_value=["a@x"]),
+			patch("hrms.api.announcements._audience_employees", return_value=["EMP-1"]),
+			patch("hrms.api.announcements._push_to_users", return_value=1) as push,
+		):
+			ann.send_publish_push("ANN-1")
+		push.assert_called_once()
+		doc.add_comment.assert_called_once()
+		self.assertEqual(doc.add_comment.call_args.args[1], ann.PUSH_SENT)
+
+	def test_one_failed_queue_does_not_stop_the_rest(self):
+		with (
+			patch.object(frappe, "get_all", return_value=["ANN-7", "ANN-8"]),
+			patch.object(frappe, "enqueue", side_effect=[RuntimeError("redis"), None]) as enqueue,
+			patch.object(frappe, "log_error") as log_error,
+			patch.object(ann, "nowdate", return_value=TODAY),
+		):
+			ann.push_notices_going_live_today()
+		self.assertEqual(enqueue.call_count, 2)
+		log_error.assert_called_once()
 
 	def test_the_daily_job_is_scheduled(self):
 		hooks = (pathlib.Path(__file__).resolve().parents[1] / "hooks.py").read_text()

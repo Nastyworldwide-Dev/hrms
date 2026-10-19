@@ -148,8 +148,16 @@ class HRAnnouncement(Document):
 		logger.info("[announcement] %s deleted, read rows removed: %s", self.name, deleted)
 
 
+#: The mark a sent publish push leaves on the notice. A job id only dedupes while the job is
+#: queued, so it cannot say "pushed once ever" (review of 22e6b92ac); a Comment needs no migrate.
+PUSH_SENT = "Push sent"
+#: How far back the daily job looks: a skipped scheduler day or a date edited to today still
+#: pushes, an old notice never does.
+CATCH_UP_DAYS = 2
+
+
 def _queue_publish_push(name: str) -> None:
-	"""One push job per notice, ever: the job id dedupes a second save or run."""
+	"""Queue the publish push; send_publish_push checks the PUSH_SENT mark."""
 	frappe.enqueue(
 		"hrms.hr.doctype.hr_announcement.hr_announcement.send_publish_push",
 		name=name,
@@ -161,15 +169,25 @@ def _queue_publish_push(name: str) -> None:
 
 
 def push_notices_going_live_today() -> None:
-	"""Daily: push each published notice whose Publish From is today (alpha.57)."""
+	"""Daily: push each published notice that went live in the last CATCH_UP_DAYS (alpha.57).
+	Already-pushed ones are skipped by send_publish_push."""
+	today = nowdate()
 	names = frappe.get_all(
 		"HR Announcement",
-		filters={"published": 1, "notify_on_publish": 1, "publish_from": nowdate()},
+		filters={
+			"published": 1,
+			"notify_on_publish": 1,
+			"publish_from": ("between", [str(getdate(add_days(today, -CATCH_UP_DAYS))), today]),
+		},
 		pluck="name",
 	)
 	for name in names:
-		_queue_publish_push(name)
-	logger.info("[announcement] %d notice(s) go live today", len(names))
+		try:
+			_queue_publish_push(name)
+		except Exception:
+			# one notice must not cost the others their push
+			frappe.log_error(f"Announcement push not queued: {name}")
+	logger.info("[announcement] %d notice(s) live in the catch-up window", len(names))
 
 
 def send_publish_push(name: str) -> None:
@@ -182,6 +200,11 @@ def send_publish_push(name: str) -> None:
 	if not doc.published:
 		logger.info("[announcement] %s no longer published; no push", name)
 		return
+	if frappe.db.exists(
+		"Comment", {"reference_doctype": "HR Announcement", "reference_name": name, "content": PUSH_SENT}
+	):
+		logger.info("[announcement] %s already pushed; not again", name)
+		return
 	from hrms.api.announcements import _audience_employees, _push_to_users
 
 	users = frappe.get_all(
@@ -190,3 +213,4 @@ def send_publish_push(name: str) -> None:
 		pluck="user_id",
 	)
 	_push_to_users(doc, users)
+	doc.add_comment("Info", PUSH_SENT)
