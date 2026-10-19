@@ -11,8 +11,14 @@
 // Enter or Space on a button moves focus too. Typing inside a text field is
 // writing, not moving, so it does not switch.
 const NOT_MOVING = new Set(["Escape", "Shift", "Control", "Alt", "Meta", "CapsLock"])
+//: Inputs that are controls, not places to type: a key on one is keyboard use.
+const CONTROL_INPUTS = new Set(["checkbox", "radio", "range", "file", "button", "submit", "reset"])
 const isTextEntry = (el) =>
-	!!el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))
+	!!el &&
+	(el.isContentEditable ||
+		el.tagName === "TEXTAREA" ||
+		el.tagName === "SELECT" ||
+		(el.tagName === "INPUT" && !CONTROL_INPUTS.has(el.type)))
 
 export function focusModality(doc = globalThis.document) {
 	if (!doc?.addEventListener) return

@@ -70,13 +70,31 @@ test("one CSS rule hides every ring while the person is tapping, and main.js arm
 	const { readFileSync } = await import("node:fs")
 	const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8")
 	const css = read("../../theme/glass-components.css")
-	const rule =
-		css.match(/html\[data-input="pointer"\] :focus-visible[\s\S]*?\{[^}]*\}/)?.[0] || ""
+	const rule = css.match(/html\[data-input="pointer"\]\s+:focus-visible[\s\S]*?\{[^}]*\}/)?.[0] || ""
 	assert.match(rule, /box-shadow: none !important/)
 	// a text field keeps its own focus cue while someone types in it
-	assert.match(rule, /:focus-visible:not\(input, textarea, select, \[contenteditable\]\)/)
+	assert.match(
+		rule,
+		/:focus-visible:not\(textarea, select, \[contenteditable\], input:not\(\[type="checkbox"\], \[type="radio"\], \[type="range"\], \[type="file"\], \[type="button"\], \[type="submit"\], \[type="reset"\]\)\)/
+	)
 	// rings drawn on a parent (switch track, time-slip file row) are covered too
 	assert.match(rule, /\.g-switch--drawn:has\(:focus-visible\) \.g-switch__track/)
 	assert.match(rule, /\.timeslip-file:has\(input:focus-visible\)/)
 	assert.match(read("../../main.js"), /\nfocusModality\(\)\n/)
+})
+
+test("a switch or checkbox is a control, not a text field (review of 34ed069cd)", () => {
+	// Space on a tapped switch moves nothing but toggles it: keyboard use, so
+	// the ring may show. The CSS keeps a switch's ring hidden after a tap,
+	// unlike a text box, which keeps its ring to show where typing goes.
+	const doc = fakeDocument()
+	focusModality(doc)
+	doc.fire("pointerdown")
+	doc.fire("keydown", { key: " ", target: { tagName: "INPUT", type: "checkbox" } })
+	assert.equal(doc.documentElement.dataset.input, "keyboard")
+	const typed = fakeDocument()
+	focusModality(typed)
+	typed.fire("pointerdown")
+	typed.fire("keydown", { key: "a", target: { tagName: "INPUT", type: "text" } })
+	assert.equal(typed.documentElement.dataset.input, "pointer")
 })

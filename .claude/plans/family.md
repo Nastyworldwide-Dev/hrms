@@ -1,4 +1,5 @@
-CLASS: the keyboard focus ring hidden from someone who IS on the keyboard (WCAG 2.4.7), after the pointer-ring fix
-frontend/src/utils/focusModality.js same-root — Enter/Space/letters on a control now count as keyboard; nothing hidden before the first tap
-frontend/src/theme/glass-components.css same-root — text inputs, textareas, selects, contenteditable keep their ring after a tap
-frontend/src/components/glass/GModal.vue not-affected — Chromium focuses the ion-modal host on Enter-open (no ring rule on it); data-input is "keyboard" there, so nothing is hidden by this change
+CLASS: a control <input> (checkbox/radio/range/file/button) treated as a text field by the focus-ring rule
+frontend/src/utils/focusModality.js same-root — isTextEntry limited to text-like inputs; Space on a switch is keyboard use
+frontend/src/theme/glass-components.css same-root — the hide rule keeps the ring only on text-like inputs; switches hide it after a tap like buttons
+frontend/src/components/glass/GCheckbox.vue not-affected — input type=checkbox, now treated as a control (covered by the rule)
+frontend/src/components/TimeSlipFields.vue not-affected — input type=file, a control; its row ring stays in the rule

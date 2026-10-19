@@ -388,8 +388,10 @@ html[data-transparency="reduce"] .g-sidenav {
    browser still matches :focus-visible on Escape or on focus the app moves
    (sheet open, focus back to its opener), which drew lime on rows nobody had
    keyed to (owner, 19 Oct 2026). One rule for every ring; Tab brings it back.
-   A text field keeps its ring: it shows where the typing goes. */
-html[data-input="pointer"] :focus-visible:not(input, textarea, select, [contenteditable]),
+   A text field keeps its ring: it shows where the typing goes. A switch or
+   checkbox is a control, so its ring is hidden after a tap like a button's. */
+html[data-input="pointer"]
+	:focus-visible:not(textarea, select, [contenteditable], input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="button"], [type="submit"], [type="reset"])),
 html[data-input="pointer"] .g-switch--drawn:has(:focus-visible) .g-switch__track,
 html[data-input="pointer"] .timeslip-file:has(input:focus-visible) {
 	box-shadow: none !important;
