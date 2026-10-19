@@ -1,3 +1,3 @@
-GOAL: Mia (Attendance Report Viewer) sees her whole company on Nadi Team, view only.
-DONE WHEN: test_team_company_view.py 11 green; team-company-view js green; probe28 run+run2 9/9 PASS; vite build passes.
-CHECK: PYTHONPATH=. python3 -m pytest -q -p no:cacheprovider hrms/tests/test_team_company_view.py && node --test frontend/src/views/__tests__/team-company-view.test.js frontend/src/views/__tests__/team-entitlement.test.js
+GOAL: All balances sheet shows a ring per leave type (owner pick B, 19 Oct 2026)
+DONE WHEN: ring tests green; build green; bench summary rows carry allocated + taken
+CHECK: cd frontend && node --test src/utils/__tests__/ring-arcs.test.js src/components/__tests__/balances-rings.test.js

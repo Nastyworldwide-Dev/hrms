@@ -1273,6 +1273,9 @@ def get_leave_balance_map() -> dict[str, dict[str, float]]:
 		leave_map[leave_type] = {
 			"allocated_leaves": allocated,
 			"balance_leaves": details.get("remaining_leaves"),
+			# What the employee actually drew on, from the ledger. allocated minus
+			# balance is NOT this: it also counts expired and pending days.
+			"leaves_taken": flt(details.get("leaves_taken"), precision),
 			"annual_entitlement": flt(entitlement, precision),
 			"carry_forwarded_leaves": flt(record.get("unused_leaves"), precision),
 			"from_date": record.get("from_date"),

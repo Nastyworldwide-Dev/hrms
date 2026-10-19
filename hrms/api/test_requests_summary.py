@@ -119,3 +119,12 @@ class TestRequestsSummary(FrappeTestCase):
 		self.assertIn("from_date", window)
 		self.assertIn("to_date", window)
 		self.assertLessEqual(window["from_date"], window["to_date"])
+
+	def test_each_leave_row_says_what_was_given_and_taken(self):
+		"""The All balances rings draw left, taken and never-given. Without
+		`allocated` and `taken` the ring could only guess at two of the three."""
+		frappe.set_user(self.user)
+		for row in get_requests_summary()["leave"]:
+			self.assertIn("allocated", row)
+			self.assertIn("taken", row)
+			self.assertGreaterEqual(row["taken"], 0)

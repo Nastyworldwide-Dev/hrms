@@ -4995,6 +4995,118 @@ ion-modal.g-mustread {
 	white-space: nowrap;
 }
 
+/* All balances rings (owner pick B, 19 Oct 2026). One glass panel, cells
+   divided by --g-hair like GBalanceGrid; two across, an odd last ring spans.
+   Lime = left (--g-brand, as the balance bar), grey = taken, bare track =
+   never given or expired. Solid track, as .g-balance__bar (§6.3). */
+.g-ring-legend {
+	display: flex;
+	gap: 16px;
+	padding: 0 4px 8px;
+	font-size: 0.8125rem;
+	color: var(--g-ink2);
+}
+.g-ring-legend i {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	margin-right: 6px;
+	border-radius: 3px;
+}
+.g-ring-legend__left {
+	background: var(--g-brand);
+}
+.g-ring-legend__taken {
+	background: var(--g-ink3);
+}
+.g-rings {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	border-radius: var(--g-radius-panel);
+	overflow: hidden;
+}
+.g-ring {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+	padding: var(--g-pad-panel) 12px;
+	text-align: center;
+	border-top: 1px solid var(--g-hair);
+}
+.g-ring:nth-child(odd) {
+	border-right: 1px solid var(--g-hair);
+}
+.g-ring:nth-child(-n + 2) {
+	border-top: 0;
+}
+.g-ring:last-child:nth-child(odd) {
+	grid-column: 1 / -1;
+	border-right: 0;
+}
+.g-ring__dial {
+	position: relative;
+	display: grid;
+	place-content: center;
+	width: 88px;
+	height: 88px;
+}
+.g-ring__dial svg {
+	position: absolute;
+	inset: 0;
+	transform: rotate(-90deg);
+}
+.g-ring__dial circle {
+	fill: none;
+	stroke-width: 9;
+}
+.g-ring__track {
+	stroke: var(--g-track-solid);
+}
+.g-ring__taken {
+	stroke: var(--g-ink3);
+}
+.g-ring__left {
+	stroke: var(--g-brand);
+}
+.g-ring__number {
+	font-family: var(--g-font-display);
+	font-size: 1.375rem;
+	line-height: 1.5rem;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink);
+}
+.g-ring__of {
+	font-size: 0.6875rem;
+	line-height: 0.875rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink3);
+}
+.g-ring__name {
+	max-width: 100%;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
+	font-weight: 600;
+	color: var(--g-ink);
+	overflow-wrap: anywhere;
+}
+.g-ring__sub {
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--g-ink2);
+}
+.g-ring__sub--warn {
+	color: var(--g-warn-ink);
+}
+@media (prefers-reduced-motion: no-preference) {
+	.g-ring__dial circle {
+		transition: stroke-dasharray 0.4s ease, stroke-dashoffset 0.4s ease;
+	}
+}
+
 /* The balance card says what its number counts (25 Sep 2026). */
 .g-balance__head {
 	display: flex;

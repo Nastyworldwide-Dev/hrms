@@ -1,0 +1,217 @@
+<title>All Balances Mockup</title>
+<style>
+/* Layout: one phone-width "All balances" sheet, three visual options to switch between. Glass tokens from frontend/src/theme/glass.css */
+:root {
+	--bg: #F2F2F7; --surface: #FFFFFF; --ink: #0B0C10; --ink2: #545C68; --ink3: #878F9B;
+	--hair: rgba(16,22,34,.08); --track: #ECEDEF;
+	--used: #3F5C00; --left: #C8FF00; --left-ink: #3F5C00;
+	--warn: #B24A00; --warn-bg: rgba(245,158,11,.14); --danger: #D70015;
+	--display: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+	--bg: #000000; --surface: #1C1C1E; --ink: #FFFFFF; --ink2: #A6ADB8; --ink3: #7C838E;
+	--hair: rgba(255,255,255,.10); --track: #2C2C2E;
+	--used: #5E7A1A; --left: #C8FF00; --left-ink: #C8FF00;
+	--warn: #F59E0B; --warn-bg: rgba(245,158,11,.16); --danger: #F87171; color-scheme: dark } }
+:root[data-theme="dark"] {
+	--bg: #000000; --surface: #1C1C1E; --ink: #FFFFFF; --ink2: #A6ADB8; --ink3: #7C838E;
+	--hair: rgba(255,255,255,.10); --track: #2C2C2E;
+	--used: #5E7A1A; --left: #C8FF00; --left-ink: #C8FF00;
+	--warn: #F59E0B; --warn-bg: rgba(245,158,11,.16); --danger: #F87171; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--display); }
+.wrap { max-width: 430px; margin: 0 auto; padding: 16px; padding-block: 16px 48px; display: flex; flex-direction: column; gap: 16px; }
+.banner { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink3); text-align: center; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--track); padding: 3px; border-radius: 10px; }
+.tabs button { font: inherit; font-size: 13px; font-weight: 600; border: 0; border-radius: 8px; padding: 8px 4px; background: transparent; color: var(--ink2); cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.tabs button:focus-visible { outline: 2px solid var(--left-ink); outline-offset: 1px; }
+.pitch { font-size: 13px; color: var(--ink2); line-height: 1.4; margin: 0; }
+
+.sheet { background: var(--bg); border: 1px solid var(--hair); border-radius: 26px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.sheet h1 { font-size: 17px; font-weight: 600; text-align: center; margin: 0; }
+.group { background: var(--surface); border-radius: 20px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); padding: 0 6px; }
+
+/* summary strip: total days left across all types */
+.summary { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.summary__big { display: flex; align-items: baseline; gap: 6px; }
+.summary__big b { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.summary__big span { color: var(--ink2); font-size: 15px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--ink2); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.sw-left { background: var(--left); } .sw-used { background: var(--used); }
+.sw-pro { background: repeating-linear-gradient(45deg, var(--ink3) 0 2px, transparent 2px 5px); border: 1px solid var(--ink3); }
+
+/* A: bars */
+.row { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.row + .row { border-top: 1px solid var(--hair); }
+.row__head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.row__name { font-size: 15px; font-weight: 600; min-width: 0; }
+.row__num { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink2); }
+.row__num b { color: var(--ink); font-size: 20px; }
+.bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--track); }
+.bar > span { height: 100%; }
+.seg-left { background: var(--left); } .seg-used { background: var(--used); }
+.seg-pro { background: repeating-linear-gradient(45deg, var(--ink3) 0 2px, transparent 2px 5px); opacity: .55; }
+.row__foot { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--ink3); font-variant-numeric: tabular-nums; }
+.chip { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
+
+/* B: rings */
+.rings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ring { padding: 16px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; border-top: 1px solid var(--hair); }
+.ring:nth-child(odd) { border-right: 1px solid var(--hair); }
+.ring:nth-child(-n+2) { border-top: 0; }
+.ring:last-child:nth-child(odd) { grid-column: 1 / -1; border-right: 0; }
+.ring svg { width: 88px; height: 88px; }
+.ring__name { font-size: 13px; font-weight: 600; }
+.ring__sub { font-size: 12px; color: var(--ink3); font-variant-numeric: tabular-nums; }
+
+/* C: day dots */
+.dots { display: flex; flex-wrap: wrap; gap: 4px; }
+.dot { width: 14px; height: 14px; border-radius: 4px; background: var(--track); position: relative; overflow: hidden; }
+.dot.left { background: var(--left); } .dot.used { background: var(--used); }
+.dot.half { background: linear-gradient(90deg, var(--left) 50%, var(--used) 50%); }
+.dot.pro { background: repeating-linear-gradient(45deg, var(--ink3) 0 2px, transparent 2px 5px); opacity: .5; }
+.dots-big { font-size: 12px; color: var(--ink3); }
+
+.notes { font-size: 13px; color: var(--ink2); line-height: 1.5; margin: 0; padding-left: 18px; }
+@media (prefers-reduced-motion: no-preference) { .bar > span, .ring circle { transition: all .4s ease; } }
+</style>
+
+<div class="wrap">
+	<div class="banner">Mockup · Nadi · All balances sheet · sample data</div>
+	<div class="tabs" role="tablist" aria-label="Visual option">
+		<button role="tab" id="tab-a" aria-selected="true" data-v="a">A · Bars</button>
+		<button role="tab" id="tab-b" aria-selected="false" data-v="b">B · Rings</button>
+		<button role="tab" id="tab-c" aria-selected="false" data-v="c">C · Day boxes</button>
+	</div>
+	<p class="pitch" id="pitch"></p>
+
+	<div class="sheet" aria-live="polite">
+		<h1>All balances</h1>
+		<div class="group summary" id="summary"></div>
+		<div class="eyebrow">By type</div>
+		<div class="group" id="list"></div>
+	</div>
+
+	<div>
+		<div class="eyebrow">What each picture says</div>
+		<ul class="notes">
+			<li><b>Lime</b> = days you still have.</li>
+			<li><b>Dark green</b> = days you have taken.</li>
+			<li><b>Striped</b> = days you don't get this year (joined mid-year).</li>
+			<li><b>Orange chip</b> = days that expire soon.</li>
+		</ul>
+	</div>
+</div>
+
+<script>
+// Sample rows in the real /requests_summary shape: balance, total (annual entitlement),
+// allocated (from the balance map), expires_on, expiring_soon.
+const ROWS = [
+	{ type: "Annual Leave", balance: 6, allocated: 14, total: 14 },
+	{ type: "Medical Leave", balance: 12.5, allocated: 14, total: 14 },
+	{ type: "Replacement Leave", balance: 1.5, allocated: 2, total: 2, expires: "31 Oct", soon: true },
+	{ type: "Emergency Leave", balance: 2, allocated: 3, total: 3 },
+	{ type: "Compassionate Leave", balance: 3, allocated: 3, total: 3 },
+	{ type: "Hospitalisation", balance: 45, allocated: 45, total: 60 },
+]
+const PITCH = {
+	a: "One bar per type: left, taken, and not-given-this-year in one line. Easiest to compare types.",
+	b: "A ring per type, two per row. Most visual; numbers read in the middle. Weaker for 6+ types.",
+	c: "One box per day. You can count them. Great for small types (2–14 days), long types fold to a bar.",
+}
+const n = (x) => (Number.isInteger(x) ? x : x.toFixed(1))
+const pct = (x, of) => (of ? Math.max(0, Math.min(100, (x / of) * 100)) : 0)
+
+function summary() {
+	const left = ROWS.reduce((s, r) => s + r.balance, 0)
+	const soon = ROWS.filter((r) => r.soon)
+	return `<div class="summary__big"><b>${n(left)}</b><span>days left across ${ROWS.length} types</span></div>
+		${soon.map((r) => `<div><span class="chip">${n(r.balance)} ${r.type.replace(" Leave", "")} days expire ${r.expires}</span></div>`).join("")}
+		<div class="legend"><span><i class="sw-left"></i>Left</span><span><i class="sw-used"></i>Taken</span><span><i class="sw-pro"></i>Not given this year</span></div>`
+}
+
+function foot(r) {
+	const used = r.allocated - r.balance
+	const bits = [`${n(used)} taken`]
+	if (r.total > r.allocated) bits.push(`${n(r.allocated)} given of ${n(r.total)} (joined mid-year)`)
+	const chip = r.soon ? `<span class="chip">Expires ${r.expires}</span>` : ""
+	return `<div class="row__foot">${chip}${bits.map((b) => `<span>${b}</span>`).join("")}</div>`
+}
+const label = (r) => `${r.type}: ${n(r.balance)} of ${n(r.allocated)} days left`
+
+function bars() {
+	return ROWS.map((r) => {
+		const used = r.allocated - r.balance, pro = r.total - r.allocated
+		return `<div class="row" role="group" aria-label="${label(r)}">
+			<div class="row__head"><span class="row__name">${r.type}</span>
+				<span class="row__num" aria-hidden="true"><b>${n(r.balance)}</b> of ${n(r.allocated)}</span></div>
+			<div class="bar" aria-hidden="true">
+				<span class="seg-left" style="width:${pct(r.balance, r.total)}%"></span>
+				<span class="seg-used" style="width:${pct(used, r.total)}%"></span>
+				<span class="seg-pro" style="width:${pct(pro, r.total)}%"></span>
+			</div>${foot(r)}</div>`
+	}).join("")
+}
+
+function rings() {
+	const C = 2 * Math.PI * 36
+	return `<div class="rings">${ROWS.map((r) => {
+		const leftLen = (pct(r.balance, r.total) / 100) * C
+		const usedLen = (pct(r.allocated - r.balance, r.total) / 100) * C
+		return `<div class="ring" role="group" aria-label="${label(r)}">
+			<svg viewBox="0 0 88 88" aria-hidden="true">
+				<circle cx="44" cy="44" r="36" fill="none" stroke="var(--track)" stroke-width="9"/>
+				<circle cx="44" cy="44" r="36" fill="none" stroke="var(--used)" stroke-width="9"
+					stroke-dasharray="${usedLen} ${C}" stroke-dashoffset="${-leftLen}" transform="rotate(-90 44 44)"/>
+				<circle cx="44" cy="44" r="36" fill="none" stroke="var(--left)" stroke-width="9" stroke-linecap="round"
+					stroke-dasharray="${leftLen} ${C}" transform="rotate(-90 44 44)"/>
+				<text x="44" y="47" text-anchor="middle" font-size="20" font-weight="700" fill="var(--ink)">${n(r.balance)}</text>
+				<text x="44" y="62" text-anchor="middle" font-size="10" fill="var(--ink3)">of ${n(r.allocated)}</text>
+			</svg>
+			<span class="ring__name">${r.type.replace(" Leave", "")}</span>
+			${r.soon ? `<span class="chip">Expires ${r.expires}</span>` : `<span class="ring__sub">${n(r.allocated - r.balance)} taken</span>`}
+		</div>`
+	}).join("")}</div>`
+}
+
+// ponytail: types over 20 days fold to a bar; 45 boxes is noise, not information
+function dots() {
+	return ROWS.map((r) => {
+		let pic
+		if (r.total > 20) {
+			pic = `<div class="bar" aria-hidden="true"><span class="seg-left" style="width:${pct(r.balance, r.total)}%"></span>
+				<span class="seg-used" style="width:${pct(r.allocated - r.balance, r.total)}%"></span>
+				<span class="seg-pro" style="width:${pct(r.total - r.allocated, r.total)}%"></span></div>`
+		} else {
+			const boxes = []
+			for (let i = 0; i < Math.ceil(r.total); i++) {
+				const k = i + 1
+				boxes.push(k <= Math.floor(r.balance) ? "left"
+					: k - r.balance === 0.5 ? "half"
+					: k <= r.allocated ? "used" : "pro")
+			}
+			pic = `<div class="dots" aria-hidden="true">${boxes.map((c) => `<span class="dot ${c}"></span>`).join("")}</div>`
+		}
+		return `<div class="row" role="group" aria-label="${label(r)}">
+			<div class="row__head"><span class="row__name">${r.type}</span>
+				<span class="row__num" aria-hidden="true"><b>${n(r.balance)}</b> of ${n(r.allocated)}</span></div>
+			${pic}${foot(r)}</div>`
+	}).join("")
+}
+
+const VIEWS = { a: bars, b: rings, c: dots }
+function show(v) {
+	document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === v)))
+	document.getElementById("pitch").textContent = PITCH[v]
+	document.getElementById("summary").innerHTML = summary()
+	document.getElementById("list").innerHTML = VIEWS[v]()
+	try { localStorage.setItem("balances-view", v) } catch (e) {}
+}
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => show(b.dataset.v)))
+let start = "a"
+try { start = localStorage.getItem("balances-view") || "a" } catch (e) {}
+show(VIEWS[start] ? start : "a")
+</script>

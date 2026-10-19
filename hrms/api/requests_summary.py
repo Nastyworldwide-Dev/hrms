@@ -90,6 +90,10 @@ def _leave() -> list[dict]:
 				# be allocated right now: a mid-year joiner with 7 of 14 has
 				# used none of it, and "7 of 7" would say the opposite.
 				"total": flt(entry.get("annual_entitlement")) or allocated,
+				# The All balances rings draw left, taken, and the pro-rated part of
+				# the year the employee was never given (total - allocated).
+				"allocated": allocated,
+				"taken": flt(entry.get("leaves_taken")),
 				"expires_on": str(expires) if expires else None,
 				# Only when it is close enough to be a prompt rather than a fact.
 				"expiring_soon": bool(

@@ -94,16 +94,53 @@
 				</GListPanel>
 			</template>
 		</section>
+		<!-- Rings, two across (owner pick B, 19 Oct 2026: "need a better visual
+		     than simple linear text"). One circle is the year: lime is left,
+		     grey is taken, the bare track is what was never given. -->
 		<GModal :is-open="allOpen" :title="__('All balances')" @did-dismiss="allOpen = false">
-			<GListPanel>
-				<GListRow
+			<div class="g-ring-legend" aria-hidden="true">
+				<span><i class="g-ring-legend__left" />{{ __("Left") }}</span>
+				<span><i class="g-ring-legend__taken" />{{ __("Taken") }}</span>
+			</div>
+			<div class="g-glass g-rings">
+				<div
 					v-for="row in rankedLeave"
 					:key="row.leave_type"
-					:label="row.leave_type"
-					:sublabel="balanceLine(row)"
-					:tappable="false"
-				/>
-			</GListPanel>
+					class="g-ring"
+					role="group"
+					:aria-label="ringLabel(row)"
+				>
+					<div class="g-ring__dial" aria-hidden="true">
+						<svg viewBox="0 0 88 88">
+							<circle class="g-ring__track" cx="44" cy="44" :r="RING_R" />
+							<circle
+								class="g-ring__taken"
+								cx="44"
+								cy="44"
+								:r="RING_R"
+								:stroke-dasharray="`${ringArcs(row, RING_C).taken} ${RING_C}`"
+								:stroke-dashoffset="-ringArcs(row, RING_C).left"
+							/>
+							<circle
+								class="g-ring__left"
+								cx="44"
+								cy="44"
+								:r="RING_R"
+								:stroke-dasharray="`${ringArcs(row, RING_C).left} ${RING_C}`"
+							/>
+						</svg>
+						<span class="g-ring__number">{{ trim(row.balance) }}</span>
+						<span class="g-ring__of">{{ __("of {0}", [trim(row.total)]) }}</span>
+					</div>
+					<span class="g-ring__name" aria-hidden="true">{{ row.leave_type }}</span>
+					<span v-if="row.expiring_soon" class="g-ring__sub g-ring__sub--warn" aria-hidden="true">
+						{{ __("Expires {0}", [formatDate(row.expires_on)]) }}
+					</span>
+					<span v-else-if="row.taken > 0" class="g-ring__sub" aria-hidden="true">
+						{{ __("{0} taken", [trim(row.taken)]) }}
+					</span>
+				</div>
+			</div>
 		</GModal>
 
 		<!-- Needs attention: one line each, and only what is non-zero. The
@@ -143,7 +180,7 @@ import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
 
 import { requestsSummary } from "@/data/requestsSummary"
-import { shortLeaveName, trimNumber as trim } from "@/utils/requestsPage"
+import { ringArcs, shortLeaveName, trimNumber as trim } from "@/utils/requestsPage"
 import { unmarkedLabel, unmarkedRoute } from "@/utils/unmarkedLabel"
 
 const __ = inject("$translate")
@@ -196,6 +233,16 @@ function balanceLine(row) {
 		return __("{0} left · expires {1}", [trim(row.balance), formatDate(row.expires_on)])
 	return __("{0} of {1} left", [trim(row.balance), trim(row.total)])
 }
+
+//: One sentence per ring: "Annual Leave: 6 of 14 left, 8 taken".
+function ringLabel(row) {
+	const line = `${row.leave_type}: ${balanceLine(row)}`
+	return row.taken > 0 ? `${line}, ${__("{0} taken", [trim(row.taken)])}` : line
+}
+
+//: The ring's radius in its 88-unit box, and the circumference the arcs share.
+const RING_R = 36
+const RING_C = 2 * Math.PI * RING_R
 
 function formatDate(value) {
 	return value ? $dayjs(value).format("D MMM") : ""
