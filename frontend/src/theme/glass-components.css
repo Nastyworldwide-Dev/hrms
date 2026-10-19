@@ -384,6 +384,17 @@ html[data-transparency="reduce"] .g-sidenav {
 
 /* ---------- focus (§14.3): inner ring carries contrast, outer carries brand ---------- */
 
+/* The ring is for keyboard movement (utils/focusModality.js). After a tap the
+   browser still matches :focus-visible on Escape or on focus the app moves
+   (sheet open, focus back to its opener), which drew lime on rows nobody had
+   keyed to (owner, 19 Oct 2026). One rule for every ring; Tab brings it back. */
+html[data-input="pointer"] :focus-visible,
+html[data-input="pointer"] .g-switch--drawn:has(:focus-visible) .g-switch__track,
+html[data-input="pointer"] .timeslip-file:has(input:focus-visible) {
+	box-shadow: none !important;
+	outline: none !important;
+}
+
 .g-btn:focus-visible,
 .g-ghost-btn:focus-visible,
 /* "Show N more" under a capped list (§10.1 #3's floor, §14.1's 44px). Its

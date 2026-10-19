@@ -14,6 +14,7 @@ import { vValueRow } from "@/utils/valueRow"
 import { applyProductName } from "@/utils/productName"
 import { blockZoom } from "@/utils/blockZoom"
 import { noOverscroll } from "@/utils/noOverscroll"
+import { focusModality } from "@/utils/focusModality"
 import { dynamicType } from "@/utils/dynamicType"
 import { keyboardSafe } from "@/utils/keyboardSafe"
 
@@ -53,6 +54,7 @@ blockZoom()
 noOverscroll()
 dynamicType()
 keyboardSafe()
+focusModality()
 const app = createApp(App)
 
 // FIRST, before any plugin: a failure while the app is still starting is
