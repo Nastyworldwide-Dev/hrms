@@ -212,5 +212,7 @@ def send_publish_push(name: str) -> None:
 		filters={"name": ("in", _audience_employees(doc) or [""]), "user_id": ("is", "set")},
 		pluck="user_id",
 	)
-	_push_to_users(doc, users)
-	doc.add_comment("Info", PUSH_SENT)
+	# marked only when it reached someone: relay off or every send failed keeps it pushable
+	# (the helper swallows per-user errors and returns a count; review of e413eaa50)
+	if _push_to_users(doc, users):
+		doc.add_comment("Info", PUSH_SENT)

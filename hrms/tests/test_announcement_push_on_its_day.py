@@ -116,6 +116,20 @@ class PushOnItsDay(unittest.TestCase):
 		doc.add_comment.assert_called_once()
 		self.assertEqual(doc.add_comment.call_args.args[1], ann.PUSH_SENT)
 
+	def test_a_push_that_reached_nobody_leaves_no_mark(self):
+		# relay off, or every send failed: the notice must stay pushable (review of e413eaa50)
+		doc = _Announcement()
+		doc.add_comment = MagicMock()
+		with (
+			patch.object(frappe.db, "exists", side_effect=lambda dt, f=None: dt == "HR Announcement"),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch.object(frappe, "get_all", return_value=["a@x"]),
+			patch("hrms.api.announcements._audience_employees", return_value=["EMP-1"]),
+			patch("hrms.api.announcements._push_to_users", return_value=0),
+		):
+			ann.send_publish_push("ANN-1")
+		doc.add_comment.assert_not_called()
+
 	def test_one_failed_queue_does_not_stop_the_rest(self):
 		with (
 			patch.object(frappe, "get_all", return_value=["ANN-7", "ANN-8"]),

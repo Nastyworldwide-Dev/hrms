@@ -146,3 +146,4 @@ hrms.patches.v16_0.add_attendance_report_viewer_role #2026-10-14 owner: Shenzhen
 hrms.patches.v16_0.hide_project_on_expense_claims #2026-10-14 owner: expense claims are not charged to projects, Project hidden in Desk
 hrms.patches.v16_0.add_time_slip_reason #2026-10-14 owner: a late arrival excused by a time slip; reason options must include Time Slip on a customised site
 hrms.patches.v16_0.make_general_sops_group_wide #2026-10-15 owner: General SOPs reach every company; ones posted before alpha.51 carried HR's own company
+hrms.patches.v16_0.mark_pushed_announcements #2026-10-19 alpha.57: notices pushed before the deploy are marked, so the new daily job does not push them a second time
