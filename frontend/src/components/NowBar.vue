@@ -94,7 +94,7 @@
 		<p class="sr-only" role="status">{{ stateLine }}{{ detail ? `. ${detail}` : "" }}</p>
 		<!-- The time slip, last on the card (owner, 14 Oct 2026). Its word is the server's
 		     (time_slip.status); the sheet's clock check was only a hint. -->
-		<p v-if="slipLine" class="g-now__slip" data-visual-mask>
+		<p v-if="slipLine" class="g-now__slip" role="status" data-visual-mask>
 			<span>{{ __("Time slip") }} ·</span>
 			<span class="g-badge" :class="`g-chip--${slipLine.chip}`">{{ slipLine.text }}</span>
 		</p>

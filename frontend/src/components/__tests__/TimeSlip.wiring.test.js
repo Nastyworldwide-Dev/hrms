@@ -140,3 +140,10 @@ test("the file input names the picked file to a screen reader", () => {
 	assert.match(fields, /__\('Add a file, \{0\}\. Tap to replace', \[file\.name\]\)/)
 	assert.match(fields, /__\('Add a file, required'\)/)
 })
+
+// alpha.48 "Later": Today's slip line changes on its own (Waiting -> Approved) while Home is open;
+// as a status region a screen reader hears the change, as the check-in sheet's pill already does.
+test("Today's slip line is a status a screen reader hears change", () => {
+	assert.match(bar, /<p v-if="slipLine" class="g-now__slip" role="status"/)
+	assert.match(panel, /class="checkin-sheet__slip-pill" role="status"/)
+})
