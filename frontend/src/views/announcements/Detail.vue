@@ -62,15 +62,16 @@
 							v-model="ticked"
 							:label="__('I have read and understood this')"
 							:disabled="!state.canTick"
-							described-by="announcement-confirm-state"
+							:described-by="`announcement-confirm-${id}`"
 						/>
 						<GButton
 							:label="__(state.label)"
 							:class="{ 'g-mustread__waiting': !state.ready }"
 							@click="confirm"
 						/>
-						<!-- what is missing, said when it changes (the tick opening, Confirm ready) -->
-						<span id="announcement-confirm-state" class="sr-only" aria-live="polite">{{
+						<!-- what is missing, said when it changes (the tick opening, Confirm ready). One id per
+						     notice: Ionic keeps the previous notice's page in the DOM (review of 808741bbc). -->
+						<span :id="`announcement-confirm-${id}`" class="sr-only" aria-live="polite">{{
 							__(state.label)
 						}}</span>
 					</template>

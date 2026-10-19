@@ -33,9 +33,11 @@ for (const [name, path] of [
 for (const path of ["../MustReadNotice.vue", "../../views/announcements/Detail.vue"]) {
 	test(`${path}: the tick says why it is closed, and the change is announced`, () => {
 		const src = read(path)
-		const id = src.match(/described-by="([a-z-]+)"/)?.[1]
+		// a fixed id, or one per notice where Ionic keeps the previous page (review of 808741bbc)
+		const id = src.match(/:?described-by="([^"]+)"/)?.[1]
 		assert.ok(id, "the tick names its reason")
-		assert.match(src, new RegExp(`id="${id}" class="sr-only" aria-live="polite"`))
+		const escaped = id.replace(/[$`{}]/g, (c) => `\\${c}`)
+		assert.match(src, new RegExp(`:?id="${escaped}" class="sr-only" aria-live="polite"`))
 	})
 }
 
@@ -45,4 +47,10 @@ test("the board page re-arms the end watch per notice, on its own text", () => {
 	const src = read("../../views/announcements/Detail.vue")
 	assert.match(src, /doc\.value\?\.name === props\.id && entries\.some/)
 	assert.match(src, /\(\) => \[endMarker\.value, doc\.value\?\.name === props\.id\]/)
+})
+
+test("the board page's live line is one per notice (Ionic keeps the last page in the DOM)", () => {
+	const src = read("../../views/announcements/Detail.vue")
+	assert.match(src, /:described-by="`announcement-confirm-\$\{id\}`"/)
+	assert.match(src, /:id="`announcement-confirm-\$\{id\}`"/)
 })
