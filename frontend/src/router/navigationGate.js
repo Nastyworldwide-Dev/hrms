@@ -10,6 +10,11 @@
 // and unknown lets the person carry on with what the app already holds.
 import { isSessionLost } from "../utils/sessionLost.js"
 
+// hrms.utils.report_scope.ATTENDANCE_VIEWER_ROLE; these screens read the role
+// and Company User Permission, never the caller's Employee.
+const VIEWER_ROLE = "Attendance Report Viewer"
+const VIEWER_ROUTES = new Set(["MoreView", "TeamView", "AttendanceDownload"])
+
 // Returns what vue-router's guard should return: undefined (go ahead), false
 // (stay), or a location to redirect to. `sessionEnded` is personalCache's: it
 // answers true when it took the page over (reload onto Login), false when this
@@ -43,6 +48,16 @@ export async function decideNavigation({
 		return sessionEnded() ? false : { name: "Login" }
 	}
 
+	// The server answered and found no Employee for this login (it returns
+	// null): that IS a verdict. Mia, 16 Oct 2026: let into Home, every read
+	// there 403'd. An Attendance Report Viewer needs no Employee for what the
+	// role is for, so she starts on More with Team and the download.
+	if (!employeeResource.data && employeeResource.fetched) {
+		if (userResource.data?.roles?.includes(VIEWER_ROLE)) {
+			return VIEWER_ROUTES.has(to.name) ? undefined : { name: "MoreView" }
+		}
+		return to.name === "InvalidEmployee" ? undefined : { name: "InvalidEmployee" }
+	}
 	// No employee in hand (offline before the first read ever landed): no
 	// identity verdict is possible, so none is given.
 	if (!employeeResource.data) {
