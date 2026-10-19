@@ -105,15 +105,25 @@ def _escape(value):
 	return "'" + str(value).replace("'", "''") + "'"
 
 
+def _own_employees(user):
+	row = EMPLOYEES.get(user)
+	return [row[0]] if row and row[2] == "Active" else []
+
+
 def _fake_db():
 	db = MagicMock()
 	db.escape.side_effect = _escape
 
 	def get_value(doctype, filters, fieldname=None, **kwargs):
 		if doctype == "Employee":
-			if not isinstance(filters, dict):
+			if isinstance(filters, str):
+				# by name, as _active_employee reads the row own_employees resolved
+				row = next((r for r in EMPLOYEES.values() if r[0] == filters), None)
+				filters = {}
+			elif not isinstance(filters, dict):
 				return None
-			row = EMPLOYEES.get(filters.get("user_id"))
+			else:
+				row = EMPLOYEES.get(filters.get("user_id"))
 			if not row:
 				return None
 			name, department, status = row
@@ -184,6 +194,9 @@ class _Ctx:
 			patch.object(frappe, "get_list", side_effect=get_list),
 			patch.object(frappe, "get_all", side_effect=get_all),
 			patch.object(frappe, "has_permission", return_value=True),
+			# the canonical identity lookup (query builder) the fake db cannot answer: the Active
+			# employees claiming this login, from EMPLOYEES, as hrms.utils.identity resolves them
+			patch.object(row_scope, "own_employees", side_effect=_own_employees),
 		]
 		for p in self.patches:
 			p.start()
