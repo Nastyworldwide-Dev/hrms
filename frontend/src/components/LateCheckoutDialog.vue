@@ -71,6 +71,7 @@ import { computed, inject, ref, watch } from "vue"
 import { gToast } from "@/components/glass/toast"
 
 import { formatTimestamp } from "@/utils/formatters"
+import { defaultCheckoutTime } from "@/utils/checkinSession"
 import { submitLateCheckoutResource } from "@/data/remoteCheckin"
 import { firstMessage } from "@/utils/loudRequest"
 
@@ -128,16 +129,9 @@ watch(
 		if (open) {
 			reason.value = ""
 			submitting.value = false
-			// Default to "end of the day the IN happened" — gives the user a useful start.
-			if (props.inCheckinTime) {
-				const inT = new Date(props.inCheckinTime.replace(" ", "T"))
-				const def = new Date(inT)
-				def.setHours(18, 0, 0, 0)
-				const now = new Date()
-				checkoutTime.value = toInputValue(def < now ? def : now)
-			} else {
-				checkoutTime.value = ""
-			}
+			// 18:00 that day, or just after a later check-in (ticket #4855).
+			const start = defaultCheckoutTime(props.inCheckinTime)
+			checkoutTime.value = start ? toInputValue(start) : ""
 		}
 	}
 )

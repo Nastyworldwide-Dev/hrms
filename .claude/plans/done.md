@@ -1,3 +1,3 @@
-GOAL: All balances sheet shows a ring per leave type (owner pick B, 19 Oct 2026)
-DONE WHEN: ring tests green; build green; bench summary rows carry allocated + taken
-CHECK: cd frontend && node --test src/utils/__tests__/ring-arcs.test.js src/components/__tests__/balances-rings.test.js
+GOAL: ticket #4855 — Forgot to check out sheet opens valid for a check-in after 18:00
+DONE WHEN: late-checkout-default.test.js red on HEAD, green now; WebKit repro (19:30 IN) opens at 19:31 with no error and sends
+CHECK: node --test frontend/src/utils/__tests__/late-checkout-default.test.js

@@ -1,7 +1,5 @@
-CLASS: a new component's CSS class reuses a name an existing Glass component already owns (.g-ring = GProgressRing)
-frontend/src/components/RequestBalances.vue same-root — renamed to .g-leave-ring*; test asserts one .g-ring rule
-frontend/src/components/glass/GProgressRing.vue same-root — its .g-ring rule was overridden by the new block (KPI dial); restored by the rename
-frontend/src/views/kpi/Dashboard.vue not-affected — uses GProgressRing, which is restored
-frontend/src/views/kpi/KpiDetail.vue not-affected — uses GProgressRing, which is restored
-frontend/src/components/glass/GScorePanel.vue not-affected — uses GProgressRing, which is restored
-frontend/src/utils/requestsPage.js same-root — ringArcs: carry-forward cut the taken arc; circle is now max(total, left+taken)
+CLASS: a time field's starting value is a fixed clock time that can fall outside the field's own min/max, so the sheet opens invalid with its submit off
+frontend/src/components/LateCheckoutDialog.vue same-root — 18:00 default fell before a check-in after 18:00; now defaultCheckoutTime (clamped to IN+1min and now)
+frontend/src/components/CheckInPanel.vue not-affected — opens the dialog; picks no time
+frontend/src/components/FormField.vue not-affected — time/datetime fields start from the doctype default or empty, no min/max set
+frontend/src/components/glass/GDateTimePicker.vue not-affected — no default of its own; value comes from the caller
