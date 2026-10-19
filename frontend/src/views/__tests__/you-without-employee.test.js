@@ -16,7 +16,7 @@ const script = src.slice(src.indexOf("<script setup>"))
 
 test("You never reads employee.data.name while the page is set up", () => {
 	// only inside functions/handlers, guarded; never at the top level of setup
-	const topLevel = script.split("\n").filter((l) => /^(const|let|\t\w+:)/.test(l) || /^\tname: /.test(l))
+	const topLevel = script.split("\n").filter((l) => /^(const|let|\t\w+:)/.test(l) || l.startsWith('	name: '))
 	assert.ok(!topLevel.some((l) => /employee\.data\.name/.test(l)), topLevel.filter((l) => /employee\.data\.name/.test(l)).join("\n"))
 	assert.match(script, /name: employee\.data\?\.name/)
 })
@@ -38,4 +38,27 @@ test("no view reads employee.data.<field> at setup without ?.", async () => {
 		}
 	}
 	assert.deepEqual(bad, [])
+})
+
+// alpha.57 (design review of bf67abf02): an Attendance Report Viewer with no Employee reaches You
+// for Log out. The server has SAID there is none, so nothing that reads one is offered: no
+// "could not load" with a Try again that cannot succeed, no details sheet, no shift reminders.
+test("You for a login the server found no Employee for: account name, no employee rows", () => {
+	assert.match(
+		script,
+		/const noEmployee = computed\(\(\) => employee\.fetched && !employee\.data\)/
+	)
+	assert.match(src, /employee\?\.data\?\.employee_name \|\| user\.data\?\.full_name/)
+	assert.match(src, /<template v-if="!noEmployee">\s*<ResourceError :resource="employeeDoc\.get"/)
+	assert.match(
+		src,
+		/<div v-if="!noEmployee" class="g-form-row">\s*<span class="g-form-row__label">\{\{ __\("Shift reminders"\) \}\}/
+	)
+	// reminders are per Employee: not even read (it 403'd into a toast), and not described
+	assert.match(
+		script,
+		/url: "hrms\.utils\.shift_reminders\.get_shift_reminders",\s*auto: !noEmployee\.value/
+	)
+	assert.match(src, /<p v-if="canPush \|\| !noEmployee" class="g-form-footer">/)
+	assert.match(script, /\.\.\.\(noEmployee\.value\s*\?\s*\[\]\s*:\s*\[\s*\{\s*key: "details"/)
 })

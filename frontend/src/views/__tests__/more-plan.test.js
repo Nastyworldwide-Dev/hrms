@@ -41,5 +41,6 @@ test("the holiday list waits for the employee before asking", () => {
 test("a login with no employee record is not offered rows that need one", () => {
 	// Design review of 9ce8bcecb: an Attendance Report Viewer with no Employee starts on More; Help,
 	// SOPs, Announcements and Public holidays all read the caller's Employee and only bounced back.
-	assert.match(template, /<GListPanel v-if="employee\.data">/)
+	// hidden only on the server's "none", never while the employee is still unread (review of bf67abf02)
+	assert.match(template, /<template v-if="employee\.data \|\| !employee\.fetched">\s*<GListPanel>/)
 })

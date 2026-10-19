@@ -7,32 +7,38 @@
 				<!-- one glass surface for the whole list (§15.1): the panel and its
 				     rows count as ONE, not one per row. Every row in it reads the
 				     caller's Employee: a login with none (an Attendance Report
-				     Viewer, who starts here) is not offered them. -->
-				<GListPanel v-if="employee.data">
-					<GListRow
-						v-for="item in moreItems"
-						:key="item.route"
-						:label="item.title"
-						:tint="item.tint"
-						@click="router.push(item.route)"
-					>
-						<template #icon>
-							<component :is="item.icon" class="h-icon-md w-icon-md" />
-						</template>
-					</GListRow>
-					<!-- One list of the year ahead, in a sheet (PAGE-20): its only
+				     Viewer, who starts here) is not offered them. Hidden only once
+				     the server SAID there is none: an unread employee (offline,
+				     cache still loading) keeps the rows. On a <template> so the
+				     surfaces gate keeps the panel on the screen, not in the sheet
+				     below (review of bf67abf02). -->
+				<template v-if="employee.data || !employee.fetched">
+					<GListPanel>
+						<GListRow
+							v-for="item in moreItems"
+							:key="item.route"
+							:label="item.title"
+							:tint="item.tint"
+							@click="router.push(item.route)"
+						>
+							<template #icon>
+								<component :is="item.icon" class="h-icon-md w-icon-md" />
+							</template>
+						</GListRow>
+						<!-- One list of the year ahead, in a sheet (PAGE-20): its only
 					     door was inside the Leaves dashboard, which More no longer
 					     lists. -->
-					<GListRow
-						:label="__('Public holidays')"
-						:tint="TILE.holiday"
-						@click="holidaysOpen = true"
-					>
-						<template #icon>
-							<CalendarDays class="h-icon-md w-icon-md" />
-						</template>
-					</GListRow>
-				</GListPanel>
+						<GListRow
+							:label="__('Public holidays')"
+							:tint="TILE.holiday"
+							@click="holidaysOpen = true"
+						>
+							<template #icon>
+								<CalendarDays class="h-icon-md w-icon-md" />
+							</template>
+						</GListRow>
+					</GListPanel>
+				</template>
 
 				<GModal
 					:is-open="holidaysOpen"

@@ -18,7 +18,10 @@
 									round
 								/>
 								<div class="g-account__text">
-									<span class="g-account__name">{{ employee?.data?.employee_name }}</span>
+									<!-- a login with no Employee (an Attendance Report Viewer) is named by its account -->
+									<span class="g-account__name">{{
+										employee?.data?.employee_name || user.data?.full_name
+									}}</span>
 									<span v-if="roleLine" class="g-account__sub">{{ roleLine }}</span>
 								</div>
 							</div>
@@ -30,17 +33,21 @@
 							     iOS Settings says it; a placeholder while loading. -->
 							<!-- A failed read says so, with Try again, instead of two
 							     placeholders that never resolve (alpha.12 C2). -->
-							<ResourceError :resource="employeeDoc.get" :what="__('your details')" />
-							<div v-if="!employeeDoc.get.error" v-value-row class="g-form-row g-form-row--readonly">
-								<span class="g-form-row__label">{{ __("Manager") }}</span>
-								<GSkeleton v-if="managerLoading" width="96px" height="11px" />
-								<span v-else class="g-form-row__value">{{ managerName || __("None") }}</span>
-							</div>
-							<div v-if="!employeeDoc.get.error" v-value-row class="g-form-row g-form-row--readonly">
-								<span class="g-form-row__label">{{ __("Shift") }}</span>
-								<GSkeleton v-if="!employeeDoc.doc" width="96px" height="11px" />
-								<span v-else class="g-form-row__value">{{ shiftName || __("None") }}</span>
-							</div>
+							<!-- None of this exists for a login the server found no Employee
+							     for: no "could not load" that Try again can never fix. -->
+							<template v-if="!noEmployee">
+								<ResourceError :resource="employeeDoc.get" :what="__('your details')" />
+								<div v-if="!employeeDoc.get.error" v-value-row class="g-form-row g-form-row--readonly">
+									<span class="g-form-row__label">{{ __("Manager") }}</span>
+									<GSkeleton v-if="managerLoading" width="96px" height="11px" />
+									<span v-else class="g-form-row__value">{{ managerName || __("None") }}</span>
+								</div>
+								<div v-if="!employeeDoc.get.error" v-value-row class="g-form-row g-form-row--readonly">
+									<span class="g-form-row__label">{{ __("Shift") }}</span>
+									<GSkeleton v-if="!employeeDoc.doc" width="96px" height="11px" />
+									<span v-else class="g-form-row__value">{{ shiftName || __("None") }}</span>
+								</div>
+							</template>
 						</div>
 
 						<!-- Details and work: one row, one sheet (was three rows). -->
@@ -90,7 +97,7 @@
 								</div>
 								<!-- Owner ruling, 23 Sep 2026: check-in / check-out reminders,
 								     the person's own on/off, ON by default. -->
-								<div class="g-form-row">
+								<div v-if="!noEmployee" class="g-form-row">
 									<span class="g-form-row__label">{{ __("Shift reminders") }}</span>
 									<GSwitch
 										class="g-form-row__switch"
@@ -101,9 +108,11 @@
 									/>
 								</div>
 							</div>
-							<p class="g-form-footer">
+							<p v-if="canPush || !noEmployee" class="g-form-footer">
 								{{
-									canPush
+									canPush && noEmployee
+										? __("Notifications arrive on this phone.")
+										: canPush
 										? __(
 												"Notifications arrive on this phone. Shift reminders nudge you if you forget to check in or out."
 										  )
@@ -217,17 +226,25 @@ const releaseName = typeof __APP_RELEASE_NAME__ === "string" ? __APP_RELEASE_NAM
 const versionString = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev"
 
 //: You is only you (alpha.14 O): Approvals moved to More → Your team.
+//: The server answered and found no Employee for this login (navigationGate
+//: lets an Attendance Report Viewer in without one): nothing here reads one.
+const noEmployee = computed(() => employee.fetched && !employee.data)
+
 const rows = computed(() => [
-	{
-		key: "details",
-		icon: User,
-		label: __("Your details"),
-		sublabel: null,
-		go: () => {
-			console.info("[You] opening details")
-			detailsOpen.value = true
-		},
-	},
+	...(noEmployee.value
+		? []
+		: [
+				{
+					key: "details",
+					icon: User,
+					label: __("Your details"),
+					sublabel: null,
+					go: () => {
+						console.info("[You] opening details")
+						detailsOpen.value = true
+					},
+				},
+		  ]),
 	{
 		key: "password",
 		icon: KeyRound,
@@ -288,9 +305,11 @@ async function togglePush(on) {
 }
 
 const remindersOn = ref(true)
+//: Reminders are per Employee: no auto read for a login the gate let in
+//: without one (it 403'd into a "You can't open this" toast).
 createResource({
 	url: "hrms.utils.shift_reminders.get_shift_reminders",
-	auto: true,
+	auto: !noEmployee.value,
 	onSuccess(data) {
 		remindersOn.value = !!data
 	},
