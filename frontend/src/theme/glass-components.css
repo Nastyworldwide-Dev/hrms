@@ -5022,11 +5022,10 @@ ion-modal.g-mustread {
 .g-leave-ring-legend__taken {
 	background: var(--g-ink3);
 }
-.g-leave-rings {
+/* On the sheet's own group (.g-form-group: fill, radius, clip), laid out as a grid. */
+.g-form-group.g-leave-rings {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
-	border-radius: var(--g-radius-panel);
-	overflow: hidden;
 }
 .g-leave-ring {
 	display: flex;

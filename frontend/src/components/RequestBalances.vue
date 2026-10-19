@@ -102,7 +102,7 @@
 				<span><i class="g-leave-ring-legend__left" />{{ __("Left") }}</span>
 				<span><i class="g-leave-ring-legend__taken" />{{ __("Taken") }}</span>
 			</div>
-			<div class="g-glass g-leave-rings">
+			<div class="g-form-group g-leave-rings">
 				<div
 					v-for="row in rankedLeave"
 					:key="row.leave_type"

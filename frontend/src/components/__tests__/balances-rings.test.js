@@ -64,7 +64,15 @@ test("rings are Glass tokens only, two across, an odd last ring spans", () => {
 	assert.doesNotMatch(block, /#[0-9a-f]{3,6}\b/i, "no hard-coded colour")
 	assert.match(
 		css,
-		/\.g-leave-rings\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/
+		/\.g-form-group\.g-leave-rings\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/
 	)
 	assert.match(css, /\.g-leave-ring:last-child:nth-child\(odd\)\s*\{\s*grid-column: 1 \/ -1;/)
+})
+
+test("the rings sit in the sheet's own group, not a box in a box", () => {
+	// The iOS gate (sheet-consistency-audit) flagged g-glass inside the sheet:
+	// a sheet is the grouped background; groups sit on it.
+	assert.match(sheet, /class="g-form-group g-leave-rings"/)
+	assert.doesNotMatch(sheet, /g-glass/)
+	assert.match(css, /\.g-form-group\.g-leave-rings\s*\{[^}]*display: grid/)
 })
