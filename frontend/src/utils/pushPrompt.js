@@ -33,3 +33,17 @@ export const shouldShowPushPrompt = ({
 			!declined &&
 			sdkInitialized
 	)
+
+// The nudge on announcements (owner, 19 Oct 2026): "ask" for a phone that can get pushes and does
+// not yet, "blocked" when the browser refused them (a button cannot undo that), null otherwise.
+// Not silenced by a decline: it is a line beside the notice, never a sheet in the way.
+export const pushNudge = ({
+	relayConfigured,
+	siteEnabled,
+	alreadyEnabled,
+	notificationSupported,
+	browserPermission,
+}) => {
+	if (!(relayConfigured && siteEnabled && notificationSupported) || alreadyEnabled) return null
+	return browserPermission === "denied" ? "blocked" : "ask"
+}

@@ -16,6 +16,7 @@
 				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full max-w-content-column-lg mx-auto lg:py-7"
 			>
 				<ResourceError :resource="allAnnouncements" what="announcements" />
+				<PushNudge />
 
 				<GListPanel v-if="allAnnouncements.loading && !rows.length" loading />
 
@@ -77,6 +78,7 @@
 
 <script setup>
 import { siteTime } from "@/utils/siteTime"
+import PushNudge from "@/components/PushNudge.vue"
 import { computed, defineAsyncComponent, inject, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { CalendarDays, Megaphone, ShieldAlert, TriangleAlert } from "lucide-vue-next"

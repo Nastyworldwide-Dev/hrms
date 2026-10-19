@@ -62,6 +62,10 @@
 						:pending-label="__('Recording…')"
 						@click="confirm"
 					/>
+
+					<!-- after the body and its confirm: the nudge never stands between a
+					     person and what they must read (owner, 19 Oct 2026) -->
+					<PushNudge v-if="!preview" />
 				</template>
 			</div>
 		</template>
@@ -74,6 +78,7 @@ import { useRoute } from "vue-router"
 import { CalendarDays, Megaphone, ShieldAlert, TriangleAlert } from "lucide-vue-next"
 
 import BaseLayout from "@/components/BaseLayout.vue"
+import PushNudge from "@/components/PushNudge.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"

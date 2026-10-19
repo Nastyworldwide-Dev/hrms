@@ -140,3 +140,14 @@ test("a failed read is not an empty board", () => {
 	)
 	assert.match(block, /could not be loaded/, "it says so")
 })
+
+// Owner, 19 Oct 2026: nudge people who have not turned notifications on, on each announcement.
+// One component on the board and on each notice (never a sheet in the way of reading).
+test("the board and each notice nudge people with notifications off", () => {
+	const views = join(import.meta.dirname, "..", "announcements")
+	for (const file of ["List.vue", "Detail.vue"]) {
+		const src = readFileSync(join(views, file), "utf8")
+		assert.match(src, /<PushNudge(\s+v-if="!preview")?\s*\/>/, file)
+		assert.match(src, /import PushNudge from "@\/components\/PushNudge\.vue"/, file)
+	}
+})
