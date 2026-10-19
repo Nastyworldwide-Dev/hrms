@@ -24,3 +24,11 @@ test("an empty reason says it is needed, beside Send", () => {
 	const after = template.slice(at)
 	assert.match(after, /v-else-if="missingReason"[^>]*>\s*\{\{ __\("Add a reason to send\."\) \}\}/)
 })
+
+test("a screen reader hears why Send is off: Send points at the hint", () => {
+	// GButton is aria-disabled, so VoiceOver reads a dimmed Send; without this
+	// it gave no reason (design review of da87de282).
+	assert.match(template, /:aria-describedby="sendHintId"/)
+	assert.match(template, /v-else-if="missingReason" :id="REASON_HINT_ID"/)
+	assert.match(src, /const sendHintId = computed\(/)
+})

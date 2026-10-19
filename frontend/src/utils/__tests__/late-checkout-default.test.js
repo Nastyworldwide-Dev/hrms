@@ -37,3 +37,21 @@ test("a check-in under a minute old leaves the time for the person to pick", () 
 	// and the sheet would open red again (review of 2e617bb0a).
 	assert.equal(defaultCheckoutTime("2026-10-18 09:00:20", at("2026-10-18T09:00:50")), null)
 })
+
+test("invariant: the start is empty or after the check-in and not after now", () => {
+	// Three fixes hit this function, each a different edge (review of da87de282).
+	const base = at("2026-10-18T00:00").getTime()
+	for (let inMin = 0; inMin < 24 * 60; inMin += 7) {
+		for (const ageMin of [0, 0.5, 1, 2, 90, 600, 1500]) {
+			const checkedIn = new Date(base + inMin * 60000)
+			const now = new Date(checkedIn.getTime() + ageMin * 60000)
+			const pad = (n) => String(n).padStart(2, "0")
+			const s = `${checkedIn.getFullYear()}-${pad(checkedIn.getMonth() + 1)}-${pad(
+				checkedIn.getDate()
+			)} ${pad(checkedIn.getHours())}:${pad(checkedIn.getMinutes())}:00`
+			const start = defaultCheckoutTime(s, now)
+			if (start === null) continue
+			assert.ok(start > checkedIn && start <= now, `${s} at +${ageMin}m gave ${start}`)
+		}
+	}
+})

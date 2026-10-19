@@ -49,6 +49,7 @@
 					:label="__('Send')"
 					:pending="submitting"
 					:disabled="submitting || !canSubmit || !online"
+					:aria-describedby="sendHintId"
 					@click="submit"
 				/>
 			</div>
@@ -57,7 +58,7 @@
 				{{ __("You need signal to check in.") }}
 			</p>
 			<!-- Send is off until a reason is in; say so (#4855 family). -->
-			<p v-else-if="missingReason" class="g-form-footer">
+			<p v-else-if="missingReason" :id="REASON_HINT_ID" class="g-form-footer">
 				{{ __("Add a reason to send.") }}
 			</p>
 		</div>
@@ -125,6 +126,8 @@ const checkoutError = computed(() => {
 })
 
 const missingReason = computed(() => !reason.value.trim())
+//: Send is aria-disabled, so it names the hint that says why (#4855 family).
+const REASON_HINT_ID = "late-checkout-reason-hint"
 const canSubmit = computed(
 	() => !!checkoutTime.value && !missingReason.value && !checkoutError.value
 )
@@ -145,6 +148,9 @@ watch(
 //: Owner ruling (22 Sep): never an offline check-in. This dialog sends a punch,
 //: so it is blocked offline like the panel that opens it (audit P0-7).
 const online = useOnline()
+const sendHintId = computed(() =>
+	online.value && missingReason.value ? REASON_HINT_ID : undefined
+)
 
 const submit = async () => {
 	if (!online.value) {
