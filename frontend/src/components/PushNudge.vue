@@ -41,6 +41,8 @@ const __ = inject("$translate")
 const enabling = ref(false)
 //: the SDK keeps no reactive state; re-read after a successful enable
 const enabledNow = ref(false)
+//: a refusal in this visit, so the line turns to "blocked" at once (review of the nudge)
+const refusedNow = ref(false)
 
 const kind = computed(() =>
 	pushNudge({
@@ -49,7 +51,11 @@ const kind = computed(() =>
 		alreadyEnabled:
 			enabledNow.value || Boolean(window.frappePushNotification?.isNotificationEnabled?.()),
 		notificationSupported: typeof window !== "undefined" && "Notification" in window,
-		browserPermission: "Notification" in window ? Notification.permission : "unsupported",
+		browserPermission: refusedNow.value
+			? "denied"
+			: "Notification" in window
+			? Notification.permission
+			: "unsupported",
 	})
 )
 
@@ -58,6 +64,7 @@ async function enable() {
 	try {
 		const data = await enablePushNotifications()
 		enabledNow.value = Boolean(data?.permission_granted)
+		refusedNow.value = !enabledNow.value
 		console.info("[PushNudge] enable", enabledNow.value ? "granted" : "refused")
 		gToast(
 			enabledNow.value
@@ -89,7 +96,10 @@ async function enable() {
 	align-items: center;
 	gap: 8px 12px;
 }
-.g-push-nudge__action {
+/* a small trailing button, not the kit's full-width pill (.g-btn's width wins over --compact) */
+.g-push-nudge .g-push-nudge__action {
+	width: auto;
+	min-height: var(--g-touch-target-min);
 	margin-left: auto;
 }
 </style>

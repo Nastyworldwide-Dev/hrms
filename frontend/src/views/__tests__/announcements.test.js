@@ -152,3 +152,12 @@ test("the board and each notice nudge people with notifications off", () => {
 		assert.match(src, /import PushNudge from "@\/components\/PushNudge\.vue"/, file)
 	}
 })
+
+// Review of the nudge: "Turn on" rendered as the kit's full-width pill (.g-btn width beats
+// --compact), and a refusal left the line offering "Turn on" until the page was opened again.
+test("the nudge's button is small, and a refusal turns the line to 'blocked' at once", () => {
+	const nudge = readFileSync(join(import.meta.dirname, "..", "..", "components", "PushNudge.vue"), "utf8")
+	assert.match(nudge, /\.g-push-nudge \.g-push-nudge__action \{[^}]*width: auto/)
+	assert.match(nudge, /refusedNow\.value = !enabledNow\.value/)
+	assert.match(nudge, /browserPermission: refusedNow\.value\s*\?\s*"denied"/)
+})
