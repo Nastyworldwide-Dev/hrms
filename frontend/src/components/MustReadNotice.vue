@@ -44,7 +44,12 @@
 					v-model="ticked"
 					:label="__('I have read and understood this')"
 					:disabled="!state.canTick"
+					described-by="mustread-confirm-state"
 				/>
+				<!-- what is missing, said when it changes (the tick opening, Confirm ready) -->
+				<span id="mustread-confirm-state" class="sr-only" aria-live="polite">{{
+					__(state.label)
+				}}</span>
 				<GButton
 					:label="__(state.label)"
 					:class="{ 'g-mustread__waiting': !state.ready }"

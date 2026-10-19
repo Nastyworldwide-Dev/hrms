@@ -62,12 +62,17 @@
 							v-model="ticked"
 							:label="__('I have read and understood this')"
 							:disabled="!state.canTick"
+							described-by="announcement-confirm-state"
 						/>
 						<GButton
 							:label="__(state.label)"
 							:class="{ 'g-mustread__waiting': !state.ready }"
 							@click="confirm"
 						/>
+						<!-- what is missing, said when it changes (the tick opening, Confirm ready) -->
+						<span id="announcement-confirm-state" class="sr-only" aria-live="polite">{{
+							__(state.label)
+						}}</span>
 					</template>
 
 					<!-- after the body and its confirm: the nudge never stands between a
@@ -80,7 +85,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onBeforeUnmount, ref, watch } from "vue"
+import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { CalendarDays, Megaphone, ShieldAlert, TriangleAlert } from "lucide-vue-next"
 
@@ -156,16 +161,27 @@ const state = computed(() =>
 )
 //: Rooted on the viewport: the page scrolls inside BaseLayout's ion-content, and the
 //: marker entering the screen is the same fact either way.
+//: Re-armed for EACH notice once its own text is on screen: a reused marker is not observed
+//: again, and the shared resource can still hold the last notice's text for a frame, so a
+//: short notice before a long one must not open the tick unread (review of a2f27ddb3).
 let observer = null
 function watchEnd() {
 	observer?.disconnect()
 	if (!endMarker.value || typeof IntersectionObserver === "undefined") return
 	observer = new IntersectionObserver((entries) => {
-		if (entries.some((e) => e.isIntersecting)) reachedEnd.value = true
+		if (doc.value?.name === props.id && entries.some((e) => e.isIntersecting))
+			reachedEnd.value = true
 	})
 	observer.observe(endMarker.value)
 }
-watch(endMarker, watchEnd)
+watch(
+	() => [endMarker.value, doc.value?.name === props.id],
+	async ([marker, shown]) => {
+		if (!marker || !shown) return
+		await nextTick()
+		watchEnd()
+	}
+)
 onBeforeUnmount(() => observer?.disconnect())
 
 async function confirm() {

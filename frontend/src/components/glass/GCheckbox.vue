@@ -13,6 +13,7 @@
     modelValue  boolean | 0 | 1
     label       string
     disabled    boolean
+    describedBy string — id of the text that says why it is disabled (aria-describedby)
   Emits: update:modelValue, change (same value)
 -->
 <template>
@@ -22,6 +23,7 @@
 			class="g-check__box g-focusable"
 			:checked="Boolean(Number(modelValue))"
 			:disabled="disabled"
+			:aria-describedby="describedBy || undefined"
 			@change="onChange"
 		/>
 		<span v-if="label" class="g-check__label">{{ label }}</span>
@@ -35,6 +37,7 @@ const props = defineProps({
 	modelValue: { type: [Boolean, Number], default: false },
 	label: { type: String, default: "" },
 	disabled: { type: Boolean, default: false },
+	describedBy: { type: String, default: "" },
 })
 const emit = defineEmits(["update:modelValue", "change"])
 
