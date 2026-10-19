@@ -387,8 +387,9 @@ html[data-transparency="reduce"] .g-sidenav {
 /* The ring is for keyboard movement (utils/focusModality.js). After a tap the
    browser still matches :focus-visible on Escape or on focus the app moves
    (sheet open, focus back to its opener), which drew lime on rows nobody had
-   keyed to (owner, 19 Oct 2026). One rule for every ring; Tab brings it back. */
-html[data-input="pointer"] :focus-visible,
+   keyed to (owner, 19 Oct 2026). One rule for every ring; Tab brings it back.
+   A text field keeps its ring: it shows where the typing goes. */
+html[data-input="pointer"] :focus-visible:not(input, textarea, select, [contenteditable]),
 html[data-input="pointer"] .g-switch--drawn:has(:focus-visible) .g-switch__track,
 html[data-input="pointer"] .timeslip-file:has(input:focus-visible) {
 	box-shadow: none !important;
