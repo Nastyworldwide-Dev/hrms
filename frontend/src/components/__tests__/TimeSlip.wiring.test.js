@@ -85,7 +85,7 @@ test("both screens ask in the same words, through the shared rows", () => {
 test("Today says the slip's status with the one status-line rule", () => {
 	assert.match(bar, /import \{[^}]*\bslipStatusLine\b[^}]*\} from "@\/utils\/timeSlip"/)
 	assert.match(bar, /slipStatusLine\(slip\.value\.status/)
-	assert.match(bar, /__\("Time slip"\) \}\} ·/)
+	assert.match(bar, /__\("Time slip"\) \}\} <span aria-hidden="true">·<\/span>/)
 })
 
 test("Today offers a slip only for a late day with none filed, and sends it for that day", () => {
@@ -144,6 +144,8 @@ test("the file input names the picked file to a screen reader", () => {
 // alpha.48 "Later": Today's slip line changes on its own (Waiting -> Approved) while Home is open;
 // as a status region a screen reader hears the change, as the check-in sheet's pill already does.
 test("Today's slip line is a status a screen reader hears change", () => {
-	assert.match(bar, /<p v-if="slipLine" class="g-now__slip" role="status"/)
+	// the region is mounted before the line, so its first appearance is heard (design review of eeb854f8c)
+	assert.match(bar, /<div class="g-now__slip-live" role="status">\s*<p v-if="slipLine" class="g-now__slip"/)
+	assert.match(bar, /\.g-now__slip-live \{\s*display: contents;/)
 	assert.match(panel, /class="checkin-sheet__slip-pill" role="status"/)
 })

@@ -94,10 +94,15 @@
 		<p class="sr-only" role="status">{{ stateLine }}{{ detail ? `. ${detail}` : "" }}</p>
 		<!-- The time slip, last on the card (owner, 14 Oct 2026). Its word is the server's
 		     (time_slip.status); the sheet's clock check was only a hint. -->
-		<p v-if="slipLine" class="g-now__slip" role="status" data-visual-mask>
-			<span>{{ __("Time slip") }} ·</span>
-			<span class="g-badge" :class="`g-chip--${slipLine.chip}`">{{ slipLine.text }}</span>
-		</p>
+		<!-- The live region stays mounted (it takes no box: display: contents) and
+		     the line comes and goes inside it, so a slip that first appears is
+		     announced too, not only one that changes (design review of eeb854f8c). -->
+		<div class="g-now__slip-live" role="status">
+			<p v-if="slipLine" class="g-now__slip" data-visual-mask>
+				<span>{{ __("Time slip") }} <span aria-hidden="true">·</span></span>
+				<span class="g-badge" :class="`g-chip--${slipLine.chip}`">{{ slipLine.text }}</span>
+			</p>
+		</div>
 		<button
 			v-if="slipNeedsFile"
 			type="button"
@@ -378,6 +383,9 @@ onBeforeUnmount(() => clearInterval(timer))
 
 <style>
 /* The time slip line and its quiet add button, last on the Today card. */
+.g-now__slip-live {
+	display: contents;
+}
 .g-now__slip {
 	display: flex;
 	align-items: center;
