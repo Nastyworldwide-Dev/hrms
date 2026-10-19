@@ -427,16 +427,18 @@ function resetSlip() {
 // upload must not hold the sheet open or delay the approval dialog, and a refused slip must never
 // undo or block a punch that already happened. It catches everything, so nothing here can reject
 // into the punch's success path.
-async function sendSlipAfterPunch(file) {
+async function sendSlipAfterPunch(file, punchTime) {
+	// The stored punch's own time (server-stamped, the employee's wall clock): Today's payload may
+	// be hours old by the time of the punch, and the phone may sit in another time zone (reviews
+	// of 10781a529, fd971eb6b). Today's date and clock only if the punch carried no time.
+	const [punchDate, punchClock] = String(punchTime || "").split(" ")
 	try {
 		await sendTimeSlip({
 			employee: employee.data?.name,
 			// the shift's own day: after midnight on a night shift, yesterday (review of 2c32b184d)
-			// day and clock from the same server payload (the employee's own wall clock): a phone
-			// in another time zone must not move the slip to a day the server never reads
 			day: slipDay(
-				nowResource.data?.date || dayjs().format("YYYY-MM-DD"),
-				wallClock(nowResource.data?.time),
+				punchDate || nowResource.data?.date || dayjs().format("YYYY-MM-DD"),
+				wallClock(punchClock || nowResource.data?.time),
 				nowResource.data?.shift?.start,
 				nowResource.data?.shift?.end
 			),
@@ -1332,7 +1334,7 @@ const runSubmitLog = async (logType) => {
 			clearPendingTap()
 			// The punch is stored; now the slip, off to the side. Not when the server turned the
 			// tap into a check-OUT (an open session): that day is not late.
-			if (slipToSend && doc?.log_type !== "OUT") sendSlipAfterPunch(slipToSend)
+			if (slipToSend && doc?.log_type !== "OUT") sendSlipAfterPunch(slipToSend, doc?.time)
 
 			// The label must be right NOW, not one round trip from now. The
 			// reload below is the authority, but until it lands `lastKnownLog`

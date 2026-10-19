@@ -153,6 +153,9 @@ test("Today's slip line is a status a screen reader hears change", () => {
 // Review of 2c32b184d (Critical): the sheet files the slip on the shift's own day.
 test("the check-in sheet files the slip on the shift's own day", () => {
 	assert.match(helper, /day: slipDay\(/)
-	// the site's date with the site's clock (review of 10781a529), never the phone's
-	assert.match(helper, /wallClock\(nowResource\.data\?\.time\)/)
+	// the stored punch's own date and clock first (reviews of 10781a529, fd971eb6b): Today's payload
+	// can be hours old and the phone in another zone
+	assert.match(helper, /punchDate \|\| nowResource\.data\?\.date/)
+	assert.match(helper, /wallClock\(punchClock \|\| nowResource\.data\?\.time\)/)
+	assert.match(onSuccess, /sendSlipAfterPunch\(slipToSend, doc\?\.time\)/)
 })
