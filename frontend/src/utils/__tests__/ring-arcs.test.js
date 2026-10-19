@@ -26,11 +26,13 @@ test("no entitlement draws an empty ring, not NaN", () => {
 	})
 })
 
-test("the two arcs never overrun the circle", () => {
-	// A carry-forward can push balance + taken past the annual entitlement.
-	const { left, taken } = ringArcs({ balance: 10, taken: 8, allocated: 18, total: 14 }, 100)
-	assert.equal(left, 100 * (10 / 14))
-	assert.ok(left + taken <= 100 + 1e-9)
+test("carried-over days grow the circle instead of hiding what was taken", () => {
+	// 14 a year + 4 carried over: 10 left and 8 taken fill an 18-day circle.
+	// Measured against 14, lime alone took 10/14 and taken was cut to 4/14.
+	assert.deepEqual(ringArcs({ balance: 10, taken: 8, allocated: 18, total: 14 }, 180), {
+		left: 100,
+		taken: 80,
+	})
 })
 
 test("an older server without taken still draws what is left", () => {

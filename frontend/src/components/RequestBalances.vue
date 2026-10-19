@@ -98,23 +98,23 @@
 		     than simple linear text"). One circle is the year: lime is left,
 		     grey is taken, the bare track is what was never given. -->
 		<GModal :is-open="allOpen" :title="__('All balances')" @did-dismiss="allOpen = false">
-			<div class="g-ring-legend" aria-hidden="true">
-				<span><i class="g-ring-legend__left" />{{ __("Left") }}</span>
-				<span><i class="g-ring-legend__taken" />{{ __("Taken") }}</span>
+			<div class="g-leave-ring-legend" aria-hidden="true">
+				<span><i class="g-leave-ring-legend__left" />{{ __("Left") }}</span>
+				<span><i class="g-leave-ring-legend__taken" />{{ __("Taken") }}</span>
 			</div>
-			<div class="g-glass g-rings">
+			<div class="g-glass g-leave-rings">
 				<div
 					v-for="row in rankedLeave"
 					:key="row.leave_type"
-					class="g-ring"
+					class="g-leave-ring"
 					role="group"
 					:aria-label="ringLabel(row)"
 				>
-					<div class="g-ring__dial" aria-hidden="true">
+					<div class="g-leave-ring__dial" aria-hidden="true">
 						<svg viewBox="0 0 88 88">
-							<circle class="g-ring__track" cx="44" cy="44" :r="RING_R" />
+							<circle class="g-leave-ring__track" cx="44" cy="44" :r="RING_R" />
 							<circle
-								class="g-ring__taken"
+								class="g-leave-ring__taken"
 								cx="44"
 								cy="44"
 								:r="RING_R"
@@ -122,21 +122,21 @@
 								:stroke-dashoffset="-ringArcs(row, RING_C).left"
 							/>
 							<circle
-								class="g-ring__left"
+								class="g-leave-ring__left"
 								cx="44"
 								cy="44"
 								:r="RING_R"
 								:stroke-dasharray="`${ringArcs(row, RING_C).left} ${RING_C}`"
 							/>
 						</svg>
-						<span class="g-ring__number">{{ trim(row.balance) }}</span>
-						<span class="g-ring__of">{{ __("of {0}", [trim(row.total)]) }}</span>
+						<span class="g-leave-ring__number">{{ trim(row.balance) }}</span>
+						<span class="g-leave-ring__of">{{ __("of {0}", [trim(row.total)]) }}</span>
 					</div>
-					<span class="g-ring__name" aria-hidden="true">{{ row.leave_type }}</span>
-					<span v-if="row.expiring_soon" class="g-ring__sub g-ring__sub--warn" aria-hidden="true">
+					<span class="g-leave-ring__name" aria-hidden="true">{{ row.leave_type }}</span>
+					<span v-if="row.expiring_soon" class="g-leave-ring__sub g-leave-ring__sub--warn" aria-hidden="true">
 						{{ __("Expires {0}", [formatDate(row.expires_on)]) }}
 					</span>
-					<span v-else-if="row.taken > 0" class="g-ring__sub" aria-hidden="true">
+					<span v-else-if="row.taken > 0" class="g-leave-ring__sub" aria-hidden="true">
 						{{ __("{0} taken", [trim(row.taken)]) }}
 					</span>
 				</div>

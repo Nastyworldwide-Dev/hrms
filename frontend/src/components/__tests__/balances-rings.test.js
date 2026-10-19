@@ -14,7 +14,7 @@ const css = read("../../theme/glass-components.css")
 
 test("the sheet is a ring per leave type, not a list of text rows", () => {
 	assert.match(sheet, /v-for="row in rankedLeave"/)
-	assert.match(sheet, /class="g-ring"/)
+	assert.match(sheet, /class="g-leave-ring"/)
 	assert.doesNotMatch(sheet, /<GListRow/, "the text list is gone")
 })
 
@@ -25,7 +25,7 @@ test("each ring draws left and taken from the one helper", () => {
 
 test("each ring is one sentence to VoiceOver; the drawing is hidden", () => {
 	assert.match(sheet, /role="group"\s+:aria-label="ringLabel\(row\)"/)
-	assert.match(sheet, /class="g-ring__dial" aria-hidden="true"/)
+	assert.match(sheet, /class="g-leave-ring__dial" aria-hidden="true"/)
 	const fn = src.slice(src.indexOf("function ringLabel"))
 	assert.match(fn, /balanceLine\(row\)/, "same words as before: '6 of 14 left' or the expiry")
 })
@@ -44,9 +44,27 @@ test("the server sends what was taken, from the ledger", () => {
 	assert.match(map, /"leaves_taken": flt\(details\.get\("leaves_taken"\), precision\)/)
 })
 
+test("the leave ring does not share GProgressRing's class", () => {
+	// .g-ring is the KPI ring (88px, flex: none); reusing the name squeezed
+	// every balance cell to 88px and restyled the KPI dial (design review).
+	assert.doesNotMatch(sheet, /class="g-ring[ _"]/)
+	const kpi = css.indexOf(".g-ring {")
+	assert.equal(css.indexOf(".g-ring {", kpi + 1), -1, "one .g-ring rule, GProgressRing's")
+})
+
+test("left reads in light mode: accent ink, not lime on a light track", () => {
+	assert.match(css, /\.g-leave-ring__left\s*\{\s*stroke: var\(--g-accent-ink\);/)
+})
+
 test("rings are Glass tokens only, two across, an odd last ring spans", () => {
-	const block = css.slice(css.indexOf(".g-ring-legend {"), css.indexOf(".g-ring__sub--warn"))
+	const block = css.slice(
+		css.indexOf(".g-leave-ring-legend {"),
+		css.indexOf(".g-leave-ring__sub--warn")
+	)
 	assert.doesNotMatch(block, /#[0-9a-f]{3,6}\b/i, "no hard-coded colour")
-	assert.match(css, /\.g-rings\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
-	assert.match(css, /\.g-ring:last-child:nth-child\(odd\)\s*\{\s*grid-column: 1 \/ -1;/)
+	assert.match(
+		css,
+		/\.g-leave-rings\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/
+	)
+	assert.match(css, /\.g-leave-ring:last-child:nth-child\(odd\)\s*\{\s*grid-column: 1 \/ -1;/)
 })

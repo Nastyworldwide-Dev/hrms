@@ -191,7 +191,7 @@ test("owner ruling R2: Annual and Medical, then All balances; the full list is c
 	assert.match(component, /const LEAVE_SHOWN = 2/)
 	assert.match(component, /__\(["']All balances["']\)/)
 	// 19 Oct 2026 (owner pick B): the sheet draws a ring per type, not text rows.
-	assert.match(component, /<GModal :is-open="allOpen"[\s\S]*class="g-ring"[\s\S]*?v-for="row in rankedLeave"|<GModal :is-open="allOpen"[\s\S]*v-for="row in rankedLeave"[\s\S]*?class="g-ring"/)
+	assert.match(component, /<GModal :is-open="allOpen"[\s\S]*class="g-leave-ring"[\s\S]*?v-for="row in rankedLeave"|<GModal :is-open="allOpen"[\s\S]*v-for="row in rankedLeave"[\s\S]*?class="g-leave-ring"/)
 	assert.doesNotMatch(component, /__\("Show fewer leave types"\)/)
 })
 
