@@ -51,6 +51,8 @@ test("a slip that fails to send never blocks or undoes the punch", () => {
 test("a late check-in offers the slip only when the next action is a check-in", () => {
 	assert.match(panel, /nextAction\.value\?\.action === "IN"/)
 	assert.match(panel, /lateMinutes\(\s*new Date\(\)/)
+	// the shift's end, so a night shift checked in after midnight still counts as late
+	assert.match(panel, /shift\.start, shift\.late_grace, shift\.late_marking, shift\.end\)/)
 })
 
 test("the button names the slip when it goes with the check-in, and waits for the file", () => {

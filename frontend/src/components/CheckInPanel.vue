@@ -414,7 +414,7 @@ function readMinutesLate() {
 	const shift = nowResource.data?.shift
 	minutesLate.value =
 		shift && nextAction.value?.action === "IN"
-			? lateMinutes(new Date(), shift.start, shift.late_grace, shift.late_marking)
+			? lateMinutes(new Date(), shift.start, shift.late_grace, shift.late_marking, shift.end)
 			: 0
 }
 

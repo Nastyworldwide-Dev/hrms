@@ -15,16 +15,23 @@ const plain = (text, args = []) => text.replace(/\{(\d+)\}/g, (_, i) => args[i])
  * late. The same line the server marks the day late by (now.py late_minutes), counted from the
  * clock on the device.
  *
- * ceiling: same calendar day only, so a night shift read after midnight is "not late" here and
- * the Today line (the server's own count) catches it; upgrade: send the shift's start date with
- * get_now if night-shift staff ask for the slip on the sheet itself
+ * A night shift (its `end` at or before its `start`, 22:00-06:00) owns the small hours before its
+ * end: 00:30 is counted from last night's 22:00, as the shift gauge reads it (shiftGauge.js).
+ * Without `end`, the same calendar day only, as before.
  */
-export function lateMinutes(now, start, graceMin, markingOn) {
+const clockSec = (hhmm) => {
+	const match = /^(\d{1,2}):(\d{2})/.exec(String(hhmm ?? "").trim())
+	return match ? (Number(match[1]) * 60 + Number(match[2])) * 60 : null
+}
+
+export function lateMinutes(now, start, graceMin, markingOn, end) {
 	if (!markingOn) return 0
-	const match = /^(\d{1,2}):(\d{2})/.exec(String(start ?? "").trim())
-	if (!match) return 0
-	const startSec = (Number(match[1]) * 60 + Number(match[2])) * 60
-	const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
+	const startSec = clockSec(start)
+	if (startSec === null) return 0
+	let nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
+	const endSec = clockSec(end)
+	// the small hours before a night shift's end belong to the shift that began last night
+	if (endSec !== null && endSec <= startSec && nowSec < endSec) nowSec += 24 * 3600
 	const over = (nowSec - startSec) / 60 - (Number(graceMin) || 0)
 	return over > 0 ? Math.floor(over) : 0
 }

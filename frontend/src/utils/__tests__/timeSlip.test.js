@@ -181,3 +181,22 @@ test("a file added later goes to the slip already saved", async () => {
 	assert.equal(name, "HR-ARQ-1")
 	assert.deepEqual(uploaded, [["slip.jpg", "HR-ARQ-1"]])
 })
+
+// alpha.48 "Later" (the ceiling on lateMinutes): a night shift checked in after midnight. The
+// small hours before its end belong to the shift that began last night, as the shift gauge reads
+// them, so 00:30 on a 22:00-06:00 shift is 2 h 30 min late, not "not late".
+test("a night shift checked in after midnight is late from last night's start", () => {
+	assert.equal(lateMinutes(at(0, 30), "22:00", 15, true, "06:00"), 135)
+	assert.equal(lateMinutes(at(22, 10), "22:00", 15, true, "06:00"), 0)
+	assert.equal(lateMinutes(at(23, 0), "22:00", 15, true, "06:00"), 45)
+})
+
+test("after a night shift has ended, the clock is not counted against it", () => {
+	// 07:00 is past the 06:00 end: not a late check-in for last night (nor tonight's, not begun)
+	assert.equal(lateMinutes(at(7, 0), "22:00", 15, true, "06:00"), 0)
+})
+
+test("a day shift is unchanged by its end", () => {
+	assert.equal(lateMinutes(at(9, 42), "09:00", 15, true, "18:00"), 27)
+	assert.equal(lateMinutes(at(8, 0), "09:00", 15, true, "18:00"), 0)
+})
