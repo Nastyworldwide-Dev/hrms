@@ -5,8 +5,10 @@
 				class="flex flex-col gap-3 w-full max-w-content-column-lg mx-auto px-4 pt-4 pb-4 lg:py-7"
 			>
 				<!-- one glass surface for the whole list (§15.1): the panel and its
-				     rows count as ONE, not one per row -->
-				<GListPanel>
+				     rows count as ONE, not one per row. Every row in it reads the
+				     caller's Employee: a login with none (an Attendance Report
+				     Viewer, who starts here) is not offered them. -->
+				<GListPanel v-if="employee.data">
 					<GListRow
 						v-for="item in moreItems"
 						:key="item.route"

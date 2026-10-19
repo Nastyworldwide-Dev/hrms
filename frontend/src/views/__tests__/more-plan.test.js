@@ -37,3 +37,9 @@ test("the holiday list waits for the employee before asking", () => {
 	// before $employee resolved asked for nobody's holidays.
 	assert.match(more, /<HolidayList v-if="holidaysOpen && employee\.data" \/>/)
 })
+
+test("a login with no employee record is not offered rows that need one", () => {
+	// Design review of 9ce8bcecb: an Attendance Report Viewer with no Employee starts on More; Help,
+	// SOPs, Announcements and Public holidays all read the caller's Employee and only bounced back.
+	assert.match(template, /<GListPanel v-if="employee\.data">/)
+})

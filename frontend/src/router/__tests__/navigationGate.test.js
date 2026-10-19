@@ -24,6 +24,7 @@ function world({
 	employee = { user_id: "a@x" },
 	fetched = false,
 	roles = [],
+	isHr = false,
 } = {}) {
 	employeePromise.catch(() => {})
 	const ended = []
@@ -31,7 +32,7 @@ function world({
 		ended,
 		sessionEnded: () => (ended.push(1), true),
 		session: { isLoggedIn: loggedIn },
-		userResource: { reload: userReload, data: { name: "a@x", roles } },
+		userResource: { reload: userReload, data: { name: "a@x", roles, is_hr: isHr } },
 		employeeResource: { promise: employeePromise, data: employee, fetched },
 		employeeGate: ({ employee: e, user }) =>
 			e && e.user_id === user.name ? null : { name: "InvalidEmployee" },
@@ -152,6 +153,19 @@ test("a viewer with no employee: Home sends her to More; More, Team and the down
 		["MoreView", "/more"],
 		["TeamView", "/team"],
 		["AttendanceDownload", "/attendance-download"],
+		// the only Log out is on Profile (design review of 9ce8bcecb)
+		["Profile", "/profile"],
+		["Notifications", "/notifications"],
+		["ChangePassword", "/change-password"],
 	])
 		assert.equal(await decideNavigation({ to: { name, path }, ...viewer() }), undefined, name)
+})
+
+// Review of 9ce8bcecb: an HR or admin login with no Employee was let in before; that rule is unchanged.
+test("an HR login with no employee keeps the old pass", async () => {
+	const out = await decideNavigation({
+		to: { name: "Approvals", path: "/approvals" },
+		...world({ employee: null, fetched: true, isHr: true }),
+	})
+	assert.equal(out, undefined)
 })
