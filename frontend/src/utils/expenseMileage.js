@@ -27,21 +27,27 @@ export function withMileageFields(fields, rate, typeName) {
 				return { ...field, reqd: rate > 0 ? 1 : 0, hidden: 0 }
 			if (!(rate > 0)) return field
 			if (field.fieldname === "amount")
-				return { ...field, read_only: 1, label: "You will claim", class: "g-form-row--claim" }
+				// keep the currency the label carries ("Amount (MYR)"): a bare "30" read as no unit (owner, 20 Oct)
+				return {
+					...field,
+					read_only: 1,
+					label: `You will claim ${(field.label || "").match(/\([^)]*\)/)?.[0] || ""}`.trim(),
+					class: "g-form-row--claim",
+				}
 			return field
 		})
 }
 
 /**
- * "70 km × RM 0.60 per km (Car)": how the amount was reached, under it.
- * `formatRate` writes the rate as money (formatCurrency with the claim's currency).
+ * "50 km × RM 0.60 per km = RM 30.00": how the amount was reached, under it.
+ * `formatMoney` writes money (formatCurrency with the claim's currency). The
+ * type is not repeated: it is the row above (owner, 20 Oct: the old line
+ * ended "(Mileage (CAR) (MILEAGE CAR))" and still never said RM 30).
  */
-export function mileageExplainer(km, rate, typeName, formatRate) {
+export function mileageExplainer(km, rate, formatMoney) {
 	const value = parseFloat(km) || 0
 	if (!(rate > 0) || !(value > 0)) return ""
-	const kind = (typeName || "").split("·").pop().trim()
-	const line = `${value} km × ${formatRate(rate)} per km`
-	return kind ? `${line} (${kind})` : line
+	return `${value} km × ${formatMoney(rate)} per km = ${formatMoney(mileageAmount(value, rate))}`
 }
 
 /** Why a mileage line is not priced: HR has not set its rate yet (never silent). */

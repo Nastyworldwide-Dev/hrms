@@ -310,11 +310,8 @@ const rateNote = computed(() =>
 )
 
 const mileageLine = computed(() =>
-	mileageExplainer(
-		expenseItem.value.distance_km,
-		mileageRate.value,
-		expenseItem.value.expense_type,
-		(rate) => formatCurrency(rate, props.expenseClaim.currency)
+	mileageExplainer(expenseItem.value.distance_km, mileageRate.value, (money) =>
+		formatCurrency(money, props.expenseClaim.currency)
 	)
 )
 

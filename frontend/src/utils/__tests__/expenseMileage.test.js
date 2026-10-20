@@ -40,12 +40,20 @@ test("an ordinary type does not ask the distance and leaves the amount editable"
 	assert.equal(out[1].read_only, undefined)
 })
 
-test("the explainer says how the amount was reached", () => {
+test("the explainer says the amount in money, not only the rate", () => {
 	const rm = (n) => `RM ${n.toFixed(2)}`
-	assert.equal(mileageExplainer(70, 0.6, "Mileage · Car", rm), "70 km × RM 0.60 per km (Car)")
-	assert.equal(mileageExplainer(70, 0.6, "Travel", rm), "70 km × RM 0.60 per km (Travel)")
-	assert.equal(mileageExplainer(0, 0.6, "Mileage · Car", rm), "")
-	assert.equal(mileageExplainer(70, 0, "Parking", rm), "")
+	assert.equal(mileageExplainer(50, 0.6, rm), "50 km × RM 0.60 per km = RM 30.00")
+	assert.equal(mileageExplainer(0, 0.6, rm), "")
+	assert.equal(mileageExplainer(70, 0, rm), "")
+})
+
+test("the claimed amount keeps its currency in the label", () => {
+	const fields = [{ fieldname: "distance_km" }, { fieldname: "amount", label: "Amount (MYR)" }]
+	assert.equal(withMileageFields(fields, 0.6)[1].label, "You will claim (MYR)")
+	assert.equal(
+		withMileageFields([{ fieldname: "amount", label: "Amount" }], 0.6)[0].label,
+		"You will claim"
+	)
 })
 
 test("a mileage type with no rate still asks the distance (optional) and says why there is no price", () => {

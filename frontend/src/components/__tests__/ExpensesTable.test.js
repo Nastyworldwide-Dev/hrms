@@ -26,7 +26,7 @@ test("Project is not asked on an expense line (owner, 14 Oct 2026)", () => {
 })
 
 test("a mileage type asks km and prices the line from the type's rate", () => {
-	assert.match(src, /withMileageFields\(expensesTableFields\.data \|\| \[\], mileageRate\.value\)/)
+	assert.match(src, /withMileageFields\(\s*expensesTableFields\.data \|\| \[\],\s*mileageRate\.value,\s*expenseItem\.value\.expense_type/)
 	assert.match(src, /claimTypesByID\[expenseItem\.value\.expense_type\]\?\.rate_per_km/)
 	assert.match(src, /expenseItem\.value\.amount = mileageAmount\(km, rate\)/)
 })
