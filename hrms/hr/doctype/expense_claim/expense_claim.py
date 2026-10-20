@@ -66,6 +66,8 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self.set_payable_account()
 		self.validate_staff_approver()
 		self.set_mileage_amounts()
+		self.validate_receipts()
+		self.require_receipts()
 		self.set_sanctioned_amount_default()
 		self.validate_sanctioned_amount()
 		self.calculate_total_amount()
@@ -256,6 +258,97 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			# the line is sanctioned in full unless an approver already reduced it
 			if is_new_or_changed or flt(row.sanctioned_amount) > amount:
 				row.sanctioned_amount = amount
+
+	def validate_receipts(self):
+		"""A line's receipt is a file this claim's owner uploaded (owner, 20 Oct 2026).
+
+		The PWA uploads a receipt the moment it is picked, with no parent, so the
+		claim stores only the file's URL. Without this fence a hand-built payload
+		could point a line at anybody's private file, and on_update would then hand
+		it to the approver. A receipt already saved on the line is not asked again:
+		it was judged when it was added, and a file HR later cleaned up must not
+		stop an approver deciding the claim.
+		"""
+		before = None if self.is_new() else self.get_doc_before_save()
+		saved = {r.name: r.receipt for r in (before.expenses if before else [])}
+		for row in self.get("expenses"):
+			if not row.receipt or saved.get(row.name) == row.receipt:
+				continue
+			if not any(may_use_as_receipt(self, f) for f in receipt_files(row.receipt)):
+				logger.info("[expense_claim] %s row %s: receipt %s refused", self.name, row.idx, row.receipt)
+				frappe.throw(_("Row #{0}: that receipt file was not found.").format(row.idx))
+
+	def require_receipts(self):
+		"""Every line whose type needs a receipt carries one before it is approved.
+
+		"Receipt Required" is per Expense Claim Type (on by default). It is checked in
+		validate, once the decision is Approved, because that is what Approve runs:
+		the approver's dry run (_approve_would_refuse) shows this message before the
+		press, and the submit is refused too. A rejection needs no receipt.
+
+		A claim made before this release has one file on the claim itself and no line
+		receipts at all; that file is its proof, so it still goes through (owner, 20 Oct
+		2026). Once any line carries a receipt the claim is new-style and every required
+		line needs its own.
+		"""
+		if self.approval_status != "Approved":
+			return
+		rows = self.get("expenses")
+		bare = [
+			row
+			for row in rows
+			if not row.receipt
+			and frappe.get_cached_value("Expense Claim Type", row.expense_type, "receipt_required") != 0
+		]
+		if not bare:
+			return
+		if not any(row.receipt for row in rows) and has_claim_level_file(self):
+			return
+		logger.info(
+			"[expense_claim] %s row %s: no receipt for %s", self.name, bare[0].idx, bare[0].expense_type
+		)
+		frappe.throw(_("Row #{0}: add the receipt for {1}.").format(bare[0].idx, bare[0].expense_type))
+
+	def link_receipts(self):
+		"""File each line's receipt under this claim, so the approver can open it.
+
+		The upload had no parent, so the File is the uploader's alone; Frappe lets
+		someone else read a private file only through the document it is attached to.
+		Only a loose file of this claim's owner is attached. One already on another
+		document stays there: moving it would take it from that document's readers.
+		Attached by db.set_value, not a save: the File's own validation would re-read
+		the bytes for nothing.
+		"""
+		for row in self.get("expenses"):
+			if not row.receipt:
+				continue
+			files = receipt_files(row.receipt)
+			if any(
+				f.attached_to_doctype == "Expense Claim" and f.attached_to_name == self.name for f in files
+			):
+				continue
+			loose = next(
+				(
+					f
+					for f in files
+					if not f.attached_to_doctype and not f.attached_to_name and may_use_as_receipt(self, f)
+				),
+				None,
+			)
+			if not loose:
+				continue
+			frappe.db.set_value(
+				"File",
+				loose.name,
+				{
+					"attached_to_doctype": "Expense Claim",
+					"attached_to_name": self.name,
+					"attached_to_field": "receipt",
+				},
+			)
+			logger.info(
+				"[expense_claim] %s row %s: receipt %s attached to the claim", self.name, row.idx, loose.name
+			)
 
 	def set_sanctioned_amount_default(self):
 		"""A NEW line with an amount and no sanctioned amount is sanctioned in full.
@@ -460,6 +553,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 	def on_update(self):
 		share_doc_with_approver(self, self.expense_approver)
+		self.link_receipts()
 		self.publish_update()
 
 	def after_delete(self):
@@ -964,6 +1058,44 @@ def expense_claim_payable_account(company_defaults) -> str | None:
 	expense-claim payable if set, else its ordinary payable (Creditors). Pure."""
 	defaults = company_defaults or {}
 	return defaults.get("default_expense_claim_payable_account") or defaults.get("default_payable_account")
+
+
+def receipt_files(url: str) -> list:
+	"""The File rows behind a receipt URL: one per upload, since the same bytes uploaded
+	twice share a URL and each upload keeps its own row (and its own owner)."""
+	return frappe.get_all(
+		"File",
+		filters={"file_url": url},
+		fields=["name", "owner", "attached_to_doctype", "attached_to_name", "attached_to_field"],
+		limit_page_length=50,
+	)
+
+
+def may_use_as_receipt(claim, file) -> bool:
+	"""Uploaded by the claim's owner or by whoever is saving it (HR filing for staff),
+	or already attached to this very claim."""
+	if file.owner in (claim.owner, frappe.session.user):
+		return True
+	return file.attached_to_doctype == "Expense Claim" and file.attached_to_name == claim.name
+
+
+def has_claim_level_file(claim) -> bool:
+	"""A file attached to the claim itself, as the claim-level attachment row did. The
+	line receipts that link_receipts files under the claim carry the field "receipt"
+	and do not count."""
+	if not claim.name:
+		return False
+	return bool(
+		frappe.get_all(
+			"File",
+			filters={
+				"attached_to_doctype": "Expense Claim",
+				"attached_to_name": claim.name,
+				"attached_to_field": ("!=", "receipt"),
+			},
+			limit_page_length=1,
+		)
+	)
 
 
 def mileage_rate(expense_claim_type: str | None, company: str | None) -> float:
