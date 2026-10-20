@@ -293,6 +293,11 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		"""
 		if self.approval_status != "Approved":
 			return
+		# only the move TO Approved asks: a claim approved before this release, with
+		# no file at all, must still save (review of cfca77cd9)
+		before = None if self.is_new() else self.get_doc_before_save()
+		if before and before.approval_status == "Approved":
+			return
 		rows = self.get("expenses")
 		bare = [
 			row

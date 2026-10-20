@@ -123,14 +123,16 @@ def _env(files, types=None, user=OWNER):
 	return ns
 
 
-def _claim(*lines, status="Approved", name="HR-EXP-1", owner=OWNER, saved=None):
+def _claim(*lines, status="Approved", name="HR-EXP-1", owner=OWNER, saved=None, was=None):
 	"""Each line is (expense_type, receipt_url or None). `saved` is the stored copy's
 	receipts by row name; None means a claim being made."""
 	rows = [
 		SimpleNamespace(name=f"r{i}", idx=i + 1, expense_type=t, receipt=r) for i, (t, r) in enumerate(lines)
 	]
 	before = (
-		SimpleNamespace(expenses=[SimpleNamespace(name=n, receipt=r) for n, r in saved.items()])
+		SimpleNamespace(
+			expenses=[SimpleNamespace(name=n, receipt=r) for n, r in saved.items()], approval_status=was
+		)
 		if saved is not None
 		else None
 	)
@@ -288,6 +290,15 @@ class TestARequiredTypeNeedsItsReceiptToBeDecided(unittest.TestCase):
 		)
 		with self.assertRaises(_Refused):
 			self.require(_claim(("Parking", None)), other)
+
+	def test_a_claim_approved_before_this_release_still_saves(self):
+		"""Review of cfca77cd9: an Approved, unsubmitted claim with no file of any kind
+		must still save (e.g. HR fixing a description); only the move to Approved asks."""
+		self.require(_claim(("Parking", None), saved={"r0": None}, was="Approved"))
+
+	def test_moving_a_saved_claim_to_approved_asks_for_the_receipts(self):
+		with self.assertRaises(_Refused):
+			self.require(_claim(("Parking", None), saved={"r0": None}, was="Draft"))
 
 	def test_a_rejection_needs_no_receipt(self):
 		"""An approver rejects a claim for its missing receipt; that must not be refused."""
