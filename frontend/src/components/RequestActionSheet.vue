@@ -35,8 +35,17 @@
 						<span class="g-form-row__label">
 							{{ sentenceCase(__(plainLabel(field.label), null, props.modelValue?.doctype)) }}
 						</span>
-						<component v-if="field.fieldtype === 'Table'" :is="field.component" :doc="document?.doc" />
-						<FormattedField v-else :value="field.value" :fieldtype="field.fieldtype" :fieldname="field.fieldname" />
+						<component
+							v-if="field.fieldtype === 'Table'"
+							:is="field.component"
+							:doc="document?.doc"
+						/>
+						<FormattedField
+							v-else
+							:value="field.value"
+							:fieldtype="field.fieldtype"
+							:fieldname="field.fieldname"
+						/>
 					</div>
 					<!-- long text: label on top, the words under it, as a sent reason reads -->
 					<div
@@ -53,7 +62,11 @@
 							{{ sentenceCase(__(plainLabel(field.label), null, props.modelValue?.doctype)) }}
 						</span>
 						<span class="g-form-row__value">
-							<FormattedField :value="field.value" :fieldtype="field.fieldtype" :fieldname="field.fieldname" />
+							<FormattedField
+								:value="field.value"
+								:fieldtype="field.fieldtype"
+								:fieldname="field.fieldname"
+							/>
 						</span>
 					</div>
 				</template>
@@ -62,7 +75,12 @@
 
 		<section v-if="attachedFiles?.data?.length" class="g-form-section">
 			<h2 class="g-form-section__title">{{ __("Attachments") }}</h2>
-			<GAttachmentRow v-for="file in attachedFiles.data" :key="file.name" :file="file" @open="showFilePreview" />
+			<GAttachmentRow
+				v-for="file in attachedFiles.data"
+				:key="file.name"
+				:file="file"
+				@open="showFilePreview"
+			/>
 		</section>
 
 		<!-- Actions -->
@@ -214,8 +232,6 @@
 				<GTextarea v-model="rejectReason" :label="__('Why not? (required)')" />
 			</template>
 		</GConfirm>
-
-
 	</div>
 	<!-- Never an empty frame (owner, 16 Oct 2026): a failed or slow read used to
 	     leave only the sheet's X, and the approver could not tell it apart from
@@ -225,9 +241,14 @@
 	<div v-else-if="document.get?.error" class="g-form-body g-request-sheet">
 		<ResourceError :resource="document.get" :what="__('this request')" />
 	</div>
-	<div v-else class="g-form-body g-request-sheet" aria-busy="true">
+	<div v-else class="g-form-body g-request-sheet" :aria-busy="!loadIsSlow">
 		<GSkeleton height="20px" />
 		<GSkeleton height="20px" width="60%" />
+		<!-- never an endless skeleton (alpha.60): after 10 s it says so and offers Try again -->
+		<template v-if="loadIsSlow">
+			<p class="g-form-footer" role="status">{{ __("Taking longer than usual.") }}</p>
+			<GButton :label="__('Try again')" @click="retryLoad" />
+		</template>
 	</div>
 </template>
 
@@ -262,6 +283,7 @@ import { formatCurrency, formatHours } from "@/utils/formatters"
 import { requestStatus } from "@/utils/requestStatus"
 import { requestKind } from "@/utils/requestKind"
 import { requestDates } from "@/utils/requestDates"
+import { STUCK_LOAD_MS, reportStuckLoad } from "@/utils/stuckLoad"
 import { plainLabel } from "@/utils/plainLabel"
 import { sentenceCase } from "@/utils/sentenceCase"
 import { firstMessage } from "@/utils/loudRequest"
@@ -329,6 +351,27 @@ const document = createDocumentResource({
 	},
 })
 
+// A senior's phone kept this sheet grey forever and it never reproduced here:
+// past STUCK_LOAD_MS the sheet says so, offers Try again, and reports once.
+const loadIsSlow = ref(false)
+const loadStartedAt = Date.now()
+const slowTimer = setTimeout(() => {
+	if (document.doc || document.get?.error) return
+	loadIsSlow.value = true
+	reportStuckLoad({
+		doctype: props.modelValue.doctype,
+		name: props.modelValue.name,
+		ms: Date.now() - loadStartedAt,
+		inFlight: Boolean(document.get?.loading),
+	})
+}, STUCK_LOAD_MS)
+onBeforeUnmount(() => clearTimeout(slowTimer))
+
+function retryLoad() {
+	console.info("[RequestActionSheet] slow load; retrying", props.modelValue.name)
+	document.reload?.()
+}
+
 const attachedFiles = createResource({
 	url: "hrms.api.get_attachments",
 	params: {
@@ -379,7 +422,8 @@ onBeforeUnmount(() => clearTimeout(closeTimer))
 //: In flight, or already decided while its mark draws: either way no second
 //: tap may reach the server (alpha.13 kept the sheet open 650 ms for the mark).
 const submitting = computed(
-	() => decision.loading || finalize.loading || document.setValue?.loading || Boolean(decidedAs.value)
+	() =>
+		decision.loading || finalize.loading || document.setValue?.loading || Boolean(decidedAs.value)
 )
 
 const sessionEmployee = inject("$employee")
@@ -550,7 +594,6 @@ const getFailureMessage = ({ status = "", docstatus = 0 }) => {
 		return __("Document {0} failed!", [docstatus === 1 ? __("submission") : __("cancellation")])
 	}
 }
-
 
 const onActionSuccess = ({ status, docstatus, dismiss }) => {
 	if (dismiss && status) {

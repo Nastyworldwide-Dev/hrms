@@ -2000,3 +2000,38 @@ def get_allowed_states_for_workflow(workflow: dict, user_id: str) -> list[str]:
 @frappe.whitelist(methods=["GET", "POST"])
 def get_permitted_fields_for_write(doctype: str) -> list[str]:
 	return get_permitted_fields(doctype, permission_type="write")
+
+
+@frappe.whitelist(methods=["POST"])
+def report_stuck_load(doctype: str, name: str, ms=0, in_flight=0, has_user_cookie=0) -> None:
+	"""A PWA sheet that never stopped loading (alpha.60). One Error Log per
+	user and document a day, with what the server itself answers for that read,
+	so the live cause is visible without asking the person who saw it."""
+	user = frappe.session.user
+	doctype, name = str(doctype)[:140], str(name)[:140]
+	key = f"hrms:stuck_load:{user}:{doctype}:{name}"
+	# ceiling: 20 reports per user a day; upgrade: raise it if real stuck loads hit it
+	daily = f"hrms:stuck_load:{user}"
+	count = cint(frappe.cache.get_value(daily))
+	if frappe.cache.get_value(key) or count >= 20:
+		return
+	frappe.cache.set_value(key, 1, expires_in_sec=86400)
+	frappe.cache.set_value(daily, count + 1, expires_in_sec=86400)
+	exists = bool(frappe.db.exists("DocType", doctype)) and bool(frappe.db.exists(doctype, name))
+	readable = exists and frappe.has_permission(doctype, "read", doc=name, user=user)
+	logger.warning(
+		"[stuck_load] %s %s %s for %s ms=%s",
+		doctype,
+		name,
+		"readable" if readable else "not readable",
+		user,
+		cint(ms),
+	)
+	frappe.log_error(
+		title=f"Request sheet stuck loading for {user}"[:140],
+		message=(
+			f"{doctype} {name} kept loading for {cint(ms)} ms on {user}'s phone. "
+			f"Request still in flight: {bool(cint(in_flight))}. Login cookie present: {bool(cint(has_user_cookie))}. "
+			f"Exists: {exists}. Server says this user may read it: {readable}."
+		),
+	)

@@ -32,6 +32,7 @@ WRITES = {
 		"mark_all_notifications_as_read",
 		"upload_base64_file",
 		"delete_attachment",
+		"report_stuck_load",
 	},
 	"approval.py": {"decide", "finalize"},
 	"correction_cancel.py": {"cancel_for_correction"},
