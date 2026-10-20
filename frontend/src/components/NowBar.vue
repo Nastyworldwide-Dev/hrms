@@ -136,10 +136,15 @@
 				:label="__('Send')"
 				:pending="slipSending"
 				:disabled="slipSending || !slipFile || !online"
+				:aria-describedby="!online || !slipFile ? 'nowbar-slip-hint' : undefined"
 				@click="sendSlip"
 			/>
-			<p v-if="!online" class="g-form-footer" role="status">
-				{{ __("You need signal to send a time slip.") }}
+			<p v-if="!online || !slipFile" id="nowbar-slip-hint" class="g-form-footer" role="status">
+				{{
+					!online
+						? __("You need signal to send a time slip.")
+						: __("Add the time slip file to send.")
+				}}
 			</p>
 		</div>
 	</GModal>

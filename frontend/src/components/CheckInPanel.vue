@@ -189,6 +189,7 @@
 					slipActive ? __('Check in and send the slip') : __('Confirm {0}', [nextAction.label])
 				"
 				:disabled="cameraStatus === 'starting' || !online || slipMissingFile"
+				:aria-describedby="confirmHint ? 'checkin-confirm-hint' : undefined"
 				:pending="submitting || punchCheckin.loading || cameraStatus === 'submitting'"
 				@click="submitLog(nextAction.action)"
 			>
@@ -196,6 +197,10 @@
 					<Check class="w-icon-md h-icon-md" />
 				</template>
 			</GButton>
+			<!-- A disabled Confirm always says why (alpha.60); "starting" is said in the preview. -->
+			<p v-if="confirmHint" id="checkin-confirm-hint" class="g-form-footer" role="status">
+				{{ confirmHint }}
+			</p>
 		</div>
 	</GModal>
 
@@ -409,6 +414,11 @@ const slipFile = ref(null)
 const slipActive = computed(() => minutesLate.value > 0 && slipOn.value)
 //: on, but no file yet: the file is the proof, so the button waits for it
 const slipMissingFile = computed(() => slipActive.value && !slipFile.value)
+const confirmHint = computed(() => {
+	if (!online.value) return __("You need signal to check in.")
+	if (slipMissingFile.value) return __("Add the time slip file to continue.")
+	return ""
+})
 
 function readMinutesLate() {
 	const shift = nowResource.data?.shift
@@ -456,10 +466,10 @@ async function sendSlipAfterPunch(file, punchTime) {
 			})
 		else
 			gToast({
-			title: __("Time slip not sent"),
-			text: firstMessage(error, __("Could not send your time slip.")),
-			variant: "error",
-		})
+				title: __("Time slip not sent"),
+				text: firstMessage(error, __("Could not send your time slip.")),
+				variant: "error",
+			})
 	} finally {
 		// the slip may exist even when its file did not go: Today reads the server's word
 		await Promise.allSettled([nowResource.reload()])
@@ -1447,11 +1457,22 @@ const runSubmitLog = async (logType) => {
 	return punchOk
 }
 
+// A permission prompt that is never answered left Confirm dead on "Starting camera"
+const CAMERA_START_TIMEOUT_MS = 15000
+
 async function startCamera() {
 	stopCamera()
 	const generation = cameraGeneration
 	cameraError.value = null
 	cameraStatus.value = "starting"
+	setTimeout(() => {
+		if (generation !== cameraGeneration || cameraStatus.value !== "starting") return
+		console.warn("[Selfie] Camera did not start in", CAMERA_START_TIMEOUT_MS, "ms")
+		cameraError.value = __(
+			"The camera is taking too long. Allow Camera for this site, then close and open this again."
+		)
+		cameraStatus.value = "error"
+	}, CAMERA_START_TIMEOUT_MS)
 	if (!navigator.mediaDevices?.getUserMedia) {
 		cameraError.value = __("Camera not supported on this device")
 		cameraStatus.value = "error"

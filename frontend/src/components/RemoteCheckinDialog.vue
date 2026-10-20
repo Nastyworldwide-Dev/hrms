@@ -46,18 +46,30 @@
 			</section>
 
 			<div class="flex flex-row gap-3">
-				<GGhostButton class="flex-1" :label="__('Cancel')" :disabled="submitting" @click="cancel" />
+				<GGhostButton
+					class="flex-1"
+					:label="__('Cancel')"
+					:disabled="submitting"
+					@click="cancel"
+				/>
 				<GButton
 					class="flex-1"
 					:label="__('Send request')"
 					:pending="submitting"
 					:disabled="submitting || !remarks.trim() || !online"
+					:aria-describedby="!online || !remarks.trim() ? 'remote-checkin-hint' : undefined"
 					@click="submit"
 				/>
 			</div>
-			<!-- Owner ruling: never an offline check-in (audit P0-7). -->
-			<p v-if="!online" class="g-form-footer" role="status">
-				{{ __("You need signal to check in.") }}
+			<!-- Owner ruling: never an offline check-in (audit P0-7). A disabled
+			     Send always says why: GButton swallows the tap (alpha.60). -->
+			<p
+				v-if="!online || !remarks.trim()"
+				id="remote-checkin-hint"
+				class="g-form-footer"
+				role="status"
+			>
+				{{ !online ? __("You need signal to check in.") : __("Write a reason to send.") }}
 			</p>
 		</div>
 	</GModal>
