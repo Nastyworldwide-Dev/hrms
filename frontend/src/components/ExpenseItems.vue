@@ -33,6 +33,8 @@
 						{{ formatCurrency(item.amount, doc.currency) }}
 					</span>
 				</div>
+				<!-- the line's own receipt, to open from here (owner, 20 Oct 2026) -->
+				<ReceiptRow :url="item.receipt" read-only />
 			</div>
 		</div>
 	</div>
@@ -41,6 +43,7 @@
 <script setup>
 import { inject } from "vue"
 
+import ReceiptRow from "@/components/ReceiptRow.vue"
 import { formatCurrency } from "@/utils/formatters"
 
 defineProps({

@@ -43,27 +43,36 @@ test("cost tags picked on an expense line survive the claim-level stamp", () => 
 // "Posting date". It is the accounting date of the claim; each expense line
 // carries its own date, and the model is seeded with today (above).
 test("the form does not ask for a posting date", () => {
-	const fields = src.slice(src.indexOf("const FIELDS = ["), src.indexOf("]", src.indexOf("const FIELDS = [")))
+	const fields = src.slice(
+		src.indexOf("const FIELDS = ["),
+		src.indexOf("]", src.indexOf("const FIELDS = ["))
+	)
 	assert.doesNotMatch(fields, /"posting_date"/)
 })
 
 test("the running total is shown once (the Expenses header), not in three boxes", () => {
-	const fields = src.slice(src.indexOf("const FIELDS = ["), src.indexOf("]", src.indexOf("const FIELDS = [")))
+	const fields = src.slice(
+		src.indexOf("const FIELDS = ["),
+		src.indexOf("]", src.indexOf("const FIELDS = ["))
+	)
 	for (const f of ["total_claimed_amount", "total_sanctioned_amount", "grand_total"]) {
 		assert.doesNotMatch(fields, new RegExp(`"${f}"`))
 	}
-	assert.match(src, /expenseClaim\.value\.total_claimed_amount = total_claimed_amount/, "still computed for the server")
+	assert.match(
+		src,
+		/expenseClaim\.value\.total_claimed_amount = total_claimed_amount/,
+		"still computed for the server"
+	)
 })
 
-// Owner, 14 Oct 2026: one receipt per claim, required before Send unless
-// every line's type has "Receipt Required" switched off in Desk.
-test("the claim requires a receipt through FormView's requireAttachment", () => {
-	assert.match(src, /:requireAttachment="receiptRequired"/)
+// Owner, 20 Oct 2026 (alpha.60 #2): the receipt moved from the claim to each line
+// (components/__tests__/receipt-per-line.test.js). The claim-level file row stays
+// only on a claim that exists, so an old claim keeps listing its file.
+test("the claim no longer requires a claim-level attachment", () => {
+	assert.doesNotMatch(src, /requireAttachment/)
+	assert.doesNotMatch(src, /receiptRequired/)
 })
 
-test("a receipt is required unless every line's type switched it off", () => {
-	const rule = src.slice(src.indexOf("const receiptRequired"), src.indexOf("const companyCurrency"))
-	assert.match(rule, /\.some\(/, "one line needing a receipt is enough")
-	// a type whose flag is not loaded yet (undefined) counts as required
-	assert.match(rule, /receipt_required !== 0/)
+test("a new claim has no claim-level file row; an existing one keeps its files listed", () => {
+	assert.match(src, /:showAttachmentView="Boolean\(props\.id\)"/)
 })

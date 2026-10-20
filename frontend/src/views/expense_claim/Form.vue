@@ -11,8 +11,7 @@
 				:id="props.id"
 				:tabbedView="true"
 				:tabs="tabs"
-				:showAttachmentView="true"
-				:requireAttachment="receiptRequired"
+				:showAttachmentView="Boolean(props.id)"
 				@validateForm="validateForm"
 				:showDownloadPDFButton="true"
 				@formReloaded="onFormReloaded"
@@ -57,7 +56,6 @@ import FormView from "@/components/FormView.vue"
 import ExpensesTable from "@/components/ExpensesTable.vue"
 import ExpenseTaxesTable from "@/components/ExpenseTaxesTable.vue"
 import { getCompanyCurrency } from "@/data/currencies"
-import { claimTypesByID } from "@/data/claims"
 
 const dayjs = inject("$dayjs")
 
@@ -96,14 +94,9 @@ const expenseClaim = ref({
 	posting_date: today,
 })
 
-// One receipt for the whole claim, before Send (owner, 14 Oct 2026). HR can
-// switch it off per type ("Receipt Required" on Expense Claim Type, on by
-// default); a type the list has not loaded yet counts as required.
-const receiptRequired = computed(() =>
-	(expenseClaim.value.expenses || []).some(
-		(row) => claimTypesByID[row.expense_type]?.receipt_required !== 0
-	)
-)
+// The receipt is per line now (owner, 20 Oct 2026): each expense line carries its
+// own, asked in the item sheet (ExpensesTable). The claim-level file row is
+// shown only on a claim that exists, so an old claim keeps listing its file.
 
 const companyCurrency = computed(() => getCompanyCurrency(expenseClaim.value.company))
 

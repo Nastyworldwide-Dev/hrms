@@ -55,32 +55,40 @@
 						:resource="claimTypesResource"
 						what="the expense types"
 					/>
-					<section
-						v-for="group in groupFields(expenseFields)"
-						:key="group.key"
-						class="g-form-section mb-4"
-					>
+					<section v-for="group in sheetGroups" :key="group.key" class="g-form-section mb-4">
 						<h2 v-if="group.label" class="g-form-section__title">
 							{{ sentenceCase(__(group.label, null, "Expense Claim Detail")) }}
 						</h2>
-						<div v-for="(segment, s) in group.segments" :key="s" class="g-form-group">
-							<FormField
-								v-for="field in segment.fields"
-								:key="field.fieldname"
-								class="w-full"
-								:label="__(field.label, null, 'Expense Claim Detail')"
-								:fieldtype="field.fieldtype"
-								:fieldname="field.fieldname"
-								:options="field.options"
-								:documentList="field.documentList"
-								:hidden="field.hidden"
-								:reqd="field.reqd"
-								:default="field.default"
-								:readOnly="field.read_only || isReadOnly"
-								:class="field.class"
-								v-model="expenseItem[field.fieldname]"
+						<template v-for="(segment, s) in group.segments" :key="s">
+							<!-- The line's own receipt (owner, 20 Oct 2026): its own group, right
+							     after the description. Not a FormField: the Attach field is
+							     filtered out of the fields, because this one uploads at once. -->
+							<ReceiptRow
+								v-if="segment.kind === 'receipt'"
+								v-model:url="expenseItem.receipt"
+								v-model:uploading="receiptUploading"
+								:required="lineNeedsReceipt"
+								:readOnly="isReadOnly"
 							/>
-						</div>
+							<div v-else class="g-form-group">
+								<FormField
+									v-for="field in segment.fields"
+									:key="field.fieldname"
+									class="w-full"
+									:label="__(field.label, null, 'Expense Claim Detail')"
+									:fieldtype="field.fieldtype"
+									:fieldname="field.fieldname"
+									:options="field.options"
+									:documentList="field.documentList"
+									:hidden="field.hidden"
+									:reqd="field.reqd"
+									:default="field.default"
+									:readOnly="field.read_only || isReadOnly"
+									:class="field.class"
+									v-model="expenseItem[field.fieldname]"
+								/>
+							</div>
+						</template>
 						<p
 							v-if="
 								group.segments.some((seg) => seg.fields.some((f) => f.fieldname === 'amount')) &&
@@ -104,19 +112,26 @@
 					</section>
 				</div>
 
-				<div v-if="!isReadOnly" class="flex w-full flex-row items-center justify-between gap-3">
-					<GButton
-						v-if="editingIdx !== null"
-						class="g-btn--compact"
-						danger
-						:label="__('Delete')"
-						@click="deleteExpenseItem()"
-					/>
-					<GButton
-						:label="editingIdx === null ? __('Add expense') : __('Update expense')"
-						:disabled="addButtonDisabled"
-						@click="updateExpenseItem()"
-					/>
+				<div v-if="!isReadOnly" class="flex w-full flex-col gap-3">
+					<div class="flex w-full flex-row items-center justify-between gap-3">
+						<GButton
+							v-if="editingIdx !== null"
+							class="g-btn--compact"
+							danger
+							:label="__('Delete')"
+							@click="deleteExpenseItem()"
+						/>
+						<GButton
+							:label="editingIdx === null ? __('Add expense') : __('Update expense')"
+							:disabled="addButtonDisabled"
+							:aria-describedby="receiptHint ? 'expense-receipt-hint' : undefined"
+							@click="updateExpenseItem()"
+						/>
+					</div>
+					<!-- A dimmed Add always says why: GButton swallows the tap (alpha.60) -->
+					<p v-if="receiptHint" id="expense-receipt-hint" class="g-form-footer" role="status">
+						{{ receiptHint }}
+					</p>
 				</div>
 			</div>
 		</div>
@@ -135,6 +150,7 @@ import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GModal from "@/components/glass/GModal.vue"
+import ReceiptRow from "@/components/ReceiptRow.vue"
 import ResourceError from "@/components/ResourceError.vue"
 
 import { claimTypesByID, claimTypesResource } from "@/data/claims"
@@ -168,6 +184,8 @@ const expenseItem = ref({})
 const editingIdx = ref(null)
 
 const isModalOpen = ref(false)
+// the receipt is on its way to the server: Add waits for its URL
+const receiptUploading = ref(false)
 const isFirstRender = ref(false)
 
 const openModal = async (item, idx) => {
@@ -201,11 +219,13 @@ function itemLine(item) {
 	])
 	const day = item.expense_date ? dayjs(item.expense_date).format("D MMM") : ""
 	const km = item.distance_km ? __("{0} km", [item.distance_km]) : ""
-	return [km, approved, day].filter(Boolean).join(" · ")
+	const receipt = item.receipt ? __("Receipt") : ""
+	return [km, approved, day, receipt].filter(Boolean).join(" · ")
 }
 
 function resetSelectedItem() {
 	isFirstRender.value = false
+	receiptUploading.value = false
 	isModalOpen.value = false
 	expenseItem.value = {}
 	editingIdx.value = null
@@ -277,6 +297,8 @@ const expenseFields = computed(() =>
 		)
 			// Project is not asked (owner, 14 Oct 2026)
 			.filter((field) => field.fieldname !== "project")
+			// the receipt has its own row (ReceiptRow), which uploads at once
+			.filter((field) => field.fieldname !== "receipt")
 			.map((field) =>
 				field.fieldname === "expense_type"
 					? { ...field, documentList: expenseTypeOptions.value }
@@ -284,6 +306,24 @@ const expenseFields = computed(() =>
 			),
 		costTags.data
 	)
+)
+
+// The receipt row sits right after the description, as its own group: the rows
+// of the segment that holds the description are split around it (owner, 20 Oct 2026).
+const sheetGroups = computed(() =>
+	groupFields(expenseFields.value).map((group) => ({
+		...group,
+		segments: group.segments.flatMap((segment) => {
+			const at = (segment.fields || []).findIndex((field) => field.fieldname === "description")
+			if (at < 0) return [segment]
+			const after = segment.fields.slice(at + 1)
+			return [
+				{ ...segment, fields: segment.fields.slice(0, at + 1) },
+				{ kind: "receipt", fields: [] },
+				...(after.length ? [{ ...segment, fields: after }] : []),
+			]
+		}),
+	}))
 )
 
 const expenseClaimRef = computed(() => props.expenseClaim)
@@ -295,9 +335,24 @@ const modalTitle = computed(() => {
 	return editingIdx.value === null ? __("New expense item") : __("Edit expense item")
 })
 
+// A line needs its receipt unless its type switched "Receipt Required" off in Desk;
+// a type the list has not loaded yet counts as required (the server decides).
+const lineNeedsReceipt = computed(
+	() => claimTypesByID[expenseItem.value.expense_type]?.receipt_required !== 0
+)
+
+// why Add is dimmed for the receipt, in words, or "" (shown at the button)
+const receiptHint = computed(() => {
+	if (receiptUploading.value) return __("Wait for the file to finish uploading.")
+	if (lineNeedsReceipt.value && !expenseItem.value.receipt)
+		return __("Add the receipt for this item.")
+	return ""
+})
+
 const addButtonDisabled = computed(() => {
 	// no fields were read: nothing to add
 	if (expensesTableFields.error) return true
+	if (receiptHint.value) return true
 	return expensesTableFields.data?.some((field) => {
 		if (field.reqd && !expenseItem.value[field.fieldname]) {
 			return true
