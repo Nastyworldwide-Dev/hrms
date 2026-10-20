@@ -32,7 +32,9 @@
 			:body="__('Add each item you paid for with the + above')"
 		/>
 		<p v-if="expenseClaim.expenses?.length" class="g-form-footer">
-			{{ __("Total {0}", [formatCurrency(expenseClaim.total_claimed_amount, expenseClaim.currency)]) }}
+			{{
+				__("Total {0}", [formatCurrency(expenseClaim.total_claimed_amount, expenseClaim.currency)])
+			}}
 		</p>
 	</section>
 
@@ -79,8 +81,25 @@
 								v-model="expenseItem[field.fieldname]"
 							/>
 						</div>
-						<p v-if="group.segments.some((seg) => seg.fields.some((f) => f.fieldname === 'amount')) && mileageLine" class="g-form-footer tabular-nums">
+						<p
+							v-if="
+								group.segments.some((seg) => seg.fields.some((f) => f.fieldname === 'amount')) &&
+								mileageLine
+							"
+							class="g-form-footer tabular-nums"
+						>
 							{{ mileageLine }}
+						</p>
+						<p
+							v-if="
+								group.segments.some((seg) =>
+									seg.fields.some((f) => f.fieldname === 'distance_km')
+								) && rateNote
+							"
+							class="g-form-footer"
+							role="status"
+						>
+							{{ rateNote }}
 						</p>
 					</section>
 				</div>
@@ -120,7 +139,12 @@ import ResourceError from "@/components/ResourceError.vue"
 
 import { claimTypesByID, claimTypesResource } from "@/data/claims"
 import { formatCurrency } from "@/utils/formatters"
-import { mileageAmount, mileageExplainer, withMileageFields } from "@/utils/expenseMileage"
+import {
+	missingRateNote,
+	mileageAmount,
+	mileageExplainer,
+	withMileageFields,
+} from "@/utils/expenseMileage"
 import { groupFields } from "@/utils/formGroups"
 import { sentenceCase } from "@/utils/sentenceCase"
 import { withCostTagFields } from "@/utils/expenseCostTags"
@@ -171,7 +195,10 @@ const updateExpenseItem = () => {
 
 //: "Approved RM 12.50 · 21 Sep" — what came back and when, under the type.
 function itemLine(item) {
-	const approved = __("{0}: {1}", [__("Approved"), formatCurrency(item.sanctioned_amount || 0, props.expenseClaim.currency)])
+	const approved = __("{0}: {1}", [
+		__("Approved"),
+		formatCurrency(item.sanctioned_amount || 0, props.expenseClaim.currency),
+	])
 	const day = item.expense_date ? dayjs(item.expense_date).format("D MMM") : ""
 	const km = item.distance_km ? __("{0} km", [item.distance_km]) : ""
 	return [km, approved, day].filter(Boolean).join(" · ")
@@ -237,11 +264,17 @@ watch(
 )
 
 // the picked type's rate per km for this company; 0 for an ordinary type
-const mileageRate = computed(() => claimTypesByID[expenseItem.value.expense_type]?.rate_per_km || 0)
+const mileageRate = computed(
+	() => claimTypesByID[expenseItem.value.expense_type]?.rate_per_km || 0
+)
 
 const expenseFields = computed(() =>
 	withCostTagFields(
-		withMileageFields(expensesTableFields.data || [], mileageRate.value)
+		withMileageFields(
+			expensesTableFields.data || [],
+			mileageRate.value,
+			expenseItem.value.expense_type
+		)
 			// Project is not asked (owner, 14 Oct 2026)
 			.filter((field) => field.fieldname !== "project")
 			.map((field) =>
@@ -271,6 +304,10 @@ const addButtonDisabled = computed(() => {
 		}
 	})
 })
+
+const rateNote = computed(() =>
+	missingRateNote(mileageRate.value, expenseItem.value.expense_type, __)
+)
 
 const mileageLine = computed(() =>
 	mileageExplainer(

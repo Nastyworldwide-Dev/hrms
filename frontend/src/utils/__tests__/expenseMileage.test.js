@@ -3,7 +3,12 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { mileageAmount, mileageExplainer, withMileageFields } from "../expenseMileage.js"
+import {
+	missingRateNote,
+	mileageAmount,
+	mileageExplainer,
+	withMileageFields,
+} from "../expenseMileage.js"
 
 const FIELDS = [
 	{ fieldname: "expense_type", fieldtype: "Link", reqd: 1 },
@@ -41,4 +46,20 @@ test("the explainer says how the amount was reached", () => {
 	assert.equal(mileageExplainer(70, 0.6, "Travel", rm), "70 km × RM 0.60 per km (Travel)")
 	assert.equal(mileageExplainer(0, 0.6, "Mileage · Car", rm), "")
 	assert.equal(mileageExplainer(70, 0, "Parking", rm), "")
+})
+
+test("a mileage type with no rate still asks the distance (optional) and says why there is no price", () => {
+	const out = withMileageFields(FIELDS, 0, "Mileage (CAR) (MILEAGE CAR)")
+	assert.deepEqual(
+		out.map((f) => f.fieldname),
+		["expense_type", "distance_km", "amount"]
+	)
+	assert.equal(out[1].reqd, 0)
+	assert.equal(out[2].read_only, undefined)
+	assert.equal(
+		missingRateNote(0, "Mileage (Motorcycle)"),
+		"HR has not set a rate for this type yet. Type the amount."
+	)
+	assert.equal(missingRateNote(0.6, "Mileage (Motorcycle)"), "")
+	assert.equal(missingRateNote(0, "Parking"), "")
 })

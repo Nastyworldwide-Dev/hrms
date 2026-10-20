@@ -9,16 +9,23 @@ export function mileageAmount(km, rate) {
 	return value > 0 ? Math.round(value * 100) / 100 : 0
 }
 
+// ponytail: a type is "mileage" by its name; add a type flag when a mileage
+// type is named otherwise. Live has "Mileage (CAR)" and "Mileage (Motorcycle)".
+const isMileageType = (typeName) => /mileage/i.test(typeName || "")
+
 /**
  * The line's fields for a type with `rate` per km: the distance is asked and
- * required, the amount is shown read-only. No rate: the distance is not asked.
+ * required, the amount is shown read-only. A mileage type with no rate yet
+ * still asks the distance, and the amount stays typed. Otherwise no distance.
  */
-export function withMileageFields(fields, rate) {
+export function withMileageFields(fields, rate, typeName) {
+	const asksKm = rate > 0 || isMileageType(typeName)
 	return fields
-		.filter((field) => rate > 0 || field.fieldname !== "distance_km")
+		.filter((field) => asksKm || field.fieldname !== "distance_km")
 		.map((field) => {
+			if (field.fieldname === "distance_km" && asksKm)
+				return { ...field, reqd: rate > 0 ? 1 : 0, hidden: 0 }
 			if (!(rate > 0)) return field
-			if (field.fieldname === "distance_km") return { ...field, reqd: 1, hidden: 0 }
 			if (field.fieldname === "amount")
 				return { ...field, read_only: 1, label: "You will claim", class: "g-form-row--claim" }
 			return field
@@ -35,4 +42,11 @@ export function mileageExplainer(km, rate, typeName, formatRate) {
 	const kind = (typeName || "").split("·").pop().trim()
 	const line = `${value} km × ${formatRate(rate)} per km`
 	return kind ? `${line} (${kind})` : line
+}
+
+/** Why a mileage line is not priced: HR has not set its rate yet (never silent). */
+export function missingRateNote(rate, typeName, __ = (text) => text) {
+	return !(rate > 0) && isMileageType(typeName)
+		? __("HR has not set a rate for this type yet. Type the amount.")
+		: ""
 }
