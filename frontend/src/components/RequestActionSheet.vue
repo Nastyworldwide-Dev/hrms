@@ -354,22 +354,30 @@ const document = createDocumentResource({
 // A senior's phone kept this sheet grey forever and it never reproduced here:
 // past STUCK_LOAD_MS the sheet says so, offers Try again, and reports once.
 const loadIsSlow = ref(false)
-const loadStartedAt = Date.now()
-const slowTimer = setTimeout(() => {
-	if (document.doc || document.get?.error) return
-	loadIsSlow.value = true
-	reportStuckLoad({
-		doctype: props.modelValue.doctype,
-		name: props.modelValue.name,
-		ms: Date.now() - loadStartedAt,
-		inFlight: Boolean(document.get?.loading),
-	})
-}, STUCK_LOAD_MS)
+let slowTimer = null
+function armSlowTimer() {
+	clearTimeout(slowTimer)
+	const startedAt = Date.now()
+	slowTimer = setTimeout(() => {
+		if (document.doc || document.get?.error) return
+		loadIsSlow.value = true
+		reportStuckLoad({
+			doctype: props.modelValue.doctype,
+			name: props.modelValue.name,
+			ms: Date.now() - startedAt,
+			inFlight: Boolean(document.get?.loading),
+		})
+	}, STUCK_LOAD_MS)
+}
+armSlowTimer()
 onBeforeUnmount(() => clearTimeout(slowTimer))
 
+// back to the busy skeleton, so the tap is seen; the message returns if it hangs again
 function retryLoad() {
 	console.info("[RequestActionSheet] slow load; retrying", props.modelValue.name)
+	loadIsSlow.value = false
 	document.reload?.()
+	armSlowTimer()
 }
 
 const attachedFiles = createResource({

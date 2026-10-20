@@ -56,5 +56,12 @@ test("the request sheet's skeleton turns into Try again and reports itself", asy
 	assert.match(skeleton, /__\("Taking longer than usual\."\)/)
 	assert.match(skeleton, /@click="retryLoad"/)
 	assert.match(src, /setTimeout\([\s\S]*reportStuckLoad\(/)
+	// Try again is seen: back to the busy skeleton, and the wait starts over
+	const retry = src.slice(
+		src.indexOf("function retryLoad"),
+		src.indexOf("function retryLoad") + 300
+	)
+	assert.match(retry, /loadIsSlow\.value = false/)
+	assert.match(retry, /armSlowTimer\(\)/)
 	assert.match(src, /onBeforeUnmount\(\(\) => clearTimeout\(slowTimer\)\)/)
 })

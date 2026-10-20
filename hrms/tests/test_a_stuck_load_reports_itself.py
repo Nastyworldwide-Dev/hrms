@@ -35,7 +35,8 @@ class TestStuckLoad(unittest.TestCase):
 		self.assertIn("[:140]", self.src)
 		self.assertIn("cint(ms)", self.src)
 		# a client cannot flood the Error Log by varying the name
-		self.assertIn("count >= 20", self.src)
+		self.assertIn("frappe.cache.incr(daily)", self.src)
+		self.assertIn("count > 20", self.src)
 
 	def test_listed_as_a_write(self):
 		self.assertIn(

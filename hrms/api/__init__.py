@@ -2011,12 +2011,16 @@ def report_stuck_load(doctype: str, name: str, ms=0, in_flight=0, has_user_cooki
 	doctype, name = str(doctype)[:140], str(name)[:140]
 	key = f"hrms:stuck_load:{user}:{doctype}:{name}"
 	# ceiling: 20 reports per user a day; upgrade: raise it if real stuck loads hit it
-	daily = f"hrms:stuck_load:{user}"
-	count = cint(frappe.cache.get_value(daily))
-	if frappe.cache.get_value(key) or count >= 20:
+	if frappe.cache.get_value(key):
+		return
+	# atomic: parallel reports cannot slip past the cap (review of 4ba80f6d7)
+	daily = frappe.cache.make_key(f"hrms:stuck_load:{user}")
+	count = frappe.cache.incr(daily)
+	if count == 1:
+		frappe.cache.expire(daily, 86400)
+	if count > 20:
 		return
 	frappe.cache.set_value(key, 1, expires_in_sec=86400)
-	frappe.cache.set_value(daily, count + 1, expires_in_sec=86400)
 	exists = bool(frappe.db.exists("DocType", doctype)) and bool(frappe.db.exists(doctype, name))
 	readable = exists and frappe.has_permission(doctype, "read", doc=name, user=user)
 	logger.warning(
