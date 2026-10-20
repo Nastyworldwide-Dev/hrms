@@ -349,6 +349,7 @@ const addHint = computed(() =>
 	addItemHint(
 		{
 			fields: expensesTableFields.data,
+			shown: expenseFields.value,
 			item: expenseItem.value,
 			needsReceipt: lineNeedsReceipt.value,
 			uploading: receiptUploading.value,

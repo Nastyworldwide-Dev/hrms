@@ -44,3 +44,25 @@ test("an upload in flight, then a missing receipt", () => {
 	assert.equal(hint({ ...full, receipt: "" }), "Add the receipt for this item.")
 	assert.equal(hint({ ...full, receipt: "" }, { needsReceipt: false }), "")
 })
+
+test("a mileage line names the distance, not the amount it works out", () => {
+	// review of 5b8da3417: the amount is read-only and filled from the km, so
+	// "Fill in Amount" pointed at a field nobody can type in
+	const shown = [
+		{ fieldname: "expense_type", label: "Expense Claim Type", reqd: 1 },
+		{ fieldname: "distance_km", label: "Distance (km)", reqd: 1 },
+		{ fieldname: "amount", label: "You will claim (MYR)", reqd: 1, read_only: 1 },
+	]
+	const item = {
+		expense_date: "2026-10-20",
+		expense_type: "Mileage (CAR)",
+		amount: 0,
+		receipt: "/f.jpg",
+	}
+	assert.equal(hint(item, { shown }), "Fill in Distance (km).")
+})
+
+test("a required field the sheet does not show is never named", () => {
+	const shown = FIELDS.filter((f) => f.fieldname !== "amount")
+	assert.equal(hint({ ...full, amount: 0 }, { shown }), "Fill in the required details.")
+})

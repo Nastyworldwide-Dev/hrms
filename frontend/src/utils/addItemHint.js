@@ -5,14 +5,23 @@
 import { plainLabel } from "./plainLabel.js"
 
 /**
- * `fields` are the sheet's fields as shown; `item` the line being added.
+ * `fields` are the doctype's fields: which are required (Add's old rule, kept).
+ * `shown` are the rows the sheet draws: which one to name. `item` is the line.
  * `__` is the app's translate (passed in so this runs in node).
  */
-export function addItemHint({ fields, item, needsReceipt, uploading, loadFailed }, __) {
+export function addItemHint({ fields, shown, item, needsReceipt, uploading, loadFailed }, __) {
 	if (loadFailed) return __("This form could not be loaded. Try again.")
-	const empty = (fields || []).find((field) => field.reqd && !item[field.fieldname])
-	// the row's own word ("Type", not "Expense Claim Type"), as FormField shows it
-	if (empty) return __("Fill in {0}.", [__(plainLabel(empty.label || empty.fieldname))])
+	const isEmpty = (field) => field.reqd && !item[field.fieldname]
+	if ((fields || []).some(isEmpty)) {
+		// name a row the person can type in: a mileage amount is worked out from the
+		// km, so it is the distance that is missing (review of 5b8da3417)
+		const typeable = (shown || fields || []).find(
+			(field) => isEmpty(field) && !field.read_only && !field.hidden
+		)
+		if (!typeable) return __("Fill in the required details.")
+		// the row's own word ("Type", not "Expense Claim Type"), as FormField shows it
+		return __("Fill in {0}.", [__(plainLabel(typeable.label || typeable.fieldname))])
+	}
 	if (uploading) return __("Wait for the file to finish uploading.")
 	if (needsReceipt && !item.receipt) return __("Add the receipt for this item.")
 	return ""
