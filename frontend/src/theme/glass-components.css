@@ -5189,6 +5189,13 @@ ion-modal.g-mustread {
 		margin-inline: auto;
 		padding-inline: var(--g-screen-gutter);
 	}
+	/* alpha.60 (owner, 20 Oct): on a desktop window the logo and bell sat on the
+	   window's top edge, so every page read as pushed up. A window has no
+	   status bar to clear, so it gets the room a phone's notch gives it. Phone
+	   widths keep the 44 pt bar: their fold budget (home-fold-budget) is exact. */
+	.g-header {
+		margin-top: 48px;
+	}
 }
 
 /* The You page's person, as iOS Settings draws the account (alpha.8). */

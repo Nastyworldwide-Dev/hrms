@@ -37,7 +37,8 @@ test("Home does not spend the small-phone budget on inter-panel gaps", () => {
 	assert.ok(m, "Home's content column should still be a flex column")
 	assert.doesNotMatch(
 		m[0],
-		/\bgap-8\b/,
+		// a bare gap-8 only: lg:gap-8 is desktop, which has no phone fold (alpha.60)
+		/(?<![:\w-])gap-8\b/,
 		"gap-8 (32px) x3 = 96px between panels; use gap-5 (20px) and keep gap-8 for the anchor only"
 	)
 })
@@ -88,4 +89,23 @@ test("the approvals row names the scope of the count it shows", () => {
 		/__\("check-ins? outside the area"\)/,
 		"the count is check-ins outside the area only (remote_checkin.get_pending_count); say so"
 	)
+})
+
+// alpha.60 (owner, 20 Oct): on a desktop window the header sat on the top edge
+// and the page read as pushed up. The room is desktop-only: phone keeps 44 pt.
+test("a desktop window gives the header room above it; a phone does not", () => {
+	const css = readFileSync(
+		fileURLToPath(new URL("../../theme/glass-components.css", import.meta.url)),
+		"utf8"
+	)
+	const desktop = css.slice(
+		css.indexOf("@media (min-width: 1024px) {\n\t.g-header,\n\t.g-large-title")
+	)
+	const block = desktop.slice(0, desktop.indexOf("\n}\n"))
+	assert.match(block, /\.g-header \{\s*margin-top: 48px;/)
+	assert.doesNotMatch(
+		css.slice(0, css.indexOf("@media (min-width: 1024px)")),
+		/\.g-header \{[^}]*margin-top/
+	)
+	assert.match(home(), /\blg:gap-8\b/)
 })
