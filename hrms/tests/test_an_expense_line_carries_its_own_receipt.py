@@ -296,6 +296,11 @@ class TestARequiredTypeNeedsItsReceiptToBeDecided(unittest.TestCase):
 		must still save (e.g. HR fixing a description); only the move to Approved asks."""
 		self.require(_claim(("Parking", None), saved={"r0": None}, was="Approved"))
 
+	def test_a_new_bare_line_on_an_approved_claim_is_refused(self):
+		"""Review of 387137aeb: only lines saved before are excused, not one added now."""
+		with self.assertRaises(_Refused):
+			self.require(_claim(("Parking", None), ("Parking", None), saved={"r0": None}, was="Approved"))
+
 	def test_moving_a_saved_claim_to_approved_asks_for_the_receipts(self):
 		with self.assertRaises(_Refused):
 			self.require(_claim(("Parking", None), saved={"r0": None}, was="Draft"))

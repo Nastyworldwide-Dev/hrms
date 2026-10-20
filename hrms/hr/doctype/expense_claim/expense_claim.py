@@ -293,16 +293,19 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		"""
 		if self.approval_status != "Approved":
 			return
-		# only the move TO Approved asks: a claim approved before this release, with
-		# no file at all, must still save (review of cfca77cd9)
+		# a claim already Approved before this save keeps its saved lines as they are:
+		# one approved before this release, with no file at all, must still save
+		# (review of cfca77cd9). A line added now is asked like any other (review of 387137aeb).
 		before = None if self.is_new() else self.get_doc_before_save()
-		if before and before.approval_status == "Approved":
-			return
+		excused = (
+			{r.name for r in before.expenses} if before and before.approval_status == "Approved" else set()
+		)
 		rows = self.get("expenses")
 		bare = [
 			row
 			for row in rows
 			if not row.receipt
+			and row.name not in excused
 			and frappe.get_cached_value("Expense Claim Type", row.expense_type, "receipt_required") != 0
 		]
 		if not bare:
