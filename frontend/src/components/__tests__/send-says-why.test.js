@@ -43,3 +43,16 @@ test("NowBar: a time slip with no file says so at Send", () => {
 	assert.match(template, /__\("Add the time slip file to send\."\)/)
 	assert.match(template, /:aria-describedby="[^"]*nowbar-slip-hint/)
 })
+
+test("CheckInPanel: every disabled Confirm/check-in state is linked to its reason", () => {
+	const { src, template } = read("CheckInPanel")
+	assert.match(template, /id="checkin-camera-msg"/)
+	assert.match(template, /'checkin-camera-msg'/)
+	assert.match(template, /:aria-describedby="online \? undefined : 'checkin-offline-hint'"/)
+	assert.match(template, /id="checkin-offline-hint"/)
+	const stop = src.slice(
+		src.indexOf("function stopCamera"),
+		src.indexOf("function stopCamera") + 120
+	)
+	assert.match(stop, /clearTimeout\(cameraStartTimer\)/)
+})

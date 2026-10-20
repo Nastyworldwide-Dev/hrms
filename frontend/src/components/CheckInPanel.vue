@@ -61,6 +61,7 @@
 				class="mt-3"
 				:label="justSaved ? __('Saved') : nextAction.label"
 				:disabled="!online"
+				:aria-describedby="online ? undefined : 'checkin-offline-hint'"
 				@click="openCheckinSheet"
 			>
 				<!-- A saved punch, confirmed where the person tapped: a tick draws
@@ -74,7 +75,12 @@
 			</GButton>
 			<!-- Owner ruling: never an offline check-in. The reason sits at the
 			     action, not only in the top banner (audit P0-7). -->
-			<p v-if="!online" class="text-caption text-ink-600 mt-2" role="status">
+			<p
+				v-if="!online"
+				id="checkin-offline-hint"
+				class="text-caption text-ink-600 mt-2"
+				role="status"
+			>
 				{{ __("You need signal to check in.") }}
 			</p>
 		</template>
@@ -150,7 +156,11 @@
 						muted
 						class="checkin-sheet__video"
 					></video>
-					<div v-if="cameraStatus === 'starting'" class="checkin-sheet__camera-msg">
+					<div
+						v-if="cameraStatus === 'starting'"
+						id="checkin-camera-msg"
+						class="checkin-sheet__camera-msg"
+					>
 						{{ __("Starting camera...") }}
 					</div>
 					<div v-else-if="cameraStatus === 'error'" class="checkin-sheet__camera-msg">
@@ -189,7 +199,13 @@
 					slipActive ? __('Check in and send the slip') : __('Confirm {0}', [nextAction.label])
 				"
 				:disabled="cameraStatus === 'starting' || !online || slipMissingFile"
-				:aria-describedby="confirmHint ? 'checkin-confirm-hint' : undefined"
+				:aria-describedby="
+					confirmHint
+						? 'checkin-confirm-hint'
+						: cameraStatus === 'starting'
+						? 'checkin-camera-msg'
+						: undefined
+				"
 				:pending="submitting || punchCheckin.loading || cameraStatus === 'submitting'"
 				@click="submitLog(nextAction.action)"
 			>
@@ -1459,13 +1475,14 @@ const runSubmitLog = async (logType) => {
 
 // A permission prompt that is never answered left Confirm dead on "Starting camera"
 const CAMERA_START_TIMEOUT_MS = 15000
+let cameraStartTimer = null
 
 async function startCamera() {
 	stopCamera()
 	const generation = cameraGeneration
 	cameraError.value = null
 	cameraStatus.value = "starting"
-	setTimeout(() => {
+	cameraStartTimer = setTimeout(() => {
 		if (generation !== cameraGeneration || cameraStatus.value !== "starting") return
 		console.warn("[Selfie] Camera did not start in", CAMERA_START_TIMEOUT_MS, "ms")
 		cameraError.value = __(
@@ -1491,6 +1508,7 @@ async function startCamera() {
 			return
 		}
 		cameraStream = stream
+		cameraError.value = null
 		cameraStatus.value = "live"
 		holdScreen()
 		await nextTick()
@@ -1510,6 +1528,7 @@ async function startCamera() {
 }
 
 function stopCamera() {
+	clearTimeout(cameraStartTimer)
 	cameraGeneration += 1
 	releaseScreen()
 	if (cameraStream) {
