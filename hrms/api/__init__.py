@@ -2016,8 +2016,8 @@ def report_stuck_load(doctype: str, name: str, ms=0, in_flight=0, has_user_cooki
 	# atomic: parallel reports cannot slip past the cap (review of 4ba80f6d7)
 	daily = frappe.cache.make_key(f"hrms:stuck_load:{user}")
 	count = frappe.cache.incr(daily)
-	if count == 1:
-		frappe.cache.expire(daily, 86400)
+	# every call, not only the first: a counter left with no expiry would silence this user for good
+	frappe.cache.expire(daily, 86400, nx=True)
 	if count > 20:
 		return
 	frappe.cache.set_value(key, 1, expires_in_sec=86400)

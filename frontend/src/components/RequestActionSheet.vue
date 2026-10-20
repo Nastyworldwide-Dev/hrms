@@ -241,12 +241,21 @@
 	<div v-else-if="document.get?.error" class="g-form-body g-request-sheet">
 		<ResourceError :resource="document.get" :what="__('this request')" />
 	</div>
-	<div v-else class="g-form-body g-request-sheet" :aria-busy="!loadIsSlow">
+	<div
+		v-else
+		ref="sheetBody"
+		tabindex="-1"
+		class="g-form-body g-request-sheet"
+		:aria-busy="!loadIsSlow"
+	>
 		<GSkeleton height="20px" />
 		<GSkeleton height="20px" width="60%" />
 		<!-- never an endless skeleton (alpha.60): after 10 s it says so and offers Try again -->
+		<!-- one live region, always there, so the change after Try again is heard -->
+		<p :class="loadIsSlow ? 'g-form-footer' : 'sr-only'" role="status">
+			{{ loadIsSlow ? __("Taking longer than usual.") : __("Loading…") }}
+		</p>
 		<template v-if="loadIsSlow">
-			<p class="g-form-footer" role="status">{{ __("Taking longer than usual.") }}</p>
 			<GButton :label="__('Try again')" @click="retryLoad" />
 		</template>
 	</div>
@@ -354,6 +363,7 @@ const document = createDocumentResource({
 // A senior's phone kept this sheet grey forever and it never reproduced here:
 // past STUCK_LOAD_MS the sheet says so, offers Try again, and reports once.
 const loadIsSlow = ref(false)
+const sheetBody = ref(null)
 let slowTimer = null
 function armSlowTimer() {
 	clearTimeout(slowTimer)
@@ -376,6 +386,8 @@ onBeforeUnmount(() => clearTimeout(slowTimer))
 function retryLoad() {
 	console.info("[RequestActionSheet] slow load; retrying", props.modelValue.name)
 	loadIsSlow.value = false
+	// the button goes away with the message: keep focus in the sheet (design review of d7733f0e6)
+	sheetBody.value?.focus()
 	document.reload?.()
 	armSlowTimer()
 }
