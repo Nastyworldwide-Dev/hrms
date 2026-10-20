@@ -10,6 +10,34 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.60] — Clear Claims — 2026-10-20
+
+### Added
+- **A receipt for each expense item.** "Add a file" is now inside the New
+  expense item sheet, one file per item, instead of one file under the whole
+  claim. The approver opens each item's receipt from that item. Claims made
+  before this release keep their one file and still go through.
+
+### Fixed
+- **Mileage says what you will get.** The amount reads "You will claim (MYR)"
+  and the line under it gives the total: "50 km × RM 0.60 per km = RM 30.00".
+  A mileage type with no rate set yet still asks the km and says HR has not
+  set the rate.
+- **Buttons that did nothing now say why.** Add expense, remote check-in Send,
+  check-in Confirm and time slip Send each show their reason when dimmed
+  ("Fill in Distance (km).", "Write a reason to send.", "Add the time slip
+  file to send."). A camera that never starts stops blocking Confirm after
+  15 seconds.
+- **A request that will not open no longer stays grey.** After 10 seconds it
+  says "Taking longer than usual" with Try again, and tells the server, so HR
+  can see what happened without asking you.
+- **Desktop pages have room at the top.** The title and bell no longer sit on
+  the window's edge.
+
+### Deploy
+- **Migrate needed** (each expense item gets a Receipt field). Without it,
+  saving an expense claim fails.
+
 ## [2.0.0-alpha.59] — Clean Focus — 2026-10-19
 
 ### Fixed
