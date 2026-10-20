@@ -31,8 +31,9 @@ test("the form offers the approver the decision sheet, not a second approval pat
 
 test("closing the sheet reloads the document so the form shows the decision", () => {
 	assert.match(source, /@did-dismiss="closeReviewSheet"/)
+	// the function's own body, however long its comments grow
 	const fn = source.slice(source.indexOf("function closeReviewSheet"))
-	assert.match(fn.slice(0, 300), /reloadDoc\(\)/)
+	assert.match(fn.slice(0, fn.indexOf("\n}\n")), /reloadDoc\(\)/)
 })
 
 test("the shared summary-field map covers the doctypes the sheet can decide", () => {

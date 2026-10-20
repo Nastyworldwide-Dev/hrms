@@ -42,7 +42,7 @@ test("D8 Expense: items are rows in one group, the total is the footer", () => {
 	assert.doesNotMatch(src, /class="text-base font-bold text-inkbase"/, "no loose bold total in a header row")
 	assert.doesNotMatch(src, /g-lineitems__row/)
 	assert.match(src, /<GListRow\s+v-for="\(item, idx\) in expenseClaim\.expenses"[\s\S]*?:amount="formatCurrency\(item\.amount/)
-	assert.match(src, /<p v-if="expenseClaim\.expenses\?\.length" class="g-form-footer">\s*\{\{ __\("Total \{0\}"/)
+	assert.match(src, /<p v-if="expenseClaim\.expenses\?\.length" class="g-form-footer">\s*\{\{\s*__\("Total \{0\}"/)
 })
 
 test("D2 Team: the day is a section header, each department a grouped section", () => {

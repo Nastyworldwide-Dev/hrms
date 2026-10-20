@@ -98,7 +98,10 @@ test("ExpensesTable: the sheet says so when its field list or the claim types fa
 	assert.match(src, /import ResourceError from "@\/components\/ResourceError\.vue"/)
 	assert.match(tpl, /<ResourceError\s+v-if="expensesTableFields\.error"\s+:resource="expensesTableFields"/)
 	assert.match(tpl, /v-else-if="claimTypesResource\.error"\s+:resource="claimTypesResource"/)
-	assert.match(src, /if \(expensesTableFields\.error\) return true/, "no Add on a form with no fields")
+	// no Add on a form with no fields: one rule since alpha.60 (addItemHint dims Add exactly
+	// when it has a reason; its own test proves the load failure is one)
+	assert.match(src, /loadFailed: Boolean\(expensesTableFields\.error\)/, "no Add on a form with no fields")
+	assert.match(src, /const addButtonDisabled = computed\(\(\) => Boolean\(addHint\.value\)\)/)
 })
 
 test("ExpenseTaxesTable: the sheet says so when its field list failed", () => {
