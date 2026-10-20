@@ -430,11 +430,6 @@ const slipFile = ref(null)
 const slipActive = computed(() => minutesLate.value > 0 && slipOn.value)
 //: on, but no file yet: the file is the proof, so the button waits for it
 const slipMissingFile = computed(() => slipActive.value && !slipFile.value)
-const confirmHint = computed(() => {
-	if (!online.value) return __("You need signal to check in.")
-	if (slipMissingFile.value) return __("Add the time slip file to continue.")
-	return ""
-})
 
 function readMinutesLate() {
 	const shift = nowResource.data?.shift
@@ -1056,6 +1051,12 @@ const askForNotifications = ref(false)
 //: Owner ruling (22 Sep): never an offline check-in. Nothing is queued, and
 //: the buttons are disabled offline with the reason beside them (audit P0-7).
 const online = useOnline()
+//: why Confirm is dimmed, said at the button (alpha.60); after `online`, which it reads
+const confirmHint = computed(() => {
+	if (!online.value) return __("You need signal to check in.")
+	if (slipMissingFile.value) return __("Add the time slip file to continue.")
+	return ""
+})
 
 //: Open state owned here, so a strict block or a saved punch closes THIS sheet;
 //: the "top overlay" dismiss they used could close a dialog opened over it
