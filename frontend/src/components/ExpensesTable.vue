@@ -124,13 +124,13 @@
 						<GButton
 							:label="editingIdx === null ? __('Add expense') : __('Update expense')"
 							:disabled="addButtonDisabled"
-							:aria-describedby="receiptHint ? 'expense-receipt-hint' : undefined"
+							:aria-describedby="addHint ? 'expense-add-hint' : undefined"
 							@click="updateExpenseItem()"
 						/>
 					</div>
 					<!-- A dimmed Add always says why: GButton swallows the tap (alpha.60) -->
-					<p v-if="receiptHint" id="expense-receipt-hint" class="g-form-footer" role="status">
-						{{ receiptHint }}
+					<p v-if="addHint" id="expense-add-hint" class="g-form-footer" role="status">
+						{{ addHint }}
 					</p>
 				</div>
 			</div>
@@ -164,6 +164,7 @@ import {
 import { groupFields } from "@/utils/formGroups"
 import { sentenceCase } from "@/utils/sentenceCase"
 import { withCostTagFields } from "@/utils/expenseCostTags"
+import { addItemHint } from "@/utils/addItemHint"
 
 import { useCurrencyConversion } from "@/composables/useCurrencyConversion"
 
@@ -341,24 +342,23 @@ const lineNeedsReceipt = computed(
 	() => claimTypesByID[expenseItem.value.expense_type]?.receipt_required !== 0
 )
 
-// why Add is dimmed for the receipt, in words, or "" (shown at the button)
-const receiptHint = computed(() => {
-	if (receiptUploading.value) return __("Wait for the file to finish uploading.")
-	if (lineNeedsReceipt.value && !expenseItem.value.receipt)
-		return __("Add the receipt for this item.")
-	return ""
-})
+// why Add is dimmed, in words, or "" (shown at the button). Add is dimmed
+// exactly when this says something, so it never goes quiet (review of b7bb33cc9).
+// expensesTableFields.data, not expenseFields: the same required list Add always checked.
+const addHint = computed(() =>
+	addItemHint(
+		{
+			fields: expensesTableFields.data,
+			item: expenseItem.value,
+			needsReceipt: lineNeedsReceipt.value,
+			uploading: receiptUploading.value,
+			loadFailed: Boolean(expensesTableFields.error),
+		},
+		__
+	)
+)
 
-const addButtonDisabled = computed(() => {
-	// no fields were read: nothing to add
-	if (expensesTableFields.error) return true
-	if (receiptHint.value) return true
-	return expensesTableFields.data?.some((field) => {
-		if (field.reqd && !expenseItem.value[field.fieldname]) {
-			return true
-		}
-	})
-})
+const addButtonDisabled = computed(() => Boolean(addHint.value))
 
 const rateNote = computed(() =>
 	missingRateNote(mileageRate.value, expenseItem.value.expense_type, __)

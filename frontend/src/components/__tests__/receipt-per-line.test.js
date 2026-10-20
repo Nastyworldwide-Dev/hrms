@@ -110,22 +110,21 @@ test("a line needs a receipt unless its type switched it off (a type not loaded 
 	)
 })
 
-test("Add is dimmed with a visible reason, linked to the button", () => {
+test("Add is dimmed exactly when it says why, linked to the button", () => {
 	const { template, script } = table()
-	assert.match(script, /__\("Add the receipt for this item\."\)/)
 	const hint = script.slice(
-		script.indexOf("const receiptHint"),
+		script.indexOf("const addHint"),
 		script.indexOf("const addButtonDisabled")
 	)
-	assert.match(hint, /lineNeedsReceipt\.value && !expenseItem\.value\.receipt/)
-	assert.match(hint, /receiptUploading\.value/)
-	const disabled = script.slice(script.indexOf("const addButtonDisabled"))
-	assert.match(disabled.slice(0, 400), /if \(receiptHint\.value\) return true/)
+	assert.match(hint, /needsReceipt: lineNeedsReceipt\.value/)
+	assert.match(hint, /uploading: receiptUploading\.value/)
+	assert.match(hint, /loadFailed: Boolean\(expensesTableFields\.error\)/)
+	assert.match(script, /const addButtonDisabled = computed\(\(\) => Boolean\(addHint\.value\)\)/)
 	assert.match(
 		template,
-		/<p\s+v-if="receiptHint"\s+id="expense-receipt-hint"\s+class="g-form-footer"\s+role="status"/
+		/<p\s+v-if="addHint"\s+id="expense-add-hint"\s+class="g-form-footer"\s+role="status"/
 	)
-	assert.match(template, /:aria-describedby="receiptHint \? 'expense-receipt-hint' : undefined"/)
+	assert.match(template, /:aria-describedby="addHint \? 'expense-add-hint' : undefined"/)
 })
 
 test("a sheet closed mid-upload does not leave the next Add dimmed", () => {
