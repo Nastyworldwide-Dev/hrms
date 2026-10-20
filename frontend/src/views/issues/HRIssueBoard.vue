@@ -201,6 +201,7 @@ const issues = createListResource({
 		"creation",
 	],
 	orderBy: "creation desc",
+	// ceiling: 500 issues, counted and filtered here; upgrade: server-side counts + paging once a site nears 500
 	pageLength: 500,
 	auto: true,
 })
