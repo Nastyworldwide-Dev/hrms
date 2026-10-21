@@ -1,3 +1,8 @@
-CLASS: a fold count after a middle dot reads as a date ("Time off not approved · 19") (UX review F8)
-frontend/src/views/Notifications.vue:257 same-root — the one fold label builder
-frontend/src/views/Notifications.vue:221 not-affected — "Earlier · 30 unread" carries its word
+CLASS: a separator drawn without the value after it ("5 Jan ·") (UX review F9)
+frontend/src/components/LeaveRequestItem.vue:19 same-root — now drawn only with the day count
+frontend/src/components/AttendanceRequestItem.vue:18 not-affected — already guarded by getTotalDays > 0
+frontend/src/components/OTRequestItem.vue:23 not-affected — already guarded by hoursAsTime
+frontend/src/components/ReplacementLeaveClaimItem.vue:18 not-affected — already guarded by hours_cost
+frontend/src/components/ShiftRequestItem.vue:15 not-affected — already guarded by to_date
+frontend/src/components/ShiftAssignmentItem.vue:13 not-affected — already guarded by end_date
+frontend/src/components/ExpenseClaimItem.vue:17 not-affected — total_claimed_amount always formats to a figure
