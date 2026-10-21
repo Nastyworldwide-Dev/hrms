@@ -1,3 +1,3 @@
-GOAL: switches and checkboxes behave like buttons for the focus ring; only text boxes keep theirs after a tap
-DONE WHEN: focusModality.test.js switch cases red on HEAD, green now; WebKit + Chromium tap-a-switch-then-Escape shows no ring
-CHECK: node --test frontend/src/utils/__tests__/focusModality.test.js
+GOAL: ship the 12 approved UX review fixes, one commit each.
+DONE WHEN: each finding's acceptance check in docs/glass/audit/2026-10-21-ux-review.md passes in the browser on fresh.local:8080.
+CHECK: cd frontend && npm test (per-file), plus .claude/tmp/ux/probe.mjs

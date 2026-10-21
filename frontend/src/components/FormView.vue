@@ -113,7 +113,7 @@
 												:readOnly="isFieldReadOnly(field)"
 												:reqd="Boolean(field.reqd)"
 												:hidden="Boolean(field.hidden)"
-												:errorMessage="field.error_message"
+												:errorMessage="rowError(field)"
 												:minDate="field.minDate"
 												:maxDate="field.maxDate"
 											/>
@@ -175,7 +175,7 @@
 										:readOnly="isFieldReadOnly(field)"
 										:reqd="Boolean(field.reqd)"
 										:hidden="Boolean(field.hidden)"
-										:errorMessage="field.error_message"
+										:errorMessage="rowError(field)"
 										:minDate="field.minDate"
 										:maxDate="field.maxDate"
 									/>
@@ -433,6 +433,7 @@ import { groupFields } from "@/utils/formGroups"
 import { sentenceCase } from "@/utils/sentenceCase"
 import { sendLabel } from "@/utils/sendLabel"
 import { plainLabel } from "@/utils/plainLabel"
+import { isMissing, missingHint } from "@/utils/missingFields"
 import FileUploaderView from "@/components/FileUploaderView.vue"
 import RequestTimeline from "@/components/RequestTimeline.vue"
 import WorkflowActionSheet from "@/components/WorkflowActionSheet.vue"
@@ -540,6 +541,25 @@ const cancelViewer = computed(() => ({
 let activeTab = ref(props.tabs?.[0].name)
 let fileAttachments = ref([])
 let formErrorMessage = ref("")
+// Set by the first Send: untouched rows are not marked before then (F2).
+const triedSend = ref(false)
+
+/** The row's own message: its inline check, or "Fill this in" once Send was tried. */
+function rowError(field) {
+	if (field.error_message) return field.error_message
+	// a read-only row (an approver HR sets) gets no "Fill this in": the line by Send says ask HR
+	const fillable = !isFieldReadOnly(field) && isMissing(field, formModel.value)
+	return triedSend.value && fillable ? __("Fill this in") : ""
+}
+
+/** Move to the first marked row, so a long form does not hide what blocked Send. */
+function focusFirstError() {
+	nextTick(() => {
+		const row = document.querySelector(".form-view-root .g-form-row--error")
+		row?.scrollIntoView({ block: "center" })
+		row?.querySelector("input, textarea, select, button")?.focus({ preventScroll: true })
+	})
+}
 let isFormDirty = ref(false)
 
 // Guard against losing typed work: when the form is dirty, Back opens a discard
@@ -840,7 +860,12 @@ const finalize = createResource({
 // The one line above the save button. formErrorMessage is already a sentence
 // (validation, saveError prop); the three requests hand back an Error, which
 // firstMessage reduces to the server's first sentence with its markup stripped.
+// Live after the first Send: it shrinks as rows are filled and is gone when none are left.
+const missingLine = computed(() =>
+	triedSend.value ? missingHint(props.fields, formModel.value, __) : ""
+)
 const formError = computed(() => {
+	if (missingLine.value) return missingLine.value
 	if (formErrorMessage.value) return formErrorMessage.value
 	const failed = docList?.insert?.error || documentResource?.setValue?.error || finalize.error
 	return failed ? firstMessage(failed) : ""
@@ -961,20 +986,10 @@ function handleDocInsert() {
 }
 
 function validateMandatoryFields() {
-	const errorFields = props.fields
-		.filter((field) => {
-			if (!field.reqd || field.hidden) return false
-			const value = formModel.value[field.fieldname]
-			// an empty child table ([]) is truthy — !value missed it, so a
-			// required table (e.g. Expense Claim's expenses) submitted empty.
-			return Array.isArray(value) ? value.length === 0 : !value
-		})
-		.map((field) => field.label)
-
-	if (errorFields.length) {
-		formErrorMessage.value = `${errorFields.join(", ")} ${
-			errorFields.length > 1 ? "fields are mandatory" : "field is mandatory"
-		}`
+	triedSend.value = true
+	if (missingLine.value) {
+		formErrorMessage.value = ""
+		focusFirstError()
 		return false
 	}
 

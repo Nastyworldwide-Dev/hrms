@@ -4085,7 +4085,10 @@ ion-router-outlet {
 /* An icon (a chevron, a mark) keeps its own size too: this grew the check-in
    row's 16 pt chevron into a 95 pt slot and left the time mid-row (owner,
    27 Sep 2026). */
-.g-form-row > :not(.g-form-row__label):not(.g-form-row__switch):not(.g-cal__swatch):not(svg) {
+/* An error line too: each :not() above adds specificity, and at (0,4,1) this
+   outranked the (0,3,0) full-width error rule below, so "Fill this in" sat
+   mid-row beside the value (UX review 21 Oct 2026). */
+.g-form-row > :not(.g-form-row__label):not(.g-form-row__switch):not(.g-cal__swatch):not(svg):not(.g-field-error) {
 	flex: 1 1 0;
 	min-width: 0;
 }

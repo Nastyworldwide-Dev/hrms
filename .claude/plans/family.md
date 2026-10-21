@@ -1,5 +1,4 @@
-CLASS: a control <input> (checkbox/radio/range/file/button) treated as a text field by the focus-ring rule
-frontend/src/utils/focusModality.js same-root — isTextEntry limited to text-like inputs; Space on a switch is keyboard use
-frontend/src/theme/glass-components.css same-root — the hide rule keeps the ring only on text-like inputs; switches hide it after a tap like buttons
-frontend/src/components/glass/GCheckbox.vue not-affected — input type=checkbox, now treated as a control (covered by the rule)
-frontend/src/components/TimeSlipFields.vue not-affected — input type=file, a control; its row ring stays in the rule
+CLASS: a blocked-Send message names fields in database words, not the labels on screen (UX review F2)
+frontend/src/components/FormView.vue:974 same-root — the only builder of the "fields are mandatory" line; fixed via utils/missingFields.js
+frontend/src/utils/addItemHint.js:23 not-affected — already plain (plainLabel + __), the expense item sheet's own hint
+frontend/src/views/ot/OTRequestForm.vue:498 not-affected — sets error_message, a plain sentence already
