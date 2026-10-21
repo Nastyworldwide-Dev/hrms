@@ -372,7 +372,8 @@ const roleLine = computed(() => {
 // screens never disagree: You said "None" beside Home's "Morning Shift" for
 // anyone on an assignment with no default (UX review 21 Oct 2026, F3).
 const shiftName = computed(() => nowResource.data?.shift?.shift || employeeDoc.doc?.default_shift || null)
-if (!nowResource.data) nowResource.fetch()
+// reload, not fetch-if-empty: the cache may hold another day's shift
+nowResource.reload()?.catch?.((e) => console.warn("[You] today's shift unavailable", e))
 
 const reportsToName = createResource({
 	url: "hrms.api.get_reports_to_employee_name",

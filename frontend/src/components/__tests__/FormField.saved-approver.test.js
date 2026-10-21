@@ -10,10 +10,10 @@ import { fileURLToPath } from "node:url"
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8")
 
-test("a saved value outside the option list is added, labelled by its title", () => {
+test("a saved value outside the option list is added on a read-only row only, labelled by its title", () => {
 	assert.match(
 		read("../FormField.vue"),
-		/!props\.documentList\.some\(\(o\) => o\.value === v\)\)\s*return \[\.\.\.props\.documentList, \{ label: props\.display \|\| String\(v\), value: v \}\]/
+		/isReadOnly\.value && v && !props\.documentList\.some\(\(o\) => o\.value === v\)\)\s*return \[\.\.\.props\.documentList, \{ label: props\.display \|\| String\(v\), value: v \}\]/
 	)
 })
 

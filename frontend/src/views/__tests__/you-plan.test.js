@@ -29,6 +29,9 @@ test("manager and shift are on the page", () => {
 
 test("the shift is today's, from the same answer Home shows (F3)", () => {
 	assert.match(view, /nowResource\.data\?\.shift\?\.shift \|\| employeeDoc\.doc\?\.default_shift/)
+	// reloaded, not fetched-if-empty: the cache can hold another day's shift (review)
+	assert.match(view, /nowResource\.reload\(\)/)
+	assert.doesNotMatch(view, /if \(!nowResource\.data\) nowResource\.fetch\(\)/)
 })
 
 test("one details row, one sheet", () => {

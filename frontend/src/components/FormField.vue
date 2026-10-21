@@ -344,8 +344,10 @@ const selectionList = computed(() => {
 		// A saved value outside today's list (a request routed to an approver who
 		// has since changed) still shows: the select drew a blank row for it
 		// (UX review 21 Oct 2026, F6).
+		// Read-only rows only: an editable pick that left the list must look unset
+		// so the person picks again (review of fa4b4ec84).
 		const v = props.modelValue
-		if (v && !props.documentList.some((o) => o.value === v))
+		if (isReadOnly.value && v && !props.documentList.some((o) => o.value === v))
 			return [...props.documentList, { label: props.display || String(v), value: v }]
 		return props.documentList
 	} else if (props.fieldtype == "Select" && props.options) {

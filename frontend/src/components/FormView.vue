@@ -272,11 +272,18 @@
 					     The wrapper carries the gap: .g-field-error sets margin 0 and loads later
 					     than the utilities, so an mb-2 on the line itself would lose. -->
 					<div v-if="formError" class="mb-2">
-						<p class="g-field-error" role="alert">{{ formError }}</p>
+						<p id="form-error-line" class="g-field-error" role="alert">{{ formError }}</p>
 					</div>
 					<!-- Why Send is dimmed, before anyone taps it, linked to the button so
 					     a screen reader hears it too (UX review F1/F4/F5; #4855 class). -->
-					<p v-else-if="sendReason" id="form-send-reason" class="g-form-footer mb-2" role="status">
+					<!-- Its own v-if, not v-else: an error line above must never hide the
+					     reason a dimmed Send points at (review of 304365140). -->
+					<p
+						v-if="sendReason && sendReason !== formError"
+						id="form-send-reason"
+						class="g-form-footer mb-2"
+						role="status"
+					>
 						{{ sendReason }}
 					</p>
 
@@ -293,7 +300,7 @@
 							docList.insert.loading || documentResource?.setValue?.loading || finalize.loading
 						"
 						:disabled="Boolean(sendReason)"
-						:aria-describedby="sendReason ? 'form-send-reason' : undefined"
+						:aria-describedby="sendReason ? (sendReason === formError ? 'form-error-line' : 'form-send-reason') : undefined"
 						:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
 						@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
 					/>
@@ -870,7 +877,7 @@ const finalize = createResource({
 // firstMessage reduces to the server's first sentence with its markup stripped.
 // Live after the first Send: it shrinks as rows are filled and is gone when none are left.
 const missingLine = computed(() =>
-	triedSend.value ? missingHint(props.fields, formModel.value, __) : ""
+	triedSend.value ? missingHint(props.fields, formModel.value, __, isFieldReadOnly) : ""
 )
 const formError = computed(() => {
 	if (missingLine.value) return missingLine.value

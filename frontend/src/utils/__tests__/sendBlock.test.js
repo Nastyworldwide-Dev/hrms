@@ -34,7 +34,10 @@ test("an expense with no lines asks for one; the approver comes first", () => {
 test("FormView links the reason to Send for a screen reader", () => {
 	const src = readFileSync(fileURLToPath(new URL("../../components/FormView.vue", import.meta.url)), "utf8")
 	assert.match(src, /id="form-send-reason"/)
-	assert.match(src, /:aria-describedby="sendReason \? 'form-send-reason' : undefined"/)
+	// the reason line is its own v-if: an error line above never hides it (review)
+	assert.match(src, /v-if="sendReason && sendReason !== formError"\s*id="form-send-reason"/)
+	assert.match(src, /sendReason === formError \? 'form-error-line' : 'form-send-reason'/)
+	assert.match(src, /id="form-error-line"/)
 })
 
 test("Time off and Expense both hand their reason to Send", () => {

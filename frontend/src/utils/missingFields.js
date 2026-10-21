@@ -10,12 +10,15 @@ export function isMissing(field, model) {
 	return Array.isArray(value) ? value.length === 0 : !value
 }
 
-/** "" when nothing is missing; `__` is the app's translate (passed in so this runs in node). */
-export function missingHint(fields, model, __) {
+/**
+ * "" when nothing is missing; `__` is the app's translate (passed in so this runs in node).
+ * `readOnly` is the form's own rule (FormView.isFieldReadOnly), so the line and the rows agree.
+ */
+export function missingHint(fields, model, __, readOnly = (field) => Boolean(field.read_only)) {
 	const missing = (fields || []).filter((field) => isMissing(field, model))
 	if (!missing.length) return ""
 	// a row the person cannot fill (an approver set by HR) has no fix on this screen
-	if (missing.some((field) => field.read_only))
+	if (missing.some(readOnly))
 		return __("Something this form needs is not set up for you. Ask HR.")
 	const names = missing.map((field) => __(plainLabel(field.label || field.fieldname)))
 	return __("Fill in {0}.", [names.join(", ")])

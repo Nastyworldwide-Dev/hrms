@@ -39,3 +39,8 @@ test("a row the person cannot type in sends them to HR, not to the row", () => {
 	const fields = [{ fieldname: "expense_approver", label: "Expense Approver", reqd: 1, read_only: 1 }]
 	assert.equal(missingHint(fields, {}, __), "Something this form needs is not set up for you. Ask HR.")
 })
+
+test("the form's own read-only rule decides, so a write-denied row is not named (review)", () => {
+	const fields = [{ fieldname: "leave_type", label: "Leave Type", reqd: 1 }]
+	assert.match(missingHint(fields, {}, __, () => true), /Ask HR/)
+})
