@@ -27,6 +27,10 @@ test("manager and shift are on the page", () => {
 	assert.match(view, /default_shift/)
 })
 
+test("the shift is today's, from the same answer Home shows (F3)", () => {
+	assert.match(view, /nowResource\.data\?\.shift\?\.shift \|\| employeeDoc\.doc\?\.default_shift/)
+})
+
 test("one details row, one sheet", () => {
 	assert.match(view, /__\("Your details"\)/)
 	assert.doesNotMatch(view, /__\("Company information"\)|__\("Contact information"\)/)

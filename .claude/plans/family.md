@@ -1,5 +1,4 @@
-CLASS: a read-only select drops a saved value that is not in the viewer's option list, drawing a blank row (UX review F6)
-frontend/src/components/FormField.vue:340 same-root — selectionList now appends the saved value; every documentList row routes here
-frontend/src/views/leave/Form.vue:446 same-root — leave_approver list holds only the viewer's own approver; fixed via FormField
-frontend/src/views/expense_claim/Form.vue:252 same-root — same for expense_approver; fixed via FormField
-frontend/src/views/leave/Form.vue:313 not-affected — half_day_session options are a fixed AM/PM pair, value always inside
+CLASS: one fact read from two sources on two screens (shift: default_shift on You vs today's assignment on Home) (UX review F3)
+frontend/src/views/Profile.vue:370 same-root — now reads nowResource (hrms.api.now), default as fallback
+frontend/src/components/NowBar.vue:188 not-affected — the source of truth (assignment, else default)
+frontend/src/views/team/TeamRoster.vue:1 not-affected — the roster shows planned shifts per day by design, not "today's shift"

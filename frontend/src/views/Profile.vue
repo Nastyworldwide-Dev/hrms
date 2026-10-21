@@ -174,6 +174,7 @@ import GListRow from "@/components/glass/GListRow.vue"
 import GSelect from "@/components/glass/GSelect.vue"
 
 import { formatCurrency } from "@/utils/formatters"
+import { nowResource } from "@/data/now"
 
 import ProfileInfoModal from "@/components/ProfileInfoModal.vue"
 
@@ -367,7 +368,11 @@ const roleLine = computed(() => {
 	const where = [doc.department, doc.branch].filter(Boolean).join(" · ")
 	return [doc.designation, where].filter(Boolean).join(" · ")
 })
-const shiftName = computed(() => employeeDoc.doc?.default_shift || null)
+// Today's shift as Home reads it (an assignment, else the default), so the two
+// screens never disagree: You said "None" beside Home's "Morning Shift" for
+// anyone on an assignment with no default (UX review 21 Oct 2026, F3).
+const shiftName = computed(() => nowResource.data?.shift?.shift || employeeDoc.doc?.default_shift || null)
+if (!nowResource.data) nowResource.fetch()
 
 const reportsToName = createResource({
 	url: "hrms.api.get_reports_to_employee_name",
