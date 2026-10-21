@@ -12,6 +12,7 @@
 				:tabbedView="true"
 				:tabs="tabs"
 				:showAttachmentView="Boolean(props.id)"
+				:saveError="props.id ? '' : expenseSendBlock(expenseClaim, expenseApproverDetails.data, __)"
 				@validateForm="validateForm"
 				:showDownloadPDFButton="true"
 				@formReloaded="onFormReloaded"
@@ -45,6 +46,7 @@
 
 <script setup>
 import { approverOptions } from "@/utils/approverOptions"
+import { expenseSendBlock } from "@/utils/sendBlock"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"

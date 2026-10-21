@@ -274,6 +274,11 @@
 					<div v-if="formError" class="mb-2">
 						<p class="g-field-error" role="alert">{{ formError }}</p>
 					</div>
+					<!-- Why Send is dimmed, before anyone taps it, linked to the button so
+					     a screen reader hears it too (UX review F1/F4/F5; #4855 class). -->
+					<p v-else-if="sendReason" id="form-send-reason" class="g-form-footer mb-2" role="status">
+						{{ sendReason }}
+					</p>
 
 					<!-- GButton, not a frappe-ui Button painted with utilities (8.17).
 				     This was the ONLY primary action in the product that bypassed
@@ -287,7 +292,8 @@
 						:pending="
 							docList.insert.loading || documentResource?.setValue?.loading || finalize.loading
 						"
-						:disabled="formButton === 'Save' && Boolean(saveError)"
+						:disabled="Boolean(sendReason)"
+						:aria-describedby="sendReason ? 'form-send-reason' : undefined"
 						:class="formButton === 'Cancel' ? 'g-confirm__destructive' : undefined"
 						@click="formButton === 'Save' ? saveForm() : submitOrCancelForm()"
 					/>
@@ -860,6 +866,9 @@ const finalize = createResource({
 // The one line above the save button. formErrorMessage is already a sentence
 // (validation, saveError prop); the three requests hand back an Error, which
 // firstMessage reduces to the server's first sentence with its markup stripped.
+// The reason a page gives for a dimmed Send; only the Save action is ever dimmed.
+const sendReason = computed(() => (formButton.value === "Save" ? props.saveError : ""))
+
 // Live after the first Send: it shrinks as rows are filled and is gone when none are left.
 const missingLine = computed(() =>
 	triedSend.value ? missingHint(props.fields, formModel.value, __) : ""

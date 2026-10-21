@@ -10,6 +10,7 @@
 				:fields="formFields.data"
 				:id="props.id"
 				:showAttachmentView="true"
+				:saveError="props.id ? '' : noApproverReason(leaveApprovalDetails.data, 'leave_approver', __)"
 				@validateForm="validateForm"
 			>
 				<!-- What the chosen half means, in the person's own shift, under the
@@ -43,6 +44,7 @@ import { approverOptions } from "@/utils/approverOptions"
 import GPage from "@/components/glass/GPage.vue"
 import { IonContent } from "@ionic/vue"
 import { createResource } from "frappe-ui"
+import { noApproverReason } from "@/utils/sendBlock"
 import { gToast } from "@/components/glass/toast"
 import { computed, ref, watch, inject, nextTick } from "vue"
 import { useRoute } from "vue-router"

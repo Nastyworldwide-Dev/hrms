@@ -26,11 +26,13 @@
 				@click="openModal(item, idx)"
 			/>
 		</GListPanel>
-		<GEmptyState
-			v-else
-			:title="__('No expenses added')"
-			:body="__('Add each item you paid for with the + above')"
-		/>
+		<!-- The first Add is a labelled button, not the header's small + alone
+		     (UX review 21 Oct 2026, F4). -->
+		<GEmptyState v-else :title="__('No expenses added')" :body="__('Add each item you paid for.')">
+			<template v-if="!isReadOnly" #action>
+				<GButton :label="__('Add expense')" @click="openModal()" />
+			</template>
+		</GEmptyState>
 		<p v-if="expenseClaim.expenses?.length" class="g-form-footer">
 			{{
 				__("Total {0}", [formatCurrency(expenseClaim.total_claimed_amount, expenseClaim.currency)])
