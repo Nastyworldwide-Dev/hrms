@@ -2319,8 +2319,11 @@ html[data-theme="dark"] .g-cal__day--present {
    GAvatar now. .g-header__avatar-link stays — it is the 44px hit area, which is
    a button concern, not an avatar one. */
 @media (min-width: 1024px) {
-	/* the side nav carries identity at lg: (§20.2), as it does today */
-	.g-header__avatar-link {
+	/* the side nav carries identity at lg: (§20.2), as it does today; its
+	   "n Nadi" mark too, so the header's logo tile said it twice (UX review
+	   21 Oct 2026, F11) */
+	.g-header__avatar-link,
+	.g-header > .g-logo-mark {
 		display: none;
 	}
 }
