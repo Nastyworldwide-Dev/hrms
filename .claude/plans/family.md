@@ -1,4 +1,5 @@
-CLASS: one fact read from two sources on two screens (shift: default_shift on You vs today's assignment on Home) (UX review F3)
-frontend/src/views/Profile.vue:370 same-root — now reads nowResource (hrms.api.now), default as fallback
-frontend/src/components/NowBar.vue:188 not-affected — the source of truth (assignment, else default)
-frontend/src/views/team/TeamRoster.vue:1 not-affected — the roster shows planned shifts per day by design, not "today's shift"
+CLASS: a doctype depends_on that the PWA form ignores, so a conditional row always shows (UX review F7)
+frontend/src/views/attendance/AttendanceRequestForm.vue:83 same-root — time_slip_reason now follows reason == Time Slip
+frontend/src/views/attendance/AttendanceRequestForm.vue:76 not-affected — half_day_date already hidden on !half_day by hand
+frontend/src/views/leave/Form.vue:313 not-affected — half-day rows already follow half_day by hand
+frontend/src/utils/visibleSections.js:20 ticket ux-depends-on — FormView reads no depends_on at all; a generic eval is a bigger change, left as a ticket

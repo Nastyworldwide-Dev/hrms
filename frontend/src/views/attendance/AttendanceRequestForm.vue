@@ -93,6 +93,20 @@ watch(
 	}
 )
 
+// The doctype shows "Time slip reason" only for a time slip (depends_on), but
+// this form drew it for every reason: three reason rows on one screen (UX
+// review 21 Oct 2026, F7). Cleared when hidden so a stale pick is never sent.
+watch(
+	() => [attendanceRequest.value.reason, formFields.data],
+	([reason]) => {
+		const field = formFields.data?.find((f) => f.fieldname === "time_slip_reason")
+		if (!field) return
+		field.hidden = reason !== "Time Slip"
+		if (field.hidden && !props.id) attendanceRequest.value.time_slip_reason = undefined
+	},
+	{ immediate: true }
+)
+
 watch(
 	() => [attendanceRequest.value.in_time, attendanceRequest.value.out_time],
 	([in_time, out_time]) => {
