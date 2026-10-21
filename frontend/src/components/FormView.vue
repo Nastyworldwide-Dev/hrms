@@ -705,6 +705,8 @@ const tabFields = computed(() => splitFieldsByTab(shownFields.value, props.tabs)
 //: employee_name beside employee, so no extra read is needed.
 const LINK_TITLES = {
 	employee: (model) => model.employee_name,
+	leave_approver: (model) => model.leave_approver_name,
+	expense_approver: (model) => model.expense_approver_name,
 }
 const displayFor = (field) =>
 	(props.id && LINK_TITLES[field.fieldname]?.(formModel.value || {})) || ""

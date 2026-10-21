@@ -1,7 +1,5 @@
-CLASS: Send is live or dimmed with no visible, linked reason, ending in a dead end (UX review F1/F4/F5; #4855 class)
-frontend/src/components/FormView.vue:290 same-root — the one Send; now dims on saveError and shows + links the reason
-frontend/src/views/expense_claim/Form.vue:15 same-root — no approver / no lines now handed to saveError
-frontend/src/views/leave/Form.vue:13 same-root — required leave approver missing now handed to saveError
-frontend/src/views/ot/OTRequestForm.vue:16 same-root — already passed saveError; gains the visible linked line via FormView
-frontend/src/components/ExpensesTable.vue:29 same-root — empty state gains a labelled Add expense button
-frontend/src/utils/addItemHint.js:12 not-affected — the item sheet's Add already shows its linked reason (alpha.60)
+CLASS: a read-only select drops a saved value that is not in the viewer's option list, drawing a blank row (UX review F6)
+frontend/src/components/FormField.vue:340 same-root — selectionList now appends the saved value; every documentList row routes here
+frontend/src/views/leave/Form.vue:446 same-root — leave_approver list holds only the viewer's own approver; fixed via FormField
+frontend/src/views/expense_claim/Form.vue:252 same-root — same for expense_approver; fixed via FormField
+frontend/src/views/leave/Form.vue:313 not-affected — half_day_session options are a fixed AM/PM pair, value always inside

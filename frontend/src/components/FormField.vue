@@ -330,14 +330,23 @@ const readValue = computed(() => {
 
 //: An empty entry row says what it wants, as iOS forms do (alpha.6 B2):
 //: without it the trailing half of the row is blank and reads as nothing.
-const rowPlaceholder = computed(() =>
-	isReadOnly.value ? "" : props.reqd ? __("Required") : __("Optional")
-)
+// An approver HR has not set reads as a blank row, like a load that never
+// finished (F6): say it, and who sets it.
+const rowPlaceholder = computed(() => {
+	if (isReadOnly.value) return /approver$/.test(props.fieldname || "") ? __("Not set, ask HR") : ""
+	return props.reqd ? __("Required") : __("Optional")
+})
 
 const selectionList = computed(() => {
 	// A caller's own option list wins for a Select too: the half-day AM | PM
 	// choice carries its meaning in the label ("AM — Start by 13:30").
 	if ((props.fieldtype === "Link" || props.fieldtype === "Select") && props.documentList) {
+		// A saved value outside today's list (a request routed to an approver who
+		// has since changed) still shows: the select drew a blank row for it
+		// (UX review 21 Oct 2026, F6).
+		const v = props.modelValue
+		if (v && !props.documentList.some((o) => o.value === v))
+			return [...props.documentList, { label: props.display || String(v), value: v }]
 		return props.documentList
 	} else if (props.fieldtype == "Select" && props.options) {
 		// Frappe's own spelling is one word per line. A caller may also hand a
