@@ -254,7 +254,8 @@ const groups = computed(() => {
 //: "W0 employee asked for time off · 3" — the lead's own line plus the count.
 function foldLabel(fold) {
 	const title = fold.lead.line.title
-	return fold.members.length > 1 ? __("{0} · {1}", [title, fold.members.length]) : title
+	// "(19)", not "· 19": after a dot a bare number read as a date (UX review 21 Oct 2026, F8)
+	return fold.members.length > 1 ? __("{0} ({1})", [title, fold.members.length]) : title
 }
 
 const openFolds = ref(new Set())

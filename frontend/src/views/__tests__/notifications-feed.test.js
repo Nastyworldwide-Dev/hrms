@@ -53,3 +53,9 @@ test("a remote check-in status that cannot be read is simply unknown", () => {
 	// approvers may not READ Remote Checkin Request; that must not toast
 	assert.match(script, /resourceFetcher: frappeRequest/)
 })
+
+test("a fold's count reads as a count, not a date (F8)", () => {
+	const src = readFileSync(fileURLToPath(new URL("../Notifications.vue", import.meta.url)), "utf8")
+	assert.match(src, /__\("\{0\} \(\{1\}\)", \[title, fold\.members\.length\]\)/)
+	assert.doesNotMatch(src, /__\("\{0\} · \{1\}", \[title/)
+})
