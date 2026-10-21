@@ -1,3 +1,3 @@
-CLASS: identity drawn twice at lg: (side nav + page header) (UX review F11)
-frontend/src/theme/glass-components.css:2326 same-root — header logo now hides at lg: with the avatar
-frontend/src/components/glass/GAppHeader.vue:55 same-root — the one header that draws the logo on tab roots
+CLASS: a computed reads a binding declared later in <script setup> (temporal dead zone) (follow-up to 304365140)
+frontend/src/components/FormView.vue:872 same-root — sendReason moved below formButton
+frontend/tests/audit/script-setup-order.test.mjs:247 not-affected — the gate that caught it, unchanged

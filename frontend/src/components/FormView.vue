@@ -868,9 +868,6 @@ const finalize = createResource({
 // The one line above the save button. formErrorMessage is already a sentence
 // (validation, saveError prop); the three requests hand back an Error, which
 // firstMessage reduces to the server's first sentence with its markup stripped.
-// The reason a page gives for a dimmed Send; only the Save action is ever dimmed.
-const sendReason = computed(() => (formButton.value === "Save" ? props.saveError : ""))
-
 // Live after the first Send: it shrinks as rows are filled and is gone when none are left.
 const missingLine = computed(() =>
 	triedSend.value ? missingHint(props.fields, formModel.value, __) : ""
@@ -933,6 +930,9 @@ const formButton = computed(() => {
 	}
 	return null
 })
+
+// The reason a page gives for a dimmed Send; only the Save action is ever dimmed.
+const sendReason = computed(() => (formButton.value === "Save" ? props.saveError : ""))
 const cancelAsRow = computed(
 	() => formButton.value === "Cancel" && !isFormDirty.value && !workflow.value?.hasWorkflow
 )

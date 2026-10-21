@@ -13,6 +13,7 @@ import {
 	nextTick,
 } from "vue"
 import { requestStatusChip } from "../src/utils/requestStatus.js"
+import { missingHint } from "../src/utils/missingFields.js"
 const require = createRequire(import.meta.url)
 const { parse } = require("acorn")
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
@@ -286,7 +287,13 @@ test("actual FormView save refuses an unsettled OT summary and preserves mandato
 			emit: () => s.run("validateForm()"),
 			docList: { insert: { submit: (doc) => writes.push({ ...doc }) } },
 			fileAttachments: ref([]),
+			triedSend: ref(false),
+			focusFirstError: () => {},
 		})
+		// FormView's real missing-row rule (utils/missingFields), as the page builds it
+		context.missingLine = computed(() =>
+			context.triedSend.value ? missingHint(props.fields, context.formModel.value, (t, a = []) => t.replace(/\{(\d)\}/g, (_, i) => String(a[i]))) : ""
+		)
 		vm.runInContext(
 			["validateMandatoryFields", "handleDocInsert", "saveForm"]
 				.map((n) => declaration(form, n))
