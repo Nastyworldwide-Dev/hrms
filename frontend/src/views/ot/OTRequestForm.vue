@@ -371,6 +371,19 @@ watch(
 	{ immediate: true }
 )
 
+//: Hours and Note mean nothing until a day is chosen (the cap comes from that
+//: day), so they wait for it: with nothing to claim the form showed three empty
+//: rows under "nothing to claim yet" (UX review 21 Oct 2026, F5). The day field
+//: itself stays, for a day not in the list.
+watch(
+	[() => otRequest.value.ot_date, () => formFields.data],
+	([day]) => {
+		for (const f of formFields.data || [])
+			if (["claimed_hours", "explanation"].includes(f.fieldname)) f.hidden = day ? 0 : 1
+	},
+	{ immediate: true }
+)
+
 //: The Pick-a-day footer: how it is paid and what the day is worth, or the
 //: state of the check. Never red: an error for the hours goes under the row.
 const dayFooter = computed(() => {
