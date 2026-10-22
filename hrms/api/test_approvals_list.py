@@ -31,7 +31,7 @@ BOSS = "boss@example.com"
 # "no number", which is what a leave without pay gets; the ones that are patch their own value.
 _NO_BALANCE = patch.object(approvals_list, "_leave_balance_now", return_value=None)
 # The approval line walks the org chart; tests that are not about it get "nobody on the line".
-_NO_LINE = patch.object(approvals_list, "get_designated_approvers", return_value=[], create=True)
+_NO_LINE = patch.object(approvals_list, "get_designated_approvers", return_value=[])
 
 
 def setUpModule():

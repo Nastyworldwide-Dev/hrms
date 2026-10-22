@@ -1,13 +1,8 @@
-fix(approvals): a request stuck when its first approver had left
+test(approvals): fail loudly if the approval-line helper is renamed
 
-Overtime, leave and other requests sat on nobody's Approvals page when
-the approver named on the employee's record (or their manager) had left
-or had their login disabled. The approval line already passes over that
-person to the next one up, and that person could open and approve the
-request - but the page and Home's count asked "was it sent to me?" from
-the record fields only, so it was sent to someone who can't log in.
-
-The page now also counts the line's first approver as "sent to".
-Backups higher up still are not sent it (owner ruling 8 Oct).
+The new tests patched get_designated_approvers with create=True, so a
+rename in hrms.hr.utils would have kept them green. approvals_list now
+imports the name, so the patch can require it. Also files the refactor
+ticket the review asked for (approvals_list is a hotspot).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
