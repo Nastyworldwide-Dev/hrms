@@ -10,6 +10,21 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.62] — Cost Split by Month — 2026-10-22
+
+### Changed
+- **Employee "Interco Cost Allocation" is now "Cost Tag/Center Allocation"**
+  (Desk, Employee → Overview). Cost Tag/Center still picks from the
+  Territory list.
+- **The split is set per month.** A new Year/Month column comes first; any
+  day picked is saved as the 1st. Each month must add up to 100%, and a
+  cost tag can appear once per month.
+- **The Intercompany Salary Cost Allocation report follows the month.** A
+  salary slip uses the latest month on or before the month it ends in, so
+  a split carries forward until HR enters a new one. Existing rows are
+  dated to the employee's joining month, so today's figures do not change.
+- Needs migrate (Frappe Cloud runs it on deploy).
+
 ## [2.0.0-alpha.61] — Clear Approvals — 2026-10-22
 
 ### Fixed

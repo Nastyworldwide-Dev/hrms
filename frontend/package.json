@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.61",
-	"releaseName": "Clear Approvals",
+	"version": "2.0.0-alpha.62",
+	"releaseName": "Cost Split by Month",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
