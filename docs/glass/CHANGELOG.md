@@ -10,6 +10,29 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.61] — Clear Approvals — 2026-10-22
+
+### Fixed
+- **Requests no longer get stuck when an approver has left.** If the
+  approver named on your record, or your manager, has left or their login
+  is off, your request now shows on the next approver's Approvals page and
+  in their Home count. Before, they could approve it but never saw it.
+- **Send says why before you tap it.** A dimmed Send shows its reason above
+  the button, in the same words as the rows ("Kind of leave", not "Leave
+  Type"), and a screen reader hears it. A missing approver reads "Ask HR to
+  set your approver" instead of naming a field you cannot see.
+- **"Goes to" is never blank.** A request sent to someone who is no longer
+  your approver shows their name. No approver set reads "Not set, ask HR".
+- **Overtime asks for hours only after a day is chosen.**
+- **Fix a day shows "Time slip reason" only for a time slip.**
+- **You shows today's shift**, the same one Home shows, not "Shift: None".
+- **Smaller tidy-ups.** A leave row with no day count no longer ends in a
+  stray dot; a folded notification count reads "(19)", not like a date;
+  desktop shows the Nadi logo once.
+
+### Deploy
+- No migrate needed.
+
 ## [2.0.0-alpha.60] — Clear Claims — 2026-10-20
 
 ### Added
