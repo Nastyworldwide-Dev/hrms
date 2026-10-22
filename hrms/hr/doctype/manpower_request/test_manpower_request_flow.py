@@ -136,7 +136,7 @@ class TestHrIsToldWhenItIsSent(unittest.TestCase):
 		notices = self._send(headcount=2, position_title="Welder", department="Ops")
 		self.assertEqual(sorted(notices.users()), [HR_OTHER, HR_USER])
 		message = notices.to(HR_USER)[0].message
-		self.assertIn("Hafiz asked for 2 × Welder (Ops). Waiting for Aiman Yusof.", message)
+		self.assertIn("Hafiz asked for Welder ×2 (Ops). Waiting for Aiman Yusof.", message)
 
 	def test_the_notice_points_at_the_request(self):
 		notice = self._send().to(HR_USER)[0]
@@ -188,7 +188,7 @@ class TestDecisionNotices(unittest.TestCase):
 		self.assertEqual(sorted(notices.users()), sorted([REQUESTER_USER, HR_USER, HR_OTHER]))
 		self.assertIn("has been", notices.to(REQUESTER_USER)[0].message)
 		self.assertIn("Approved", notices.to(REQUESTER_USER)[0].message)
-		self.assertIn("Aiman Yusof approved 3 × Driver for Hafiz. Your turn.", notices.to(HR_USER)[0].message)
+		self.assertIn("Aiman Yusof approved Driver ×3 for Hafiz. Your turn.", notices.to(HR_USER)[0].message)
 		self.assertEqual(doc.hiring_status, "Waiting for HR")
 
 	def test_rejection_tells_the_requester_with_the_reason_and_not_hr(self):
@@ -288,8 +288,8 @@ class TestWhoMayWithdrawAndWhen(unittest.TestCase):
 	def test_the_line_approver_and_hr_are_told_while_it_was_still_open(self):
 		_, notices = self._withdraw(docstatus=0, status="Open", headcount=2, position_title="Welder")
 		self.assertEqual(sorted(notices.users()), sorted([BOSS_USER, HR_USER, HR_OTHER]))
-		self.assertIn("Hafiz withdrew the request for 2 × Welder.", notices.to(BOSS_USER)[0].message)
-		self.assertIn("Hafiz withdrew the request for 2 × Welder.", notices.to(HR_USER)[0].message)
+		self.assertIn("Hafiz withdrew the request for Welder ×2.", notices.to(BOSS_USER)[0].message)
+		self.assertIn("Hafiz withdrew the request for Welder ×2.", notices.to(HR_USER)[0].message)
 
 	def test_once_approved_only_hr_is_told(self):
 		_, notices = self._withdraw(
@@ -364,15 +364,37 @@ class TestRequesterToldWhenHrChangesHiring(unittest.TestCase):
 	def test_a_change_tells_the_requester_with_the_note(self):
 		notices = self._updated("Waiting for HR", "Recruiting", note="Posting it on Monday")
 		self.assertEqual(notices.users(), [REQUESTER_USER])
-		self.assertIn(
-			"Manpower request HR-MPR-26-10-00001: Recruiting", notices.to(REQUESTER_USER)[0].message
-		)
+		# answer first, then the note (design review of aba0a4461: the record id led the line)
+		self.assertIn("HR is recruiting for Welder ×2.", notices.to(REQUESTER_USER)[0].message)
+		self.assertNotIn("HR-MPR-", notices.to(REQUESTER_USER)[0].message)
 		self.assertIn("Posting it on Monday", notices.to(REQUESTER_USER)[0].message)
 
 	def test_no_note_no_trailing_text(self):
 		message = self._updated("Recruiting", "Filled").to(REQUESTER_USER)[0].message
-		self.assertIn("Manpower request HR-MPR-26-10-00001: Filled", message)
+		self.assertIn("Welder ×2 is filled.", message)
 		self.assertNotIn("None", message)
+
+	def test_not_proceeding_says_so_with_hrs_reason(self):
+		message = (
+			self._updated("Recruiting", "Not proceeding", note="Budget moved to Q1")
+			.to(REQUESTER_USER)[0]
+			.message
+		)
+		self.assertIn("HR is not proceeding with Welder ×2: Budget moved to Q1", message)
+
+	def test_one_person_needs_no_count(self):
+		doc = _Flow(
+			docstatus=1,
+			status="Approved",
+			hiring_status="Recruiting",
+			headcount=1,
+			position_title="Cook",
+			before=before(hiring_status="Waiting for HR"),
+		)
+		stack, notices, _ = world(user=HR_USER)
+		with stack:
+			doc.on_update_after_submit()
+		self.assertIn("HR is recruiting for Cook.", notices.to(REQUESTER_USER)[0].message)
 
 	def test_the_note_is_escaped(self):
 		message = self._updated("Recruiting", "Not proceeding", note="<b>x</b>").to(REQUESTER_USER)[0].message

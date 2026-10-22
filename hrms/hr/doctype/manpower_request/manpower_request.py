@@ -305,10 +305,16 @@ class ManpowerRequest(Document, PWANotificationsMixin):
 		to_user = self._get_employee_user()
 		if not to_user or normalize_login(to_user) == normalize_login(frappe.session.user):
 			return
-		text = f"Manpower request {self.name}: {self.hiring_status}"
+		# the answer first, in words (design review of aba0a4461); the notice links to the record
+		text = {
+			"Recruiting": f"HR is recruiting for {self._what()}.",
+			"Filled": f"{self._what()} is filled.",
+			"Not proceeding": f"HR is not proceeding with {self._what()}.",
+		}.get(self.hiring_status, f"{self._what()}: {self.hiring_status}.")
 		note = (self.hr_note or "").strip()
 		if note:
-			text += f". {note}"
+			# a refusal is followed by its reason; any other update by HR's remark
+			text = f"{text[:-1]}: {note}" if self.hiring_status == "Not proceeding" else f"{text} {note}"
 		self._send_notice(to_user, text)
 
 	def withdraw(self, reason: str | None = None) -> None:
@@ -344,7 +350,9 @@ class ManpowerRequest(Document, PWANotificationsMixin):
 		return self.employee_name or self.employee
 
 	def _what(self) -> str:
-		return f"{self.headcount} × {self.position_title}"
+		"""The title with the count after it, the mockup's form; just the title for one."""
+		count = cint(self.headcount)
+		return f"{self.position_title} ×{count}" if count > 1 else self.position_title
 
 	def _user_name(self, user: str) -> str:
 		return frappe.db.get_value("User", user, "full_name") or user
