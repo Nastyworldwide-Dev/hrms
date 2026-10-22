@@ -306,10 +306,11 @@ onBeforeUnmount(() => pending?.flush())
 	border: 2px solid var(--g-ink3);
 	color: var(--g-on-brand);
 }
+/* the glyph on a filled mark stays white in both themes, as on a tile */
 .mp-step--done .mp-mark {
 	background: var(--g-success-ink);
 	border-color: var(--g-success-ink);
-	color: #fff;
+	color: var(--g-tile-on-tile);
 }
 .mp-step--current .mp-mark {
 	border-color: var(--g-accent-ink);
@@ -318,17 +319,17 @@ onBeforeUnmount(() => pending?.flush())
 .mp-step--rejected .mp-mark {
 	background: var(--g-danger-ink);
 	border-color: var(--g-danger-ink);
-	color: #fff;
+	color: var(--g-tile-on-tile);
 }
 .mp-step--withdrawn .mp-mark {
 	background: var(--g-ink2);
 	border-color: var(--g-ink2);
-	color: #fff;
+	color: var(--g-tile-on-tile);
 }
 .mp-note {
 	margin-top: 4px;
 	padding: 6px 10px;
-	border-radius: 8px;
+	border-radius: var(--g-radius-well);
 	background: var(--g-track-solid);
 	font-size: 0.875rem;
 }
