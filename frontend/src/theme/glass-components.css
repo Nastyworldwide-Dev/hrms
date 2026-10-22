@@ -1155,6 +1155,22 @@ html[data-theme="dark"] .g-badge--open {
 	display: block;
 	width: 100%;
 }
+/* Search + filter on one row: the search takes the room, a filter is as wide as its choices.
+   `.g-field`'s 100% used to win over a Tailwind width, so the select took the row and the search
+   shrank to 82 px on both HR boards (design review of the manpower board, 22 Oct 2026). */
+.g-filter-row {
+	display: flex;
+	gap: 8px;
+}
+.g-filter-row > .g-search {
+	flex: 1;
+	min-width: 0;
+}
+.g-filter-row > .g-field {
+	flex: none;
+	width: auto;
+	max-width: 50%;
+}
 .g-field__label {
 	display: block;
 	margin-bottom: 6px;

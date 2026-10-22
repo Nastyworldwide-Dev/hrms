@@ -85,8 +85,16 @@ class _Request(mr.ManpowerRequest, FakeDocument):
 		return self._before_save
 
 
+#: HR's questions for the answer tests (validate rebuilds the answers from HR's settings). The default
+#: world asks none, so the tests of other rules are not refused for answers they never meant to give.
+HR_QUESTIONS = [
+	frappe._dict(step="5 Requirements", question=q, answer_type="Long text", required=1, active=1, idx=i)
+	for i, q in enumerate(("Draft job description", "Key deliverables"), 1)
+]
+
+
 @contextmanager
-def world(*, team=True, hr=False, employees=None, user="hafiz@example.com", me="EMP-HAFIZ"):
+def world(*, team=True, hr=False, employees=None, user="hafiz@example.com", me="EMP-HAFIZ", questions=None):
 	"""The database the rules read: who has a team, who is HR, the Employee rows.
 
 	The team rule is the one hrms.api.team.has_team asks (an Active Employee reporting
@@ -104,6 +112,13 @@ def world(*, team=True, hr=False, employees=None, user="hafiz@example.com", me="
 		stack.enter_context(patch.object(mr, "get_employee", return_value=me))
 		stack.enter_context(patch.object(mr, "sees_all_employee_data", return_value=hr))
 		stack.enter_context(patch.object(mr, "validate_filing_for_self", seen.filing))
+		stack.enter_context(
+			patch.object(
+				frappe,
+				"get_cached_doc",
+				return_value=SimpleNamespace(questions=questions or []),
+			)
+		)
 		yield seen
 
 
@@ -372,14 +387,20 @@ class TestRequiredAnswers(unittest.TestCase):
 
 	def test_validate_refuses_and_names_the_question(self):
 		doc = _Request(answers=[self.row("Draft job description", ""), self.row("Key deliverables", "")])
-		with world():
+		with world(questions=HR_QUESTIONS):
 			message = refusal(doc)
 		self.assertIn("Draft job description", message)
 		self.assertIn("Key deliverables", message)
 
 	def test_validate_passes_when_answered(self):
-		with world():
-			self.assertIsNone(refusal(_Request(answers=[self.row("Draft job description", "Weld pipes")])))
+		answers = [self.row("Draft job description", "Weld pipes"), self.row("Key deliverables", "On time")]
+		with world(questions=HR_QUESTIONS):
+			self.assertIsNone(refusal(_Request(answers=answers)))
+
+	def test_validate_asks_hrs_question_even_when_the_phone_left_it_out(self):
+		with world(questions=HR_QUESTIONS):
+			message = refusal(_Request(answers=[self.row("Draft job description", "Weld pipes")]))
+		self.assertEqual(message, "Please answer: Key deliverables")
 
 
 class TestAfterSend(unittest.TestCase):
@@ -721,3 +742,61 @@ class TestTheReplacedPersonIsNamed(unittest.TestCase):
 		self.assertTrue(fields["replacing_employee_name"].get("read_only"))
 		order = _doctype_json("manpower_request")["field_order"]
 		self.assertEqual(order.index("replacing_employee_name"), order.index("replacing_employee") + 1)
+
+
+class TestAnswersAreHrsQuestions(unittest.TestCase):
+	"""Frappe review of the HR report slice (22 Oct): the answer rows carried whatever question text the
+	phone sent, and the Desk report turns each distinct question into a column label. So a hand-made
+	request could add a junk column, or put markup in a header HR opens. The server now keeps only
+	answers to questions HR asked, and takes the question's words, type and required flag from HR's
+	settings — the answer is the only thing the sender supplies."""
+
+	SETTINGS: ClassVar[list] = [
+		frappe._dict(
+			step="5 Requirements",
+			question="Draft job description",
+			answer_type="Long text",
+			required=1,
+			active=1,
+			idx=1,
+		),
+		frappe._dict(
+			step="5 Requirements", question="KPIs", answer_type="Long text", required=0, active=1, idx=2
+		),
+		frappe._dict(
+			step="3 Why", question="Retired question", answer_type="Short text", required=1, active=0, idx=3
+		),
+	]
+
+	def test_only_hrs_questions_survive_and_keep_hrs_words(self):
+		sent = [
+			frappe._dict(
+				step="5",
+				question="Draft job description",
+				answer_type="Short text",
+				required=0,
+				answer="Weld pipes",
+			),
+			frappe._dict(
+				step="5",
+				question="<img src=x onerror=alert(1)>",
+				answer_type="Short text",
+				required=0,
+				answer="junk",
+			),
+			frappe._dict(step="5", question="KPIs", answer_type="Long text", required=0, answer=""),
+		]
+		kept = mr.answers_from_settings(sent, self.SETTINGS)
+		self.assertEqual([a["question"] for a in kept], ["Draft job description", "KPIs"])
+		self.assertEqual(kept[0]["answer"], "Weld pipes")
+		# HR's type and required flag, not the phone's
+		self.assertEqual((kept[0]["answer_type"], kept[0]["required"]), ("Long text", 1))
+		self.assertEqual(kept[0]["step"], "5 Requirements")
+
+	def test_a_required_question_left_out_entirely_is_still_asked(self):
+		kept = mr.answers_from_settings([], self.SETTINGS)
+		self.assertEqual(mr.required_answer_gaps(kept), ["Draft job description"])
+
+	def test_a_question_hr_switched_off_is_not_asked(self):
+		kept = mr.answers_from_settings([], self.SETTINGS)
+		self.assertNotIn("Retired question", [a["question"] for a in kept])

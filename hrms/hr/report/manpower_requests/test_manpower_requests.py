@@ -77,22 +77,23 @@ class TestFixedColumns(unittest.TestCase):
 		self.columns = report.fixed_columns()
 		self.by_name = {c["fieldname"]: c for c in self.columns}
 
-	def test_the_order_is_the_owners_list(self):
+	def test_the_order_is_the_owners_list_in_the_mockups_words(self):
+		# labels as the approved mockup (tab 7) writes them — design review of the report slice
 		self.assertEqual(
 			[c["label"] for c in self.columns],
 			[
-				"ID",
+				"Request",
 				"Position",
-				"Headcount",
+				"People needed",
 				"Department",
 				"Requested by",
 				"Status",
 				"Hiring status",
 				"Urgency",
 				"How soon",
-				"Band",
-				"Budgeted",
-				"Proposed",
+				"Pay band",
+				"Budgeted salary",
+				"Proposed salary",
 				"Location",
 				"Start date",
 				"Sent on",
@@ -139,6 +140,12 @@ class TestQuestionColumns(unittest.TestCase):
 	def test_a_question_with_no_letters_still_gets_a_usable_fieldname(self):
 		(column,) = report.question_columns([answer("A", "???", "x")])
 		self.assertRegex(column["fieldname"], r"^q_[a-z0-9_]+$")
+
+	def test_a_question_label_is_escaped_for_the_column_header(self):
+		# defence in depth (review of the report slice): answers now keep HR's own question words, but the
+		# header is HTML in Desk's datatable, so the label is escaped whatever reaches it
+		(column,) = report.question_columns([answer("A", "Pay <b>band</b> & grade", "x")])
+		self.assertEqual(column["label"], "Pay &lt;b&gt;band&lt;/b&gt; &amp; grade")
 
 	def test_a_fieldname_never_clashes_with_a_fixed_column(self):
 		fixed = {c["fieldname"] for c in report.fixed_columns()}

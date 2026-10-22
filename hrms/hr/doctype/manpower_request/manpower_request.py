@@ -77,6 +77,32 @@ def required_answer_gaps(rows) -> list[str]:
 	return gaps
 
 
+def answers_from_settings(sent, questions) -> list[dict]:
+	"""The answer rows a request keeps: one per ACTIVE question HR set, in HR's order, with HR's words,
+	type and required flag; only the answer comes from the sender. Pure, so it is tested directly.
+
+	Frappe review of the report slice (22 Oct 2026): the question text came from the phone, and the
+	Desk report makes a column of every distinct question, so a hand-made request could add a junk
+	column or markup to a header HR opens. A required question the sender left out entirely is still
+	asked, so `required_answer_gaps` refuses it."""
+	given = {(row.get("question") or "").strip(): row.get("answer") for row in sent or []}
+	kept = []
+	for question in sorted(
+		(q for q in questions or [] if cint(q.get("active"))), key=lambda q: q.get("idx") or 0
+	):
+		answer = given.get(question.question)
+		kept.append(
+			{
+				"step": question.step,
+				"question": question.question,
+				"answer_type": question.answer_type,
+				"required": 1 if cint(question.required) else 0,
+				"answer": "" if answer is None else str(answer).strip(),
+			}
+		)
+	return kept
+
+
 def board_group(status: str | None, hiring_status: str | None) -> str:
 	"""The list a request sits in. Open waits on the manager; Approved waits on HR until HR picks it
 	up (Waiting for HR, or nothing yet), then is Recruiting; every other ending is Done."""
@@ -268,6 +294,11 @@ class ManpowerRequest(Document, PWANotificationsMixin):
 				frappe.throw(_("{0} must be more than zero.").format(label))
 
 	def validate_answers(self):
+		# only while it is being written by its sender: HR's later edits to the settings never rewrite an
+		# old request (the answers are a copy of what was asked when it was sent)
+		if cint(self.docstatus) == 0 and self.status == "Open":
+			questions = frappe.get_cached_doc("Manpower Request Settings").questions
+			self.set("answers", answers_from_settings(self.answers, questions))
 		gaps = required_answer_gaps(self.answers)
 		if gaps:
 			frappe.throw(_("Please answer: {0}").format(", ".join(gaps)))

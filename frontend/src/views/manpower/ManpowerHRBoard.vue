@@ -29,15 +29,14 @@
 					<span>{{ hot.word }}</span>
 				</p>
 
-				<div class="flex gap-2">
+				<div class="g-filter-row">
 					<GSearchBar
 						v-model="search"
 						class="flex-1"
-						:placeholder="__('Search position or name')"
+						:placeholder="__('Search')"
 						:label="__('Search staff requests')"
 					/>
 					<GSelect
-						class="w-40"
 						:options="departmentOptions"
 						:model-value="department"
 						:placeholder="__('All departments')"

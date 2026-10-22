@@ -26,7 +26,7 @@
 				</div>
 
 				<!-- search + type filter -->
-				<div class="flex gap-2 px-4 pt-2.5">
+				<div class="g-filter-row px-4 pt-2.5">
 					<GSearchBar
 						v-model="search"
 						class="flex-1"
@@ -34,7 +34,6 @@
 						:label="__('Search issues')"
 					/>
 					<GSelect
-						class="w-32"
 						:options="ISSUE_TYPES.map((type) => ({ value: type, label: __(TYPE_SHORT[type]) }))"
 						:model-value="issueType"
 						:placeholder="__('All types')"
@@ -134,7 +133,11 @@
 						<div class="g-form-group">
 							<div class="g-form-row g-form-row--stacked">
 								<span class="g-form-row__label">{{ __("Internal HR notes") }}</span>
-								<GTextarea v-model="hrNotes" :aria-label="__('Internal HR notes')" :placeholder="__('Notes for the HR team…')" />
+								<GTextarea
+									v-model="hrNotes"
+									:aria-label="__('Internal HR notes')"
+									:placeholder="__('Notes for the HR team…')"
+								/>
 							</div>
 						</div>
 						<p class="g-form-footer">{{ __("Never shown to the employee.") }}</p>

@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from html import escape
 
 import frappe
 from frappe import _
@@ -43,18 +44,18 @@ def fixed_columns() -> list[dict]:
 		return column
 
 	return [
-		col("name", "ID", "Link", 150, DOCTYPE),
+		col("name", "Request", "Link", 150, DOCTYPE),
 		col("position_title", "Position", width=170),
-		col("headcount", "Headcount", "Int", 90),
+		col("headcount", "People needed", "Int", 90),
 		col("department", "Department", "Link", 160, "Department"),
 		col("employee_name", "Requested by", width=160),
 		col("status", "Status", width=100),
 		col("hiring_status", "Hiring status", width=130),
 		col("urgency", "Urgency", width=90),
 		col("how_soon", "How soon", width=120),
-		col("band", "Band", width=70),
-		col("budgeted_salary", "Budgeted", "Currency", 110),
-		col("proposed_salary", "Proposed", "Currency", 110),
+		col("band", "Pay band", width=80),
+		col("budgeted_salary", "Budgeted salary", "Currency", 130),
+		col("proposed_salary", "Proposed salary", "Currency", 130),
 		col("location", "Location", width=170),
 		col("start_date", "Start date", "Date", 100),
 		col("sent_on", "Sent on", "Date", 100),
@@ -87,7 +88,15 @@ def question_columns(answers) -> list[dict]:
 			fieldname, n = f"{base}_{n}", n + 1
 		taken.add(fieldname)
 		seen[question] = fieldname
-		columns.append({"fieldname": fieldname, "label": question, "fieldtype": "Data", "width": 160})
+		# the header is HTML in Desk's datatable: escape what was typed in Settings
+		columns.append(
+			{
+				"fieldname": fieldname,
+				"label": escape(question, quote=False),
+				"fieldtype": "Data",
+				"width": 160,
+			}
+		)
 	return columns
 
 
