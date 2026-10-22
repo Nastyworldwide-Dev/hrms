@@ -1,26 +1,39 @@
-# Cost Tag/Center allocation with Year/Month, 22 Oct 2026
+# Manpower Request in Nadi, 22 Oct 2026
 
-Owner: "rename that to cost tag/center allocation. adjust the doctype, field. the table must have
-new collumn, its called year/month". Answers: 3 columns; a month with no rows carries the latest
-earlier month's split forward; labels only (internal names stay).
+Full spec + owner rulings: .claude/plans/manpower-plan.md (rounds 1-2). Code map: .claude/plans/manpower-map.md.
 
-APPROVED: owner, 22 Oct 2026 — "3 columns (Recommended)", "Carry forward (Recommended)", "Labels only (Recommended)"
+APPROVED: owner, 22 Oct 2026 — "mockup is nice, so the plan is this will fall under like the same other request" … "aite lets do thissss"
 
 FLOW
-1. Child doctype Employee Interco Allocation: new first column `allocation_month` (Date, label
-   "Year/Month", required); `territory` label -> "Cost Tag/Center".
-2. Employee section + table labels -> "Cost Tag/Center Allocation" (setup.py; sync patch line bumped).
-3. Validate (Employee.validate): month saved as the 1st; per month rows total 100%; a cost tag
-   once per month; percentage > 0; empty table allowed.
-4. Report "Intercompany Salary Cost Allocation": each slip uses the split of the latest month
-   on or before the slip's month (end_date); none -> one unallocated row. Labels renamed.
-5. Patch stamps existing rows with the employee's joining month (fallback: row creation), so
-   today's report output is unchanged.
-No push, no deploy. Needs migrate.
+1. New submittable doctype Manpower Request (HR module), shaped like Compensatory Leave Request:
+   employee + status Open/Approved/Rejected/Withdrawn, decided through the existing decide() path.
+   Job Requisition / Staffing Plan / Job Opening untouched.
+2. Questions are data: Manpower Request Settings (Single) holds a question table HR edits in Desk;
+   a patch seeds it from the MS form. Answers copied onto each request (child table) at Send.
+   Fixed fields (logic + reports read them): department, position, headcount, location (+Other),
+   employment type, new/replacement (+staff, same department, leavers of 6 months), how soon
+   (urgency derived: 2 weeks High, 3-4 weeks Medium, 1-2 months Low), start date (optional, future),
+   justification, band, budgeted + proposed salary.
+3. Only senders with an active direct report (team.has_team) may file; server enforces.
+4. Routing = the sender's approval line (get_designated_approvers, leave pair), like Comp Leave.
+   After Approved: hiring_status Waiting for HR -> Recruiting -> Filled / Not proceeding (HR only).
+5. Notifications: approver on send; HR on send (FYI) and on approval (action); requester on every
+   decision / hiring change; approver + HR on withdraw.
+6. Withdraw by the sender while Open, Approved or Recruiting: status Withdrawn, record kept.
+7. Nadi: + sheet entry (team only), 6-step wizard, list rows, progress tracker detail, withdraw;
+   HR monitoring screen (Issue Board pattern). Desk: Script Report "Manpower Requests" (filters,
+   answers pivoted, days open / to approve, export).
+Slices: S1 doctypes+controller+settings+scope · S2 approval/notify/withdraw/HR API ·
+S3 Nadi wizard+list+detail · S4 HR monitoring Nadi + Desk report. One release after S4; needs migrate.
 
-MOCKUP: NOT NEEDED (Desk form: one new grid column and renamed labels; no new screen)
+MOCKUP: /home/nabil/nz-version-16/mockups/mockup-manpower-request.html
+DESIGN SKILLS: NONE (existing Glass design system in frontend/src/components/glass and the approved mockup are the design contract; Desk parts use stock Frappe)
 
 EXPECTED OUTPUT
-- Employee > Overview: section "Cost Tag/Center Allocation"; grid Year/Month | Cost Tag/Center | Percentage.
-- Saving Oct 60/40 + Jan 100 works; Oct 60/30 refuses "must total 100% for Oct 2026".
-- Report for Nov slip uses the Oct split; a Sep slip before any month shows unallocated.
+- Hafiz (has reports): Requests -> + lists Manpower; a junior's + does not; the API refuses a junior.
+- Wizard: 6 steps; Next blocked with a reason per step; Replacement lists his department + recent leavers;
+  Location Other demands "Where will they work?"; Review then Send.
+- His manager: Approvals page + Home count + push; Approve/Reject. HR: notice on send and on approval.
+- Hafiz: progress tracker Sent -> Manager -> HR -> Filled; Withdraw while open/approved/recruiting.
+- HR: Nadi monitoring (Waiting for manager / Needs HR / Recruiting / Done) + Desk report with export.
+- Other staff cannot read a manpower request (salary private).

@@ -1,0 +1,361 @@
+{
+ "actions": [],
+ "autoname": "HR-MPR-.YY.-.MM.-.#####",
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "company",
+  "department",
+  "column_break_position",
+  "position_title",
+  "headcount",
+  "employment_type",
+  "section_break_type",
+  "request_type",
+  "replacing_employee",
+  "section_break_where",
+  "location",
+  "location_other",
+  "column_break_when",
+  "how_soon",
+  "urgency",
+  "start_date",
+  "section_break_why",
+  "justification",
+  "section_break_pay",
+  "band",
+  "budgeted_salary",
+  "column_break_pay",
+  "proposed_salary",
+  "section_break_answers",
+  "answers",
+  "section_break_status",
+  "status",
+  "hiring_status",
+  "column_break_status",
+  "hr_note",
+  "withdrawn_reason",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "description": "The person sending the request (the hiring manager). Fixed once saved.",
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_standard_filter": 1,
+   "label": "Department",
+   "options": "Department",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_position",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "position_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Position Title",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "headcount",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Headcount",
+   "reqd": 1
+  },
+  {
+   "fieldname": "employment_type",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Employment Type",
+   "options": "\nFull-Time\nContract\nPart-Time\nInternship",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_type",
+   "fieldtype": "Section Break",
+   "label": "Type"
+  },
+  {
+   "fieldname": "request_type",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Request Type",
+   "options": "\nNew Headcount\nReplacement\nProject-Based\nBusiness Expansion",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.request_type==\"Replacement\"",
+   "description": "Someone in the same department who is still here, or left in the last 6 months.",
+   "fieldname": "replacing_employee",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "label": "Staff Being Replaced",
+   "mandatory_depends_on": "eval:doc.request_type==\"Replacement\"",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "section_break_where",
+   "fieldtype": "Section Break",
+   "label": "Where and When"
+  },
+  {
+   "description": "Leave empty and fill the box below when the site is not in the list.",
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "label": "Location",
+   "options": "Shift Location"
+  },
+  {
+   "depends_on": "eval:!doc.location",
+   "fieldname": "location_other",
+   "fieldtype": "Small Text",
+   "label": "Where, if not in the list"
+  },
+  {
+   "fieldname": "column_break_when",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "how_soon",
+   "fieldtype": "Select",
+   "label": "How Soon",
+   "options": "\nWithin 2 weeks\n3–4 weeks\n1–2 months",
+   "reqd": 1
+  },
+  {
+   "description": "Worked out from How Soon.",
+   "fieldname": "urgency",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Urgency",
+   "options": "\nHigh\nMedium\nLow",
+   "read_only": 1
+  },
+  {
+   "description": "Optional. Must be after today.",
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "section_break_why",
+   "fieldtype": "Section Break",
+   "label": "Why"
+  },
+  {
+   "fieldname": "justification",
+   "fieldtype": "Small Text",
+   "label": "Justification",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_pay",
+   "fieldtype": "Section Break",
+   "label": "Pay"
+  },
+  {
+   "fieldname": "band",
+   "fieldtype": "Select",
+   "label": "Band",
+   "options": "\nB\nC\nD\nE1\nE2\nF",
+   "reqd": 1
+  },
+  {
+   "fieldname": "budgeted_salary",
+   "fieldtype": "Currency",
+   "label": "Budgeted Salary",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_pay",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "proposed_salary",
+   "fieldtype": "Currency",
+   "label": "Proposed Salary",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_answers",
+   "fieldtype": "Section Break",
+   "label": "Answers"
+  },
+  {
+   "fieldname": "answers",
+   "fieldtype": "Table",
+   "label": "Answers",
+   "options": "Manpower Request Answer"
+  },
+  {
+   "fieldname": "section_break_status",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Open\nApproved\nRejected\nWithdrawn",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "hiring_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Hiring Status",
+   "no_copy": 1,
+   "options": "\nWaiting for HR\nRecruiting\nFilled\nNot proceeding",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "hr_note",
+   "fieldtype": "Small Text",
+   "label": "HR Note",
+   "no_copy": 1,
+   "permlevel": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "withdrawn_reason",
+   "fieldtype": "Small Text",
+   "label": "Withdrawn Reason",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Manpower Request",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Manpower Request",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Employee",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "HR User",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "position_title",
+ "track_changes": 1
+}

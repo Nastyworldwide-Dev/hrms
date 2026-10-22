@@ -148,3 +148,4 @@ hrms.patches.v16_0.add_time_slip_reason #2026-10-14 owner: a late arrival excuse
 hrms.patches.v16_0.make_general_sops_group_wide #2026-10-15 owner: General SOPs reach every company; ones posted before alpha.51 carried HR's own company
 hrms.patches.v16_0.mark_pushed_announcements #2026-10-19 alpha.57: notices pushed before the deploy are marked, so the new daily job does not push them a second time
 hrms.patches.v16_0.stamp_cost_allocation_month #2026-10-22 owner: cost split per Year/Month; old rows apply from the joining month
+hrms.patches.v16_0.seed_manpower_request_questions #2026-10-22 owner: Manpower Request questions are data HR edits in Desk; seeded from the MS Manpower Requisition Form

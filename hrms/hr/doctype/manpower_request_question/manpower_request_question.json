@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "step",
+  "question",
+  "answer_type",
+  "required",
+  "active",
+  "choices",
+  "help"
+ ],
+ "fields": [
+  {
+   "default": "5 Requirements",
+   "description": "Which page of the request form asks it.",
+   "fieldname": "step",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Step",
+   "options": "1 Position\n2 Type\n3 Why\n4 Pay\n5 Requirements",
+   "reqd": 1
+  },
+  {
+   "fieldname": "question",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Question",
+   "reqd": 1
+  },
+  {
+   "default": "Short text",
+   "fieldname": "answer_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Answer Type",
+   "options": "Short text\nLong text\nChoice\nNumber\nMoney\nDate\nYes-No",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "The request cannot be sent until this is answered.",
+   "fieldname": "required",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Required"
+  },
+  {
+   "default": "1",
+   "description": "Untick to stop asking it. Requests already sent keep their answer.",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Active"
+  },
+  {
+   "depends_on": "eval:doc.answer_type==\"Choice\"",
+   "description": "One choice per line.",
+   "fieldname": "choices",
+   "fieldtype": "Small Text",
+   "label": "Choices"
+  },
+  {
+   "description": "A short line shown under the question.",
+   "fieldname": "help",
+   "fieldtype": "Small Text",
+   "label": "Help"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Manpower Request Question",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

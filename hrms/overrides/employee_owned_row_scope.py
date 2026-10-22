@@ -70,6 +70,9 @@ OWNED_DOCTYPES: dict[str, tuple[str, ...]] = {
 	"Attendance Request": ("employee",),
 	"Compensatory Leave Request": ("employee",),
 	"Employee Checkin": ("employee",),
+	# Salary is on it: the sender, the approver it was shared with, and HR only (owner, 22 Oct 2026).
+	# The line approver reads through the DocShare made when it was sent, not through reports_to.
+	"Manpower Request": ("employee",),
 	"Remote Checkin Request": ("employee",),
 	"Shift Assignment": ("employee",),
 	"Shift Schedule Assignment": ("employee",),
