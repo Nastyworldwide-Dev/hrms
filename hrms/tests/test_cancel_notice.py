@@ -64,6 +64,7 @@ DECISION_FIELD = {
 	"OT Request": "status",
 	"Replacement Leave Claim": "status",
 	"Compensatory Leave Request": "status",
+	"Manpower Request": "status",
 }
 # The pair approval_reminders and the approval routing hand to get_designated_approvers.
 APPROVER_PAIR = {
@@ -74,6 +75,7 @@ APPROVER_PAIR = {
 	"OT Request": ("leave_approver", "leave_approvers"),
 	"Replacement Leave Claim": ("leave_approver", "leave_approvers"),
 	"Compensatory Leave Request": ("leave_approver", "leave_approvers"),
+	"Manpower Request": ("leave_approver", "leave_approvers"),
 }
 KIND = {
 	"Leave Application": "leave",
@@ -83,6 +85,7 @@ KIND = {
 	"OT Request": "overtime claim",
 	"Replacement Leave Claim": "replacement leave claim",
 	"Compensatory Leave Request": "time-off-in-lieu request",
+	"Manpower Request": "manpower request",
 }
 # Every on_cancel handler that was wired BEFORE this notice, per doctype.
 EXISTING_ON_CANCEL = {

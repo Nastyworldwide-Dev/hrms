@@ -94,6 +94,7 @@ PWA_DETAIL_PATHS = {
 	"Shift Assignment": "shift-assignments",
 	"OT Request": "ot-requests",
 	"Employee Issue": "issues",
+	"Manpower Request": "manpower-requests",
 }
 
 

@@ -52,12 +52,12 @@ class TestSeedManpowerRequestQuestions(unittest.TestCase):
 			[(r.question, r.step, r.answer_type, r.required) for r in rows],
 			[
 				("Draft job description", "5 Requirements", "Long text", 1),
-				("Key deliverables / KPIs", "5 Requirements", "Long text", 0),
+				("KPIs", "5 Requirements", "Long text", 0),
 				("Minimum qualification", "5 Requirements", "Choice", 0),
-				("Years of relevant experience", "5 Requirements", "Choice", 0),
+				("Experience", "5 Requirements", "Choice", 0),
 				("Industry experience required", "5 Requirements", "Choice", 0),
 				("If other, which industry", "5 Requirements", "Short text", 0),
-				("Business impact if delayed", "3 Why", "Long text", 0),
+				("What happens if it is late?", "3 Why", "Long text", 0),
 			],
 		)
 
@@ -68,7 +68,7 @@ class TestSeedManpowerRequestQuestions(unittest.TestCase):
 			["Diploma", "Bachelor's Degree", "Professional Certification", "SPM / O' Level"],
 		)
 		self.assertEqual(
-			rows["Years of relevant experience"].choices.split("\n"),
+			rows["Experience"].choices.split("\n"),
 			["Fresh Graduate", "1–3 years", "3–5 years", "5+ years"],
 		)
 		self.assertEqual(rows["Industry experience required"].choices.split("\n"), ["Yes", "No", "Other"])

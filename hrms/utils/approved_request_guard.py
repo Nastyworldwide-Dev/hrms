@@ -87,6 +87,7 @@ DECISION_FIELD_BY_DOCTYPE = {
 	"Replacement Leave Claim": "status",
 	# decides in status since 15 Sep 2026 (Reject button); a rejection grants nothing
 	"Compensatory Leave Request": "status",
+	"Manpower Request": "status",
 	"Employee Advance": None,
 	"Travel Request": None,
 }

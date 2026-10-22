@@ -78,6 +78,8 @@ DESIGNATED_APPROVER_DOCTYPES = {
 	"Expense Claim": ("expense_approver", "expense_approvers"),
 	"Shift Request": ("shift_request_approver", "shift_request_approver"),
 	"Compensatory Leave Request": ("leave_approver", "leave_approvers"),
+	# 22 Oct 2026: the sender's own approval line decides, one level, like Compensatory Leave.
+	"Manpower Request": ("leave_approver", "leave_approvers"),
 }
 
 #: doctype -> the HR Settings tickbox that used to be the WHOLE self-approval
@@ -281,6 +283,8 @@ DECIDE_THEN_SUBMIT = {
 	# approving, so the approver could not decline. Its on_submit grants the
 	# Leave Allocation days only when Approved, like the three above.
 	"Compensatory Leave Request": ("status", "Open"),
+	# 22 Oct 2026. Submitting records the decision only; hiring is HR's step after it.
+	"Manpower Request": ("status", "Open"),
 }
 
 #: The only values `decide` will write. Cancellation is a different operation

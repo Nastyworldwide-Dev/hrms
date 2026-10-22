@@ -63,6 +63,8 @@ OWN_DATES = {
 	"Expense Claim": ("posting_date", "posting_date"),
 	"Replacement Leave Claim": ("bank_month", "bank_month"),
 	"Compensatory Leave Request": ("work_from_date", "work_end_date"),
+	# no date of its own: the day it was sent is the day the page filters on
+	"Manpower Request": ("creation", "creation"),
 }
 
 #: The person's word for each type (glossary: "Time off", "Overtime" …).
@@ -74,6 +76,7 @@ KIND = {
 	"OT Request": "Overtime",
 	"Replacement Leave Claim": "Replacement leave",
 	"Compensatory Leave Request": "Time off in lieu",
+	"Manpower Request": "Manpower",
 }
 
 
@@ -330,6 +333,9 @@ def _row(
 	elif doc.doctype == "Compensatory Leave Request":
 		detail = doc.get("leave_type") or ""
 		reason = doc.get("reason") or ""
+	elif doc.doctype == "Manpower Request":
+		detail = f"{doc.get('position_title')} ×{doc.get('headcount')} · {_COMPANY_SUFFIX.sub('', doc.get('department') or '')}"
+		reason = doc.get("justification") or ""
 	return {
 		"doctype": doc.doctype,
 		"name": doc.name,

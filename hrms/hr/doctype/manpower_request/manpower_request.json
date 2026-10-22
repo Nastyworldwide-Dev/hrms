@@ -38,6 +38,7 @@
   "column_break_status",
   "hr_note",
   "withdrawn_reason",
+  "withdrawn_at",
   "amended_from"
  ],
  "fields": [
@@ -180,7 +181,7 @@
   {
    "fieldname": "justification",
    "fieldtype": "Small Text",
-   "label": "Justification",
+   "label": "Why do you need this hire?",
    "reqd": 1
   },
   {
@@ -276,6 +277,13 @@
    "no_copy": 1,
    "options": "Manpower Request",
    "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "withdrawn_at",
+   "fieldtype": "Datetime",
+   "label": "Withdrawn At",
+   "no_copy": 1,
    "read_only": 1
   }
  ],

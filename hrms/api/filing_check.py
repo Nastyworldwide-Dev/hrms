@@ -30,6 +30,7 @@ FILABLE = (
 	"Shift Request",
 	"Attendance Request",
 	"Compensatory Leave Request",
+	"Manpower Request",
 )
 
 #: The controller's refusal, by exception class, in the filer's words.

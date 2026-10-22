@@ -627,6 +627,12 @@ doc_events = {
 			"hrms.sync.write_block.block_transactions_for_mirrored_employee",
 		],
 	},
+	# Not mirrored (no write_block entries): a manager's staffing ask, nothing on the hub's ledgers.
+	"Manpower Request": {
+		"on_cancel": "hrms.utils.cancel_notice.notify_cancelled",
+		"validate": "hrms.utils.decision_field_guard.validate",
+		"before_cancel": "hrms.utils.approved_request_guard.block_cancel_of_approved",
+	},
 	"Leave Allocation": {
 		"validate": "hrms.sync.write_block.block_mirrored_writes",
 		"before_update_after_submit": "hrms.sync.write_block.block_mirrored_writes",

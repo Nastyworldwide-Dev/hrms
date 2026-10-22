@@ -63,6 +63,8 @@ ROW_COPY = {
 		"compensatory leave requests",
 		"LeaveApplicationListView",
 	),
+	# The route is built in the Nadi slice (S3) under exactly this name.
+	"Manpower Request": ("manpower request", "manpower requests", "ManpowerRequestListView"),
 }
 
 

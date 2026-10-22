@@ -57,6 +57,7 @@ DECISION_FIELD = {
 	"OT Request": "status",
 	"Replacement Leave Claim": "status",
 	"Compensatory Leave Request": "status",
+	"Manpower Request": "status",
 }
 # No decision field: submitting IS approving.
 SUBMIT_IS_APPROVAL = ("Employee Advance", "Travel Request")

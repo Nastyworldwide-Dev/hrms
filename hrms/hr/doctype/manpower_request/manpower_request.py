@@ -13,16 +13,18 @@ sender, the approver it was shared with, and HR (salary is on it).
 """
 
 import logging
+from html import escape
 
 from dateutil.relativedelta import relativedelta
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, flt, getdate
+from frappe.utils import cint, flt, getdate, now_datetime
 
 from hrms.hr.utils import (
 	get_designated_approvers,
+	is_own_employee,
 	sees_all_employee_data,
 	share_doc_with_approver,
 	validate_active_employee,
@@ -30,6 +32,7 @@ from hrms.hr.utils import (
 	validate_self_submission,
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
+from hrms.overrides.remote_checkin_request_hooks import hr_alert_recipients
 from hrms.utils.identity import get_employee, normalize_login
 
 logger = logging.getLogger(__name__)
@@ -46,6 +49,15 @@ URGENCY_BY_HOW_SOON = {
 REPLACEMENT_LEAVER_MONTHS = 6
 
 NOT_A_MANAGER = "Only someone with a team can request manpower."
+
+#: The sender may take a request back while HR has not finished with it (owner, 22 Oct 2026).
+WITHDRAWABLE_HIRING = ("Waiting for HR", "Recruiting")
+
+#: HR's last words on a request: only a System Manager reopens one of these.
+CLOSED_HIRING = ("Filled", "Not proceeding")
+
+#: Longest withdraw reason kept (characters). ceiling: 500, upgrade: staff report a cut-off reason
+WITHDRAW_REASON_MAX = 500
 
 
 def urgency_for(how_soon: str | None) -> str | None:
@@ -65,6 +77,81 @@ def required_answer_gaps(rows) -> list[str]:
 	return gaps
 
 
+def _last_change(changes: list[dict], field: str, new: str) -> dict:
+	"""The latest recorded change of `field` to `new`, or {}."""
+	for change in reversed(changes or []):
+		if change.get("field") == field and change.get("new") == new:
+			return change
+	return {}
+
+
+def _step(key: str, label: str, state: str, who=None, at=None, note=None) -> dict:
+	return {"key": key, "label": label, "who": who, "at": at, "state": state, "note": note or None}
+
+
+def build_progress(request: dict, changes: list[dict]) -> list[dict]:
+	"""The tracker: Sent -> Manager -> HR -> Filled, each step saying who, when and where it stands.
+
+	Pure, over plain dicts, so it is tested directly. `request` carries employee_name, creation,
+	status, docstatus, hiring_status, hr_note, approver_name, rejection_reason, withdrawn_reason,
+	withdrawn_at. `changes` is the request's recorded history, oldest first, one dict per change of
+	`status` or `hiring_status`: {field, old, new, by (a name), at}. state is done | current |
+	waiting | rejected | withdrawn.
+	"""
+	status = request.get("status")
+	hiring = request.get("hiring_status")
+	withdrawn = status == "Withdrawn"
+	# only an approved request can be withdrawn at docstatus 1, so that one WAS approved
+	approved = status == "Approved" or (withdrawn and cint(request.get("docstatus")) == 1)
+	sender = request.get("employee_name")
+	gone = (sender, request.get("withdrawn_at"), request.get("withdrawn_reason"))
+
+	steps = [_step("sent", _("Sent"), "done", sender, request.get("creation"))]
+
+	decided = _last_change(changes, "status", "Approved" if approved else "Rejected")
+	if status == "Rejected":
+		manager = _step(
+			"manager",
+			_("Manager"),
+			"rejected",
+			decided.get("by"),
+			decided.get("at"),
+			request.get("rejection_reason"),
+		)
+	elif approved:
+		manager = _step("manager", _("Manager"), "done", decided.get("by"), decided.get("at"))
+	elif withdrawn:
+		manager = _step("manager", _("Manager"), "withdrawn", *gone)
+	else:
+		manager = _step("manager", _("Manager"), "current", request.get("approver_name"))
+	steps.append(manager)
+
+	if not approved:
+		hr = _step("hr", _("HR"), "waiting")
+	elif withdrawn:
+		hr = _step("hr", _("HR"), "withdrawn", *gone)
+	elif hiring == "Not proceeding":
+		said = _last_change(changes, "hiring_status", hiring)
+		hr = _step("hr", _("HR"), "rejected", said.get("by"), said.get("at"), request.get("hr_note"))
+	else:
+		# Filled still names the HR person who started recruiting; Waiting for HR has nobody yet
+		# (that value is written by the approver's submit, not by HR)
+		moved = (
+			_last_change(changes, "hiring_status", "Recruiting") if hiring in ("Recruiting", "Filled") else {}
+		)
+		hr = _step(
+			"hr", _("HR"), "done" if hiring == "Filled" else "current", moved.get("by"), moved.get("at")
+		)
+	steps.append(hr)
+
+	if approved and not withdrawn and hiring == "Filled":
+		filled = _last_change(changes, "hiring_status", "Filled")
+		steps.append(_step("filled", _("Filled"), "done", filled.get("by"), filled.get("at")))
+	else:
+		steps.append(_step("filled", _("Filled"), "waiting"))
+	return steps
+
+
 def can_file_manpower_request(employee: str | None) -> bool:
 	"""May `employee` send a manpower request? HR may for anyone; everyone else needs an
 	Active direct report (the same question hrms.api.team.has_team asks of the Team page)."""
@@ -81,6 +168,7 @@ class ManpowerRequest(Document, PWANotificationsMixin):
 
 	def validate(self):
 		validate_active_employee(self.employee)
+		self.validate_not_withdrawn_by_save()
 		if self.is_new():
 			# `employee` is set-only-once, so the subject is decided here and nowhere else
 			validate_filing_for_self(self)
@@ -94,6 +182,16 @@ class ManpowerRequest(Document, PWANotificationsMixin):
 		self.validate_start_date()
 		self.validate_salaries()
 		self.validate_answers()
+		if self.hiring_status and cint(self.docstatus) == 0:
+			frappe.throw(_("Hiring status opens once the manager approves."))
+
+	def validate_not_withdrawn_by_save(self):
+		"""Withdrawn is reached through `withdraw()` only, which writes it past validate. A save
+		that sets it is a decision-field write by someone who is not deciding."""
+		previous = self.get_doc_before_save()
+		if self.status == "Withdrawn" and (previous is None or previous.get("status") != "Withdrawn"):
+			logger.warning("[manpower] %s: a save tried to set Withdrawn, refused", self.name)
+			frappe.throw(_("Use Withdraw to take a request back."), frappe.PermissionError)
 
 	def validate_headcount(self):
 		if cint(self.headcount) < 1:
@@ -163,6 +261,8 @@ class ManpowerRequest(Document, PWANotificationsMixin):
 		logger.info("[manpower] %s sent by %s, approver %s", self.name, self.employee, approver)
 		share_doc_with_approver(self, approver)
 		self.notify_approver()
+		waiting = self._user_name(approver) if approver else _("their manager")
+		self._notify_hr(f"{self._who()} asked for {self._what()} ({self.department}). Waiting for {waiting}.")
 
 	def on_submit(self):
 		# the sender must never be the submitter, HR included (as Compensatory Leave Request)
@@ -175,3 +275,106 @@ class ManpowerRequest(Document, PWANotificationsMixin):
 		logger.info("[manpower] %s %s by %s", self.name, self.status, frappe.session.user)
 		if self.status == "Approved":
 			self.db_set("hiring_status", "Waiting for HR")
+		self.notify_approval_status()
+		if self.status == "Approved":
+			self._notify_hr(
+				f"{self._user_name(frappe.session.user)} approved {self._what()} for {self._who()}. Your turn."
+			)
+
+	def before_update_after_submit(self):
+		"""HR's hiring status: only on an approved request, final once Filled / Not proceeding."""
+		if not self.has_value_changed("hiring_status"):
+			return
+		if not (cint(self.docstatus) == 1 and self.status == "Approved"):
+			frappe.throw(_("Only an approved request has a hiring status."))
+		if not self.hiring_status:
+			frappe.throw(_("Pick a hiring status."))
+		previous = self.get_doc_before_save()
+		was = previous.get("hiring_status") if previous else None
+		if was in CLOSED_HIRING and "System Manager" not in frappe.get_roles():
+			frappe.throw(
+				_("This request is closed ({0}). Only a System Manager can reopen it.").format(_(was))
+			)
+		if self.hiring_status == "Not proceeding" and not (self.hr_note or "").strip():
+			frappe.throw(_("Say why it is not proceeding."))
+
+	def on_update_after_submit(self):
+		"""Tell the sender when HR moves the hiring status (and why, when HR wrote a note)."""
+		if not self.has_value_changed("hiring_status"):
+			return
+		to_user = self._get_employee_user()
+		if not to_user or normalize_login(to_user) == normalize_login(frappe.session.user):
+			return
+		text = f"Manpower request {self.name}: {self.hiring_status}"
+		note = (self.hr_note or "").strip()
+		if note:
+			text += f". {note}"
+		self._send_notice(to_user, text)
+
+	def withdraw(self, reason: str | None = None) -> None:
+		"""The sender takes the request back. The record is kept.
+
+		Written with db_set, past validate: Withdrawn is not a decision, so the decision-field
+		guard has nothing to say, and `status` need not be editable after submit. A plain save
+		that sets Withdrawn is refused (validate_not_withdrawn_by_save); this is the one door.
+		"""
+		if not is_own_employee(self.employee):
+			logger.warning(
+				"[manpower] %s: %s is not the sender, withdraw refused", self.name, frappe.session.user
+			)
+			frappe.throw(_("Only the person who sent this request can withdraw it."), frappe.PermissionError)
+		was_open = cint(self.docstatus) == 0 and self.status == "Open"
+		approved_live = (
+			cint(self.docstatus) == 1
+			and self.status == "Approved"
+			and self.hiring_status in WITHDRAWABLE_HIRING
+		)
+		if not (was_open or approved_live):
+			frappe.throw(_("This request can no longer be withdrawn."))
+		reason = (reason or "").strip()[:WITHDRAW_REASON_MAX] or None
+		self.db_set({"status": "Withdrawn", "withdrawn_reason": reason, "withdrawn_at": now_datetime()})
+		logger.info("[manpower] %s withdrawn by %s (was open: %s)", self.name, frappe.session.user, was_open)
+		message = f"{self._who()} withdrew the request for {self._what()}."
+		approver = self._get_doc_approver() if was_open else None
+		if approver and normalize_login(approver) != normalize_login(frappe.session.user):
+			self._send_notice(approver, message)
+		self._notify_hr(message)
+
+	def _who(self) -> str:
+		return self.employee_name or self.employee
+
+	def _what(self) -> str:
+		return f"{self.headcount} × {self.position_title}"
+
+	def _user_name(self, user: str) -> str:
+		return frappe.db.get_value("User", user, "full_name") or user
+
+	def _send_notice(self, to_user: str, message: str) -> bool:
+		"""One PWA Notification about this request. Plain text, escaped, in the Text Editor's <p>
+		(a bare string is stripped to nothing there). Logged and False when it cannot be written:
+		a notice must not undo the work around it."""
+		try:
+			notice = frappe.new_doc("PWA Notification")
+			notice.from_user = frappe.session.user
+			notice.to_user = to_user
+			notice.message = f"<p>{escape(message, quote=False)}</p>"
+			notice.reference_document_type = self.doctype
+			notice.reference_document_name = self.name
+			notice.insert(ignore_permissions=True)
+			return True
+		except Exception:
+			logger.exception("[manpower] could not tell %s about %s", to_user, self.name)
+			return False
+
+	def _notify_hr(self, message: str) -> int:
+		"""Every enabled HR Manager / HR User whose company fence admits this request, minus the
+		sender. Returns how many were told."""
+		company = self.company or frappe.db.get_value("Employee", self.employee, "company")
+		sender = normalize_login(self._get_employee_user())
+		told = sum(
+			self._send_notice(user, message)
+			for user in hr_alert_recipients(company)
+			if normalize_login(user) != sender
+		)
+		logger.info("[manpower] %s: HR told (%d) for company %s", self.name, told, company)
+		return told

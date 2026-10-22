@@ -20,6 +20,7 @@ hrms.approved_request_cancel.APPROVED_CANCEL_DOCTYPES = [
 	"OT Request",
 	"Replacement Leave Claim",
 	"Compensatory Leave Request",
+	"Manpower Request",
 	"Employee Advance",
 	"Travel Request",
 ];

@@ -100,6 +100,7 @@ class PWANotificationsMixin:
 			"Replacement Leave Claim": "status",
 			"Attendance Request": "status",
 			"Compensatory Leave Request": "status",
+			"Manpower Request": "status",
 		}
 		return APPROVAL_STATUS_FIELD[self.doctype]
 

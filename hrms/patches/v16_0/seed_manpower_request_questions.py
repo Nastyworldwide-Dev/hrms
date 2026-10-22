@@ -24,7 +24,7 @@ QUESTIONS = (
 		"answer_type": "Long text",
 		"required": 1,
 	},
-	{"step": STEP_REQUIREMENTS, "question": "Key deliverables / KPIs", "answer_type": "Long text"},
+	{"step": STEP_REQUIREMENTS, "question": "KPIs", "answer_type": "Long text"},
 	{
 		"step": STEP_REQUIREMENTS,
 		"question": "Minimum qualification",
@@ -33,7 +33,7 @@ QUESTIONS = (
 	},
 	{
 		"step": STEP_REQUIREMENTS,
-		"question": "Years of relevant experience",
+		"question": "Experience",
 		"answer_type": "Choice",
 		"choices": "Fresh Graduate\n1–3 years\n3–5 years\n5+ years",
 	},
@@ -44,7 +44,7 @@ QUESTIONS = (
 		"choices": "Yes\nNo\nOther",
 	},
 	{"step": STEP_REQUIREMENTS, "question": "If other, which industry", "answer_type": "Short text"},
-	{"step": STEP_WHY, "question": "Business impact if delayed", "answer_type": "Long text"},
+	{"step": STEP_WHY, "question": "What happens if it is late?", "answer_type": "Long text"},
 )
 
 
