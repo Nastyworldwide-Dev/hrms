@@ -30,13 +30,17 @@ BOSS = "boss@example.com"
 # The live leave balance needs the leave controller and a database. Tests that are not about it get
 # "no number", which is what a leave without pay gets; the ones that are patch their own value.
 _NO_BALANCE = patch.object(approvals_list, "_leave_balance_now", return_value=None)
+# The approval line walks the org chart; tests that are not about it get "nobody on the line".
+_NO_LINE = patch.object(approvals_list, "get_designated_approvers", return_value=[], create=True)
 
 
 def setUpModule():
 	_NO_BALANCE.start()
+	_NO_LINE.start()
 
 
 def tearDownModule():
+	_NO_LINE.stop()
 	_NO_BALANCE.stop()
 
 
@@ -561,6 +565,24 @@ class TestGroupedApprovals(unittest.TestCase):
 		# Access is the two gates, unchanged: a row they refuse is not listed, sent to me or not.
 		names = set(self._list(routed=lambda doc: doc.name != "OT-REPORT"))
 		self.assertEqual(names, {"LA-MINE", "AR-LEAVE", "RCR-SHIFT", "RCR-STAMPED"})
+
+	def test_a_request_whose_first_approver_left_is_sent_to_the_next_one_up(self):
+		# REPORTED 22 Oct 2026: a request whose approver had left sat on nobody's page. The line
+		# passes over a rung that left or is disabled, so the next one up is its first approver.
+		line = {"E-QC": [CALLER, "director@example.com"]}
+		with patch.object(
+			approvals_list, "get_designated_approvers", side_effect=lambda e, *a: line.get(e, [])
+		):
+			rows = self._list()
+		self.assertEqual(rows["OT-QC"]["section"], "yours")
+
+	def test_a_backup_further_up_the_line_is_not_sent_it(self):
+		line = {"E-QC": ["ahmad@example.com", CALLER]}
+		with patch.object(
+			approvals_list, "get_designated_approvers", side_effect=lambda e, *a: line.get(e, [])
+		):
+			rows = self._list()
+		self.assertNotIn("OT-QC", rows)
 
 	def test_an_hr_operator_is_routed_everything_but_the_page_lists_only_what_was_sent_to_them(self):
 		rows = self._list(user="hr@example.com", own=())

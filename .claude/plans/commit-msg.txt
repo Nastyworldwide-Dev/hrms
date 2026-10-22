@@ -1,9 +1,13 @@
-docs(plan): payroll consumers and the start-date patch spelled out
+fix(approvals): a request stuck when its first approver had left
 
-Second review of the rest-day plan: say that unpaid leave, half-day
-absence and unmarked days share the one payroll reader, that the
-payroll period uses the same function, and that the start date is set
-only if empty. Two more edge tests (unpaid leave across a shift change;
-night shift on a rest day). Still a plan.
+Overtime, leave and other requests sat on nobody's Approvals page when
+the approver named on the employee's record (or their manager) had left
+or had their login disabled. The approval line already passes over that
+person to the next one up, and that person could open and approve the
+request - but the page and Home's count asked "was it sent to me?" from
+the record fields only, so it was sent to someone who can't log in.
 
-Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+The page now also counts the line's first approver as "sent to".
+Backups higher up still are not sent it (owner ruling 8 Oct).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

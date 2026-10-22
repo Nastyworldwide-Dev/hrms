@@ -26,6 +26,7 @@ import frappe
 from hrms.api.approval import (
 	APPROVER_FIELD,
 	DECIDE_THEN_SUBMIT,
+	DESIGNATED_APPROVER_DOCTYPES,
 	_is_routed_approver,
 	_leave_balance_now,
 	_request_read_allowed,
@@ -33,6 +34,7 @@ from hrms.api.approval import (
 	may_read_leave_reasons,
 )
 from hrms.api.now import _hhmm
+from hrms.hr.utils import get_designated_approvers
 from hrms.utils.identity import normalize_login, own_employees
 
 logger = logging.getLogger(__name__)
@@ -137,7 +139,16 @@ def _sent_to_me(doctype: str, doc, facts: dict, me: dict) -> bool:
 	"""Is this request addressed to the caller, rather than merely visible?
 
 	The request's own approver field, the approver named on the employee's
-	record, or the employee reports to the caller's own employee.
+	record, the employee reports to the caller's own employee, or the caller is
+	the FIRST approver on the employee's line.
+
+	REPORTED 22 Oct 2026 ("certain requests for approver, it stucks"): the
+	first three read the records as written, so when the named approver or
+	manager had LEFT (or their login was disabled) the request was sent to a
+	person who can no longer log in. The line passes over them to the next one
+	up, and that person could open and approve it, but it was on nobody's
+	Approvals page and in nobody's Home count. The line's first approver is
+	who validate_staff_approver routes to and who the reminders call "first".
 	"""
 	if not me["login"]:
 		return False
@@ -146,7 +157,11 @@ def _sent_to_me(doctype: str, doc, facts: dict, me: dict) -> bool:
 		return True
 	if normalize_login(facts.get(RECORD_APPROVER_FIELD.get(doctype, "leave_approver"))) == me["login"]:
 		return True
-	return bool(me["employee"]) and facts.get("reports_to") == me["employee"]
+	if bool(me["employee"]) and facts.get("reports_to") == me["employee"]:
+		return True
+	pair = DESIGNATED_APPROVER_DOCTYPES.get(doctype)
+	line = get_designated_approvers(doc.get("employee"), *pair) if pair and doc.get("employee") else []
+	return bool(line) and normalize_login(line[0]) == me["login"]
 
 
 def _team_approver_name(facts: dict) -> str:
