@@ -45,6 +45,7 @@ KIND_WORDS = {
 	"Shift Request": "shift change",
 	"Attendance Request": "day fix",
 	"Compensatory Leave Request": "time-off-in-lieu request",
+	"Manpower Request": "manpower request",
 }
 
 

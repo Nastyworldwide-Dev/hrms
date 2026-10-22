@@ -377,12 +377,14 @@ class ManpowerRequest(Document, PWANotificationsMixin):
 	def _notify_hr(self, message: str) -> int:
 		"""Every enabled HR Manager / HR User whose company fence admits this request, minus the
 		sender. Returns how many were told."""
-		company = self.company or frappe.db.get_value("Employee", self.employee, "company")
-		sender = normalize_login(self._get_employee_user())
-		told = sum(
-			self._send_notice(user, message)
-			for user in hr_alert_recipients(company)
-			if normalize_login(user) != sender
-		)
+		# never raises: a notice must not undo the send, the decision or the withdraw around it
+		try:
+			company = self.company or frappe.db.get_value("Employee", self.employee, "company")
+			sender = normalize_login(self._get_employee_user())
+			recipients = [user for user in hr_alert_recipients(company) if normalize_login(user) != sender]
+		except Exception:
+			logger.exception("[manpower] %s: could not resolve HR recipients", self.name)
+			return 0
+		told = sum(self._send_notice(user, message) for user in recipients)
 		logger.info("[manpower] %s: HR told (%d) for company %s", self.name, told, company)
 		return told

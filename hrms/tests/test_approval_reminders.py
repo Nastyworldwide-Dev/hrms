@@ -316,5 +316,25 @@ class TestWaitingRequestsReadsLeaveOnce(unittest.TestCase):
 		)
 
 
+class TestEveryApprovableTypeIsReminded(unittest.TestCase):
+	"""Frappe review of aba0a4461: Manpower Request joined DECIDE_THEN_SUBMIT but not KIND_WORDS,
+	and _waiting_requests walks KIND_WORDS, so its approver was never reminded. The class: any
+	type an approver decides and the reminder list does not name is silently never nudged."""
+
+	# Decided elsewhere, not by a line approver this job reminds (policy: no banked overtime,
+	# 23 Sep 2026 — the PWA has no screen for it).
+	NOT_REMINDED = frozenset({"Replacement Leave Claim"})
+
+	def test_every_decided_type_has_reminder_words(self):
+		from hrms.api.approval import DECIDE_THEN_SUBMIT
+
+		missing = set(DECIDE_THEN_SUBMIT) - set(approval_reminders.KIND_WORDS) - self.NOT_REMINDED
+		self.assertEqual(missing, set())
+
+	def test_manpower_request_reads_naturally(self):
+		# the Home count already calls it this (needs_you.ROW_COPY); one word everywhere
+		self.assertEqual(approval_reminders.KIND_WORDS["Manpower Request"], "manpower request")
+
+
 if __name__ == "__main__":
 	unittest.main()

@@ -174,6 +174,21 @@ class TestHrIsToldWhenItIsSent(unittest.TestCase):
 			doc.after_insert()
 		recipients.assert_called_once_with("NASTY Logistics")
 
+	def test_hr_lookup_failing_never_undoes_the_send(self):
+		# Frappe review of aba0a4461: _notify_hr ran outside the notice guard, so a bad
+		# User Permission row raising in hr_alert_recipients failed the insert itself.
+		doc = _Flow()
+		stack, notices, _ = world(user=REQUESTER_USER)
+		with (
+			stack,
+			patch.object(mr, "get_designated_approvers", return_value=[BOSS_USER]),
+			patch.object(mr, "share_doc_with_approver"),
+			patch.object(mr.ManpowerRequest, "notify_approver"),
+			patch.object(mr, "hr_alert_recipients", side_effect=RuntimeError("bad fence row")),
+		):
+			doc.after_insert()
+		self.assertEqual(notices.users(), [])
+
 
 class TestDecisionNotices(unittest.TestCase):
 	def _submit(self, status, **extra):
