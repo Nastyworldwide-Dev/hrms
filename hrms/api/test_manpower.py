@@ -148,11 +148,12 @@ class TestEndpointsAreReadsOnly(unittest.TestCase):
 				"get_questions",
 				"get_progress",
 				"replaceable_staff",
+				"hr_board",
 				"withdraw",
 				"set_hiring_status",
 			},
 		)
-		for name in ("can_request", "get_questions", "get_progress", "replaceable_staff"):
+		for name in ("can_request", "get_questions", "get_progress", "replaceable_staff", "hr_board"):
 			self.assertEqual(sorted(found[name] or []), ["GET", "POST"], name)
 		# a change of state is never a GET
 		for name in ("withdraw", "set_hiring_status"):
@@ -160,7 +161,7 @@ class TestEndpointsAreReadsOnly(unittest.TestCase):
 
 	def test_the_reads_write_nothing(self):
 		tree = ast.parse((HRMS_ROOT / "api" / "manpower.py").read_text(encoding="utf-8"))
-		reads = {"can_request", "get_questions", "get_progress", "replaceable_staff"}
+		reads = {"can_request", "get_questions", "get_progress", "replaceable_staff", "hr_board"}
 		for node in tree.body:
 			if isinstance(node, ast.FunctionDef) and node.name in reads:
 				body = ast.unparse(node)
@@ -509,3 +510,234 @@ class TestReplaceableStaff(unittest.TestCase):
 		body = ast.unparse(fn)
 		for call in (".insert(", ".save(", ".submit(", "db.set_value", "db.sql", ".db_set(", "delete_doc"):
 			self.assertNotIn(call, body)
+
+
+def board_row(name="HR-MPR-26-10-00001", **extra):
+	row = dict(
+		name=name,
+		position_title="Welder",
+		headcount=2,
+		department="Ops - NW",
+		employee_name="W0 employee",
+		status="Open",
+		hiring_status=None,
+		urgency="High",
+		creation="2026-10-20 09:00:00",
+		modified="2026-10-20 09:00:00",
+		docstatus=0,
+	)
+	row.update(extra)
+	return frappe._dict(row)
+
+
+TODAY = __import__("datetime").date(2026, 10, 22)
+
+
+class TestBoardGroup(unittest.TestCase):
+	"""Which of the four lists a request sits in. Expected words are the owner's (manpower-plan.md)."""
+
+	def test_an_open_request_is_waiting_for_the_manager(self):
+		self.assertEqual(manpower.board_group("Open", None), "waiting_manager")
+
+	def test_approved_and_not_yet_picked_up_needs_hr(self):
+		self.assertEqual(manpower.board_group("Approved", "Waiting for HR"), "needs_hr")
+
+	def test_approved_with_no_hiring_status_still_needs_hr(self):
+		self.assertEqual(manpower.board_group("Approved", None), "needs_hr")
+
+	def test_recruiting_is_its_own_list(self):
+		self.assertEqual(manpower.board_group("Approved", "Recruiting"), "recruiting")
+
+	def test_every_ending_is_done(self):
+		for status, hiring in (
+			("Approved", "Filled"),
+			("Approved", "Not proceeding"),
+			("Rejected", None),
+			("Withdrawn", None),
+			("Withdrawn", "Recruiting"),
+		):
+			self.assertEqual(manpower.board_group(status, hiring), "done", (status, hiring))
+
+
+class TestBuildBoard(unittest.TestCase):
+	def _board(self, *rows):
+		return manpower.build_board(list(rows), TODAY)
+
+	def test_counts_for_the_four_tiles_and_the_over_30_state(self):
+		board = self._board(
+			board_row("A", status="Open"),
+			board_row("B", status="Approved", docstatus=1, hiring_status="Waiting for HR"),
+			board_row(
+				"C",
+				status="Approved",
+				docstatus=1,
+				hiring_status="Waiting for HR",
+				creation="2026-09-01 09:00:00",
+			),
+			board_row("D", status="Approved", docstatus=1, hiring_status="Recruiting"),
+			board_row(
+				"E",
+				status="Approved",
+				docstatus=1,
+				hiring_status="Filled",
+				modified="2026-10-12 10:00:00",
+			),
+			board_row(
+				"F",
+				status="Approved",
+				docstatus=1,
+				hiring_status="Filled",
+				modified="2026-09-28 10:00:00",
+			),
+			board_row("G", status="Rejected", docstatus=1),
+		)
+		self.assertEqual(
+			board["counts"],
+			{
+				"waiting_manager": 1,
+				"needs_hr": 2,
+				"recruiting": 1,
+				"filled_this_month": 1,
+				"needs_hr_over_30": 1,
+			},
+		)
+
+	def test_a_live_request_has_been_open_since_it_was_sent(self):
+		(row,) = self._board(board_row(creation="2026-10-12 23:59:00"))["rows"]
+		self.assertEqual(row["days_open"], 10)
+
+	def test_a_finished_request_stops_counting_when_it_closed(self):
+		(row,) = self._board(
+			board_row(
+				status="Approved",
+				docstatus=1,
+				hiring_status="Filled",
+				creation="2026-09-14 09:00:00",
+				modified="2026-10-12 10:00:00",
+			)
+		)["rows"]
+		self.assertEqual((row["days_open"], row["closed_on"]), (28, "2026-10-12"))
+
+	def test_a_live_request_has_no_closing_day(self):
+		(row,) = self._board(board_row())["rows"]
+		self.assertIsNone(row["closed_on"])
+
+	def test_over_30_counts_only_waiting_for_hr_and_only_past_30_days(self):
+		board = self._board(
+			board_row("A", status="Open", creation="2026-08-01 09:00:00"),
+			board_row(
+				"B",
+				status="Approved",
+				docstatus=1,
+				hiring_status="Waiting for HR",
+				creation="2026-09-22 09:00:00",
+			),
+		)
+		# B was sent exactly 30 days ago: not yet over
+		self.assertEqual(board["counts"]["needs_hr_over_30"], 0)
+
+	def test_each_row_carries_its_list_and_only_the_board_fields(self):
+		(row,) = self._board(board_row(status="Open"))["rows"]
+		self.assertEqual(
+			sorted(row),
+			sorted(
+				[
+					"name",
+					"position_title",
+					"headcount",
+					"department",
+					"employee_name",
+					"status",
+					"hiring_status",
+					"urgency",
+					"creation",
+					"days_open",
+					"group",
+					"closed_on",
+				]
+			),
+		)
+		self.assertEqual(row["group"], "waiting_manager")
+
+	def test_the_order_the_server_gave_is_kept(self):
+		names = [r["name"] for r in self._board(board_row("B"), board_row("A"))["rows"]]
+		self.assertEqual(names, ["B", "A"])
+
+	def test_nothing_in_is_nothing_out(self):
+		board = self._board()
+		self.assertEqual(board["rows"], [])
+		self.assertEqual(set(board["counts"].values()), {0})
+
+
+class TestHrBoard(unittest.TestCase):
+	"""The Nadi board's read: HR only, through the row scope (get_list), no pay on the rows."""
+
+	def _call(self, rows=(), *, hr=True, departments=("Ops - NW",), **kw):
+		asked = []
+
+		def get_list(doctype, **ask):
+			asked.append(dict(ask, doctype=doctype))
+			if ask.get("group_by"):
+				return [frappe._dict(department=d) for d in departments]
+			return list(rows)
+
+		with (
+			patch.object(manpower, "is_hr_operator", return_value=hr),
+			patch.object(frappe, "get_list", side_effect=get_list),
+			patch.object(manpower, "getdate", return_value=TODAY),
+		):
+			return manpower.hr_board(**kw), asked
+
+	def test_only_hr_may_read_it_and_nothing_is_read_for_anyone_else(self):
+		with self.assertRaises(frappe.PermissionError):
+			self._call(hr=False)
+		with (
+			patch.object(manpower, "is_hr_operator", return_value=False),
+			patch.object(frappe, "get_list") as getter,
+			self.assertRaises(frappe.PermissionError),
+		):
+			manpower.hr_board()
+		getter.assert_not_called()
+
+	def test_it_reads_through_get_list_so_the_company_fence_applies(self):
+		_, asked = self._call()
+		for ask in asked:
+			self.assertEqual(ask["doctype"], "Manpower Request")
+			self.assertFalse(ask.get("ignore_permissions"))
+
+	def test_no_pay_and_no_free_text_is_asked_for_or_returned(self):
+		out, asked = self._call([board_row()])
+		fields = [f for ask in asked for f in ask["fields"]]
+		for secret in ("budgeted_salary", "proposed_salary", "justification", "hr_note", "withdrawn_reason"):
+			self.assertNotIn(secret, fields)
+		self.assertFalse([key for key in out["rows"][0] if "salary" in key])
+
+	def test_a_cancelled_request_is_not_on_the_board(self):
+		_, asked = self._call()
+		self.assertIn(["docstatus", "!=", 2], asked[0]["filters"])
+
+	def test_the_department_narrows_the_rows_and_not_the_department_list(self):
+		out, asked = self._call(department="Ops - NW", departments=("Ops - NW", "Sales - NW"))
+		self.assertIn(["department", "=", "Ops - NW"], asked[0]["filters"])
+		self.assertEqual(out["departments"], ["Ops - NW", "Sales - NW"])
+		self.assertNotIn(["department", "=", "Ops - NW"], asked[1]["filters"])
+
+	def test_search_looks_in_the_title_the_sender_and_the_id(self):
+		_, asked = self._call(search="  weld ")
+		self.assertEqual(
+			sorted(f[0] for f in asked[0]["or_filters"]), ["employee_name", "name", "position_title"]
+		)
+		self.assertTrue(all(f[1] == "like" and f[2] == "%weld%" for f in asked[0]["or_filters"]))
+
+	def test_no_search_adds_no_filter(self):
+		_, asked = self._call(search="   ")
+		self.assertFalse(asked[0].get("or_filters"))
+
+	def test_it_returns_the_counts_and_the_rows_built_from_what_it_read(self):
+		out, _ = self._call([board_row("A"), board_row("B", status="Rejected", docstatus=1)])
+		self.assertEqual(out["counts"]["waiting_manager"], 1)
+		self.assertEqual([r["name"] for r in out["rows"]], ["A", "B"])
+
+	def test_it_asks_for_every_request_not_just_a_first_page(self):
+		_, asked = self._call()
+		self.assertNotEqual(asked[0].get("limit_page_length", 20), 20)

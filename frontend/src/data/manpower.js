@@ -51,3 +51,10 @@ export const myManpowerRequests = createResource({
 		return data.map((request) => ({ ...request, doctype: "Manpower Request" }))
 	},
 })
+
+// The number on More's "Staff requests" row: how many approved requests are waiting on HR. Asked only
+// when the person is HR (More decides; the server refuses anyone else), so it never runs for staff.
+export const manpowerBoardCount = createResource({
+	url: "hrms.api.manpower.hr_board",
+	cache: personalCacheKey("hrms:manpower_board_count"),
+})

@@ -90,6 +90,63 @@
 								</div>
 							</section>
 
+							<!-- Hiring: HR only. Open = visible but locked (the manager decides first). Gone once
+							     Filled / Not proceeding. Every state that dims Save is ONE list
+							     (utils/manpowerBoard.js hiringProblems), shown in #mp-hiring-why. -->
+							<section v-if="hiring.visible" class="g-form-section">
+								<h2 class="g-form-section__title">{{ __("Hiring") }}</h2>
+								<p v-if="hiring.locked" id="mp-hiring-lock" class="mp-lock" role="status">
+									<Lock class="h-4 w-4 flex-none" aria-hidden="true" />
+									<span>{{ hiringWhy }}</span>
+								</p>
+								<div :inert="hiring.locked || undefined" :class="{ 'mp-dim': hiring.locked }">
+									<GSegmented
+										v-model="choice"
+										:buttons="hiringButtons"
+										:label="__('Hiring status')"
+									/>
+									<div class="g-form-group mt-3">
+										<div class="g-form-row g-form-row--stacked">
+											<span class="g-form-row__label">
+												{{
+													choice === "Not proceeding"
+														? __("Note (required)")
+														: __("Note (optional)")
+												}}
+											</span>
+											<GTextarea
+												v-model="hrNote"
+												:aria-label="__('Hiring note')"
+												:placeholder="__('{0} will see this', [requesterFirstName])"
+											/>
+										</div>
+									</div>
+									<p v-if="saveError" class="g-field-error mt-2" role="alert">{{ saveError }}</p>
+									<p
+										v-if="hiringWhy && !hiring.locked"
+										id="mp-hiring-why"
+										class="g-form-footer"
+										role="status"
+									>
+										{{ hiringWhy }}
+									</p>
+									<GButton
+										class="mt-2"
+										:label="__('Save')"
+										:pending-label="__('Saving…')"
+										:pending="saving"
+										:disabled="Boolean(hiringWhy)"
+										:aria-describedby="
+											hiringWhy ? (hiring.locked ? 'mp-hiring-lock' : 'mp-hiring-why') : undefined
+										"
+										@click="saveHiring"
+									/>
+									<p v-if="!hiringWhy" class="g-form-footer">
+										{{ __("Saving tells {0} the new status.", [requesterFirstName]) }}
+									</p>
+								</div>
+							</section>
+
 							<p v-if="doc.status === 'Rejected'" class="g-form-footer">
 								{{ __("You can send a new request with changes.") }}
 							</p>
@@ -131,7 +188,7 @@
 
 <script setup>
 import { IonContent } from "@ionic/vue"
-import { Check, ChevronDown, Minus, X } from "lucide-vue-next"
+import { Check, ChevronDown, Lock, Minus, X } from "lucide-vue-next"
 import { createResource } from "frappe-ui"
 import { computed, inject, onBeforeUnmount, ref } from "vue"
 
@@ -141,13 +198,18 @@ import ShellHeader from "@/components/ShellHeader.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import GPage from "@/components/glass/GPage.vue"
+import GSegmented from "@/components/glass/GSegmented.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
+import GTextarea from "@/components/glass/GTextarea.vue"
 import { gToast } from "@/components/glass/toast"
 import { hideRequest, unhideRequest } from "@/data/hiddenRequests"
 import { reloadRequestLists } from "@/data/requestLists"
 import { showUndo } from "@/data/undoBar"
+import { userResource } from "@/data/user"
 import { departmentLabel } from "@/utils/departmentLabel"
+import { hasHRRole } from "@/utils/issueBoard"
+import { HIRING_CHOICES, hiringProblems, hiringSection } from "@/utils/manpowerBoard"
 import { firstMessage } from "@/utils/loudRequest"
 import {
 	DOCTYPE,
@@ -219,6 +281,62 @@ const answers = computed(() => {
 		...(d.answers || []).map((a) => ({ label: a.question, value: sentence(a.answer) })),
 	]
 })
+
+// ---- Hiring (HR only)
+const isHR = computed(() => hasHRRole(userResource.data))
+const hiring = computed(() => hiringSection(doc.value, { isHR: isHR.value }))
+const hiringButtons = HIRING_CHOICES.map((c) => ({ key: c.key, label: __(c.label) }))
+const choice = ref("")
+const hrNote = ref("")
+const saving = ref(false)
+const saveError = ref("")
+const approverName = computed(() => progress.data?.find((s) => s.key === "manager")?.who || "")
+const requesterFirstName = computed(
+	() => (doc.value?.employee_name || "").split(" ")[0] || __("The sender")
+)
+//: the single visible reason Save is dimmed ("" when it can be pressed)
+const hiringWhy = computed(
+	() =>
+		hiringProblems(doc.value, {
+			isHR: isHR.value,
+			approver: approverName.value,
+			choice: choice.value,
+			note: hrNote.value,
+			t: __,
+		})[0]?.message || ""
+)
+const setHiring = createResource({ url: "hrms.api.manpower.set_hiring_status" })
+const saveHiring = () => {
+	if (hiringWhy.value || saving.value) return
+	saving.value = true
+	saveError.value = ""
+	setHiring.submit(
+		{ name: props.id, hiring_status: choice.value, note: hrNote.value.trim() || null },
+		{
+			onSuccess() {
+				saving.value = false
+				choice.value = ""
+				hrNote.value = ""
+				reloadRequestLists("manpower hiring status")
+				request.reload()
+				progress.reload()
+				gToast({
+					title: __("Saved"),
+					text: __("{0} is told.", [requesterFirstName.value]),
+					variant: "success",
+				})
+			},
+			onError(error) {
+				saving.value = false
+				console.error("[ManpowerRequestDetail] hiring status not saved:", error)
+				saveError.value = firstMessage(
+					error,
+					__("Could not save. Check your connection and try again.")
+				)
+			},
+		}
+	)
+}
 
 // ---- Withdraw
 const offerWithdraw = computed(() => canWithdraw(doc.value, employee.data?.name))
@@ -325,6 +443,20 @@ onBeforeUnmount(() => pending?.flush())
 	background: var(--g-ink2);
 	border-color: var(--g-ink2);
 	color: var(--g-tile-on-tile);
+}
+.mp-lock {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 12px;
+	padding: 12px 16px;
+	border-radius: var(--g-radius-well);
+	background: var(--g-track-solid);
+	font-size: 0.9375rem;
+	color: var(--g-ink2);
+}
+.mp-dim {
+	opacity: 0.55;
 }
 .mp-note {
 	margin-top: 4px;

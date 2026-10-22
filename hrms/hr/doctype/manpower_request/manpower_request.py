@@ -77,6 +77,29 @@ def required_answer_gaps(rows) -> list[str]:
 	return gaps
 
 
+def board_group(status: str | None, hiring_status: str | None) -> str:
+	"""The list a request sits in. Open waits on the manager; Approved waits on HR until HR picks it
+	up (Waiting for HR, or nothing yet), then is Recruiting; every other ending is Done."""
+	if status == "Open":
+		return "waiting_manager"
+	if status == "Approved" and hiring_status in (None, "", "Waiting for HR"):
+		return "needs_hr"
+	if status == "Approved" and hiring_status == "Recruiting":
+		return "recruiting"
+	return "done"
+
+
+def request_age(request, today):
+	"""(days open, the day it closed or None). A live request has been open since it was sent; a
+	finished one stopped counting the day it was last touched (`modified`: a closed request is final,
+	so that is the day it closed). Pure: the clock comes in as `today`. The Nadi board and the Desk
+	report both read it, so the two never disagree."""
+	closed = None
+	if board_group(request.get("status"), request.get("hiring_status")) == "done":
+		closed = getdate(request.get("modified"))
+	return ((closed or today) - getdate(request.get("creation"))).days, closed
+
+
 def _last_change(changes: list[dict], field: str, new: str) -> dict:
 	"""The latest recorded change of `field` to `new`, or {}."""
 	for change in reversed(changes or []):

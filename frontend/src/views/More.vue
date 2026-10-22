@@ -128,13 +128,14 @@ import { HUB_PATH } from "@/utils/helpdeskHub"
 import {
 	CalendarDays,
 	CalendarRange,
+	ClipboardList,
 	ExternalLink,
 	Plane,
 	SquareCheck,
 	Users,
 } from "lucide-vue-next"
 import { useRouter } from "vue-router"
-import { computed, inject, markRaw, onMounted, ref } from "vue"
+import { computed, inject, markRaw, onMounted, ref, watch } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import HolidayList from "@/components/HolidayList.vue"
@@ -146,6 +147,10 @@ import { isSameOriginPath } from "@/data/appLinks"
 import { EXTERNAL_LINKS, openExternal } from "@/data/externalLinks"
 import { hasCompanyView, hasTeam, isApprover } from "@/data/team"
 import { needsYouResource } from "@/data/needsYou"
+import { manpowerBoardCount } from "@/data/manpower"
+import { userResource } from "@/data/user"
+import { hasHRRole } from "@/utils/issueBoard"
+import { boardRoute } from "@/utils/manpowerBoard"
 import GBadge from "@/components/glass/GBadge.vue"
 import { myApps } from "@/data/myApps"
 
@@ -179,10 +184,32 @@ const waitingOnYou = computed(
 	() =>
 		(Number(needsYouResource.data?.total) || 0) + (Number(needsYouResource.data?.checkins) || 0)
 )
+//: HR only (the server's own is_hr verdict, as the HR Issue Board): the number is what waits on HR.
+const isHR = computed(() => hasHRRole(userResource.data))
 onMounted(() => {
 	if (isApprover.data) needsYouResource.reload()
 })
+// userResource may still be loading at mount: ask the moment the person is known to be HR
+watch(
+	isHR,
+	(hr) => {
+		if (hr) manpowerBoardCount.reload()
+	},
+	{ immediate: true }
+)
+const needsHr = computed(() => Number(manpowerBoardCount.data?.counts?.needs_hr) || 0)
 const teamItems = computed(() => [
+	...(isHR.value
+		? [
+				{
+					key: "staff-requests",
+					icon: markRaw(ClipboardList),
+					title: __("Staff requests"),
+					to: { name: boardRoute.name },
+					badge: needsHr.value ? String(needsHr.value) : "",
+				},
+		  ]
+		: []),
 	...(isApprover.data
 		? [
 				{

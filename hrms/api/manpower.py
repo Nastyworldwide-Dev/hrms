@@ -4,6 +4,8 @@ Reads: `can_request` decides whether Requests offers "Manpower" at all (the cont
 sender with no team regardless); `get_questions` is the list HR keeps in Manpower Request
 Settings; `get_progress` is the tracker on the detail page.
 
+`hr_board` is HR's Nadi board: counts and one slim row per request, no pay and no free text.
+
 Writes (POST only): `withdraw` (the sender takes it back) and `set_hiring_status` (HR). Both hand
 the work to the document, so its rules and notices run; nothing here decides anything.
 """
@@ -20,14 +22,36 @@ from frappe.utils import getdate
 from hrms.api.approval import get_rejection_reason
 from hrms.hr.doctype.manpower_request.manpower_request import (
 	REPLACEMENT_LEAVER_MONTHS,
+	board_group,
 	build_progress,
 	can_file_manpower_request,
+	request_age,
 )
 from hrms.hr.utils import get_designated_approvers, is_hr_operator, sees_all_employee_data
 from hrms.overrides.company_scope import company_visible
 from hrms.utils.identity import get_employee, normalize_login
 
 DOCTYPE = "Manpower Request"
+
+#: Which of the board's four lists a request sits in; the Nadi screen draws them in this order.
+BOARD_GROUPS = ("waiting_manager", "needs_hr", "recruiting", "done")
+
+#: A request waiting on HR longer than this many days turns the "Needs HR" tile red.
+NEEDS_HR_OVER_DAYS = 30
+
+#: The only fields the board reads: who, what, where it stands. Never pay, never free text.
+BOARD_FIELDS = [
+	"name",
+	"position_title",
+	"headcount",
+	"department",
+	"employee_name",
+	"status",
+	"hiring_status",
+	"urgency",
+	"creation",
+	"modified",
+]
 
 #: The two fields whose history the tracker reads; the Version log is the only record of who and when.
 TRACKED_FIELDS = ("status", "hiring_status")
@@ -105,6 +129,82 @@ def replaceable_staff(department: str) -> list[dict]:
 	)
 	logger.debug("[manpower] %d staff offered for %s", len(here) + len(left), department)
 	return [dict(r) for r in here + left]
+
+
+def build_board(requests, today) -> dict:
+	"""{counts, rows} for the board from plain request rows. Pure: the clock comes in as `today`.
+
+	Ages come from `request_age`. "Filled this month" counts the Filled ones closed in today's month.
+	Rows keep the order they came in.
+	"""
+	rows = []
+	counts = dict.fromkeys(("waiting_manager", "needs_hr", "recruiting", "filled_this_month"), 0)
+	counts["needs_hr_over_30"] = 0
+	for request in requests:
+		group = board_group(request.get("status"), request.get("hiring_status"))
+		days_open, closed = request_age(request, today)
+		if group in counts:
+			counts[group] += 1
+		if group == "needs_hr" and days_open > NEEDS_HR_OVER_DAYS:
+			counts["needs_hr_over_30"] += 1
+		if (
+			request.get("hiring_status") == "Filled"
+			and closed
+			and (closed.year, closed.month) == (today.year, today.month)
+		):
+			counts["filled_this_month"] += 1
+		rows.append(
+			{
+				**{key: request.get(key) for key in BOARD_FIELDS if key != "modified"},
+				"days_open": days_open,
+				"group": group,
+				"closed_on": str(closed) if closed else None,
+			}
+		)
+	return {"counts": counts, "rows": rows}
+
+
+@frappe.whitelist(methods=["GET", "POST"])
+def hr_board(department: str | None = None, search: str | None = None) -> dict:
+	"""HR's monitoring board in Nadi: {counts, rows, departments}. HR only.
+
+	Read with frappe.get_list on purpose, so the row scope (the company fence) decides what HR sees;
+	nothing is read past permissions. `department` and `search` (position, sender or id) narrow the
+	rows and the counts; the department list for the picker is never narrowed by either.
+	"""
+	if not is_hr_operator():
+		logger.warning("[manpower] hr_board refused for %s: not HR", frappe.session.user)
+		frappe.throw(_("Only HR can open the manpower board."), frappe.PermissionError)
+	filters = [["docstatus", "!=", 2]]
+	if department:
+		filters.append(["department", "=", department])
+	text = (search or "").strip()
+	or_filters = (
+		[[field, "like", f"%{text}%"] for field in ("position_title", "employee_name", "name")]
+		if text
+		else None
+	)
+	# ceiling: every request in the fence is read (a few dozen a year); upgrade: server paging past ~2000 rows
+	requests = frappe.get_list(
+		DOCTYPE,
+		fields=BOARD_FIELDS,
+		filters=filters,
+		or_filters=or_filters,
+		order_by="creation desc",
+		limit_page_length=0,
+	)
+	departments = frappe.get_list(
+		DOCTYPE,
+		fields=["department"],
+		filters=[["docstatus", "!=", 2]],
+		group_by="department",
+		order_by="department asc",
+		limit_page_length=0,
+	)
+	board = build_board(requests, getdate())
+	board["departments"] = [row.department for row in departments if row.department]
+	logger.debug("[manpower] hr_board read by %s: %d row(s)", frappe.session.user, len(board["rows"]))
+	return board
 
 
 def _locked_request(name: str):
