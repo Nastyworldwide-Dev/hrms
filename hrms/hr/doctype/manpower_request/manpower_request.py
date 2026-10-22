@@ -87,19 +87,28 @@ def answers_from_settings(sent, questions) -> list[dict]:
 	asked, so `required_answer_gaps` refuses it."""
 	given = {(row.get("question") or "").strip(): row.get("answer") for row in sent or []}
 	kept = []
+	asked = set()
 	for question in sorted(
 		(q for q in questions or [] if cint(q.get("active"))), key=lambda q: q.get("idx") or 0
 	):
-		answer = given.get(question.question)
+		# both sides stripped: a Settings row saved as "KPIs " must still match (review of 301765fdf)
+		words = (question.question or "").strip()
+		asked.add(words)
+		answer = given.get(words)
 		kept.append(
 			{
 				"step": question.step,
-				"question": question.question,
+				"question": words,
 				"answer_type": question.answer_type,
 				"required": 1 if cint(question.required) else 0,
 				"answer": "" if answer is None else str(answer).strip(),
 			}
 		)
+	# an answer to a question HR no longer asks (renamed or switched off after the wizard loaded) is
+	# dropped; say so, so a lost answer is findable rather than silent
+	dropped = [q for q, a in given.items() if q not in asked and str(a or "").strip()]
+	if dropped:
+		logger.warning("[manpower] dropped answers to questions no longer asked: %s", dropped)
 	return kept
 
 

@@ -800,3 +800,22 @@ class TestAnswersAreHrsQuestions(unittest.TestCase):
 	def test_a_question_hr_switched_off_is_not_asked(self):
 		kept = mr.answers_from_settings([], self.SETTINGS)
 		self.assertNotIn("Retired question", [a["question"] for a in kept])
+
+	def test_a_question_saved_with_stray_spaces_in_settings_still_matches(self):
+		# Frappe review of 301765fdf: the phone's question was stripped, HR's was not, so a Settings row
+		# saved as "KPIs " could never be answered and a required one refused every request
+		settings = [
+			frappe._dict(
+				step="5 Requirements", question="KPIs ", answer_type="Long text", required=1, active=1, idx=1
+			)
+		]
+		kept = mr.answers_from_settings([frappe._dict(question="KPIs", answer="On time")], settings)
+		self.assertEqual(kept[0]["answer"], "On time")
+		self.assertEqual(kept[0]["question"], "KPIs")
+
+	def test_an_answer_to_a_question_hr_no_longer_asks_is_logged_not_lost_silently(self):
+		with self.assertLogs(mr.logger, level="WARNING") as logs:
+			mr.answers_from_settings(
+				[frappe._dict(question="Old wording", answer="Something")], self.SETTINGS
+			)
+		self.assertIn("Old wording", "\n".join(logs.output))
