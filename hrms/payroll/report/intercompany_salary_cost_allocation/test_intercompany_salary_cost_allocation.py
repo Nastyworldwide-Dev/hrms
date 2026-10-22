@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+import datetime
 import unittest
 
 import frappe
@@ -16,6 +17,7 @@ SLIPS = [
 		employee_name="Nur Aina",
 		company="Nasty MY",
 		gross_pay=3000.0,
+		end_date=datetime.date(2026, 10, 31),
 	),
 	frappe._dict(
 		name="SS-002",
@@ -23,17 +25,20 @@ SLIPS = [
 		employee_name="Li Wei",
 		company="Nasty MY",
 		gross_pay=10000.0,
+		end_date=datetime.date(2026, 10, 31),
 	),
 ]
+
+OCT = datetime.date(2026, 10, 1)
 
 EMPLOYER_COSTS = {"SS-001": 461.7, "SS-002": 0}
 
 ALLOCATIONS = {
 	# EMP-001 works 60/30/10 across three intercos
 	"EMP-001": [
-		{"territory": "Interco A", "percentage": 60},
-		{"territory": "Interco B", "percentage": 30},
-		{"territory": "Interco C", "percentage": 10},
+		{"allocation_month": OCT, "territory": "Interco A", "percentage": 60},
+		{"allocation_month": OCT, "territory": "Interco B", "percentage": 30},
+		{"allocation_month": OCT, "territory": "Interco C", "percentage": 10},
 	]
 	# EMP-002 has no allocation rows — shown as a single unallocated 100% row
 }
@@ -54,13 +59,20 @@ class TestBuildAllocationRows(unittest.TestCase):
 
 	def test_rounding_remainder_lands_on_last_row(self):
 		slips = [
-			frappe._dict(name="SS-003", employee="EMP-003", employee_name="X", company="C", gross_pay=100.0)
+			frappe._dict(
+				name="SS-003",
+				employee="EMP-003",
+				employee_name="X",
+				company="C",
+				gross_pay=100.0,
+				end_date=datetime.date(2026, 10, 31),
+			)
 		]
 		allocations = {
 			"EMP-003": [
-				{"territory": "A", "percentage": 100.0 / 3},
-				{"territory": "B", "percentage": 100.0 / 3},
-				{"territory": "C", "percentage": 100.0 / 3},
+				{"allocation_month": OCT, "territory": "A", "percentage": 100.0 / 3},
+				{"allocation_month": OCT, "territory": "B", "percentage": 100.0 / 3},
+				{"allocation_month": OCT, "territory": "C", "percentage": 100.0 / 3},
 			]
 		}
 		rows = build_allocation_rows(slips, {}, allocations)
@@ -83,3 +95,36 @@ class TestBuildAllocationRows(unittest.TestCase):
 		self.assertEqual(emp1[0]["gross_pay"], 3000.0)
 		self.assertEqual(emp1[1]["gross_pay"], 0)
 		self.assertEqual(emp1[2]["total_employer_cost"], 0)
+
+
+def _slip(end_date):
+	return frappe._dict(
+		name="SS-9", employee="EMP-9", employee_name="Y", company="C", gross_pay=1000.0, end_date=end_date
+	)
+
+
+MONTHLY = {
+	"EMP-9": [
+		{"allocation_month": datetime.date(2026, 10, 1), "territory": "A", "percentage": 60},
+		{"allocation_month": datetime.date(2026, 10, 1), "territory": "B", "percentage": 40},
+		{"allocation_month": datetime.date(2027, 1, 1), "territory": "C", "percentage": 100},
+	]
+}
+
+
+class TestSplitFollowsYearMonth(unittest.TestCase):
+	def _tags(self, end_date):
+		rows = build_allocation_rows([_slip(end_date)], {}, MONTHLY)
+		return [(r["territory"], r["allocated_amount"]) for r in rows]
+
+	def test_a_slip_in_a_set_month_uses_that_month(self):
+		self.assertEqual(self._tags(datetime.date(2026, 10, 31)), [("A", 600.0), ("B", 400.0)])
+
+	def test_a_month_with_no_rows_carries_the_last_split_forward(self):
+		self.assertEqual(self._tags(datetime.date(2026, 12, 31)), [("A", 600.0), ("B", 400.0)])
+
+	def test_a_new_month_replaces_the_old_split(self):
+		self.assertEqual(self._tags(datetime.date(2027, 3, 31)), [("C", 1000.0)])
+
+	def test_a_slip_before_the_first_month_is_unallocated(self):
+		self.assertEqual(self._tags(datetime.date(2026, 9, 30)), [(None, 1000.0)])

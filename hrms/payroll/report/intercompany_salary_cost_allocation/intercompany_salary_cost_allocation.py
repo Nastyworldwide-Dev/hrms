@@ -6,7 +6,7 @@ import logging
 import frappe
 from frappe import _
 from frappe.query_builder.functions import Sum
-from frappe.utils import flt
+from frappe.utils import flt, getdate
 
 logger = logging.getLogger(__name__)
 
@@ -30,19 +30,34 @@ def execute(filters=None):
 	return _get_columns(), rows
 
 
-def build_allocation_rows(slips, employer_costs, allocations) -> list[dict]:
-	"""Split each slip's total employer cost across the employee's interco
-	allocations. Pure function — the last allocation row absorbs the
-	rounding remainder so the per-employee split always sums exactly.
+def split_for_month(employee_rows, slip_end_date) -> list[dict]:
+	"""The Cost Tag/Center rows of the latest Year/Month on or before the
+	slip's month. A month with no rows carries the last split forward; a
+	slip before the first month gets none."""
+	slip_month = getdate(slip_end_date).replace(day=1)
+	months = [r["allocation_month"] for r in employee_rows if getdate(r["allocation_month"]) <= slip_month]
+	if not months:
+		return []
+	month = max(months, key=getdate)
+	return [r for r in employee_rows if r["allocation_month"] == month]
 
-	Employees without allocation rows appear as a single 100% row with a
-	blank Interco so their cost stays visible until the table is filled.
+
+def build_allocation_rows(slips, employer_costs, allocations) -> list[dict]:
+	"""Split each slip's total employer cost across the employee's Cost
+	Tag/Center allocation for the slip's month. Pure function — the last
+	allocation row absorbs the rounding remainder so the per-employee split
+	always sums exactly.
+
+	A slip with no applicable month appears as a single 100% row with a
+	blank Cost Tag/Center so its cost stays visible until the table is filled.
 	"""
 	rows = []
 	for slip in slips:
 		contributions = flt(employer_costs.get(slip.name, 0))
 		total_cost = flt(slip.gross_pay) + contributions
-		employee_allocations = allocations.get(slip.employee) or [{"territory": None, "percentage": 100.0}]
+		employee_allocations = split_for_month(allocations.get(slip.employee) or [], slip.end_date) or [
+			{"territory": None, "percentage": 100.0}
+		]
 
 		allocated_so_far = 0.0
 		for i, allocation in enumerate(employee_allocations):
@@ -80,7 +95,7 @@ def _get_salary_slips(filters):
 	return frappe.get_all(
 		"Salary Slip",
 		filters=conditions,
-		fields=["name", "employee", "employee_name", "company", "gross_pay"],
+		fields=["name", "employee", "employee_name", "company", "gross_pay", "end_date"],
 		order_by="employee asc, start_date asc",
 	)
 
@@ -112,13 +127,17 @@ def _get_employee_allocations(employees):
 	allocation_rows = frappe.get_all(
 		"Employee Interco Allocation",
 		filters={"parenttype": "Employee", "parent": ("in", list(employees))},
-		fields=["parent", "territory", "percentage"],
+		fields=["parent", "allocation_month", "territory", "percentage"],
 		order_by="parent asc, idx asc",
 	)
 	allocations = {}
 	for row in allocation_rows:
 		allocations.setdefault(row.parent, []).append(
-			{"territory": row.territory, "percentage": flt(row.percentage)}
+			{
+				"allocation_month": row.allocation_month,
+				"territory": row.territory,
+				"percentage": flt(row.percentage),
+			}
 		)
 	logger.debug(
 		"[interco_report] allocations loaded employees=%d allocated=%d", len(employees), len(allocations)
@@ -145,7 +164,7 @@ def _get_columns():
 		},
 		{
 			"fieldname": "territory",
-			"label": _("Interco (Territory)"),
+			"label": _("Cost Tag/Center"),
 			"fieldtype": "Link",
 			"options": "Territory",
 			"width": 150,

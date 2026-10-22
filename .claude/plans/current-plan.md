@@ -1,30 +1,26 @@
-# UX review fixes, 21 Oct 2026 (owner: "go A and all of B")
+# Cost Tag/Center allocation with Year/Month, 22 Oct 2026
 
-Source: docs/glass/audit/2026-10-21-ux-review.md (F1–F12). Defaults taken: F1 blocks Send only;
-F3 You shows today's assigned shift, default shift as fallback.
+Owner: "rename that to cost tag/center allocation. adjust the doctype, field. the table must have
+new collumn, its called year/month". Answers: 3 columns; a month with no rows carries the latest
+earlier month's split forward; labels only (internal names stay).
+
+APPROVED: owner, 22 Oct 2026 — "3 columns (Recommended)", "Carry forward (Recommended)", "Labels only (Recommended)"
 
 FLOW
-1. F2 FormView mandatory message: plain labels + __(), and each empty required row gets its own
-   message beside it after a Send attempt; first one focused. One shared function, every form.
-2. F1 Expense, no approver: banner "No one is set to approve your expenses yet. Ask HR to set your
-   approver." Send disabled, reason linked. Time off same check if it has the gap.
-3. F4 Expense empty: full-width "Add expense" button in the empty state; Send disabled with
-   "Add at least one expense".
-4. F5 OT: empty-reason linked to Send (aria-describedby); day/hours/note hidden when nothing to claim
-   (only if no manual-day fallback exists).
-5. F6 Leave/expense detail: blank "Goes to" reads "Not set — ask HR".
-6. F7 Fix a day: Time slip reason only when Reason = Time slip; holidays switch below dates.
-7. F3 You: shift = same source Home uses.
-8. F8/F9/F11/F12: notification count wording + chevron, status icon + no stray dot,
-   desktop logo tile hidden >=1024, empty announcements row dropped on Home.
-One commit per finding; no push, no deploy.
+1. Child doctype Employee Interco Allocation: new first column `allocation_month` (Date, label
+   "Year/Month", required); `territory` label -> "Cost Tag/Center".
+2. Employee section + table labels -> "Cost Tag/Center Allocation" (setup.py; sync patch line bumped).
+3. Validate (Employee.validate): month saved as the 1st; per month rows total 100%; a cost tag
+   once per month; percentage > 0; empty table allowed.
+4. Report "Intercompany Salary Cost Allocation": each slip uses the split of the latest month
+   on or before the slip's month (end_date); none -> one unallocated row. Labels renamed.
+5. Patch stamps existing rows with the employee's joining month (fallback: row creation), so
+   today's report output is unchanged.
+No push, no deploy. Needs migrate.
 
-MOCKUP: NOT NEEDED — wording and state changes on existing Glass screens; screenshots of each
-current screen are the reference (.claude/tmp/ux/), owner approved the written fixes.
+MOCKUP: NOT NEEDED (Desk form: one new grid column and renamed labels; no new screen)
 
 EXPECTED OUTPUT
-- Time off, empty Send: "Choose Kind of leave" style messages under each empty row, no ERP label.
-- Expense with no approver: banner naming HR, Send dimmed with linked reason.
-- Expense empty: an "Add expense" button; Send dimmed, "Add at least one expense".
-- You and Home show the same shift name.
-- Notifications: "19 time off requests not approved"; status chips carry an icon.
+- Employee > Overview: section "Cost Tag/Center Allocation"; grid Year/Month | Cost Tag/Center | Percentage.
+- Saving Oct 60/40 + Jan 100 works; Oct 60/30 refuses "must total 100% for Oct 2026".
+- Report for Nov slip uses the Oct split; a Sep slip before any month shows unallocated.

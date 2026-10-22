@@ -1,3 +1,3 @@
-GOAL: a request whose first approver left or was disabled shows on the next approver's Approvals page and Home count.
-DONE WHEN: _sent_to_me admits the line's first approver; backups further up still are not sent it.
-CHECK: PYTHONPATH=. python3 hrms/api/test_approvals_list.py (87 OK); live probe on fresh.local: director page True, Home 1.
+GOAL: Employee cost split is per Year/Month and labelled Cost Tag/Center.
+DONE WHEN: validate checks 100% per month; report picks latest month <= slip month; old rows stamped by patch.
+CHECK: PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_employee_interco_allocation.py hrms/payroll/report/intercompany_salary_cost_allocation/test_intercompany_salary_cost_allocation.py hrms/tests/test_stamp_cost_allocation_month_patch.py

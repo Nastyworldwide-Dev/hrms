@@ -5,15 +5,24 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "allocation_month",
   "territory",
   "percentage"
  ],
  "fields": [
   {
+   "description": "Any day picked is saved as the 1st of its month. The latest month on or before a salary slip's month applies.",
+   "fieldname": "allocation_month",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Year/Month",
+   "reqd": 1
+  },
+  {
    "fieldname": "territory",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Interco (Territory)",
+   "label": "Cost Tag/Center",
    "options": "Territory",
    "reqd": 1
   },
@@ -28,7 +37,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-14 08:00:00.000000",
+ "modified": "2026-10-22 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Employee Interco Allocation",
