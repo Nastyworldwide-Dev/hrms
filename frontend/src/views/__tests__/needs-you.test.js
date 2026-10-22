@@ -41,6 +41,7 @@ function routerNames() {
 		"router/leaves.js",
 		"router/claims.js",
 		"router/ot.js",
+		"router/manpower.js",
 		"router/issues.js",
 		"router/helpdesk.js",
 		"router/sop.js",

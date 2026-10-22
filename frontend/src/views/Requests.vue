@@ -39,7 +39,7 @@
 				<GActionSheet
 					:is-open="typeSheetOpen"
 					:title="__('New request')"
-					:actions="requestTypes"
+					:actions="offeredTypes"
 					@select="startRequest"
 					@did-dismiss="typeSheetOpen = false"
 				/>
@@ -50,8 +50,16 @@
 
 <script setup>
 import { TILE } from "@/utils/iconTile"
-import { defineAsyncComponent, inject, ref } from "vue"
-import { CalendarCheck, CalendarClock, Clock, Palmtree, Plus, Receipt } from "lucide-vue-next"
+import { computed, defineAsyncComponent, inject, ref } from "vue"
+import {
+	CalendarCheck,
+	CalendarClock,
+	Clock,
+	Palmtree,
+	Plus,
+	Receipt,
+	Users,
+} from "lucide-vue-next"
 import { useRouter } from "vue-router"
 
 import BaseLayout from "@/components/BaseLayout.vue"
@@ -64,6 +72,9 @@ import GIconButton from "@/components/glass/GIconButton.vue"
 const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
 import { reloadRequestLists } from "@/data/requestLists"
 import { requestsSummary } from "@/data/requestsSummary"
+import { canRequestManpower } from "@/data/manpower"
+import { readDraft } from "@/utils/manpowerRequest"
+import { sessionUser } from "@/utils/personalCache"
 
 const __ = inject("$translate")
 const router = useRouter()
@@ -77,6 +88,7 @@ const ROUTES = {
 	expense: { name: "ExpenseClaimFormView" },
 	shift: { name: "ShiftRequestFormView" },
 	fix: { name: "AttendanceRequestFormView" },
+	manpower: { name: "ManpowerRequestFormView" },
 }
 //: Icon per kind = the one Notifications uses; the hint says what each is FOR
 //: in the employee's words (owner, 24 Sep: "bad guidance design").
@@ -116,9 +128,28 @@ const requestTypes = [
 		hint: __("A missing check-in, or a day on duty"),
 		icon: CalendarCheck,
 	},
+	// Only someone with a team (or HR) sees this one. Hidden while the answer loads and when it
+	// fails: the server refuses a sender with no team anyway, so the entry is never a promise.
+	{
+		key: "manpower",
+		tint: TILE.sop,
+		label: __("Request staff"),
+		hint: __("Ask for new or replacement staff"),
+		icon: Users,
+	},
 ]
-
 const typeSheetOpen = ref(false)
+//: A draft kept on this phone changes the hint, so it is not forgotten (read when the sheet opens).
+const offeredTypes = computed(() =>
+	requestTypes
+		.filter((type) => type.key !== "manpower" || canRequestManpower.data === true)
+		.map((type) =>
+			type.key === "manpower" && typeSheetOpen.value && readDraft(sessionUser())
+				? { ...type, hint: __("Continue your draft") }
+				: type
+		)
+)
+
 function startRequest(key) {
 	typeSheetOpen.value = false
 	console.info("[Requests] new request", key)

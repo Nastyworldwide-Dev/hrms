@@ -93,6 +93,7 @@ import {
 	FileText,
 	Palmtree,
 	Receipt,
+	Users,
 } from "lucide-vue-next"
 import { TILE, tileFor } from "@/utils/iconTile"
 
@@ -131,6 +132,7 @@ const ICONS = {
 	"Attendance Request": CalendarCheck,
 	"Replacement Leave Claim": Palmtree,
 	"Compensatory Leave Request": Palmtree,
+	"Manpower Request": Users,
 }
 
 //: Every kind of waiting thing, in one list. Adding a kind is adding an entry

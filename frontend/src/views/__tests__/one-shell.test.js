@@ -109,7 +109,7 @@ async function routeTable() {
 		dataUrl(lazyToName(read(`router/${name}.js`)).replace(/"@\/utils\/helpdeskHub"/g, JSON.stringify(hubUtil)))
 	const index = read("router/index.js")
 	const body = index.slice(index.indexOf("const routes = ["), index.indexOf("const router = createRouter("))
-	const leaves = ["attendance", "claims", "helpdesk", "helpdeskHub", "issues", "leaves", "ot", "sop"]
+	const leaves = ["attendance", "claims", "helpdesk", "helpdeskHub", "issues", "leaves", "manpower", "ot", "sop"]
 	const names = {
 		attendance: "attendanceRoutes",
 		claims: "claimRoutes",
@@ -117,6 +117,7 @@ async function routeTable() {
 		helpdeskHub: "helpdeskHubRoutes",
 		issues: "issueRoutes",
 		leaves: "leaveRoutes",
+		manpower: "manpowerRoutes",
 		ot: "otRoutes",
 		sop: "sopRoutes",
 	}

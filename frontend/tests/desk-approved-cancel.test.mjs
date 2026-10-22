@@ -73,6 +73,7 @@ test("every approved-request doctype runs the check on refresh", () => {
 		"Employee Advance",
 		"Expense Claim",
 		"Leave Application",
+		"Manpower Request",
 		"OT Request",
 		"Replacement Leave Claim",
 		"Shift Request",

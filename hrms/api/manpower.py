@@ -11,12 +11,19 @@ the work to the document, so its rules and notices run; nothing here decides any
 import json
 import logging
 
+from dateutil.relativedelta import relativedelta
+
 import frappe
 from frappe import _
+from frappe.utils import getdate
 
 from hrms.api.approval import get_rejection_reason
-from hrms.hr.doctype.manpower_request.manpower_request import build_progress, can_file_manpower_request
-from hrms.hr.utils import get_designated_approvers, is_hr_operator
+from hrms.hr.doctype.manpower_request.manpower_request import (
+	REPLACEMENT_LEAVER_MONTHS,
+	build_progress,
+	can_file_manpower_request,
+)
+from hrms.hr.utils import get_designated_approvers, is_hr_operator, sees_all_employee_data
 from hrms.overrides.company_scope import company_visible
 from hrms.utils.identity import get_employee, normalize_login
 
@@ -57,6 +64,47 @@ def get_questions() -> list[dict]:
 		}
 		for row in rows
 	]
+
+
+@frappe.whitelist(methods=["GET", "POST"])
+def replaceable_staff(department: str) -> list[dict]:
+	"""Who can be named as replaced, for the wizard's picker: the department's Active staff first,
+	then anyone who left in the last REPLACEMENT_LEAVER_MONTHS months (the request's own rule),
+	latest leaver first. The sender is never offered.
+
+	Refused unless the caller may send a request at all. Read past Employee's own permissions on
+	purpose (a manager cannot open every colleague), so what leaves is fenced here: five fields
+	only, the department asked for, and, unless HR, the caller's own company.
+	"""
+	me = get_employee()
+	if not can_file_manpower_request(me):
+		logger.warning("[manpower] replaceable_staff refused for %s: no team", frappe.session.user)
+		frappe.throw(_("Only someone with a team can request manpower."), frappe.PermissionError)
+	if not department:
+		return []
+	filters = {"department": department}
+	if not sees_all_employee_data(frappe.session.user):
+		filters["company"] = frappe.db.get_value("Employee", me, "company")
+	earliest = getdate() - relativedelta(months=REPLACEMENT_LEAVER_MONTHS)
+	rows = frappe.get_all(
+		"Employee",
+		filters=filters,
+		or_filters=[
+			{"status": "Active"},
+			{"status": "Left", "relieving_date": [">=", str(earliest)]},
+		],
+		fields=["name", "employee_name", "designation", "status", "relieving_date"],
+	)
+	here = sorted(
+		(r for r in rows if r.status == "Active" and r.name != me), key=lambda r: r.employee_name or ""
+	)
+	left = sorted(
+		(r for r in rows if r.status != "Active" and r.name != me),
+		key=lambda r: str(r.relieving_date or ""),
+		reverse=True,
+	)
+	logger.debug("[manpower] %d staff offered for %s", len(here) + len(left), department)
+	return [dict(r) for r in here + left]
 
 
 def _locked_request(name: str):

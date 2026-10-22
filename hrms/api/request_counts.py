@@ -31,6 +31,7 @@ LISTED_TYPES = (
 	"Attendance Request",
 	"OT Request",
 	"Replacement Leave Claim",
+	"Manpower Request",
 )
 
 #: Each listed type's decision field, read from approval.DECIDE_THEN_SUBMIT (the one table of decision
@@ -45,7 +46,9 @@ def get_current_employee():
 
 
 def _bucket(docstatus: int, decision: str | None) -> str | None:
-	if docstatus == 2:
+	# Cancelled, or taken back by its sender (Manpower Request, at any docstatus): over, and neither
+	# waiting nor decided. The Requests panel does not list a withdrawn request either.
+	if docstatus == 2 or decision == "Withdrawn":
 		return None
 	if docstatus == 0:
 		return "waiting"

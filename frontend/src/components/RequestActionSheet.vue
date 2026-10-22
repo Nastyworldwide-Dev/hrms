@@ -292,6 +292,7 @@ import { formatCurrency, formatHours } from "@/utils/formatters"
 import { requestStatus } from "@/utils/requestStatus"
 import { requestKind } from "@/utils/requestKind"
 import { requestDates } from "@/utils/requestDates"
+import { summaryLine } from "@/utils/manpowerRequest"
 import { STUCK_LOAD_MS, reportStuckLoad } from "@/utils/stuckLoad"
 import { plainLabel } from "@/utils/plainLabel"
 import { sentenceCase } from "@/utils/sentenceCase"
@@ -576,8 +577,9 @@ const fieldsWithValues = computed(() => {
 	})
 })
 
-//: Which day(s) this request is for; empty for types with no single date.
-const whenLine = computed(() => requestDates(document?.doc))
+//: Which day(s) this request is for; empty for types with no single date. A manpower request
+//: says what it asks for instead: "Driver ×3 · Ops".
+const whenLine = computed(() => summaryLine(document?.doc) || requestDates(document?.doc))
 
 //: The person's word for this request, not its doctype (plan P1-5).
 const kindLabel = computed(() => requestKind(document?.doctype, document?.doc))

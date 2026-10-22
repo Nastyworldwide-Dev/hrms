@@ -8,6 +8,7 @@ import helpdeskHubRoutes from "./helpdeskHub"
 import issueRoutes from "./issues"
 import { HUB_PATH, HUB_ROUTE_NAME } from "@/utils/helpdeskHub"
 import leaveRoutes from "./leaves"
+import manpowerRoutes from "./manpower"
 import otRoutes from "./ot"
 import sopRoutes from "./sop"
 import { isStaleChunkError } from "./stale-chunk"
@@ -206,6 +207,7 @@ const routes = [
 			...issueRoutes,
 			...helpdeskRoutes,
 			...sopRoutes,
+			...manpowerRoutes,
 		],
 	},
 ]

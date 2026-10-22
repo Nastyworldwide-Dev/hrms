@@ -142,9 +142,17 @@ class TestEndpointsAreReadsOnly(unittest.TestCase):
 					methods = [kw.value for kw in deco.keywords if kw.arg == "methods"]
 					found[node.name] = ast.literal_eval(methods[0]) if methods else None
 		self.assertEqual(
-			set(found), {"can_request", "get_questions", "get_progress", "withdraw", "set_hiring_status"}
+			set(found),
+			{
+				"can_request",
+				"get_questions",
+				"get_progress",
+				"replaceable_staff",
+				"withdraw",
+				"set_hiring_status",
+			},
 		)
-		for name in ("can_request", "get_questions", "get_progress"):
+		for name in ("can_request", "get_questions", "get_progress", "replaceable_staff"):
 			self.assertEqual(sorted(found[name] or []), ["GET", "POST"], name)
 		# a change of state is never a GET
 		for name in ("withdraw", "set_hiring_status"):
@@ -152,7 +160,7 @@ class TestEndpointsAreReadsOnly(unittest.TestCase):
 
 	def test_the_reads_write_nothing(self):
 		tree = ast.parse((HRMS_ROOT / "api" / "manpower.py").read_text(encoding="utf-8"))
-		reads = {"can_request", "get_questions", "get_progress"}
+		reads = {"can_request", "get_questions", "get_progress", "replaceable_staff"}
 		for node in tree.body:
 			if isinstance(node, ast.FunctionDef) and node.name in reads:
 				body = ast.unparse(node)
@@ -396,3 +404,108 @@ class TestChangesFromVersions(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestReplaceableStaff(unittest.TestCase):
+	"""The wizard's "Who is being replaced?" list: the chosen department's Active staff and anyone who
+	left in the last REPLACEMENT_LEAVER_MONTHS months (the controller's own rule), nothing more."""
+
+	def _call(self, rows, *, can=True, hr=False, company="NASTY"):
+		asked = {}
+
+		def get_all(doctype, **kw):
+			asked.update(kw, doctype=doctype)
+			return [frappe._dict(r) for r in rows]
+
+		with (
+			patch.object(manpower, "can_file_manpower_request", return_value=can),
+			patch.object(manpower, "get_employee", return_value="EMP-HAFIZ"),
+			patch.object(manpower, "sees_all_employee_data", return_value=hr),
+			# a whole stand-in db: patching one attribute of the shared stub with create=True deletes it on
+			# exit, and the next file that reads frappe.db.get_value then fails (memory: whole-dir pytest)
+			patch.object(frappe, "db", MagicMock(get_value=MagicMock(return_value=company))),
+			patch.object(frappe, "get_all", side_effect=get_all),
+			patch.object(manpower, "getdate", return_value=__import__("datetime").date(2026, 10, 22)),
+		):
+			return manpower.replaceable_staff("Marketing - NW"), asked
+
+	def test_someone_who_cannot_send_a_request_is_refused_and_nothing_is_read(self):
+		with self.assertRaises(frappe.PermissionError):
+			self._call([], can=False)
+
+	def test_only_the_five_fields_the_picker_shows_are_read(self):
+		_, asked = self._call([])
+		self.assertEqual(asked["doctype"], "Employee")
+		self.assertEqual(
+			sorted(asked["fields"]),
+			["designation", "employee_name", "name", "relieving_date", "status"],
+		)
+
+	def test_it_asks_for_the_chosen_department_active_staff_or_leavers_of_the_last_six_months(self):
+		_, asked = self._call([])
+		self.assertEqual(asked["filters"]["department"], "Marketing - NW")
+		self.assertEqual(
+			asked["or_filters"],
+			[
+				{"status": "Active"},
+				{"status": "Left", "relieving_date": [">=", "2026-04-22"]},
+			],
+		)
+
+	def test_a_manager_is_kept_to_their_own_company_and_hr_is_not(self):
+		_, asked = self._call([])
+		self.assertEqual(asked["filters"]["company"], "NASTY")
+		_, asked = self._call([], hr=True)
+		self.assertNotIn("company", asked["filters"])
+
+	def test_staff_still_here_come_first_then_the_latest_leavers(self):
+		rows = [
+			dict(
+				name="E3",
+				employee_name="Joel",
+				designation="Designer",
+				status="Left",
+				relieving_date="2026-09-12",
+			),
+			dict(
+				name="E2", employee_name="Dina", designation="Executive", status="Active", relieving_date=None
+			),
+			dict(
+				name="E4",
+				employee_name="Aziz",
+				designation="Executive",
+				status="Left",
+				relieving_date="2026-10-05",
+			),
+			dict(
+				name="E1", employee_name="Amir", designation="Executive", status="Active", relieving_date=None
+			),
+		]
+		out, _ = self._call(rows)
+		self.assertEqual([r["name"] for r in out], ["E1", "E2", "E4", "E3"])
+
+	def test_the_sender_is_never_offered_as_their_own_replacement(self):
+		rows = [
+			dict(
+				name="EMP-HAFIZ",
+				employee_name="Hafiz",
+				designation="Manager",
+				status="Active",
+				relieving_date=None,
+			),
+			dict(
+				name="E2", employee_name="Dina", designation="Executive", status="Active", relieving_date=None
+			),
+		]
+		out, _ = self._call(rows)
+		self.assertEqual([r["name"] for r in out], ["E2"])
+
+	def test_it_is_a_read_that_answers_get_and_post(self):
+		tree = ast.parse((HRMS_ROOT / "api" / "manpower.py").read_text(encoding="utf-8"))
+		fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "replaceable_staff")
+		deco = next(d for d in fn.decorator_list if isinstance(d, ast.Call))
+		methods = ast.literal_eval(next(k.value for k in deco.keywords if k.arg == "methods"))
+		self.assertEqual(sorted(methods), ["GET", "POST"])
+		body = ast.unparse(fn)
+		for call in (".insert(", ".save(", ".submit(", "db.set_value", "db.sql", ".db_set(", "delete_doc"):
+			self.assertNotIn(call, body)

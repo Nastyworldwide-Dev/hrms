@@ -15,6 +15,8 @@ const RANGE = {
 	"Shift Request": ["from_date", "to_date"],
 	"Compensatory Leave Request": ["work_from_date", "work_end_date"],
 	"OT Request": ["ot_date", "ot_date"],
+	// no date of its own: the day it was sent
+	"Manpower Request": ["creation", "creation"],
 }
 
 const day = (value) => dayjs(value).format("ddd D MMM")

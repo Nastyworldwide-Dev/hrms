@@ -11,6 +11,8 @@ export const REQUEST_KIND = {
 	"Replacement Leave Claim": "Replacement leave",
 	"Compensatory Leave Request": "Time off in lieu",
 	"Remote Checkin Request": "Check-in outside the area",
+	// approvals_list.KIND says "Manpower"; every sentence says "manpower request"
+	"Manpower Request": "Manpower",
 }
 
 /**

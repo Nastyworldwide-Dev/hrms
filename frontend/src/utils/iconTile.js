@@ -30,6 +30,7 @@ const BY_KEY = {
 	"Remote Checkin Request": "checkin",
 	"HR Announcement": "announcement",
 	"SOP": "sop",
+	"Manpower Request": "sop",
 }
 
 export function tileFor(kind) {

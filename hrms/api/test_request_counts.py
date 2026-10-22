@@ -123,6 +123,20 @@ class TestTheChipsCountWhatTheListShows(unittest.TestCase):
 		_, asked = self._run({})
 		self.assertEqual(set(asked), listed)
 
+	def test_a_withdrawn_manpower_request_is_counted_in_no_chip(self):
+		# The sender took it back: it is neither waiting nor decided, and the Requests panel does not
+		# list it (data/manpower.js), so no chip may count it, at either docstatus.
+		counts, _ = self._run(
+			{
+				"Manpower Request": [
+					{"docstatus": 0, "status": "Withdrawn", "n": 2},
+					{"docstatus": 1, "status": "Withdrawn", "n": 1},
+					{"docstatus": 0, "status": "Open", "n": 1},
+				]
+			}
+		)
+		self.assertEqual(counts, {"all": 1, "waiting": 1, "approved": 0, "rejected": 0})
+
 	def test_each_type_is_grouped_by_the_decision_field_approval_names(self):
 		_, asked = self._run({})
 		for doctype, fields in asked.items():

@@ -13,6 +13,7 @@ import {
 } from "@/data/attendance"
 import { historyClaims, myClaims, teamClaims } from "@/data/claims"
 import { myRequestCounts } from "@/data/requestCounts"
+import { myManpowerRequests } from "@/data/manpower"
 import { historyLeaves, myLeaves, teamLeaves } from "@/data/leaves"
 import {
 	myOTRequests,
@@ -28,6 +29,8 @@ export const REQUEST_LISTS = {
 	"Attendance Request": { my: myAttendanceRequests, team: [teamAttendanceRequests] },
 	"OT Request": { my: myOTRequests, team: [teamOTRequests] },
 	"Replacement Leave Claim": { my: myReplacementLeaveClaims, team: [teamReplacementLeaveClaims] },
+	// Approvers decide it on Approvals (no team list here), so only your own are listed
+	"Manpower Request": { my: myManpowerRequests, team: [] },
 }
 
 export const MY_REQUEST_LISTS = Object.values(REQUEST_LISTS).map((lists) => lists.my)

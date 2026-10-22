@@ -97,6 +97,7 @@ import { REQUEST_KIND } from "@/utils/requestKind"
 import { requestStatus } from "@/utils/requestStatus"
 import { siteTime } from "@/utils/siteTime"
 import { ref, inject } from "vue"
+import { useRouter } from "vue-router"
 import GModal from "@/components/glass/GModal.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
 
@@ -108,6 +109,7 @@ import {
 	SHIFT_FIELDS,
 	OT_REQUEST_FIELDS,
 	REPLACEMENT_LEAVE_CLAIM_FIELDS,
+	MANPOWER_REQUEST_FIELDS,
 } from "@/data/config/requestSummaryFields"
 
 const __ = inject("$translate")
@@ -165,6 +167,7 @@ const fieldsMap = {
 	"Shift Assignment": SHIFT_FIELDS,
 	"OT Request": OT_REQUEST_FIELDS,
 	"Replacement Leave Claim": REPLACEMENT_LEAVE_CLAIM_FIELDS,
+	"Manpower Request": MANPOWER_REQUEST_FIELDS,
 }
 
 //: "21 Sep" on the site clock (the Date constructor rejects these strings on
@@ -176,7 +179,13 @@ function filedOn(request) {
 const isRequestModalOpen = ref(false)
 const selectedRequest = ref(null)
 
+const router = useRouter()
 const openRequestModal = async (request) => {
+	// A manpower request has a page of its own (the progress tracker and Withdraw live there)
+	if (request.doctype === "Manpower Request") {
+		router.push({ name: "ManpowerRequestDetailView", params: { id: request.name } })
+		return
+	}
 	selectedRequest.value = request
 	isRequestModalOpen.value = true
 }

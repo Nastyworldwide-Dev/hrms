@@ -141,10 +141,12 @@ import { historyClaims, myClaims } from "@/data/claims"
 import { historyLeaves, myLeaves } from "@/data/leaves"
 import { isApprover } from "@/data/team"
 import { myOTRequests, myReplacementLeaveClaims } from "@/data/overtime"
+import { myManpowerRequests } from "@/data/manpower"
 
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
+import ManpowerRequestItem from "@/components/ManpowerRequestItem.vue"
 import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
 import OTRequestItem from "@/components/OTRequestItem.vue"
 import ReplacementLeaveClaimItem from "@/components/ReplacementLeaveClaimItem.vue"
@@ -263,7 +265,8 @@ const myRequests = computed(() =>
 		myShiftRequests,
 		myAttendanceRequests,
 		myOTRequests,
-		myReplacementLeaveClaims
+		myReplacementLeaveClaims,
+		myManpowerRequests
 	).filter((request) => !isHidden(request.name))
 )
 
@@ -301,7 +304,7 @@ async function retryLastFive() {
 // "decided, and I was the named approver" — covers leaves, claims and shift
 // requests only.
 const historyRequests = computed(() =>
-	updateRequestDetails(historyLeaves, historyClaims, historyShiftRequests, null, null, null)
+	updateRequestDetails(historyLeaves, historyClaims, historyShiftRequests, null, null, null, null)
 )
 
 //: One line saying what is missing (ruling 2), per tab.
@@ -415,7 +418,8 @@ function updateRequestDetails(
 	shiftRequests,
 	attendanceRequests,
 	otRequests,
-	replacementLeaveClaims
+	replacementLeaveClaims,
+	manpowerRequests
 ) {
 	const requests = [
 		leaves,
@@ -424,6 +428,7 @@ function updateRequestDetails(
 		attendanceRequests,
 		otRequests,
 		replacementLeaveClaims,
+		manpowerRequests,
 	].reduce((acc, resource) => acc.concat(resource?.data || []), [])
 
 	const componentMap = {
@@ -433,6 +438,7 @@ function updateRequestDetails(
 		"Attendance Request": AttendanceRequestItem,
 		"OT Request": OTRequestItem,
 		"Replacement Leave Claim": ReplacementLeaveClaimItem,
+		"Manpower Request": ManpowerRequestItem,
 	}
 	requests.forEach((request) => {
 		request.component = markRaw(componentMap[request.doctype])

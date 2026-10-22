@@ -26,7 +26,7 @@ test("the rows sit in one group with inset separators", () => {
 test("every request type has an icon and a plain one-line hint", () => {
 	const block = requests.slice(requests.indexOf("const requestTypes = ["), requests.indexOf("]", requests.indexOf("const requestTypes = [")))
 	const rows = block.split(/\bkey:/).slice(1)
-	assert.equal(rows.length, 5)
+	assert.equal(rows.length, 6, "the five everyone files, plus Request staff for a manager")
 	for (const row of rows) {
 		assert.match(row, /icon: \w+/, row)
 		assert.match(row, /hint: __\("[^"]{8,60}"\)/, row)

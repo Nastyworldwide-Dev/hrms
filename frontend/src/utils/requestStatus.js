@@ -27,6 +27,8 @@ const STATUS_VARIANTS = {
 	paid: "success",
 	rejected: "danger",
 	cancelled: "muted",
+	// a request its sender took back (Manpower Request): over, and neither yes nor no
+	withdrawn: "muted",
 	// attendance states — TeamDashboard mapped these by hand and noted "the DS
 	// has no red variant"; it does now, so Absent stops rendering as a brand chip
 	present: "success",
@@ -65,6 +67,7 @@ const REQUEST_TYPES = {
 	"OT Request": { field: "status", pending: "Open" },
 	"Replacement Leave Claim": { field: "status", pending: "Open" },
 	"Compensatory Leave Request": { field: "status", pending: "Open" },
+	"Manpower Request": { field: "status", pending: "Open" },
 	"Shift Request": { field: "status", pending: "Draft" },
 	// Not submittable: it has no docstatus, so its decision field is the whole
 	// truth. Listed here so RemoteApprovals reads the same rule as every other
@@ -105,6 +108,9 @@ export function requestStatus(doctype, doc = {}) {
 	let pending = false
 	if (docstatus === 2) {
 		label = "Cancelled"
+	} else if (decision === "Withdrawn") {
+		// The sender took it back (at any docstatus): not waiting, not decided.
+		label = "Withdrawn"
 	} else if (docstatus === 0 || (docstatus === undefined && !DECIDED.includes(decision))) {
 		pending = true
 		// A decided draft says the pending word, not the decision it has not

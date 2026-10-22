@@ -543,10 +543,15 @@ class TestTheRegistries(unittest.TestCase):
 		self.assertIn("Manpower Request", filing_check.FILABLE)
 		self.assertEqual(pwa_notification.PWA_DETAIL_PATHS["Manpower Request"], "manpower-requests")
 
-	def test_it_stays_off_the_requests_panel_chips(self):
+	def test_it_is_on_the_requests_panel_chips_because_the_panel_lists_it(self):
+		# S2 kept it off the chips while the app had no list for it (a chip must count only what the
+		# panel shows). S3 adds the list (frontend/src/data/requestLists.js), so the chips count it,
+		# and a withdrawn one in no chip (test_request_counts pins both).
 		from hrms.api import request_counts
 
-		self.assertNotIn("Manpower Request", request_counts.LISTED_TYPES)
+		self.assertIn("Manpower Request", request_counts.LISTED_TYPES)
+		js = (HRMS_ROOT.parent / "frontend/src/data/requestLists.js").read_text()
+		self.assertIn('"Manpower Request": { my: myManpowerRequests', js)
 
 	def test_hooks_wire_the_guard_the_cancel_notice_and_the_approved_guard(self):
 		tree = ast.parse((HRMS_ROOT / "hooks.py").read_text())

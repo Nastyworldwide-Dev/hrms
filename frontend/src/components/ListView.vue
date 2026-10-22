@@ -181,6 +181,7 @@ import {
 	Palmtree,
 	Plus,
 	Receipt,
+	Users,
 } from "lucide-vue-next"
 import { IonContent } from "@ionic/vue"
 import ShellHeader from "@/components/ShellHeader.vue"
@@ -216,12 +217,14 @@ const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPull
 import GSegmented from "@/components/glass/GSegmented.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
 import ListFiltersActionSheet from "@/components/ListFiltersActionSheet.vue"
+import ManpowerRequestItem from "@/components/ManpowerRequestItem.vue"
 import OTRequestItem from "@/components/OTRequestItem.vue"
 import ReplacementLeaveClaimItem from "@/components/ReplacementLeaveClaimItem.vue"
 import CheckinSheet from "@/components/CheckinSheet.vue"
 import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
 import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
 import { useListUpdate } from "@/composables/realtime"
+import { canRequestManpower } from "@/data/manpower"
 
 import useWorkflow from "@/composables/workflow"
 
@@ -304,6 +307,10 @@ const EMPTY_COPY = {
 		title: __("No replacement leave yet"),
 		body: __("Worked a rest day? Claim the time back."),
 	},
+	"Manpower Request": {
+		title: __("No staff requests yet"),
+		body: __("Need more people? Ask for new or replacement staff."),
+	},
 }
 
 const emptyCopy = computed(
@@ -324,6 +331,7 @@ const EMPTY_ICON = {
 	"Attendance Request": markRaw(CalendarCheck),
 	"Employee Checkin": markRaw(MapPin),
 	"Shift Assignment": markRaw(CalendarClock),
+	"Manpower Request": markRaw(Users),
 }
 
 const getButtonKey = (tab) => tab?.key ?? tab
@@ -339,6 +347,7 @@ const listItemComponent = {
 	// rendered every one of them blank.
 	"OT Request": markRaw(OTRequestItem),
 	"Replacement Leave Claim": markRaw(ReplacementLeaveClaimItem),
+	"Manpower Request": markRaw(ManpowerRequestItem),
 }
 
 const router = useRouter()
@@ -473,6 +482,8 @@ const canCreate = computed(
 	() =>
 		createPermission?.data?.has_permission &&
 		props.doctype !== "Employee Checkin" &&
+		// the create permission is every employee's; only someone with a team (or HR) sends one
+		(props.doctype !== "Manpower Request" || canRequestManpower.data === true) &&
 		router.hasRoute(formViewRoute.value)
 )
 

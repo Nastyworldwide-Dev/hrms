@@ -709,3 +709,15 @@ class TestWhoMayRead(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestTheReplacedPersonIsNamed(unittest.TestCase):
+	"""S3 browser check (22 Oct): the detail read "Replacement for HR-EMP-00007" — the record carried
+	only the id, and the sender and approver should see a name."""
+
+	def test_the_name_is_fetched_beside_the_link(self):
+		fields = {f["fieldname"]: f for f in _doctype_json("manpower_request")["fields"]}
+		self.assertEqual(fields["replacing_employee_name"]["fetch_from"], "replacing_employee.employee_name")
+		self.assertTrue(fields["replacing_employee_name"].get("read_only"))
+		order = _doctype_json("manpower_request")["field_order"]
+		self.assertEqual(order.index("replacing_employee_name"), order.index("replacing_employee") + 1)

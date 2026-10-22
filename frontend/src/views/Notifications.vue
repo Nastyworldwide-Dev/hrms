@@ -111,6 +111,7 @@ import {
 	MapPin,
 	Palmtree,
 	Receipt,
+	Users,
 } from "lucide-vue-next"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
@@ -205,6 +206,7 @@ const KIND_ICON = {
 	"Employee Issue": LifeBuoy,
 	"HD Ticket": LifeBuoy,
 	"Remote Checkin Request": MapPin,
+	"Manpower Request": Users,
 }
 //: The kind's colour, as on Home and Requests (alpha.9 D24; alpha.7 §7).
 //: Unread rows carry the dot, read rows the chevron: iOS Mail shows one mark

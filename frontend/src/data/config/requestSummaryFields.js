@@ -290,6 +290,22 @@ const COMPENSATORY_LEAVE_REQUEST_FIELDS = [
 	},
 ]
 
+//: What an approver decides on: who, what, how many, how soon, the pay (the mockup's approver sheet).
+//: The one-line "Driver ×3 · Ops" heads it (utils/manpowerRequest.js summaryLine).
+export const MANPOWER_REQUEST_FIELDS = [
+	{ fieldname: "employee", label: "From", fieldtype: "Link" },
+	{ fieldname: "position_title", label: "Position", fieldtype: "Data" },
+	{ fieldname: "headcount", label: "People needed", fieldtype: "Int" },
+	{ fieldname: "department", label: "Department", fieldtype: "Link" },
+	{ fieldname: "request_type", label: "This is", fieldtype: "Select" },
+	{ fieldname: "how_soon", label: "How soon", fieldtype: "Select" },
+	{ fieldname: "band", label: "Band", fieldtype: "Select" },
+	{ fieldname: "proposed_salary", label: "Proposed Salary", fieldtype: "Currency" },
+	{ fieldname: "budgeted_salary", label: "Budgeted Salary", fieldtype: "Currency" },
+	{ fieldname: "start_date", label: "Start Date", fieldtype: "Date" },
+	{ fieldname: "justification", label: "Reason", fieldtype: "Small Text" },
+]
+
 // Summary fields by doctype — what RequestActionSheet renders above its
 // Approve / Reject bar. Shared so a form can open the same sheet the Team
 // Requests list opens, instead of growing a second approval path.
@@ -301,4 +317,5 @@ export const REQUEST_SUMMARY_FIELDS = {
 	"OT Request": OT_REQUEST_FIELDS,
 	"Replacement Leave Claim": REPLACEMENT_LEAVE_CLAIM_FIELDS,
 	"Compensatory Leave Request": COMPENSATORY_LEAVE_REQUEST_FIELDS,
+	"Manpower Request": MANPOWER_REQUEST_FIELDS,
 }

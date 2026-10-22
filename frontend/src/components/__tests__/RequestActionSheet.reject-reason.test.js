@@ -43,5 +43,8 @@ test("the reason goes to the server with the decision", () => {
 test("the sheet says which day(s) the request is for", () => {
 	const header = template.slice(0, template.indexOf("<!-- Request Summary"))
 	assert.match(header, /:sublabel="whenLine/)
-	assert.match(src, /const whenLine = computed\(\(\) => requestDates\(document\?\.doc\)\)/)
+	assert.match(
+		src,
+		/const whenLine = computed\(\(\) => summaryLine\(document\?\.doc\) \|\| requestDates\(document\?\.doc\)\)/
+	)
 })

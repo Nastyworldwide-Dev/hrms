@@ -16,6 +16,7 @@
   "section_break_type",
   "request_type",
   "replacing_employee",
+  "replacing_employee_name",
   "section_break_where",
   "location",
   "location_other",
@@ -128,6 +129,14 @@
    "label": "Staff Being Replaced",
    "mandatory_depends_on": "eval:doc.request_type==\"Replacement\"",
    "options": "Employee"
+  },
+  {
+   "depends_on": "eval:doc.request_type==\"Replacement\"",
+   "fetch_from": "replacing_employee.employee_name",
+   "fieldname": "replacing_employee_name",
+   "fieldtype": "Data",
+   "label": "Name of Staff Being Replaced",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_where",
@@ -290,7 +299,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-22 12:00:00.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Manpower Request",
