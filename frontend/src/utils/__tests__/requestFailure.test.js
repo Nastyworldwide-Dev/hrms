@@ -364,3 +364,26 @@ test("a missing record is gone, for a signed-in person only", async () => {
 	assert.equal(isGone({ exc_type: "PermissionError", response: { status: 403 } }, { signedIn: true }), false)
 	assert.equal(isGone(null, { signedIn: true }), false)
 })
+
+// Review of 0c4823b31: "gone" skipped the repeat window, so a list whose rows each read a
+// deleted record would stack one "That is no longer here." per row.
+test("a missing record, toasted, is said once per endpoint within the repeat window", async () => {
+	globalThis.requestAnimationFrame = (fn) => fn()
+	globalThis.document = { querySelector: () => null }
+	try {
+		const toasts = []
+		let clock = 0
+		const loud = makeLoudRequest(() => Promise.reject({ exc_type: "DoesNotExistError", response: { status: 404 } }), {
+			notify: (t) => toasts.push(t),
+			now: () => (clock += 100),
+		})
+		const url = read()
+		await assert.rejects(() => loud({ url }))
+		await assert.rejects(() => loud({ url }))
+		await assert.rejects(() => loud({ url }))
+		assert.equal(toasts.length, 1)
+	} finally {
+		delete globalThis.document
+		delete globalThis.requestAnimationFrame
+	}
+})

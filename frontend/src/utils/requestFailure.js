@@ -118,7 +118,7 @@ function classifyFailure(error, { endpoint, signedIn, now }) {
 	if (silenced) return "silent"
 	if (isNoAccess(error, { signedIn: signedIn() })) return "refused"
 	// a record deleted since it was linked: the screen says "no longer here" itself
-	if (isGone(error, { signedIn: signedIn() })) return "gone"
+	if (isGone(error, { signedIn: signedIn() })) return isRepeat(endpoint, now()) ? "repeat" : "gone"
 	return isRepeat(endpoint, now()) ? "repeat" : "load"
 }
 
