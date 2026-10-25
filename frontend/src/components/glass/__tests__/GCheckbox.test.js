@@ -23,7 +23,8 @@ test("the tick box is drawn by Glass, not the browser", () => {
 	const box = decls(".g-check .g-check__box")
 	assert.equal(box.appearance, "none")
 	assert.equal(box["-webkit-appearance"], "none")
-	assert.match(box.border, /var\(--g-ink3\)/)
+	// ink2: ink3 is 2.93:1 on the light page ground (design review of a68b4dcb5)
+	assert.match(box.border, /var\(--g-ink2\)/)
 	assert.ok(box["border-radius"], "rounded like the rest of Glass")
 	// the plugin's :checked:focus/:checked:hover rules are (0,3,0) and fill with currentColor
 	assert.equal(box.color, "var(--g-brand)")
@@ -32,7 +33,8 @@ test("the tick box is drawn by Glass, not the browser", () => {
 test("ticked = lime fill with a dark tick (the Confirm button's colours)", () => {
 	const on = decls(".g-check .g-check__box:checked")
 	assert.equal(on["background-color"], "var(--g-brand)")
-	assert.equal(on["border-color"], "var(--g-brand)")
+	// the outline stays: a lime edge is 1.06:1 on the light page and the box shape vanished
+	assert.equal(on["border-color"], undefined)
 	const tick = decls(".g-check .g-check__box:checked::after")
 	assert.match(tick.border, /var\(--g-on-brand\)/)
 	assert.equal(on["background-image"], "none", "no plugin tick drawn under ours")
@@ -53,4 +55,18 @@ test("every tick-box rule outranks the forms plugin", () => {
 
 test("a closed tick reads as closed", () => {
 	assert.ok(decls(".g-check .g-check__box:disabled").opacity, "dimmed while the end is not reached")
+})
+
+test("high contrast mode keeps the ticked state", () => {
+	let found = false
+	root.walkAtRules("media", (m) => {
+		if (!m.params.includes("forced-colors: active")) return
+		m.walkRules((r) => {
+			if (r.selector === ".g-check .g-check__box:checked") {
+				found = true
+				r.walkDecls("background-color", (d) => assert.equal(d.value, "Highlight"))
+			}
+		})
+	})
+	assert.ok(found)
 })

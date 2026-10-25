@@ -3850,9 +3850,11 @@ ion-router-outlet {
 }
 /* Drawn, not native: the browser's box, restyled by the Tailwind forms plugin
    (blue fill, white tick, blue focus ring), sat beside a lime button (owner,
-   25 Oct 2026). That plugin loads after this file and its [type="checkbox"]
-   rules tie with a single class, so every rule here is scoped under .g-check.
-   The input is still the real control (focus, keyboard, VoiceOver). */
+   25 Oct 2026). The plugin's [type="checkbox"]:checked / :focus rules are two
+   selectors deep and beat a single class, so every rule here is scoped under
+   .g-check. The input is still the real control (focus, keyboard, VoiceOver).
+   The outline is ink2 in both states: ink3 is 2.9:1 on the page ground and a
+   lime edge vanishes on a light page (WCAG 1.4.11 needs 3:1). */
 .g-check .g-check__box {
 	flex: none;
 	position: relative;
@@ -3862,7 +3864,7 @@ ion-router-outlet {
 	padding: 0;
 	-webkit-appearance: none;
 	appearance: none;
-	border: 1.5px solid var(--g-ink3);
+	border: 1.5px solid var(--g-ink2);
 	border-radius: 6px;
 	background-color: var(--g-surface);
 	background-image: none;
@@ -3874,7 +3876,6 @@ ion-router-outlet {
 .g-check .g-check__box:checked {
 	background-color: var(--g-brand);
 	background-image: none;
-	border-color: var(--g-brand);
 }
 .g-check .g-check__box:checked::after {
 	content: "";
@@ -3896,6 +3897,16 @@ ion-router-outlet {
 }
 .g-check .g-check__box:disabled {
 	opacity: 0.45;
+}
+/* Windows high contrast drops the lime fill: system colours keep the state */
+@media (forced-colors: active) {
+	.g-check .g-check__box:checked {
+		background-color: Highlight;
+		border-color: Highlight;
+	}
+	.g-check .g-check__box:checked::after {
+		border-color: HighlightText;
+	}
 }
 
 /* GSwitch: 44px button, 52x32 track (iOS proportions on the 4pt grid) */
