@@ -5098,10 +5098,10 @@ ion-modal.g-mustread {
 }
 .g-leave-ring-legend i {
 	display: inline-block;
-	width: 10px;
-	height: 10px;
-	margin-right: 6px;
-	border-radius: 3px;
+	width: 8px;
+	height: 8px;
+	margin-right: 4px;
+	border-radius: 2px;
 }
 .g-leave-ring-legend__left {
 	background: var(--g-accent-ink);
@@ -5194,7 +5194,8 @@ ion-modal.g-mustread {
 }
 @media (prefers-reduced-motion: no-preference) {
 	.g-leave-ring__dial circle {
-		transition: stroke-dasharray 0.4s ease, stroke-dashoffset 0.4s ease;
+		transition: stroke-dasharray var(--g-motion-progress-duration) var(--g-motion-progress-easing),
+			stroke-dashoffset var(--g-motion-progress-duration) var(--g-motion-progress-easing);
 	}
 }
 
