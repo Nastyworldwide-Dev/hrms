@@ -298,7 +298,7 @@ test("a suppressed refusal does not use up the repeat window of the endpoint", a
 })
 
 test("a screen that has drawn 'You can't open this.' (data-no-access) is not toasted over", async () => {
-	globalThis.document = { querySelector: (sel) => (sel.endsWith("[data-no-access]") ? {} : null) }
+	globalThis.document = { querySelectorAll: () => [{ closest: () => null }] }
 	try {
 		const { loud, toasts } = harness(forbidden())
 		await assert.rejects(() => loud({ url: read() }))
@@ -310,15 +310,26 @@ test("a screen that has drawn 'You can't open this.' (data-no-access) is not toa
 })
 
 test("a 'You can't open this.' left on a hidden page does not silence the current one", async () => {
-	// Ionic keeps earlier pages mounted (class ion-page-hidden); only the visible page counts
-	let asked = ""
-	globalThis.document = { querySelector: (sel) => ((asked = sel), null) }
+	// Ionic keeps earlier pages mounted (class ion-page-hidden); only a card on screen counts.
+	// Review of 5b510dce8: the old check was the selector ":not(.ion-page-hidden) [data-no-access]",
+	// which matches through <body> (never hidden), so a card on a hidden page silenced the toast.
+	// This drives the real check with element-like nodes instead of asserting the selector text.
+	const card = (hidden) => ({ closest: (sel) => (hidden && sel === ".ion-page-hidden" ? {} : null) })
+	globalThis.document = { querySelectorAll: () => [card(true)] }
 	try {
 		const { loud, toasts } = harness(forbidden())
 		await assert.rejects(() => loud({ url: read() }))
 		await new Promise((r) => setTimeout(r, 5))
-		assert.match(asked, /:not\(\.ion-page-hidden\)/, "the check skips hidden pages")
-		assert.equal(toasts.length, 1)
+		assert.equal(toasts.length, 1, "the hidden page's card does not count")
+	} finally {
+		delete globalThis.document
+	}
+	globalThis.document = { querySelectorAll: () => [card(true), card(false)] }
+	try {
+		const { loud, toasts } = harness(forbidden())
+		await assert.rejects(() => loud({ url: read() }))
+		await new Promise((r) => setTimeout(r, 5))
+		assert.equal(toasts.length, 0, "a card on the visible page (or in a sheet) still counts")
 	} finally {
 		delete globalThis.document
 	}
@@ -329,7 +340,7 @@ test("a 'You can't open this.' left on a hidden page does not silence the curren
 // refusal: no toast where the screen already said it, a plain one where it did not.
 test("a missing record is not toasted as 'didn't load' on top of the screen's own card", async () => {
 	globalThis.requestAnimationFrame = (fn) => fn()
-	globalThis.document = { querySelector: (sel) => (sel.includes("data-no-access") ? {} : null) }
+	globalThis.document = { querySelectorAll: () => [{ closest: () => null }] }
 	try {
 		const { loud, toasts } = harness({ exc_type: "DoesNotExistError", response: { status: 404 } })
 		await assert.rejects(() => loud({ url: read() }))
@@ -342,7 +353,7 @@ test("a missing record is not toasted as 'didn't load' on top of the screen's ow
 
 test("a missing record on a screen with no card of its own is said once, plainly", async () => {
 	globalThis.requestAnimationFrame = (fn) => fn()
-	globalThis.document = { querySelector: () => null }
+	globalThis.document = { querySelectorAll: () => [] }
 	try {
 		const { loud, toasts } = harness({ exc_type: "DoesNotExistError", response: { status: 404 } })
 		await assert.rejects(() => loud({ url: read() }))
@@ -372,7 +383,7 @@ test("a missing record is gone, for a signed-in person only", async () => {
 // deleted record would stack one "That is no longer here." per row.
 test("a missing record, toasted, is said once per endpoint within the repeat window", async () => {
 	globalThis.requestAnimationFrame = (fn) => fn()
-	globalThis.document = { querySelector: () => null }
+	globalThis.document = { querySelectorAll: () => [] }
 	try {
 		const toasts = []
 		let clock = 0

@@ -75,10 +75,11 @@ const SILENT_ENDPOINTS = new Set([
 // after the request settles, so the check waits one frame before deciding.
 function noAccessDrawn(options) {
 	if (options?.noAccessShown) return true
-	return (
-		typeof document !== "undefined" &&
-		Boolean(document.querySelector?.(":not(.ion-page-hidden) [data-no-access]"))
-	)
+	if (typeof document === "undefined" || !document.querySelectorAll) return false
+	// A card counts only off a hidden page. Not the selector ":not(.ion-page-hidden) [data-no-access]":
+	// that matches through <body>, so a card left on an earlier page silenced this one (review of
+	// 5b510dce8). A sheet's card sits in ion-modal, outside any page, and still counts.
+	return [...document.querySelectorAll("[data-no-access]")].some((card) => !card.closest(".ion-page-hidden"))
 }
 
 function endpointOf(options) {

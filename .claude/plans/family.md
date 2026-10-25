@@ -1,4 +1,4 @@
-CLASS: a toast reads a 404 as "deleted" where the page itself says "Could not load" (they contradicted each other)
-frontend/src/utils/requestFailure.js gone toast same-root — fixed: generic "didn't load" when no single-record card is drawn
+CLASS: a descendant selector :not(.x) [attr] matches through any ancestor without .x (body), so it cannot exclude an .x subtree
+frontend/src/utils/requestFailure.js noAccessDrawn same-root — fixed: each card checked with closest(".ion-page-hidden")
 frontend/src/utils/loudRequest.js:34 same-root — wires the reporter
-frontend/src/views/issues/HRIssueBoard.vue detail, frontend/src/components/RequestActionSheet.vue document.get same-root — single-record reads, now marked record
+frontend/src/components/glass/GModal.vue:145 not-affected — its :not() sits on the .ion-page itself, which is the correct form
