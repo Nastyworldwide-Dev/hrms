@@ -37,3 +37,12 @@ test("a mileage type asks km and prices the line from the type's rate", () => {
 test("a mileage line says its distance in the list", () => {
 	assert.match(src, /item\.distance_km \? __\("\{0\} km"/)
 })
+
+// Coherence gate, 25 Oct 2026: a new claim showed two lime buttons, "Add expense" and "Send"
+// (§18: one filled action per screen). Send is the screen's action; the first Add is the
+// secondary, ghost style, still a labelled button (UX review 21 Oct, F4).
+test("the empty list's Add expense is a ghost button, not a second filled action", () => {
+	const empty = src.match(/<GEmptyState[\s\S]*?<\/GEmptyState>/)?.[0] ?? ""
+	assert.match(empty, /<GGhostButton :label="__\('Add expense'\)"/)
+	assert.doesNotMatch(empty, /<GButton\b/)
+})

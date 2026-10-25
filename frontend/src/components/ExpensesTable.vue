@@ -30,7 +30,8 @@
 		     (UX review 21 Oct 2026, F4). -->
 		<GEmptyState v-else :title="__('No expenses added')" :body="__('Add each item you paid for.')">
 			<template v-if="!isReadOnly" #action>
-				<GButton :label="__('Add expense')" @click="openModal()" />
+				<!-- ghost: Send is this screen's one filled action (§18) -->
+				<GGhostButton :label="__('Add expense')" @click="openModal()" />
 			</template>
 		</GEmptyState>
 		<p v-if="expenseClaim.expenses?.length" class="g-form-footer">
@@ -144,6 +145,7 @@
 import { Plus } from "lucide-vue-next"
 import { createResource } from "frappe-ui"
 import GButton from "@/components/glass/GButton.vue"
+import GGhostButton from "@/components/glass/GGhostButton.vue"
 import GIconButton from "@/components/glass/GIconButton.vue"
 import { computed, ref, watch, inject } from "vue"
 
