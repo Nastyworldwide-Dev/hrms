@@ -3848,13 +3848,54 @@ ion-router-outlet {
 	color: var(--g-ink3);
 	cursor: not-allowed;
 }
-.g-check__box {
+/* Drawn, not native: the browser's box, restyled by the Tailwind forms plugin
+   (blue fill, white tick, blue focus ring), sat beside a lime button (owner,
+   25 Oct 2026). That plugin loads after this file and its [type="checkbox"]
+   rules tie with a single class, so every rule here is scoped under .g-check.
+   The input is still the real control (focus, keyboard, VoiceOver). */
+.g-check .g-check__box {
 	flex: none;
-	width: 20px;
-	height: 20px;
+	position: relative;
+	width: 22px;
+	height: 22px;
 	margin: 0;
-	accent-color: var(--g-brand);
+	padding: 0;
+	-webkit-appearance: none;
+	appearance: none;
+	border: 1.5px solid var(--g-ink3);
+	border-radius: 6px;
+	background-color: var(--g-surface);
+	background-image: none;
+	/* the plugin's :checked:focus / :checked:hover fill with currentColor */
+	color: var(--g-brand);
 	cursor: inherit;
+	transition: background-color 0.15s, border-color 0.15s;
+}
+.g-check .g-check__box:checked {
+	background-color: var(--g-brand);
+	background-image: none;
+	border-color: var(--g-brand);
+}
+.g-check .g-check__box:checked::after {
+	content: "";
+	position: absolute;
+	left: 6.5px;
+	top: 2.5px;
+	width: 6px;
+	height: 11px;
+	border: solid var(--g-on-brand);
+	border-width: 0 2.5px 2.5px 0;
+	transform: rotate(45deg);
+}
+.g-check .g-check__box:focus {
+	outline: none;
+	box-shadow: none;
+}
+.g-check .g-check__box:focus-visible {
+	box-shadow: var(--g-shadow-focus-ring);
+}
+.g-check .g-check__box:disabled {
+	opacity: 0.45;
 }
 
 /* GSwitch: 44px button, 52x32 track (iOS proportions on the 4pt grid) */
