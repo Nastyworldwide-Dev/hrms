@@ -54,3 +54,14 @@ test("the board page's live line is one per notice (Ionic keeps the last page in
 	assert.match(src, /:described-by="`announcement-confirm-\$\{id\}`"/)
 	assert.match(src, /:id="`announcement-confirm-\$\{id\}`"/)
 })
+
+// Owner, 25 Oct 2026: tick + Confirm on the last must-read left a blank screen. `:can-dismiss="false"`
+// made Ionic refuse the close that `is-open` going false asks for, so the empty modal stayed on top
+// of the app. "Remind me later" on the last notice did the same. The modal may close once nothing
+// is left to show, and never while a notice is on screen.
+test("the full-screen must-read closes once no notice is left", () => {
+	const src = read("../MustReadNotice.vue")
+	assert.doesNotMatch(src, /:can-dismiss="false"/)
+	assert.match(src, /:can-dismiss="allowClose"/)
+	assert.match(src, /const allowClose = \(\) => !current\.value/)
+})

@@ -15,7 +15,7 @@
 	<ion-modal
 		:is-open="Boolean(current)"
 		class="g-mustread"
-		:can-dismiss="false"
+		:can-dismiss="allowClose"
 		:backdrop-dismiss="false"
 		:handle="false"
 		:aria-label="current?.title || undefined"
@@ -91,6 +91,10 @@ const detail = createResource({ url: "hrms.api.announcements.get_announcement", 
 
 const snoozed = ref(new Set())
 const current = computed(() => nextMustRead(queue.data, snoozed.value))
+//: Ionic asks this before every close. `false` also refused the close that `is-open` going false
+//: asks for, so confirming the last notice left the empty modal over the app: a blank screen
+//: (owner, 25 Oct 2026). Closing is allowed only once no notice is left to show.
+const allowClose = () => !current.value
 const body = computed(() => (detail.data?.name === current.value?.name ? detail.data.body : ""))
 
 const reachedEnd = ref(false)
