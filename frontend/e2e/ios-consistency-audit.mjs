@@ -64,8 +64,10 @@ for (const s of list) {
 			// 7. buttons: heights of primary buttons
 			const btns = uniq([...page.querySelectorAll(".g-btn")].filter(vis).map((x) => R(x.getBoundingClientRect().height)))
 			if (btns.length > 1) issues.push(`button heights differ: ${btns}`)
-			// 8. loose text between groups (iOS keeps content in groups or footers)
-			const loose = [...page.querySelectorAll("ion-content p, ion-content span")].filter(vis).filter((e) => !e.closest(".g-form-group, .g-list, .g-glass, .g-today, .g-form-footer, .g-form-section__title, .g-eyebrow, .g-empty, button, a, ion-modal, .g-header") && e.textContent.trim().length > 3 && e.children.length === 0)
+			// 8. loose text between groups (iOS keeps content in groups or footers).
+			//    A <label> is a control's own name ("Select all 3" on GCheckbox), like a
+			//    button's: 25 Oct 2026 the gate counted it as loose text.
+			const loose = [...page.querySelectorAll("ion-content p, ion-content span")].filter(vis).filter((e) => !e.closest(".g-form-group, .g-list, .g-glass, .g-today, .g-form-footer, .g-form-section__title, .g-eyebrow, .g-empty, button, a, label, ion-modal, .g-header") && e.textContent.trim().length > 3 && e.children.length === 0)
 			if (loose.length) issues.push(`loose text outside groups: ${loose.length} (${loose.slice(0, 2).map((e) => JSON.stringify(e.textContent.trim().slice(0, 28))).join(", ")})`)
 			return { title: (document.querySelector(".g-large-title, .g-header__title")?.textContent || "").trim(), issues }
 		})
