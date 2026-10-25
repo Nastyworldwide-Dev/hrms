@@ -1108,7 +1108,10 @@ function handleDocDelete() {
 }
 
 async function reloadDoc() {
-	await documentResource.reload()
+	// a failed retry is drawn by the card and reported by the seam, like the first open
+	await documentResource.reload().catch(() => null)
+	if (documentResource.get.error) return
+	if (!isSetUp) await setUpForm()
 	resetForm()
 }
 
@@ -1165,22 +1168,31 @@ const isFormReadOnly = computed(() => {
 	return Boolean(props.id)
 })
 
+//: The form's set-up once its document is in. One function, so Try again can finish a set-up a
+//: failed first open skipped (review of c3b699efe: offline, then Try again drew a form with no
+//: write permissions, attachments or workflow).
+let isSetUp = false
+async function setUpForm() {
+	formModel.value = { ...documentResource.doc }
+	await docPermissions.reload()
+	await permittedWriteFields.reload()
+	await attachedFiles.reload()
+	await setFormattedCurrency()
+
+	// workflow
+	workflow.value = useWorkflow(props.doctype)
+
+	isFormDirty.value = false
+	isSetUp = true
+}
+
 onMounted(async () => {
 	if (props.id) {
 		// a failed read (gone, refused, offline) is drawn by the card above and already
 		// reported by the request seam; thrown from here it logged a render crash too
 		await documentResource.get.promise?.catch(() => null)
 		if (documentResource.get.error) return
-		formModel.value = { ...documentResource.doc }
-		await docPermissions.reload()
-		await permittedWriteFields.reload()
-		await attachedFiles.reload()
-		await setFormattedCurrency()
-
-		// workflow
-		workflow.value = useWorkflow(props.doctype)
-
-		isFormDirty.value = false
+		await setUpForm()
 	}
 })
 </script>

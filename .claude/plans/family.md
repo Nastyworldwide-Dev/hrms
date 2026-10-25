@@ -1,3 +1,3 @@
-CLASS: an awaited resource read in a lifecycle hook rethrows a failure the screen already drew and the seam already reported, so Vue logs a render crash
-frontend/src/components/FormView.vue onMounted same-root — fixed: catch the read, stop start-up when it failed
-other views awaiting .promise not-affected — grep of frontend/src/views for get.promise / .get.fetch() found none
+CLASS: start-up work tied to the first successful read, so a retry that succeeds leaves the screen half set up
+frontend/src/components/FormView.vue onMounted/reloadDoc same-root — fixed: setUpForm() run on mount and by Try again when the first open never set up
+frontend/src/components/FormView.vue workflowApplied/reload callers of reloadDoc not-affected — they run after a successful set-up (isSetUp true), so reloadDoc behaves as before

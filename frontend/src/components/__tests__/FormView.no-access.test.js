@@ -44,3 +44,19 @@ test("a failed first read stops the form's start-up instead of throwing out of o
 	assert.match(mount, /await documentResource\.get\.promise\?\.catch\(\(\) => null\)/)
 	assert.match(mount, /if \(documentResource\.get\.error\) return/)
 })
+
+// Review of c3b699efe: a first open that failed (offline, 5xx) skipped the form's set-up, and
+// Try again only re-read the document, so after the network came back the form drew without
+// its write permissions, attachments or workflow: every field read-only, no Approve/Reject.
+// The set-up is one function; Try again runs it when the first open never did.
+test("Try again finishes a set-up that a failed first open skipped", () => {
+	const setup = src.match(/async function setUpForm\(\) \{[\s\S]*?\n\}/)?.[0] ?? ""
+	for (const step of ["docPermissions.reload", "permittedWriteFields.reload", "attachedFiles.reload", "setFormattedCurrency", "useWorkflow"])
+		assert.ok(setup.includes(step), `setUpForm runs ${step}`)
+	const mount = src.match(/onMounted\(async \(\) => \{[\s\S]*?\n\}\)/)?.[0] ?? ""
+	assert.match(mount, /await setUpForm\(\)/)
+	const reload = src.match(/async function reloadDoc\(\) \{[\s\S]*?\n\}/)?.[0] ?? ""
+	assert.match(reload, /await documentResource\.reload\(\)\.catch\(\(\) => null\)/)
+	assert.match(reload, /if \(documentResource\.get\.error\) return/)
+	assert.match(reload, /if \(!isSetUp\) await setUpForm\(\)/)
+})
