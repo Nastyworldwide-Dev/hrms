@@ -99,7 +99,7 @@
 			:title="detail.data?.employee_name || __('Issue')"
 			@did-dismiss="sheetOpen = false"
 		>
-			<ResourceError :resource="detail" what="this issue" />
+			<ResourceError :resource="detail" record what="this issue" />
 			<div v-if="detail.data" class="w-full flex flex-col pb-8">
 				<div class="w-full flex flex-col gap-1 pb-3 px-4">
 					<div class="g-eyebrow">{{ detail.data.name }}</div>

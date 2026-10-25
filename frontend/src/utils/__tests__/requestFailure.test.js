@@ -347,7 +347,10 @@ test("a missing record on a screen with no card of its own is said once, plainly
 		const { loud, toasts } = harness({ exc_type: "DoesNotExistError", response: { status: 404 } })
 		await assert.rejects(() => loud({ url: read() }))
 		assert.equal(toasts.length, 1)
-		assert.equal(toasts[0].title, "That is no longer here.")
+		// Review of 90df2f2a6: only a single-record page knows a 404 means "deleted". A list or a
+		// method (Helpdesk not installed) says "Could not load … Try again" in place, so a toast
+		// saying "no longer here" contradicted it. Without a card, the toast stays generic.
+		assert.equal(toasts[0].title, "Something didn't load")
 	} finally {
 		delete globalThis.document
 		delete globalThis.requestAnimationFrame

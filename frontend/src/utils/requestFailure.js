@@ -181,15 +181,16 @@ export function makeFailureReporter(request, { notify, now, signedIn }) {
 						})
 				})
 			} else if (verdict === "gone") {
-				// Same shape as a refusal: a screen that drew "no longer here" (data-no-access)
-				// gets no toast on top; any other screen hears it once, in plain words.
+				// A single-record screen draws "no longer here" itself (data-no-access): no toast on
+				// top. Anywhere else a 404 may not mean "deleted" (a list, Helpdesk not installed:
+				// review of 90df2f2a6), so the toast stays the generic one the screen agrees with.
 				const later =
 					typeof requestAnimationFrame === "function"
 						? requestAnimationFrame
 						: (fn) => setTimeout(fn, 0)
 				later(() => {
 					if (!noAccessDrawn(options))
-						notify({ title: "That is no longer here.", text: "It may have been removed.", variant: "error" })
+						notify({ title: "Something didn't load", text: "Try again in a moment.", variant: "error" })
 				})
 			} else if (verdict === "load") {
 				// Plain words only (audit F-6): the server's sentence names doctypes,

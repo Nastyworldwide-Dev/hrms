@@ -239,7 +239,7 @@
 	<!-- document.get is the request that ran: its error and loading; ResourceError
 	     tells a refusal from a failure and guards Try again against a double tap -->
 	<div v-else-if="document.get?.error" class="g-form-body g-request-sheet">
-		<ResourceError :resource="document.get" :what="__('this request')" />
+		<ResourceError :resource="document.get" record :what="__('this request')" />
 	</div>
 	<div
 		v-else

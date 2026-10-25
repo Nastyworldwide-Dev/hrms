@@ -174,3 +174,19 @@ test("without `record`, a missing-thing error keeps 'Could not load' and Try aga
 	assert.match(html, /Try again/)
 	assert.doesNotMatch(html, /no longer here/)
 })
+
+// Review of 90df2f2a6: every page whose resource reads ONE record carries `record`, and no list does.
+test("single-record pages opt in to 'no longer here'; lists do not", () => {
+	const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8")
+	for (const [file, resource] of [
+		["../../views/sop/SopDetail.vue", "sop"],
+		["../../views/helpdesk/TicketDetail.vue", "ticketDetail"],
+		["../../views/announcements/Detail.vue", "announcementDetail"],
+		["../../views/manpower/ManpowerRequestDetail.vue", "request"],
+		["../../views/issues/HRIssueBoard.vue", "detail"],
+		["../RequestActionSheet.vue", "document.get"],
+	])
+		assert.match(read(file), new RegExp(`<ResourceError :resource="${resource.replace(".", "\\.")}" record`), file)
+	for (const file of ["../../views/helpdesk/HelpdeskList.vue", "../../views/sop/SopList.vue", "../../views/issues/IssueList.vue"])
+		assert.doesNotMatch(read(file), /<ResourceError[^>]*\brecord\b/, file)
+})

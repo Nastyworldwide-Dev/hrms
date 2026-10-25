@@ -1,6 +1,4 @@
-CLASS: a 404/DoesNotExistError read as "this record was deleted" where the resource is not one record
-frontend/src/components/ResourceError.vue same-root — fixed: gone only with the `record` prop
-frontend/src/views/{sop/SopDetail,helpdesk/TicketDetail,announcements/Detail,manpower/ManpowerRequestDetail}.vue same-root — marked record
-frontend/src/views/helpdesk/HelpdeskList.vue, TicketNew.vue, ListView.vue, KPI/board/list resources not-affected — no record prop, keep Could not load + Try again
-hrms/api/helpdesk.py get_ticket ticket .claude/plans/ticket-load-shifts-oct25.md — Helpdesk missing raises DoesNotExistError, a direct ticket link then reads "no longer here"
-frontend/src/utils/requestFailure.js noAccessDrawn ticket .claude/plans/ticket-loudrequest-split.md — any visible data-no-access on the page silences another request toast
+CLASS: a toast reads a 404 as "deleted" where the page itself says "Could not load" (they contradicted each other)
+frontend/src/utils/requestFailure.js gone toast same-root — fixed: generic "didn't load" when no single-record card is drawn
+frontend/src/utils/loudRequest.js:34 same-root — wires the reporter
+frontend/src/views/issues/HRIssueBoard.vue detail, frontend/src/components/RequestActionSheet.vue document.get same-root — single-record reads, now marked record
