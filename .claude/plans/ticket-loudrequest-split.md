@@ -9,3 +9,8 @@ refusal shapes (markup, entities, line breaks, unclosed tags, empty, network), (
 Drop the duplicated `new Function` source-eval harness in loudRequest.test.js.
 
 Upgrade trigger: the next fix in loudRequest.js. Candidate for alpha.41 S12.
+
+## 25 Oct 2026 — trigger met (4 fixes in 90 days: fdb11268b, 0c4823b31, 454ed9dcd, d79d6d575)
+- Add ONE table-driven test: every verdict (silent, refused, gone, repeat, load) x signed-in/out x inside/outside the repeat window x card drawn/not.
+- isRepeat records a timestamp as a side effect and is called from two branches of classifyFailure: make it a pure check + an explicit record, so a branch cannot forget it (how 454ed9dcd happened).
+- isGone matches any endpoint; consider scoping it to document reads (frappe.client.get) if a list or method 404 is ever misread as "no longer here".

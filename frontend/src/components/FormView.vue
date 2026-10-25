@@ -1109,7 +1109,7 @@ function handleDocDelete() {
 
 async function reloadDoc() {
 	// a failed retry is drawn by the card and reported by the seam, like the first open
-	await documentResource.reload().catch(() => null)
+	await documentResource.reload()?.catch?.(() => null)
 	if (documentResource.get.error) return
 	if (props.id && !isSetUp) await setUpForm()
 	resetForm()
@@ -1190,7 +1190,7 @@ onMounted(async () => {
 	if (props.id) {
 		// a failed read (gone, refused, offline) is drawn by the card above and already
 		// reported by the request seam; thrown from here it logged a render crash too
-		await documentResource.get.promise?.catch(() => null)
+		await documentResource.get.promise?.catch?.(() => null)
 		if (documentResource.get.error) return
 		await setUpForm()
 	}

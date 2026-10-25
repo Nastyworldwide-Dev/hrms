@@ -41,7 +41,7 @@ test("a record that is gone says so and offers Back, not Try again", () => {
 // into Vue's error handler. The card above already says what happened; the start-up stops.
 test("a failed first read stops the form's start-up instead of throwing out of onMounted", () => {
 	const mount = src.match(/onMounted\(async \(\) => \{[\s\S]*?\n\}\)/)?.[0] ?? ""
-	assert.match(mount, /await documentResource\.get\.promise\?\.catch\(\(\) => null\)/)
+	assert.match(mount, /await documentResource\.get\.promise\?\.catch\?\.\(\(\) => null\)/)
 	assert.match(mount, /if \(documentResource\.get\.error\) return/)
 })
 
@@ -56,7 +56,7 @@ test("Try again finishes a set-up that a failed first open skipped", () => {
 	const mount = src.match(/onMounted\(async \(\) => \{[\s\S]*?\n\}\)/)?.[0] ?? ""
 	assert.match(mount, /await setUpForm\(\)/)
 	const reload = src.match(/async function reloadDoc\(\) \{[\s\S]*?\n\}/)?.[0] ?? ""
-	assert.match(reload, /await documentResource\.reload\(\)\.catch\(\(\) => null\)/)
+	assert.match(reload, /await documentResource\.reload\(\)\?\.catch\?\.\(\(\) => null\)/)
 	assert.match(reload, /if \(documentResource\.get\.error\) return/)
-	assert.match(reload, /if \(!isSetUp\) await setUpForm\(\)/)
+	assert.match(reload, /if \(props\.id && !isSetUp\) await setUpForm\(\)/)
 })
