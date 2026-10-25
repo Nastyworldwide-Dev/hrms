@@ -1111,7 +1111,7 @@ async function reloadDoc() {
 	// a failed retry is drawn by the card and reported by the seam, like the first open
 	await documentResource.reload().catch(() => null)
 	if (documentResource.get.error) return
-	if (!isSetUp) await setUpForm()
+	if (props.id && !isSetUp) await setUpForm()
 	resetForm()
 }
 

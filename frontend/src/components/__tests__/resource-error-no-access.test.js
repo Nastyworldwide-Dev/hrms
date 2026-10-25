@@ -21,6 +21,7 @@ import {
 } from "vue/server-renderer"
 
 import { isNoAccess } from "../../utils/sessionLost.js"
+import { isGone } from "../../utils/requestFailure.js"
 
 const source = readFileSync(new URL("../ResourceError.vue", import.meta.url), "utf8")
 const { descriptor } = parse(source)
@@ -54,6 +55,7 @@ async function render({ error, back = false, signedIn = true, what = "" }) {
 		useRouter: () => ({}),
 		goBackOrHome: () => {},
 		isNoAccess,
+		isGone,
 		sessionUser: () => (signedIn ? "a@x" : null),
 		console: { info() {}, warn() {}, error() {} },
 	}
@@ -148,4 +150,16 @@ test("the KPI drill-down draws ResourceError for the person-detail request, besi
 		/\bback\b/,
 		"the drill-down already has its own Back link"
 	)
+})
+
+// Persona crawl, 25 Oct 2026: an SOP, ticket or issue deleted since it was linked said "Could not
+// load this SOP." with Try again, which can never work. Same answer as FormView's gone card.
+test("a record that is gone says so, with Back and no Try again", async () => {
+	const error = Object.assign(new Error("x"), { exc_type: "DoesNotExistError", response: { status: 404 } })
+	const html = await render({ error, back: true, what: "this SOP" })
+	assert.match(html, /This is no longer here\./)
+	assert.match(html, /data-no-access/, "the toast seam sees the screen already said it")
+	assert.match(html, />Back</)
+	assert.doesNotMatch(html, /Try again/)
+	assert.doesNotMatch(html, /Could not load/)
 })

@@ -5,13 +5,13 @@
 	<div
 		v-if="failed"
 		role="alert"
-		:data-no-access="noAccess || undefined"
+		:data-no-access="noAccess || gone || undefined"
 		class="flex flex-col items-center gap-2 p-5 text-card-title text-ink-600"
 	>
 		<span class="text-center">{{ message }}</span>
 		<div class="flex flex-row items-center gap-2">
 			<GButton
-				v-if="resource.reload && !noAccess"
+				v-if="resource.reload && !noAccess && !gone"
 				class="g-btn--compact"
 				:label="__('Try again')"
 				:pending-label="__('Trying…')"
@@ -53,6 +53,7 @@ import GButton from "@/components/glass/GButton.vue"
 import { useRouter } from "vue-router"
 import { goBackOrHome } from "@/utils/navigation"
 import { isNoAccess } from "@/utils/sessionLost"
+import { isGone } from "@/utils/requestFailure"
 import { sessionUser } from "@/utils/personalCache"
 
 const router = useRouter()
@@ -96,8 +97,12 @@ const noAccess = computed(() =>
 	isNoAccess(request.value?.error, { signedIn: Boolean(sessionUser()) })
 )
 
+//: Deleted since it was linked (persona crawl, 25 Oct 2026): a retry can never bring it back.
+const gone = computed(() => isGone(request.value?.error, { signedIn: Boolean(sessionUser()) }))
+
 const message = computed(() => {
 	if (noAccess.value) return __("You can't open this.")
+	if (gone.value) return __("This is no longer here.")
 	return props.what
 		? __("Could not load {0}.").replace("{0}", __(props.what))
 		: __("Could not load this.")
