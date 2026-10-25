@@ -134,3 +134,30 @@ test("every toast announces, because the vendor toast does not", () => {
 		"an error interrupts, a success does not"
 	)
 })
+
+// Persona crawl, 25 Oct 2026: one failed load early in a session left "Something didn't load.
+// Try again in a moment." in the alert region for the rest of the session, so 65 later pages
+// still carried it (a reader re-reading the page, or one moving through it, meets old news).
+// The toast it mirrors closes after 5 s; the spoken copy clears after the same time.
+test("an announcement does not outlive the toast it speaks for", async (t) => {
+	t.mock.timers.enable({ apis: ["setTimeout"] })
+	const { announce, CLEAR_AFTER_MS } = await import("../announce.js")
+	announce("Something didn't load. Try again in a moment.", "assertive")
+	await Promise.resolve()
+	const [el] = dom.created
+	assert.equal(el.textContent, "Something didn't load. Try again in a moment.")
+	t.mock.timers.tick(CLEAR_AFTER_MS)
+	assert.equal(el.textContent, "", "cleared once the toast is gone")
+})
+
+test("a newer message is not cleared by the older one's timer", async (t) => {
+	t.mock.timers.enable({ apis: ["setTimeout"] })
+	const { announce, CLEAR_AFTER_MS } = await import("../announce.js")
+	announce("First")
+	await Promise.resolve()
+	t.mock.timers.tick(CLEAR_AFTER_MS - 100)
+	announce("Second")
+	await Promise.resolve()
+	t.mock.timers.tick(200)
+	assert.equal(dom.created[0].textContent, "Second")
+})

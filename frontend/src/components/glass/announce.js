@@ -23,6 +23,9 @@
 // guidance is that assertive is for things that need attention NOW; everything
 // else waits its turn.
 
+//: frappe-ui's Toast closes after 5 s (Toast.vue `timeout` default).
+export const CLEAR_AFTER_MS = 5000
+
 let region = null
 let assertiveRegion = null
 
@@ -78,10 +81,16 @@ export function announce(message, politeness = "polite") {
 	// same string produces no mutation, so a second failed save would be
 	// silent — which is precisely the moment somebody needs to be told again.
 	target.textContent = ""
+	clearTimeout(target.__clear)
 	// A microtask is enough for the mutation observer to see two changes; a
 	// timeout would risk landing after the next announcement.
 	Promise.resolve().then(() => {
 		target.textContent = message
+		// Cleared when the toast it speaks for closes: left in place, one early failure
+		// stayed in the alert region for the whole session (persona crawl, 25 Oct 2026).
+		target.__clear = setTimeout(() => {
+			if (target.textContent === message) target.textContent = ""
+		}, CLEAR_AFTER_MS)
 	})
 }
 
