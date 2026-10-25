@@ -35,3 +35,12 @@ test("a record that is gone says so and offers Back, not Try again", () => {
 	assert.doesNotMatch(block, /Try again/)
 })
 
+
+// Persona crawl, 25 Oct 2026: every failed open (gone, refused, offline) also logged a
+// "[diagnostics] vue.render" crash: onMounted awaited the failed read, so the rejection escaped
+// into Vue's error handler. The card above already says what happened; the start-up stops.
+test("a failed first read stops the form's start-up instead of throwing out of onMounted", () => {
+	const mount = src.match(/onMounted\(async \(\) => \{[\s\S]*?\n\}\)/)?.[0] ?? ""
+	assert.match(mount, /await documentResource\.get\.promise\?\.catch\(\(\) => null\)/)
+	assert.match(mount, /if \(documentResource\.get\.error\) return/)
+})

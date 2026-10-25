@@ -1167,7 +1167,10 @@ const isFormReadOnly = computed(() => {
 
 onMounted(async () => {
 	if (props.id) {
-		await documentResource.get.promise
+		// a failed read (gone, refused, offline) is drawn by the card above and already
+		// reported by the request seam; thrown from here it logged a render crash too
+		await documentResource.get.promise?.catch(() => null)
+		if (documentResource.get.error) return
 		formModel.value = { ...documentResource.doc }
 		await docPermissions.reload()
 		await permittedWriteFields.reload()
