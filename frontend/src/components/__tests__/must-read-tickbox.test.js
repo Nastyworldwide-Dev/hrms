@@ -65,3 +65,10 @@ test("the full-screen must-read closes once no notice is left", () => {
 	assert.match(src, /:can-dismiss="allowClose"/)
 	assert.match(src, /const allowClose = \(\) => !current\.value/)
 })
+
+// The gate's axe run, 25 Oct 2026: the notice text scrolls, but a keyboard could not reach it
+// to scroll (scrollable-region-focusable, serious).
+test("the full-screen notice text can be scrolled from a keyboard", () => {
+	const src = read("../MustReadNotice.vue")
+	assert.match(src, /ref="scroller"[\s\S]*?tabindex="0"[\s\S]*?role="region"[\s\S]*?:aria-label="current\.title"/)
+})
