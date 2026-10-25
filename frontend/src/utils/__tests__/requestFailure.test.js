@@ -271,11 +271,10 @@ test("a 401, or a Guest permission error, is never a refusal, even carrying a 40
 	}
 })
 
-test("a server error or a missing document is not a refusal: it keeps the load toast", async () => {
-	for (const error of [
-		Object.assign(new Error("x"), { response: { status: 500 } }),
-		{ exc_type: "DoesNotExistError", messages: ["not found"] },
-	]) {
+// (A missing document used to sit here; since 25 Oct 2026 it is answered like a refusal —
+// see "a missing record is not toasted…" below.)
+test("a server error is not a refusal: it keeps the load toast", async () => {
+	for (const error of [Object.assign(new Error("x"), { response: { status: 500 } })]) {
 		const { loud, toasts } = harness(error)
 		await assert.rejects(() => loud({ url: read() }))
 		assert.equal(toasts.length, 1)
@@ -323,4 +322,45 @@ test("a 'You can't open this.' left on a hidden page does not silence the curren
 	} finally {
 		delete globalThis.document
 	}
+})
+
+// Persona crawl, 25 Oct 2026: a deleted record drew its own "no longer here" card and the
+// generic "Something didn't load" toast went on top of it. A missing record is answered like a
+// refusal: no toast where the screen already said it, a plain one where it did not.
+test("a missing record is not toasted as 'didn't load' on top of the screen's own card", async () => {
+	globalThis.requestAnimationFrame = (fn) => fn()
+	globalThis.document = { querySelector: (sel) => (sel.includes("data-no-access") ? {} : null) }
+	try {
+		const { loud, toasts } = harness({ exc_type: "DoesNotExistError", response: { status: 404 } })
+		await assert.rejects(() => loud({ url: read() }))
+		assert.equal(toasts.length, 0)
+	} finally {
+		delete globalThis.document
+		delete globalThis.requestAnimationFrame
+	}
+})
+
+test("a missing record on a screen with no card of its own is said once, plainly", async () => {
+	globalThis.requestAnimationFrame = (fn) => fn()
+	globalThis.document = { querySelector: () => null }
+	try {
+		const { loud, toasts } = harness({ exc_type: "DoesNotExistError", response: { status: 404 } })
+		await assert.rejects(() => loud({ url: read() }))
+		assert.equal(toasts.length, 1)
+		assert.equal(toasts[0].title, "That is no longer here.")
+	} finally {
+		delete globalThis.document
+		delete globalThis.requestAnimationFrame
+	}
+})
+
+test("a missing record is gone, for a signed-in person only", async () => {
+	const { isGone } = await import("../requestFailure.js")
+	const missing = { exc_type: "DoesNotExistError", response: { status: 404 } }
+	assert.equal(isGone(missing, { signedIn: true }), true)
+	assert.equal(isGone({ response: { status: 404 } }, { signedIn: true }), true)
+	assert.equal(isGone(missing, { signedIn: false }), false, "a logged-out read goes to Login")
+	assert.equal(isGone({ response: { status: 500 } }, { signedIn: true }), false)
+	assert.equal(isGone({ exc_type: "PermissionError", response: { status: 403 } }, { signedIn: true }), false)
+	assert.equal(isGone(null, { signedIn: true }), false)
 })

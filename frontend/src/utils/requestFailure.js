@@ -92,6 +92,15 @@ function isRepeat(endpoint, now) {
 	return last !== undefined && now - last < REPEAT_WINDOW_MS
 }
 
+// Is the record this page reads gone (deleted since a notification or link pointed at it)?
+// For a signed-in person only, like isNoAccess: a logged-out read is answered by Login. A
+// retry can never bring it back, so the page says so with a way back, not "Try again"
+// (persona crawl, 25 Oct 2026).
+export function isGone(error, { signedIn }) {
+	if (!error || !signedIn) return false
+	return error.exc_type === "DoesNotExistError" || error.response?.status === 404
+}
+
 /**
  * What this failure is: "silent" (reported elsewhere, or the offline banner says it), "refused"
  * (a refusal of THIS page from a person still signed in), "repeat" (this endpoint was reported
@@ -108,6 +117,8 @@ function classifyFailure(error, { endpoint, signedIn, now }) {
 		(noServerAnswer(error) && phoneOffline())
 	if (silenced) return "silent"
 	if (isNoAccess(error, { signedIn: signedIn() })) return "refused"
+	// a record deleted since it was linked: the screen says "no longer here" itself
+	if (isGone(error, { signedIn: signedIn() })) return "gone"
 	return isRepeat(endpoint, now()) ? "repeat" : "load"
 }
 
@@ -168,6 +179,17 @@ export function makeFailureReporter(request, { notify, now, signedIn }) {
 							text: "It is not shared with you.",
 							variant: "error",
 						})
+				})
+			} else if (verdict === "gone") {
+				// Same shape as a refusal: a screen that drew "no longer here" (data-no-access)
+				// gets no toast on top; any other screen hears it once, in plain words.
+				const later =
+					typeof requestAnimationFrame === "function"
+						? requestAnimationFrame
+						: (fn) => setTimeout(fn, 0)
+				later(() => {
+					if (!noAccessDrawn(options))
+						notify({ title: "That is no longer here.", text: "It may have been removed.", variant: "error" })
 				})
 			} else if (verdict === "load") {
 				// Plain words only (audit F-6): the server's sentence names doctypes,

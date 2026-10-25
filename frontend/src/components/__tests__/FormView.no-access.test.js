@@ -12,6 +12,7 @@ const template = src.split("<script")[0]
 
 test("a refused read says 'You can't open this.' and offers Back, not Try again", () => {
 	assert.match(src, /import \{ isNoAccess \} from "@\/utils\/sessionLost"/)
+	assert.match(src, /import \{ isGone \} from "@\/utils\/requestFailure"/)
 	assert.match(src, /const noAccess = computed\(\(\) =>\s*isNoAccess\(documentResource\.get\.error/)
 	assert.match(template, /v-else-if="noAccess"[\s\S]*?You can\\?'t open this\./)
 	const block = template.match(/v-else-if="noAccess"[\s\S]*?<\/GEmptyState>/)?.[0] ?? ""
@@ -23,3 +24,14 @@ test("any other failed read keeps its wording and Try again", () => {
 	assert.match(template, /Could not open this \{0\}/)
 	assert.match(template, /reloadDoc\(\)/)
 })
+
+// Persona crawl, 25 Oct 2026: a deleted record read as a connection glitch with a retry.
+test("a record that is gone says so and offers Back, not Try again", () => {
+	assert.match(src, /const gone = computed\(\(\) =>\s*isGone\(documentResource\.get\.error/)
+	const block = template.match(/v-else-if="gone"[\s\S]*?<\/GEmptyState>/)?.[0] ?? ""
+	assert.match(block, /data-no-access/, "the toast seam sees the screen already said it")
+	assert.match(block, /This \{0\} is no longer here/)
+	assert.match(block, /goBackOrHome\(router\)/)
+	assert.doesNotMatch(block, /Try again/)
+})
+

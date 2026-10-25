@@ -6,3 +6,4 @@ Found by the clean gate run, 25 Oct 2026 (/tmp/gates2.log). Persona nadi.w0.appr
 4. /expense-claims/<id>: Expenses group moves 44px (17 shifts), cold. NOT traced.
 5. ios-consistency "1 loose text outside groups" and states-audit "O3": NOT traced; rerun those audits alone to see the screen.
 Also: attendance-requests-detail "no back control" in coherence is a timing flake (back button present, checked in browser).
+6. ResourceError.vue (SOP/helpdesk/issue detail): a 404 still reads "Could not load X." + Try again; give it the isGone branch FormView got in the 25 Oct gone-record fix.

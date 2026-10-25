@@ -342,6 +342,17 @@
 					<GButton :label="__('Back')" @click="goBackOrHome(router)" />
 				</template>
 			</GEmptyState>
+			<!-- deleted since a notification or link pointed here: a retry can never work -->
+			<GEmptyState
+				v-else-if="gone"
+				data-no-access
+				:title="__('This {0} is no longer here', [__(props.noun)])"
+				:body="__('It may have been removed.')"
+			>
+				<template #action>
+					<GButton :label="__('Back')" @click="goBackOrHome(router)" />
+				</template>
+			</GEmptyState>
 			<GEmptyState
 				v-else
 				:title="__('Could not open this {0}', [__(props.noun)])"
@@ -464,6 +475,7 @@ import { requestStatus } from "@/utils/requestStatus"
 import { formTitle } from "@/utils/formTitle"
 import { firstMessage, saveFailedSentence } from "@/utils/loudRequest"
 import { isNoAccess } from "@/utils/sessionLost"
+import { isGone } from "@/utils/requestFailure"
 import { sessionUser } from "@/utils/personalCache"
 import { formatCurrency } from "@/utils/formatters"
 import { useDownloadPDF } from "@/utils/commonUtils"
@@ -847,6 +859,9 @@ const documentResource = createDocumentResource({
 // that ended reloads onto Login instead; isNoAccess tells the two apart)
 const noAccess = computed(() =>
 	isNoAccess(documentResource.get.error, { signedIn: Boolean(sessionUser()) })
+)
+const gone = computed(() =>
+	isGone(documentResource.get.error, { signedIn: Boolean(sessionUser()) })
 )
 
 // docstatus is a TRANSITION, not a field: frappe.client.set_value refuses it
