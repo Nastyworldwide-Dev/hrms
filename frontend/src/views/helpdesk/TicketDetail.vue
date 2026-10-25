@@ -15,7 +15,7 @@
 			<div
 				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full lg:py-7 max-w-content-column-lg mx-auto"
 			>
-				<ResourceError :resource="ticketDetail" back what="this ticket" />
+				<ResourceError :resource="ticketDetail" record back what="this ticket" />
 				<GSkeleton v-if="ticketDetail.loading && !ticket" height="220px" />
 
 				<template v-if="ticket">

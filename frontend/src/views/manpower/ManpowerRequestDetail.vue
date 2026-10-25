@@ -13,7 +13,7 @@
 				<ShellHeader bare :title="__('Manpower request')" />
 				<div class="grow overflow-y-auto" tabindex="0" :aria-label="__('Manpower request')">
 					<div class="w-full max-w-content-column-lg mx-auto flex flex-col gap-5 px-4 pt-4 pb-8">
-						<ResourceError :resource="request" back :what="__('this manpower request')" />
+						<ResourceError :resource="request" record back :what="__('this manpower request')" />
 
 						<template v-if="doc">
 							<section class="g-form-section">

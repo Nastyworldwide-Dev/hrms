@@ -18,7 +18,7 @@
 			<div
 				class="flex flex-col gap-4 px-4 pt-6 pb-8 w-full max-w-content-column-read mx-auto lg:py-7"
 			>
-				<ResourceError :resource="announcementDetail" back what="this announcement" />
+				<ResourceError :resource="announcementDetail" record back what="this announcement" />
 
 				<template v-if="announcementDetail.loading && !doc">
 					<GSkeleton height="24px" width="70%" />

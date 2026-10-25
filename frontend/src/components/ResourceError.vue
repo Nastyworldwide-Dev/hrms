@@ -76,6 +76,9 @@ const props = defineProps({
 	// content on a route with no other navigation (a form/detail whose meta
 	// failed), so the user is never stranded. Off for inline list/card errors.
 	back: { type: Boolean, default: false },
+	// The resource reads ONE record (a detail page): a 404 then means it was deleted, said as
+	// "This is no longer here." with no retry. Lists and methods leave it off.
+	record: { type: Boolean, default: false },
 })
 
 // A list resource (createListResource) is a WRAPPER: the request — and so
@@ -98,7 +101,12 @@ const noAccess = computed(() =>
 )
 
 //: Deleted since it was linked (persona crawl, 25 Oct 2026): a retry can never bring it back.
-const gone = computed(() => isGone(request.value?.error, { signedIn: Boolean(sessionUser()) }))
+//: Only where the resource is ONE record (`record`): a list or a method can raise
+//: DoesNotExistError for other reasons (Helpdesk not installed, a doctype before migrate), and
+//: "no longer here" with no retry would strand the person (review of d79d6d575).
+const gone = computed(
+	() => props.record && isGone(request.value?.error, { signedIn: Boolean(sessionUser()) })
+)
 
 const message = computed(() => {
 	if (noAccess.value) return __("You can't open this.")

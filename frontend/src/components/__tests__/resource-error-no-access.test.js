@@ -41,7 +41,7 @@ const GButtonStub = {
 	},
 }
 
-async function render({ error, back = false, signedIn = true, what = "" }) {
+async function render({ error, back = false, signedIn = true, what = "", record = false }) {
 	const bindings = {
 		computed,
 		inject,
@@ -61,7 +61,7 @@ async function render({ error, back = false, signedIn = true, what = "" }) {
 	}
 	const component = new Function(...Object.keys(bindings), code)(...Object.values(bindings))
 	const app = createSSRApp({
-		render: () => h(component, { resource: { error, reload() {} }, back, what }),
+		render: () => h(component, { resource: { error, reload() {} }, back, what, record }),
 	})
 	return renderToString(app)
 }
@@ -156,10 +156,21 @@ test("the KPI drill-down draws ResourceError for the person-detail request, besi
 // load this SOP." with Try again, which can never work. Same answer as FormView's gone card.
 test("a record that is gone says so, with Back and no Try again", async () => {
 	const error = Object.assign(new Error("x"), { exc_type: "DoesNotExistError", response: { status: 404 } })
-	const html = await render({ error, back: true, what: "this SOP" })
+	const html = await render({ error, back: true, what: "this SOP", record: true })
 	assert.match(html, /This is no longer here\./)
 	assert.match(html, /data-no-access/, "the toast seam sees the screen already said it")
 	assert.match(html, />Back</)
 	assert.doesNotMatch(html, /Try again/)
 	assert.doesNotMatch(html, /Could not load/)
+})
+
+// Review of d79d6d575: a 404 / DoesNotExistError is "deleted" only for ONE record. A list, or
+// Helpdesk not installed (_require_helpdesk raises DoesNotExistError), keeps "Could not load"
+// and Try again. The page opts in with `record`.
+test("without `record`, a missing-thing error keeps 'Could not load' and Try again", async () => {
+	const error = Object.assign(new Error("x"), { exc_type: "DoesNotExistError", response: { status: 404 } })
+	const html = await render({ error, what: "your IT tickets" })
+	assert.match(html, /Could not load your IT tickets\./)
+	assert.match(html, /Try again/)
+	assert.doesNotMatch(html, /no longer here/)
 })

@@ -14,3 +14,4 @@ Upgrade trigger: the next fix in loudRequest.js. Candidate for alpha.41 S12.
 - Add ONE table-driven test: every verdict (silent, refused, gone, repeat, load) x signed-in/out x inside/outside the repeat window x card drawn/not.
 - isRepeat records a timestamp as a side effect and is called from two branches of classifyFailure: make it a pure check + an explicit record, so a branch cannot forget it (how 454ed9dcd happened).
 - isGone matches any endpoint; consider scoping it to document reads (frappe.client.get) if a list or method 404 is ever misread as "no longer here".
+- noAccessDrawn matches ANY visible [data-no-access]: an inline gone/refused card silences an unrelated 404/403 toast in the same frame (review of d79d6d575). Match the request's own element.

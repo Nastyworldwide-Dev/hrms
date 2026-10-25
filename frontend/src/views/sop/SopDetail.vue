@@ -15,7 +15,7 @@
 		</ShellHeader>
 
 		<div class="grow overflow-y-auto">
-			<ResourceError :resource="sop" what="this document" />
+			<ResourceError :resource="sop" record what="this document" />
 			<div
 				v-if="sop.data"
 				class="flex flex-col gap-3.5 w-full max-w-content-column-read mx-auto px-4 pt-4 pb-16 lg:my-8 lg:bg-surface lg:border lg:border-divider lg:shadow-sm lg:px-14 lg:py-11"
