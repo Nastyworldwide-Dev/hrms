@@ -13,12 +13,14 @@
 -->
 <template>
 	<ion-modal
+		ref="modalRef"
 		:is-open="Boolean(current)"
 		class="g-mustread"
 		:can-dismiss="allowClose"
 		:backdrop-dismiss="false"
 		:handle="false"
 		:aria-label="current?.title || undefined"
+		@will-present="nameNotice"
 	>
 		<div v-if="current" class="g-mustread__page">
 			<header class="g-mustread__bar">
@@ -82,6 +84,7 @@ import { acknowledgeAnnouncement, reloadAnnouncements } from "@/data/announcemen
 import { sessionUser } from "@/data/session"
 import { confirmState, nextMustRead } from "@/utils/mustRead"
 import { safeHtml } from "@/utils/safeHtml"
+import { nameSheet } from "@/utils/sheetName"
 
 const __ = inject("$translate")
 
@@ -175,6 +178,14 @@ async function onConfirm() {
 		pending.value = false
 	}
 }
+
+//: The host's aria-label is read once, before the first title arrives; this names
+//: the dialog for each notice, including the next one after a confirm.
+const modalRef = ref(null)
+function nameNotice() {
+	nameSheet(modalRef.value?.$el, current.value?.title)
+}
+watch(() => current.value?.title, nameNotice)
 
 function later() {
 	console.info("[MustRead] later", current.value?.name)

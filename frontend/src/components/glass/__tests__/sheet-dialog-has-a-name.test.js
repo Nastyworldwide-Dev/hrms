@@ -49,3 +49,11 @@ test("the sheet body is not a second dialog", () => {
 	assert.ok(page, "MustReadNotice still renders its page")
 	assert.doesNotMatch(page, /role="dialog"|aria-modal/)
 })
+
+// The gate's axe run, 25 Oct 2026: the host label alone left 144 screens with an unnamed
+// dialog — Ionic copies it once, before a late or changing title exists (utils/sheetName.js).
+test("every sheet names its dialog again as it opens", () => {
+	assert.match(src, /function onWillPresent\(\) \{[\s\S]*?nameSheet\(modal\.value\?\.\$el, props\.title\)/)
+	assert.match(notice, /@will-present="nameNotice"/)
+	assert.match(notice, /watch\(\(\) => current\.value\?\.title, nameNotice\)/)
+})

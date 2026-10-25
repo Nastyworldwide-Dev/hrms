@@ -98,6 +98,7 @@ import GIconButton from "@/components/glass/GIconButton.vue"
 
 import { holdPageInert, releasePageInert } from "@/utils/sheetInert"
 import { mountScrim } from "@/utils/sheetScrim"
+import { nameSheet } from "@/utils/sheetName"
 
 const props = defineProps({
 	trigger: { type: String, required: false },
@@ -146,6 +147,7 @@ function visiblePage() {
 
 function onWillPresent() {
 	openedOn ??= route.path
+	nameSheet(modal.value?.$el, props.title)
 	if (!scrim) scrim = mountScrim(modal.value?.$el, closeOwnSheet)
 	opener = document.activeElement
 	if (!frozenPage) frozenPage = holdPageInert(visiblePage)
