@@ -70,5 +70,5 @@ test("the full-screen must-read closes once no notice is left", () => {
 // to scroll (scrollable-region-focusable, serious).
 test("the full-screen notice text can be scrolled from a keyboard", () => {
 	const src = read("../MustReadNotice.vue")
-	assert.match(src, /ref="scroller"[\s\S]*?tabindex="0"[\s\S]*?role="region"[\s\S]*?:aria-label="current\.title"/)
+	assert.match(src, /ref="scroller"[\s\S]*?tabindex="0"[\s\S]*?role="region"[\s\S]*?:aria-label="__\('Notice text'\)"/)
 })

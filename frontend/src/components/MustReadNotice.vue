@@ -27,13 +27,13 @@
 				<span class="g-mustread__tag">{{ current.urgent ? __("Urgent · must read") : __("Must read") }}</span>
 			</header>
 			<!-- focusable so a keyboard can scroll the text (axe scrollable-region-focusable),
-			     named by the notice title like the sheets' scroll areas -->
+			     named briefly: the dialog and the h1 already say the title -->
 			<div
 				ref="scroller"
 				class="g-mustread__scroll g-focusable"
 				tabindex="0"
 				role="region"
-				:aria-label="current.title"
+				:aria-label="__('Notice text')"
 			>
 				<h1 class="g-mustread__title">{{ current.title }}</h1>
 				<p v-if="current.summary" class="g-mustread__summary">{{ current.summary }}</p>
