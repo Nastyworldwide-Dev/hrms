@@ -25,7 +25,7 @@ test("the tick box is drawn by Glass, not the browser", () => {
 	assert.equal(box["-webkit-appearance"], "none")
 	// ink2: ink3 is 2.93:1 on the light page ground (design review of a68b4dcb5)
 	assert.match(box.border, /var\(--g-ink2\)/)
-	assert.ok(box["border-radius"], "rounded like the rest of Glass")
+	assert.equal(box["border-radius"], "var(--g-radius-pill)", "a Glass radius token, on the 4pt grid")
 	// the plugin's :checked:focus/:checked:hover rules are (0,3,0) and fill with currentColor
 	assert.equal(box.color, "var(--g-brand)")
 })
@@ -36,7 +36,8 @@ test("ticked = lime fill with a dark tick (the Confirm button's colours)", () =>
 	// the outline stays: a lime edge is 1.06:1 on the light page and the box shape vanished
 	assert.equal(on["border-color"], undefined)
 	const tick = decls(".g-check .g-check__box:checked::after")
-	assert.match(tick.border, /var\(--g-on-brand\)/)
+	assert.equal(tick["background-color"], "var(--g-on-brand)")
+	assert.match(tick.mask, /svg/, "the tick is a drawn check, not a plugin image")
 	assert.equal(on["background-image"], "none", "no plugin tick drawn under ours")
 })
 
@@ -65,6 +66,8 @@ test("high contrast mode keeps the ticked state", () => {
 			if (r.selector === ".g-check .g-check__box:checked") {
 				found = true
 				r.walkDecls("background-color", (d) => assert.equal(d.value, "Highlight"))
+			if (r.selector === ".g-check .g-check__box:checked::after")
+				r.walkDecls("background-color", (d) => assert.equal(d.value, "HighlightText"))
 			}
 		})
 	})
