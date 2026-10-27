@@ -285,14 +285,15 @@ def _state(session, shift, last_out, now, leave=None):
 	if session:
 		return {"key": "working", "label": "Working"}
 
+	if last_out and str(last_out)[:10] == str(now.date()):
+		return {"key": "done", "label": "Done for today"}
+
 	# A whole day of approved leave is its own state, not "Not checked in" (owner, 27 Oct 2026:
-	# Home and the check-in reminder treated an approved leave day as a workday). A half day is
+	# Home and the check-in reminder treated an approved leave day as a workday). What happened
+	# today wins over the plan: working and done come first (review of aee25b247). A half day is
 	# still a working day and falls through.
 	if leave:
 		return {"key": "leave", "label": "On leave", "leave_type": leave}
-
-	if last_out and str(last_out)[:10] == str(now.date()):
-		return {"key": "done", "label": "Done for today"}
 
 	if shift:
 		# A shift exists for today and nothing is open. Before its start time

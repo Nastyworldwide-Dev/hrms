@@ -85,3 +85,16 @@ class TestLeaveToday(unittest.TestCase):
 		):
 			payload = now_api.get_now()
 		self.assertEqual(payload["state"]["key"], "leave")
+
+
+class TestLeaveOrder(unittest.TestCase):
+	"""Review of aee25b247: someone who came in on a leave day and checked out read "On leave",
+	losing "Done for today". What happened today wins over the plan: working, then done, then leave."""
+
+	def test_checked_out_on_a_leave_day_is_done(self):
+		state = now_api._state(None, {"shift": "Day"}, "2026-10-27 15:00:00", NOW, leave="Annual Leave")
+		self.assertEqual(state["key"], "done")
+
+	def test_yesterdays_check_out_does_not_hide_todays_leave(self):
+		state = now_api._state(None, {"shift": "Day"}, "2026-10-26 18:00:00", NOW, leave="Annual Leave")
+		self.assertEqual(state["key"], "leave")
