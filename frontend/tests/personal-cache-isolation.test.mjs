@@ -83,6 +83,8 @@ function browser(
 		// logout hands the phone's push token back first (utils/handBackPhone.js, 5 Oct 2026);
 		// this harness has no push, so the hand-back is a no-op and logout goes straight on
 		handBackPhone: async () => {},
+		// data/notifications.js catches up after a socket gap (27 Oct 2026); no socket here
+		useReloadOnGap: () => () => {},
 	})
 	vm.runInContext(
 		executable(source("node_modules/frappe-ui/src/resources/local.js")),

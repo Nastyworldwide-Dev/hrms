@@ -39,10 +39,13 @@ import MustReadNotice from "@/components/MustReadNotice.vue"
 import OfflineBanner from "@/components/OfflineBanner.vue"
 import UndoBar from "@/components/UndoBar.vue"
 import { showNotification } from "@/utils/pushNotifications"
+import { refreshNotifications } from "@/data/notifications"
 
 onMounted(() => {
 	window?.frappePushNotification?.onMessage((payload) => {
 		showNotification(payload)
+		// the push arrived, so the bell and the feed are behind: catch up now
+		refreshNotifications("push while open")
 	})
 })
 </script>

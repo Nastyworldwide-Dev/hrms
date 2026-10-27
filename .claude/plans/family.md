@@ -1,4 +1,5 @@
-CLASS: a URL the page links under /hrms/ falls into the app catch-all route
-hrms/hooks.py /hrms/manifest.webmanifest same-root — own rule before /hrms/<path:app_path>
-hrms/hooks.py /hrms/sw.js not-affected — has its own rule since alpha.12
-frontend/index.html apple-touch-icon / splash links not-affected — absolute /assets/hrms/manifest/ URLs, served as static files
+CLASS: notification state refreshed only by a socket event that a sleeping phone misses
+frontend/src/data/notifications.js same-root — refreshNotifications on the shared gap hook
+frontend/src/App.vue same-root — foreground push calls refreshNotifications
+frontend/src/components/RequestPanel.vue not-affected — already reloads on the gap hook
+frontend/src/views/Notifications.vue not-affected — reads the same shared resources
