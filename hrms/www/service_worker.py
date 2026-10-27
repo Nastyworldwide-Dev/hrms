@@ -36,9 +36,9 @@ class ServiceWorkerPage:
 		return self.path == ROUTE and SW_FILE.is_file()
 
 	def render(self):
+		"""The built sw.js (or the manifest) with no-cache, so a new deploy reaches phones on their next check."""
 		if self.path == MANIFEST_ROUTE:
 			return self._manifest()
-		"""The built sw.js with no-cache, so a new deploy reaches phones on their next check."""
 		body = SW_FILE.read_bytes()
 		response = Response(body, status=200, mimetype="application/javascript")
 		response.headers["Cache-Control"] = "no-cache"

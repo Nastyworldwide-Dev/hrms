@@ -58,6 +58,8 @@ export const enablePushNotifications = () => {
 // The bell, and the feed when a page of it was ever asked for (a list never
 // fetched has nothing stale, and fetching it here would load it on every screen).
 export function refreshNotifications(why) {
+	// a signed-out page (Login) has no bell: asking would only be refused
+	if (!sessionUser()) return
 	console.info("[notifications] catching up:", why)
 	unreadNotificationsCount.reload()
 	if (notifications.list.fetched) notifications.reload()

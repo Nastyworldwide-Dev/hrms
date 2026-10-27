@@ -28,3 +28,8 @@ test("a push that lands while the app is open refreshes the bell and the feed", 
 	assert.match(handler, /refreshNotifications\("push while open"\)/)
 	assert.match(src, /export function refreshNotifications\(/)
 })
+
+test("a signed-out page does not ask for notifications when it comes back", () => {
+	const body = src.slice(src.indexOf("export function refreshNotifications("))
+	assert.match(body, /if \(!sessionUser\(\)\) return/)
+})
