@@ -210,47 +210,16 @@ def _is_working_day(c) -> bool:
 
 
 def _approved_leave(employees, day):
-	"""Approved, submitted leave covering `day` for these employees. One read per day."""
-	return frappe.get_all(
-		"Leave Application",
-		filters={
-			"docstatus": 1,
-			"status": "Approved",
-			"employee": ["in", list(employees)],
-			"from_date": ["<=", day],
-			"to_date": [">=", day],
-		},
-		fields=["employee", "half_day", "half_day_date", "half_day_session", "from_date", "to_date"],
-		limit_page_length=0,
-	)
+	"""Approved leave covering `day` (hrms.utils.leave_day, the one shared reading)."""
+	from hrms.utils.leave_day import approved_leave
 
-
-def _half_on(row, day):
-	"""Is `day` the half day of this leave? Only a one-day leave may leave half_day_date empty
-	(its one day is the half); a multi-day leave with no date is not guessed (review of 211fa4d5b)."""
-	if not row.get("half_day"):
-		return False
-	half = row.get("half_day_date") or (
-		row.get("from_date") if row.get("from_date") == row.get("to_date") else None
-	)
-	return half is not None and getdate(half) == getdate(day)
-
-
-def _off_session(rows, day):
-	"""What one person's approved leave rows leave of `day`: None (a full day off) or the half
-	that is off ("AM"/"PM"). An AM and a PM half on the same day are a full day off."""
-	sessions = set()
-	for row in rows:
-		session = row.get("half_day_session") if _half_on(row, day) else None
-		if session not in ("AM", "PM"):
-			return None
-		sessions.add(session)
-	return sessions.pop() if len(sessions) == 1 else None
+	return approved_leave(employees, day)
 
 
 def _apply_leave(candidates):
 	"""Drop reminders on approved leave; on a half day, move them to the middle of the shift."""
 	from hrms.utils.half_day_session import late_early_bounds
+	from hrms.utils.leave_day import off_session
 
 	out = []
 	by_day = {}
@@ -265,7 +234,7 @@ def _apply_leave(candidates):
 			if not rows:
 				out.append(c)
 				continue
-			session = _off_session(rows, day)
+			session = off_session(rows, day)
 			if not session:
 				logger.info("[shift_reminders] %s on approved leave %s; no reminder", c.employee, day)
 				continue
