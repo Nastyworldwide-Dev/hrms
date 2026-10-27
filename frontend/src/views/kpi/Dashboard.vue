@@ -19,31 +19,20 @@
 						v-if="years.length"
 						class="flex flex-wrap items-end gap-x-6 gap-y-3 border-b-2 border-divider pb-5"
 					>
-						<div class="flex min-w-0 flex-col gap-1.5">
-							<label class="g-eyebrow" for="kpi-year-filter">{{ __("Year") }}</label>
-							<select
-								id="kpi-year-filter"
-								v-model="selectedYear"
-								@change="onYearChange"
-								class="kpi-filter g-focusable"
-							>
-								<option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-							</select>
-						</div>
-						<div class="flex min-w-0 flex-col gap-1.5">
-							<label class="g-eyebrow" for="kpi-cycle-filter">
-								{{ __("Appraisal cycle") }}
-							</label>
-							<select
-								id="kpi-cycle-filter"
-								v-model="selectedCycle"
-								@change="refetch"
-								class="kpi-filter g-focusable"
-							>
-								<option :value="ALL_CYCLES">{{ __("All review periods") }}</option>
-								<option v-for="c in cycles" :key="c" :value="c">{{ c }}</option>
-							</select>
-						</div>
+						<GSelect
+							v-model="selectedYear"
+							:label="__('Year')"
+							:options="yearOptions"
+							class="g-kpi-filter"
+							@update:model-value="onYearChange"
+						/>
+						<GSelect
+							v-model="selectedCycle"
+							:label="__('Appraisal cycle')"
+							:options="cycleOptions"
+							class="g-kpi-filter"
+							@update:model-value="refetch"
+						/>
 					</div>
 
 					<!-- The SAME component the drill-down renders. One layout for
@@ -136,73 +125,45 @@
 						v-if="teamYears.length"
 						class="flex flex-wrap items-end gap-x-6 gap-y-3 border-b-2 border-divider pb-5"
 					>
-						<div class="flex min-w-0 flex-col gap-1.5">
-							<label class="g-eyebrow" for="team-year-filter">{{ __("Year") }}</label>
-							<select
-								id="team-year-filter"
-								v-model="teamYear"
-								@change="onTeamYearChange"
-								class="kpi-filter g-focusable"
-							>
-								<option v-for="y in teamYears" :key="y" :value="y">{{ y }}</option>
-							</select>
-						</div>
-						<div class="flex min-w-0 flex-col gap-1.5">
-							<label class="g-eyebrow" for="team-cycle-filter">
-								{{ __("Appraisal cycle") }}
-							</label>
-							<select
-								id="team-cycle-filter"
-								v-model="teamCycle"
-								@change="fetchTeam"
-								class="kpi-filter g-focusable"
-							>
-								<option :value="ALL_CYCLES">{{ __("All review periods") }}</option>
-								<option v-for="c in teamCycles" :key="c" :value="c">{{ c }}</option>
-							</select>
-						</div>
+						<GSelect
+							v-model="teamYear"
+							:label="__('Year')"
+							:options="teamYearOptions"
+							class="g-kpi-filter"
+							@update:model-value="onTeamYearChange"
+						/>
+						<GSelect
+							v-model="teamCycle"
+							:label="__('Appraisal cycle')"
+							:options="teamCycleOptions"
+							class="g-kpi-filter"
+							@update:model-value="fetchTeam"
+						/>
 						<!-- Only drawn when there IS more than one company to choose
 						     between: a one-option selector is not a control. Never for
 						     a manager — their scope is the people who report to them,
 						     not a slice of the org chart, so a company or department
 						     filter over it is a control with nothing to control. -->
-						<div
+						<GSelect
 							v-if="!isManagerTier && teamCompanies.length > 1"
-							class="flex min-w-0 flex-col gap-1.5"
-						>
-							<label class="g-eyebrow" for="team-company-filter">
-								{{ __("Company") }}
-							</label>
-							<select
-								id="team-company-filter"
-								v-model="teamCompany"
-								@change="onTeamCompanyChange"
-								class="kpi-filter g-focusable"
-							>
-								<option value="">{{ __("All companies") }}</option>
-								<option v-for="c in teamCompanies" :key="c" :value="c">{{ c }}</option>
-							</select>
-						</div>
+							v-model="teamCompany"
+							:label="__('Company')"
+							:options="teamCompanyOptions"
+							class="g-kpi-filter"
+							@update:model-value="onTeamCompanyChange"
+						/>
 						<!-- The Department SELECT belongs to the manager tier only. CEO and
 						     HR walk the tree instead, and for them this carried exactly one
 						     option that changed a value fetchTree never sends — a control
 						     that cannot be changed and would do nothing if it could. -->
-						<div v-if="isManagerTier" class="flex min-w-0 flex-col gap-1.5">
-							<label class="g-eyebrow" for="team-department-filter">
-								{{ __("Department") }}
-							</label>
-							<select
-								id="team-department-filter"
-								v-model="teamDepartment"
-								@change="fetchTeam"
-								class="kpi-filter g-focusable"
-							>
-								<option value="">{{ __("All departments") }}</option>
-								<option v-for="d in teamDepartments" :key="d" :value="d">
-									{{ departmentLabel(d) }}
-								</option>
-							</select>
-						</div>
+						<GSelect
+							v-if="isManagerTier"
+							v-model="teamDepartment"
+							:label="__('Department')"
+							:options="teamDepartmentOptions"
+							class="g-kpi-filter"
+							@update:model-value="fetchTeam"
+						/>
 					</div>
 
 					<!-- Hero: the average of whatever the filters currently select -->
@@ -418,6 +379,7 @@ import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GMetaGrid from "@/components/glass/GMetaGrid.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
+import GSelect from "@/components/glass/GSelect.vue"
 import GDataTable from "@/components/glass/GDataTable.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import KpiDetail from "@/views/kpi/KpiDetail.vue"
@@ -463,6 +425,14 @@ const dashboard = createResource({
 
 const years = computed(() => dashboard.data?.years || [])
 const cycles = computed(() => dashboard.data?.cycles || [])
+
+//: The filters' choices, for GSelect (design audit 27 Oct 2026: one picker, not a local skin).
+const asOptions = (values, label = (v) => v) => values.map((v) => ({ label: label(v), value: v }))
+const yearOptions = computed(() => asOptions(years.value))
+const cycleOptions = computed(() => [
+	{ label: __("All review periods"), value: ALL_CYCLES },
+	...asOptions(cycles.value),
+])
 
 function refetch() {
 	dashboard.submit({ year: selectedYear.value, cycle: selectedCycle.value })
@@ -750,6 +720,19 @@ const teamDepartments = computed(
 	() => (isManagerTier.value ? teamKpi.data?.departments : []) || []
 )
 const teamCompanies = computed(() => teamData.value?.companies || [])
+const teamYearOptions = computed(() => asOptions(teamYears.value))
+const teamCycleOptions = computed(() => [
+	{ label: __("All review periods"), value: ALL_CYCLES },
+	...asOptions(teamCycles.value),
+])
+const teamCompanyOptions = computed(() => [
+	{ label: __("All companies"), value: "" },
+	...asOptions(teamCompanies.value),
+])
+const teamDepartmentOptions = computed(() => [
+	{ label: __("All departments"), value: "" },
+	...asOptions(teamDepartments.value, departmentLabel),
+])
 const teamSummary = computed(() => teamData.value?.summary)
 
 // What the filters currently select, as one string, read by BOTH the visible
@@ -820,40 +803,11 @@ const teamRows = computed(() =>
 </script>
 
 <style scoped>
-/* Modernist filter selects: surface fill, hairline border, square. */
-.kpi-filter {
-	background-color: var(--g-glass-fill-fallback);
-	border: 1px solid var(--g-hair);
-	border-radius: 0;
-	color: var(--g-ink);
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 32px 8px 12px;
-	min-width: 150px;
-	/* A select sizes to its widest option, and these are user-named masters — a
-	   company name or a suffixed department ("Human Resources - VRFC") can
-	   exceed a 375px content box and push the whole page sideways.
-	   max-width ALONE is a no-op here: the percentage resolves against the
-	   field wrapper, and that wrapper is a flex item whose automatic minimum
-	   size IS the select's min-content width. The wrapper is sized by the
-	   select and the select is capped by the wrapper — circular. `min-w-0` on
-	   every wrapper breaks that cycle; the two go together.
-	   The ellipsis is progressive enhancement only: Chromium draws it on a
-	   native select, Gecko and WebKit hard-clip with no glyph, so it must never
-	   be the only thing signalling truncation. */
+/* The filters are GSelect (design audit 27 Oct 2026). A select sizes to its widest option and
+   these are user-named masters (a company, "Human Resources - VRFC") that can pass a 375 px
+   column: min-width 0 on the flex item lets max-width cap it instead of pushing the page sideways. */
+.g-kpi-filter {
+	min-width: 0;
 	max-width: 100%;
-	text-overflow: ellipsis;
-	/* §14.1. Three of these now sit side by side on a phone; at 13px type and
-	   8px padding the real target was 34px. */
-	min-height: var(--g-touch-target-min);
-}
-/* The focus ring is NOT redeclared here. This block used to end
-   `outline: none; box-shadow: none`, which — being scoped — outranked
-   `.g-focusable:focus-visible` by data-v specificity and silently deleted the
-   §14.3 two-tone ring from every filter on this page. Same specificity trap
-   GSegmented.vue records for its deleted min-height. The border tint stays as
-   a second, redundant cue. */
-.kpi-filter:focus-visible {
-	border-color: var(--g-accent-ink);
 }
 </style>

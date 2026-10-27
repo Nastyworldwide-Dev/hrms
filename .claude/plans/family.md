@@ -1,2 +1,4 @@
-CLASS: a retry/status shown only when one source of the empty state is present (days list answered), and a live region inserted with its text already set
-frontend/src/views/ot/OTRequestForm.vue empty block same-root — shows when the typed day failed even if the list read failed; footer always rendered, text bound
+CLASS: a raw <select> with a local skin where the Glass picker (GSelect) exists
+frontend/src/views/kpi/Dashboard.vue 6 filters same-root — GSelect, computed options, .kpi-filter skin removed
+frontend/src/views/helpdesk/TicketNew.vue Type/Priority same-root — GSelect
+frontend/src/components/FormField.vue:36 not-affected — a comment, FormField already renders GSelect

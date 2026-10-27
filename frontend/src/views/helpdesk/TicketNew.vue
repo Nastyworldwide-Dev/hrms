@@ -56,24 +56,18 @@
 					/>
 
 					<div class="grid grid-cols-2 gap-3">
-						<label class="flex flex-col gap-1.5">
-							<span class="g-eyebrow">{{ __("Type") }}</span>
-							<select v-model="form.ticket_type" class="g-input">
-								<option value="">{{ __("Select") }}</option>
-								<option v-for="t in ticketOptions.data?.types || []" :key="t" :value="t">
-									{{ t }}
-								</option>
-							</select>
-						</label>
-						<label class="flex flex-col gap-1.5">
-							<span class="g-eyebrow">{{ __("Priority") }}</span>
-							<select v-model="form.priority" class="g-input">
-								<option value="">{{ __("Default") }}</option>
-								<option v-for="p in ticketOptions.data?.priorities || []" :key="p" :value="p">
-									{{ p }}
-								</option>
-							</select>
-						</label>
+						<GSelect
+							v-model="form.ticket_type"
+							:label="__('Type')"
+							:placeholder="__('Select')"
+							:options="typeOptions"
+						/>
+						<GSelect
+							v-model="form.priority"
+							:label="__('Priority')"
+							:placeholder="__('Default')"
+							:options="priorityOptions"
+						/>
 					</div>
 
 					<GTextarea
@@ -124,6 +118,7 @@ import GPage from "@/components/glass/GPage.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GInput from "@/components/glass/GInput.vue"
+import GSelect from "@/components/glass/GSelect.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"
 import GFileUpload from "@/components/glass/GFileUpload.vue"
 import FilePreviewModal from "@/components/FilePreviewModal.vue"
@@ -142,6 +137,11 @@ import { countOf } from "@/utils/countWords"
 
 const router = useRouter()
 const __ = inject("$translate")
+
+//: Type and Priority for GSelect (design audit 27 Oct 2026: one picker, not raw selects).
+const asOptions = (values) => (values || []).map((v) => ({ label: v, value: v }))
+const typeOptions = computed(() => asOptions(ticketOptions.data?.types))
+const priorityOptions = computed(() => asOptions(ticketOptions.data?.priorities))
 
 const form = reactive({ subject: "", description: "", ticket_type: "", priority: "" })
 const errors = reactive({ subject: "", description: "" })

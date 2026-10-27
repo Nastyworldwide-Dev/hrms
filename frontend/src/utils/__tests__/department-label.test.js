@@ -28,7 +28,7 @@ test("every screen that prints a department goes through it", () => {
 		"../../views/sop/SopDetail.vue": /departmentLabel\(sop\.data\.department\)/,
 		"../../views/sop/SopFormSheet.vue": /label: departmentLabel\(d\.name\)/,
 		"../../views/sop/SopList.vue": /departmentLabel\(section\.department\)/,
-		"../../views/kpi/Dashboard.vue": /\{\{ departmentLabel\(d\) \}\}/,
+		"../../views/kpi/Dashboard.vue": /asOptions\(teamDepartments\.value, departmentLabel\)/,
 	}
 	for (const [file, pattern] of Object.entries(shown)) {
 		const src = readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8")
