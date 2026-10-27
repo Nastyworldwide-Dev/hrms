@@ -10,6 +10,39 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.64] — Calendar Events — 2026-10-27
+
+### Added
+- **Company events on the calendar.** HR gives an Event announcement its
+  **Event date** (Desk). The calendar puts a dot on that day, weeks ahead,
+  for that announcement's audience only. Tap the day: an **Events** list;
+  tap one to open it. An event can be read any time; its Confirm shows
+  only while the notice is on the board.
+- **SOP folders.** HR groups SOPs into topic folders, in Nadi or Desk:
+  pick a folder (or make a new one) on the SOP, and reorder, rename or
+  delete an empty folder from **Manage folders**. Staff open a folder
+  from the SOP page; search still finds every SOP and names its folder.
+- Needs migrate (Frappe Cloud runs it on deploy).
+
+### Changed
+- **The announcements page reads like Home.** "To confirm" first, then
+  "Latest", each with HR's summary, one word (Confirm / Urgent / New) and
+  its age. A notice says when it was posted and until when, leads with its
+  summary and shows its picture; an event shows when it happens.
+- **One look everywhere.** KPI filters and the IT ticket form use the
+  standard picker; HR Issue Board urgency uses the standard status label;
+  every "See all" link looks the same; the new-claim page has one main
+  button.
+
+### Fixed
+- **Approved leave is respected.** No check-in or check-out reminder on a
+  day of approved leave (a half day moves it to mid-shift), and Home says
+  "On leave" instead of "Not checked in" with a Check in button.
+- **Overtime claim hours fill in again.** Picking a claimable day fills its
+  verified hours, read-only as ruled on 4 Sep; you only write the note.
+- **Screens no longer jump while loading** (Home "Needs you", Approvals).
+- **Logging out leaves nothing behind** on a shared phone.
+
 ## [2.0.0-alpha.63] — Staff Requests — 2026-10-27
 
 ### Added
