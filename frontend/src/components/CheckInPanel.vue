@@ -56,7 +56,10 @@
 				<ChevronRight class="g-today__issue-chevron" aria-hidden="true" />
 			</button>
 
+			<!-- Not on a full day of approved leave (owner, 27 Oct 2026): the bar above says
+			     "On leave"; someone who comes in anyway still has the Check-in page. -->
 			<GButton
+				v-if="!onLeave"
 				id="open-checkin-modal"
 				class="mt-3"
 				:label="justSaved ? __('Saved') : nextAction.label"
@@ -608,6 +611,9 @@ const lastLog = computed(() => {
 	}
 	return row
 })
+
+//: A full day of approved leave (now.py state "leave", 27 Oct 2026): no big Check in button.
+const onLeave = computed(() => nowResource.data?.state?.key === "leave")
 
 // `lastLogType` went with the "Last check-out was at …" line: the NOW BAR
 // states what happened last, in words that say what it means (revamp §2).

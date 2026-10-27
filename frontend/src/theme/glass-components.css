@@ -3743,6 +3743,10 @@ ion-router-outlet {
 .g-now--before .g-now__dot {
 	background: var(--g-warn);
 }
+/* a day of approved leave: the leave colour the calendar uses (27 Oct 2026) */
+.g-now--leave .g-now__dot {
+	background: var(--g-leave);
+}
 .g-now__date {
 	font-family: var(--g-type-caption-family);
 	font-size: var(--g-type-caption-size);

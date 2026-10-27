@@ -222,6 +222,18 @@ def _is_rest_day(employee, on_date) -> bool:
 	return bool(is_holiday(employee, on_date, raise_exception=False)) or marked_day_off(employee, on_date)
 
 
+def _leave_today(employee, on_date):
+	"""The leave type when the employee is on approved leave all day (hrms.utils.leave_day)."""
+	from hrms.utils.leave_day import full_day_leave
+
+	try:
+		return full_day_leave(employee, on_date)
+	except Exception:
+		# the leave read must not take the top of Home with it; the rest of the bar is true
+		logger.exception("[now] could not read leave for %s", employee)
+		return None
+
+
 def _hhmm(value) -> str:
 	"""HH:MM from whatever the field holds.
 
@@ -256,7 +268,7 @@ def _last_completed(employee, now):
 	return str(rows[0].time)
 
 
-def _state(session, shift, last_out, now):
+def _state(session, shift, last_out, now, leave=None):
 	"""One word for what is true, and a sentence under it.
 
 	FOUR STATES, and every employee is always in exactly one:
@@ -272,6 +284,12 @@ def _state(session, shift, last_out, now):
 	"""
 	if session:
 		return {"key": "working", "label": "Working"}
+
+	# A whole day of approved leave is its own state, not "Not checked in" (owner, 27 Oct 2026:
+	# Home and the check-in reminder treated an approved leave day as a workday). A half day is
+	# still a working day and falls through.
+	if leave:
+		return {"key": "leave", "label": "On leave", "leave_type": leave}
 
 	if last_out and str(last_out)[:10] == str(now.date()):
 		return {"key": "done", "label": "Done for today"}
@@ -314,7 +332,7 @@ def get_now() -> dict:
 		# shift assigned and no open punch got an empty bar and Home opened on
 		# "Last check-out was at 08:17 pm" exactly as before. Deployed 23 Sep
 		# and it was the first thing the owner saw.
-		"state": _state(session, shift, last_out, now),
+		"state": _state(session, shift, last_out, now, leave=_leave_today(employee, now.date())),
 		"last_out": last_out,
 		"time_slip": _time_slip(employee, now, session),
 	}

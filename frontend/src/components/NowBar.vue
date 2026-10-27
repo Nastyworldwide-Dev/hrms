@@ -250,6 +250,10 @@ const detail = computed(() => {
 	// the bar for after the state itself.
 	// While working: when they came in and when they may leave (owner, 28 Sep
 	// 2026: his screenshot had no check-in time, and late in means late out).
+	// a day of approved leave says which leave, not the shift they are not working (27 Oct 2026)
+	if (stateKey.value === "leave" && data.value.state?.leave_type) {
+		return __(data.value.state.leave_type)
+	}
 	if (stateKey.value === "working" && inAt.value && leaveAt.value) {
 		return __("In {0} · leave at {1}", [inAt.value, leaveAt.value])
 	}
