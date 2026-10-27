@@ -379,10 +379,18 @@ def _require_sop_hr():
 
 
 def _clean_name(value) -> str:
+	"""A NEW folder name, as typed in the app: trimmed, at most FOLDER_NAME_MAX."""
 	name = value.strip() if isinstance(value, str) else ""
 	if not name or len(name) > FOLDER_NAME_MAX:
 		frappe.throw(_("Name the folder in up to {0} characters.").format(FOLDER_NAME_MAX))
 	return name
+
+
+def _folder_ref(value) -> str:
+	"""An EXISTING folder, by its name: any length the field allows (Desk takes 140)."""
+	if not isinstance(value, str) or not value.strip():
+		frappe.throw(_("Pick a folder."))
+	return value
 
 
 @frappe.whitelist(methods=["POST"])
@@ -391,7 +399,7 @@ def save_folder(folder_name, name=None, description=None) -> dict:
 	_require_sop_hr()
 	folder_name = _clean_name(folder_name)
 	if name:
-		new = frappe.rename_doc("SOP Folder", _clean_name(name), folder_name, force=False)
+		new = frappe.rename_doc("SOP Folder", _folder_ref(name), folder_name, force=False)
 		if description is not None:
 			frappe.db.set_value("SOP Folder", new, "description", str(description)[:500])
 		logger.info("[sop] folder %s renamed to %s by %s", name, new, frappe.session.user)
@@ -435,7 +443,7 @@ def move_folder(name, direction) -> dict:
 def delete_folder(name) -> dict:
 	"""Delete an empty folder; one that holds SOPs is refused by SOPFolder.on_trash."""
 	_require_sop_hr()
-	name = _clean_name(name)
+	name = _folder_ref(name)
 	frappe.delete_doc("SOP Folder", name)
 	logger.info("[sop] folder %s deleted by %s", name, frappe.session.user)
 	return {"deleted": name}

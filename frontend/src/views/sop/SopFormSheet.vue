@@ -69,9 +69,11 @@
 					<label class="g-form-row">
 						<span class="g-form-row__label">{{ __("Folder") }}</span>
 						<GSelect
+							:key="folderPickerKey"
 							:options="folderOptions"
 							:model-value="form.folder"
 							:aria-label="__('Folder')"
+							:placeholder="__('No folder')"
 							@update:model-value="pickFolder"
 						/>
 					</label>
@@ -162,6 +164,7 @@
 							:aria-label="__('Folder name')"
 							:placeholder="__('e.g. Safety')"
 							:maxlength="80"
+							@keydown.enter="submitNewFolder"
 						/>
 					</label>
 				</div>
@@ -357,8 +360,9 @@ const library = createResource({
 	auto: true,
 })
 const NEW_FOLDER = "__new__"
+// "No folder" is GSelect's own empty choice (its placeholder), so the list
+// never carries two empty-valued options
 const folderOptions = computed(() => [
-	{ value: "", label: __("No folder") },
 	...(library.data?.folders || []).map((f) => ({ value: f.name, label: f.folder_name })),
 	{ value: NEW_FOLDER, label: __("New folder…") },
 ])
@@ -368,6 +372,10 @@ const newFolderName = ref("")
 const newFolderHintId = useId()
 const createFolder = createResource({ url: "hrms.api.sop.save_folder" })
 
+// the native select shows "New folder…" once picked; re-keying it puts the
+// real choice back when the New folder sheet is closed without creating one
+const folderPickerKey = ref(0)
+
 const pickFolder = (value) => {
 	if (value !== NEW_FOLDER) {
 		form.folder = value || ""
@@ -375,10 +383,11 @@ const pickFolder = (value) => {
 	}
 	newFolderName.value = ""
 	newFolderOpen.value = true
+	folderPickerKey.value++
 }
 
 const submitNewFolder = async () => {
-	if (!newFolderName.value.trim()) return
+	if (!newFolderName.value.trim() || createFolder.loading) return
 	try {
 		const folder = await createFolder.fetch({ folder_name: newFolderName.value.trim() })
 		await library.reload()

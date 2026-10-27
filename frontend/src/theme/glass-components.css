@@ -524,6 +524,12 @@ html[data-input="pointer"] .timeslip-file:has(input:focus-visible) {
 .g-iconbtn--flush {
 	margin-left: calc(-1 * (var(--g-touch-target-min) - var(--g-screen-gutter)) / 2);
 }
+/* `disabled` falls through to the native button (Move up on the first SOP
+   folder); it must look unavailable, not only refuse the tap */
+.g-iconbtn:disabled {
+	color: var(--g-ink3);
+	cursor: default;
+}
 /* the boxed variant — a rimmed icon action, e.g. the list filter */
 .g-iconbtn--boxed {
 	border: 1px solid var(--g-hair);

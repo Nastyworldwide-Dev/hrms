@@ -271,3 +271,16 @@ class TestManageFolders(unittest.TestCase):
 		with self._as(True), patch.object(frappe, "delete_doc", create=True) as delete:
 			sop_api.delete_folder("Safety")
 		delete.assert_called_once_with("SOP Folder", "Safety")
+
+	def test_a_long_desk_made_folder_can_still_be_renamed_and_deleted(self):
+		# the field takes 140 characters; only the NEW name the app sends is capped at 80
+		long_name = "L" * 120
+		with (
+			self._as(True),
+			patch.object(frappe, "rename_doc", return_value="Short", create=True) as rename,
+			patch.object(frappe, "delete_doc", create=True) as delete,
+		):
+			sop_api.save_folder("Short", name=long_name)
+			sop_api.delete_folder(long_name)
+		self.assertEqual(rename.call_args.args[1], long_name)
+		delete.assert_called_once_with("SOP Folder", long_name)

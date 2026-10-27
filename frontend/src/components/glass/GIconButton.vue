@@ -22,6 +22,8 @@
     flush  boolean — pull the target out to the screen gutter. A 44px box at
            the edge would otherwise indent the glyph past the content column;
            the target stays 44px, only the optical position moves.
+  `disabled` is not a prop: it falls through to the native <button>, which
+  then refuses the tap and is styled unavailable (.g-iconbtn:disabled).
   Emits: click
 -->
 <template>

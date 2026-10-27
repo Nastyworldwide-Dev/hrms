@@ -17,6 +17,7 @@
 								:label="__('Save')"
 								:pending="busy"
 								:disabled="busy || !renameTo.trim()"
+								:aria-describedby="renameTo.trim() ? undefined : renameHintId"
 								@click="saveRename(folder)"
 							/>
 							<GGhostButton :label="__('Cancel')" @click="renaming = null" />
@@ -33,7 +34,7 @@
 							<GIconButton
 								class="!flex-none"
 								:label="__('Move {0} up', [folder.folder_name])"
-								:disabled="busy || index === 0"
+								:disabled="index === 0"
 								@click="move(folder, 'up')"
 							>
 								<ChevronUp class="h-5 w-5" aria-hidden="true" />
@@ -41,7 +42,7 @@
 							<GIconButton
 								class="!flex-none"
 								:label="__('Move {0} down', [folder.folder_name])"
-								:disabled="busy || index === folders.length - 1"
+								:disabled="index === folders.length - 1"
 								@click="move(folder, 'down')"
 							>
 								<ChevronDown class="h-5 w-5" aria-hidden="true" />
@@ -49,7 +50,7 @@
 							<button
 								v-if="folder.count === 0"
 								type="button"
-								class="g-form-row--action g-form-row--destructive !flex-none !w-auto"
+								class="g-form-row--action g-form-row--destructive !flex-none !w-auto min-h-11"
 								:aria-label="__('Delete {0}', [folder.folder_name])"
 								:disabled="busy"
 								@click="deleting = folder"
@@ -59,6 +60,15 @@
 						</template>
 					</div>
 				</div>
+				<!-- a dimmed Save says why, visibly and to a screen reader -->
+				<p
+					v-if="renaming && !renameTo.trim()"
+					:id="renameHintId"
+					class="g-form-footer"
+					aria-live="polite"
+				>
+					{{ __("Name the folder") }}
+				</p>
 				<p class="g-form-footer">
 					{{ __("A folder with SOPs in it cannot be deleted. Move its SOPs first.") }}
 				</p>
@@ -82,7 +92,7 @@
 <script setup>
 import { createResource } from "frappe-ui"
 import { ChevronDown, ChevronUp } from "lucide-vue-next"
-import { computed, inject, ref } from "vue"
+import { computed, inject, ref, useId } from "vue"
 
 import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
@@ -109,6 +119,7 @@ const busy = ref(false)
 const renaming = ref(null)
 const renameTo = ref("")
 const deleting = ref(null)
+const renameHintId = useId()
 
 const saveFolder = createResource({ url: "hrms.api.sop.save_folder" })
 const moveFolder = createResource({ url: "hrms.api.sop.move_folder" })
@@ -124,6 +135,7 @@ const close = () => {
 // one change at a time; the list reloads after each, so the order and counts
 // shown are always the server's
 const run = async (request, params) => {
+	if (busy.value) return false
 	busy.value = true
 	try {
 		await request.fetch(params)

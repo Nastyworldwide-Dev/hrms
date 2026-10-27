@@ -26,7 +26,9 @@ test("a folder opens its own page that reads the list's answer", () => {
 
 test("the SOP sheet picks a folder, or makes a new one with a Create that says why it is dimmed", () => {
 	const sheet = read("views/sop/SopFormSheet.vue")
-	assert.match(sheet, /__\("No folder"\)/)
+	assert.match(sheet, /:placeholder="__\('No folder'\)"/)
+	assert.doesNotMatch(sheet, /value: "", label: __\("No folder"\)/)
+	assert.match(sheet, /folderPickerKey\.value\+\+/)
 	assert.match(sheet, /__\("New folder…"\)/)
 	assert.match(sheet, /folder: form\.folder \|\| ""/)
 	assert.match(sheet, /:disabled="!newFolderName\.trim\(\) \|\| createFolder\.loading"/)
@@ -42,4 +44,13 @@ test("Manage folders moves and renames every folder, deletes only an empty one",
 	assert.match(sheet, /v-if="folder\.count === 0"[\s\S]*?__\("Delete"\)/)
 	assert.match(sheet, /A folder with SOPs in it cannot be deleted\. Move its SOPs first\./)
 	assert.match(sheet, /await props\.sops\.reload\(\)/)
+})
+
+test("a move that cannot happen looks unavailable, not only inert", () => {
+	const sheet = read("views/sop/SopManageFolders.vue")
+	assert.match(sheet, /:disabled="index === 0"/)
+	assert.match(sheet, /:disabled="index === folders\.length - 1"/)
+	assert.match(sheet, /:aria-describedby="renameTo\.trim\(\) \? undefined : renameHintId"/)
+	const css = read("theme/glass-components.css")
+	assert.match(css, /\.g-iconbtn:disabled \{[^}]*color: var\(--g-ink3\)/)
 })
