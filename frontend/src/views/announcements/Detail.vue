@@ -41,7 +41,21 @@
 					</div>
 
 					<h1 class="text-screen-title text-inkbase">{{ doc.title }}</h1>
-					<p class="text-caption text-ink-600">{{ posted }}</p>
+					<!-- ONE meta line: when it went up and when it comes down -->
+					<p v-if="dates" class="-mt-2 text-caption text-ink-700">{{ dates }}</p>
+					<!-- HR's one-line Summary, read first (owner-approved mockup, 27 Oct 2026) -->
+					<p v-if="doc.summary" class="g-ann-lead">{{ doc.summary }}</p>
+					<!-- HR's cover: decorative (the title says what this is), so no alt text -->
+					<img
+						v-if="doc.cover_image"
+						:src="doc.cover_image"
+						alt=""
+						class="w-full aspect-video rounded-card object-cover bg-icon-bg"
+					/>
+					<!-- An Event: the day it happens, read-only -->
+					<GListPanel v-if="doc.category === 'Event' && doc.event_date">
+						<GListRow :label="__('When')" :amount="eventDay" :tappable="false" />
+					</GListPanel>
 
 					<!-- Sanitised through the app's own allow-list as well as
 					     server-side: this is rich text an author controls, and
@@ -96,9 +110,12 @@ import ResourceError from "@/components/ResourceError.vue"
 import GBanner from "@/components/glass/GBanner.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GCheckbox from "@/components/glass/GCheckbox.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import { gToast } from "@/components/glass/toast"
 
+import { noticeDates } from "@/utils/announcementRow"
 import { confirmState } from "@/utils/mustRead"
 import { safeHtml } from "@/utils/safeHtml"
 import {
@@ -137,8 +154,11 @@ const doc = computed(() => announcementDetail.data)
 const justAcknowledged = ref(false)
 const acknowledged = computed(() => justAcknowledged.value || Boolean(doc.value?.acknowledged))
 
-const posted = computed(() =>
-	doc.value?.publish_from ? $dayjs(doc.value.publish_from).format("D MMM YYYY") : ""
+const dates = computed(() =>
+	doc.value ? noticeDates(doc.value, __, (date) => $dayjs(date).format("D MMM")) : ""
+)
+const eventDay = computed(() =>
+	doc.value?.event_date ? $dayjs(doc.value.event_date).format("ddd D MMM") : ""
 )
 
 function iconFor(category) {

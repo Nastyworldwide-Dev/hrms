@@ -1,5 +1,3 @@
-CLASS: one announcement drawn two ways (Home rich, board bare), so the board hid what Home said
-frontend/src/utils/announcementRow.js same-root — one rule for badge, subline, age, sections
-frontend/src/components/Announcements.vue same-root — Home uses it, same output
-frontend/src/views/announcements/List.vue same-root — board uses it
-frontend/src/components/MustReadNotice.vue not-affected — full-screen notice, no row
+CLASS: a notice page that hid what the reader needs to act (dates, summary, picture, when)
+frontend/src/views/announcements/Detail.vue same-root — meta line, lead summary, cover, When row
+hrms/api/announcements.py _payload same-root — sends event_date

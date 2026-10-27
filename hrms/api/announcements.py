@@ -301,6 +301,8 @@ def _payload(doc) -> dict:
 		"publish_until": doc.publish_until,
 		"summary": doc.summary,
 		"cover_image": doc.cover_image,
+		# The day an Event happens: the notice page draws its "When" row from this.
+		"event_date": doc.event_date,
 		"urgent": bool(doc.urgent),
 		"version": doc.version or 1,
 		"published": bool(doc.published),
