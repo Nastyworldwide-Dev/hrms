@@ -9,7 +9,7 @@ import {
 	buildSopSections,
 	filterSops,
 	matchesQuery,
-} from "../src/utils/sopLibrary.js"
+} from "../sopLibrary.js"
 
 const PAYLOAD = {
 	is_hr: true,
@@ -73,4 +73,59 @@ test("buildSopSections reports empty only when nothing matches at all", () => {
 	assert.equal(buildSopSections(PAYLOAD, "handbook").isEmpty, false)
 	assert.equal(buildSopSections(PAYLOAD, "zzz").isEmpty, true)
 	assert.equal(buildSopSections(undefined, "").isEmpty, true)
+})
+
+// SOP folders (owner, 27 Oct 2026): folders list only what this reader sees
+// in them; search stays flat, each hit naming its folder.
+const FOLDERED = {
+	...PAYLOAD,
+	pinned: [
+		{ name: "HR-SOP-00001", title: "Employee Handbook", scope: "General", folder: "Safety" },
+	],
+	folders: [
+		{
+			name: "Safety",
+			folder_name: "Safety",
+			count: 2,
+			sops: [
+				{ name: "HR-SOP-00001", title: "Employee Handbook", folder: "Safety" },
+				{ name: "HR-SOP-00006", title: "Fire Drill", folder: "Safety" },
+			],
+		},
+		{ name: "Empty", folder_name: "Empty", count: 0, sops: [] },
+	],
+}
+
+test("buildSopSections lists folders with SOPs in them, not empty ones", () => {
+	const { folders } = buildSopSections(FOLDERED, "")
+	assert.deepEqual(
+		folders.map((f) => [f.name, f.count]),
+		[["Safety", 2]]
+	)
+})
+
+test("a search is one flat list, each hit naming its folder, no duplicates", () => {
+	const { folders, results, isEmpty } = buildSopSections(FOLDERED, "fire")
+	assert.equal(folders.length, 0)
+	assert.equal(isEmpty, false)
+	assert.deepEqual(
+		results.map((r) => [r.title, r.folderName]),
+		[
+			["Fire Drill", "Safety"],
+			["Fire Evacuation Procedure", null],
+		]
+	)
+	const handbook = buildSopSections(FOLDERED, "handbook").results
+	assert.equal(handbook.length, 1)
+	assert.equal(handbook[0].folderName, "Safety")
+})
+
+test("without a search there are no flat results", () => {
+	assert.deepEqual(buildSopSections(FOLDERED, "").results, [])
+})
+
+test("a search that only finds a filed SOP is not empty", () => {
+	const { results, isEmpty } = buildSopSections(FOLDERED, "drill")
+	assert.equal(results.length, 1)
+	assert.equal(isEmpty, false)
 })

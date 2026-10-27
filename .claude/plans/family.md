@@ -1,2 +1,3 @@
-CLASS: HR could only manage SOP folders in Desk
-hrms/api/sop.py save_folder/move_folder/delete_folder same-root — HR-only (the get_sops is_hr rule), inputs checked; delete refused by the record when not empty
+CLASS: SOP folders had no place in the app
+frontend/src/views/sop/SopList.vue same-root — folders section + flat search
+frontend/src/utils/sopLibrary.js same-root — the one grouping helper SopList uses

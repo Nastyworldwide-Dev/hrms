@@ -3,6 +3,12 @@
 // renders in the FormShell so the back button returns to the list
 const routes = [
 	{
+		name: "SopFolderView",
+		path: "/sop/folder/:folder",
+		props: true,
+		component: () => import("@/views/sop/SopFolder.vue"),
+	},
+	{
 		name: "SopDetailView",
 		path: "/sop/:id",
 		props: true,

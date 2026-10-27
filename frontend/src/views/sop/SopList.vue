@@ -21,7 +21,7 @@
 				/>
 
 				<!-- Essentials (pinned) first, then each section, as iOS sections. -->
-				<section v-if="pinned.length" class="g-form-section">
+				<section v-if="pinned.length && !query" class="g-form-section">
 					<h2 class="g-form-section__title">{{ __("Essentials") }}</h2>
 					<GListPanel>
 						<GListRow
@@ -37,7 +37,56 @@
 					</GListPanel>
 				</section>
 
-				<template v-if="!isEmpty">
+				<!-- Folders (owner, 27 Oct 2026): a row per folder this reader has
+				     SOPs in; HR also gets Manage folders at the end. -->
+				<section v-if="!query && (folders.length || isHR)" class="g-form-section">
+					<h2 class="g-form-section__title">{{ __("Folders") }}</h2>
+					<GListPanel>
+						<GListRow
+							v-for="folder in folders"
+							:key="folder.name"
+							:label="folder.folder_name"
+							:amount="String(folder.count)"
+							:tint="TILE.sop"
+							:aria-label="
+								folder.count === 1
+									? __('{0}, 1 SOP', [folder.folder_name])
+									: __('{0}, {1} SOPs', [folder.folder_name, folder.count])
+							"
+							@click="openFolder(folder)"
+						>
+							<template #icon><Folder class="g-row-icon" /></template>
+						</GListRow>
+						<GListRow
+							v-if="isHR"
+							:label="__('Manage folders')"
+							:tint="TILE.neutral"
+							@click="manageOpen = true"
+						>
+							<template #icon><FolderCog class="g-row-icon" /></template>
+						</GListRow>
+					</GListPanel>
+				</section>
+
+				<!-- A search is one flat list; each hit says which folder it is in. -->
+				<section v-if="query && results.length" class="g-form-section">
+					<h2 class="g-form-section__title">{{ __("Results") }}</h2>
+					<GListPanel>
+						<GListRow
+							v-for="sop in results"
+							:key="sop.name"
+							:label="sop.title"
+							:sublabel="sop.folderName || scopeLabel(sop)"
+							@click="openSop(sop)"
+						>
+							<template v-if="!sop.published" #badge>
+								<GBadge variant="neutral">{{ __("Draft") }}</GBadge>
+							</template>
+						</GListRow>
+					</GListPanel>
+				</section>
+
+				<template v-if="!isEmpty && !query">
 					<section v-for="section in sections" :key="section.key" class="g-form-section">
 						<h2 class="g-form-section__title">{{ sectionLabel(section) }}</h2>
 						<GListPanel>
@@ -82,7 +131,7 @@
 
 <script setup>
 import { departmentLabel } from "@/utils/departmentLabel"
-import { BookOpen, Plus } from "lucide-vue-next"
+import { BookOpen, Folder, FolderCog, Plus } from "lucide-vue-next"
 import { useRouter } from "vue-router"
 import { TILE } from "@/utils/iconTile"
 import GIconButton from "@/components/glass/GIconButton.vue"
@@ -160,6 +209,9 @@ const grouped = computed(() => buildSopSections(sops.data, query.value))
 const pinned = computed(() => grouped.value.pinned)
 const sections = computed(() => grouped.value.sections)
 const isEmpty = computed(() => grouped.value.isEmpty)
+const folders = computed(() => grouped.value.folders)
+const results = computed(() => grouped.value.results)
+const manageOpen = ref(false)
 
 const scopeLabel = (sop) =>
 	sop.scope === "Department" && sop.department ? departmentLabel(sop.department) : __("General")
@@ -175,6 +227,8 @@ const sectionLabel = (section) => {
 const router = useRouter()
 //: Every row reads the SOP; HR edits from its page (SopDetail's Edit).
 const openSop = (sop) => router.push({ name: "SopDetailView", params: { id: sop.name } })
+const openFolder = (folder) =>
+	router.push({ name: "SopFolderView", params: { folder: folder.name } })
 const rowLine = (sop) => `${__("Updated")} ${dayjs(sop.modified).format("D MMM YYYY")}`
 
 const openCreate = () => {
