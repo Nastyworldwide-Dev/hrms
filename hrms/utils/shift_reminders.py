@@ -226,13 +226,26 @@ def _approved_leave(employees, day):
 
 
 def _half_on(row, day):
-	"""Is `day` the half day of this leave? A one-day half day may leave half_day_date empty."""
+	"""Is `day` the half day of this leave? Only a one-day leave may leave half_day_date empty
+	(its one day is the half); a multi-day leave with no date is not guessed (review of 211fa4d5b)."""
 	if not row.get("half_day"):
 		return False
 	half = row.get("half_day_date") or (
 		row.get("from_date") if row.get("from_date") == row.get("to_date") else None
 	)
-	return half is None or getdate(half) == getdate(day)
+	return half is not None and getdate(half) == getdate(day)
+
+
+def _off_session(rows, day):
+	"""What one person's approved leave rows leave of `day`: None (a full day off) or the half
+	that is off ("AM"/"PM"). An AM and a PM half on the same day are a full day off."""
+	sessions = set()
+	for row in rows:
+		session = row.get("half_day_session") if _half_on(row, day) else None
+		if session not in ("AM", "PM"):
+			return None
+		sessions.add(session)
+	return sessions.pop() if len(sessions) == 1 else None
 
 
 def _apply_leave(candidates):
@@ -246,14 +259,14 @@ def _apply_leave(candidates):
 	for day, group in by_day.items():
 		leave = {}
 		for row in _approved_leave({c.employee for c in group}, day):
-			leave[row.employee] = row
+			leave.setdefault(row.employee, []).append(row)
 		for c in group:
-			row = leave.get(c.employee)
-			if not row:
+			rows = leave.get(c.employee)
+			if not rows:
 				out.append(c)
 				continue
-			session = row.get("half_day_session") if _half_on(row, day) else None
-			if not _half_on(row, day) or session not in ("AM", "PM"):
+			session = _off_session(rows, day)
+			if not session:
 				logger.info("[shift_reminders] %s on approved leave %s; no reminder", c.employee, day)
 				continue
 			c.start, c.end = late_early_bounds(c.start, c.end, session)

@@ -287,7 +287,15 @@ class TestApprovedLeave(unittest.TestCase):
 		self.assertEqual(count, 1)
 
 	def test_morning_half_day_moves_check_in_past_midday(self):
-		leave = [{"employee": "E1", "half_day": 1, "half_day_session": "AM"}]
+		leave = [
+			{
+				"employee": "E1",
+				"half_day": 1,
+				"half_day_session": "AM",
+				"from_date": "2026-09-23",
+				"to_date": "2026-09-23",
+			}
+		]
 		count, _, _ = self._with_leave(DT(2026, 9, 23, 9, 16), leave)
 		self.assertEqual(count, 0, "not at 09:15: the morning is off")
 		# Day 09:00-18:00, middle 13:30, reminder due 13:45
@@ -296,7 +304,15 @@ class TestApprovedLeave(unittest.TestCase):
 		self.assertEqual(inserted[0]["message"], sr.CHECK_IN_MESSAGE)
 
 	def test_afternoon_half_day_moves_check_out_to_midday(self):
-		leave = [{"employee": "E1", "half_day": 1, "half_day_session": "PM"}]
+		leave = [
+			{
+				"employee": "E1",
+				"half_day": 1,
+				"half_day_session": "PM",
+				"from_date": "2026-09-23",
+				"to_date": "2026-09-23",
+			}
+		]
 		punches = [{"employee": "E1", "time": DT(2026, 9, 23, 8, 55), "log_type": "IN"}]
 		# check-out reminder due 30 min after the middle (13:30) = 14:00
 		count, inserted, _ = self._with_leave(DT(2026, 9, 23, 14, 1), leave, punches=punches)
@@ -327,3 +343,50 @@ class TestApprovedLeave(unittest.TestCase):
 		self.assertEqual(filters["from_date"], ["<=", datetime.date(2026, 9, 23)])
 		self.assertEqual(filters["to_date"], [">=", datetime.date(2026, 9, 23)])
 		self.assertIn("half_day_session", fields)
+
+
+class TestLeaveEdges(unittest.TestCase):
+	"""Review of 211fa4d5b: (1) an AM half and a PM half filed as two approved leaves on one day
+	are a whole day off; keeping only the last row reminded at mid-shift. (2) A multi-day leave
+	marked half_day with no half_day_date: the middle days are full days off, not halves."""
+
+	def _with_leave(self, now, rows, **kw):
+		with patch.object(sr, "_approved_leave", side_effect=lambda e, d: [frappe._dict(r) for r in rows]):
+			return _run(now, **kw)
+
+	def test_am_and_pm_halves_on_one_day_are_a_whole_day_off(self):
+		rows = [
+			{
+				"employee": "E1",
+				"half_day": 1,
+				"half_day_session": "AM",
+				"from_date": "2026-09-23",
+				"to_date": "2026-09-23",
+			},
+			{
+				"employee": "E1",
+				"half_day": 1,
+				"half_day_session": "PM",
+				"from_date": "2026-09-23",
+				"to_date": "2026-09-23",
+			},
+		]
+		for now in (DT(2026, 9, 23, 9, 16), DT(2026, 9, 23, 13, 46)):
+			count, _, _ = self._with_leave(now, rows)
+			self.assertEqual(count, 0, now)
+		count, _, _ = self._with_leave(DT(2026, 9, 23, 13, 46), list(reversed(rows)))
+		self.assertEqual(count, 0, "row order does not matter")
+
+	def test_multi_day_half_day_leave_without_a_date_is_a_full_day_off(self):
+		rows = [
+			{
+				"employee": "E1",
+				"half_day": 1,
+				"half_day_session": "AM",
+				"half_day_date": None,
+				"from_date": "2026-09-22",
+				"to_date": "2026-09-24",
+			}
+		]
+		count, _, _ = self._with_leave(DT(2026, 9, 23, 13, 46), rows)
+		self.assertEqual(count, 0, "no mid-shift reminder on a middle day of a multi-day leave")
