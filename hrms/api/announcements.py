@@ -272,9 +272,10 @@ def get_announcement(name: str, preview: int | str = 0) -> dict:
 		frappe.throw(_("Announcements are for employees."), frappe.PermissionError)
 
 	visible = {row.name for row in _visible_rows(reader)}
+	live = name in visible
 	# An event on the reader's calendar opens on its day too, live or not (owner, 27 Oct 2026),
 	# behind the same audience fence.
-	if name not in visible and not _visible_event_row(reader, name):
+	if not live and not _visible_event_row(reader, name):
 		# Same message whether it is missing, expired, unpublished or addressed
 		# to somebody else: a different one for each would let a caller map the
 		# board by probing it.
@@ -283,7 +284,9 @@ def get_announcement(name: str, preview: int | str = 0) -> dict:
 
 	doc = frappe.get_doc("HR Announcement", name)
 	_record_read(name, reader.name)
-	return {**_payload(doc), "acknowledged": _confirmed(name, reader.name, doc.version)}
+	# `live`: on the board today. Off the board (opened from the calendar) it can be read but not
+	# confirmed (owner, 27 Oct 2026); acknowledge refuses it, so the page hides the button.
+	return {**_payload(doc), "acknowledged": _confirmed(name, reader.name, doc.version), "live": live}
 
 
 def _payload(doc) -> dict:

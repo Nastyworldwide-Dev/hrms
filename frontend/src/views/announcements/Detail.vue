@@ -57,7 +57,7 @@
 					<!-- The same gate as the full-screen must-read: read to the end,
 					     tick "I have read and understood this" (a statement the person
 					     makes, not a dismissal), then Confirm. -->
-					<template v-else-if="doc.acknowledge_required && !preview">
+					<template v-else-if="doc.acknowledge_required && !preview && doc.live !== false">
 						<GCheckbox
 							v-model="ticked"
 							:label="__('I have read and understood this')"

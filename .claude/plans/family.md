@@ -1,3 +1,4 @@
-CLASS: a new column read before migrate raises a DB error the fail-soft guard did not know
-hrms/api/calendar.py _board_missing same-root — MySQL 1054 Unknown column counts as "board not there"; other OperationalErrors stay loud
-hrms/api/calendar.py _event_days, _day_events same-root — both go through _board_missing
+CLASS: a Confirm button shown where the server refuses the confirmation (dead button)
+hrms/api/announcements.py get_announcement same-root — payload says live
+frontend/src/views/announcements/Detail.vue same-root — tick + Confirm only when live
+frontend/src/components/MustReadNotice.vue not-affected — fed by must_read (live notices only)

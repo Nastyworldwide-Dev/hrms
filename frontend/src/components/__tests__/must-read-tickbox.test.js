@@ -72,3 +72,10 @@ test("the full-screen notice text can be scrolled from a keyboard", () => {
 	const src = read("../MustReadNotice.vue")
 	assert.match(src, /ref="scroller"[\s\S]*?tabindex="0"[\s\S]*?role="region"[\s\S]*?:aria-label="__\('Notice text'\)"/)
 })
+
+// Owner, 27 Oct 2026: an event opened from the calendar while its notice is off the board can be
+// read, not confirmed (the server refuses acknowledge there). The tick + Confirm wait for `live`.
+test("the board page's tick and Confirm show only while the notice is live", () => {
+	const src = read("../../views/announcements/Detail.vue")
+	assert.match(src, /v-else-if="doc\.acknowledge_required && !preview && doc\.live !== false"/)
+})

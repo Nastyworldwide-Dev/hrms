@@ -1,3 +1,3 @@
-GOAL: the remembered placeholder heights never hold a stale size (review of bcfbeaa8e/d612c8d07).
-DONE WHEN: an emptied Needs you forgets its height; an expanded Approvals group is not remembered; logout removes every hrms:ph: key.
-CHECK: node --test frontend/src/utils/__tests__/placeholderHeight.test.js frontend/tests/personal-cache-isolation.test.mjs
+GOAL: an Event opened from the calendar off the board shows no Confirm (owner, 27 Oct 2026).
+DONE WHEN: get_announcement returns live; Detail hides tick + Confirm when live is false.
+CHECK: pytest hrms/api/test_calendar_events_by_date.py; node --test frontend/src/components/__tests__/must-read-tickbox.test.js

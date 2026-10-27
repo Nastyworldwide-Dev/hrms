@@ -331,3 +331,37 @@ class TestNoEmployeeNoEvents(unittest.TestCase):
 			out = calendar._day_events(datetime.date(2026, 10, 30))
 		self.assertEqual(out, [{"name": "EV1", "title": "Potluck", "summary": "Pantry, 12:30"}])
 		read.assert_called_once_with(READER, datetime.date(2026, 10, 30), datetime.date(2026, 10, 30))
+
+
+class TestConfirmOnlyWhileLive(unittest.TestCase):
+	"""Owner, 27 Oct 2026: an event opened from the calendar outside its board dates can be read,
+	but its tick + Confirm show only while the notice is on the board (HR's "read and confirmed"
+	stays about published notices; acknowledge still refuses off the board). The payload says
+	`live` so the page can hide the dead button."""
+
+	def _open(self, board_rows, event_rows):
+		doc = frappe._dict(name="EV1", version=1)
+		with (
+			patch.object(announcements, "_reader", return_value=READER),
+			patch.object(
+				announcements, "_visible_rows", return_value=[frappe._dict(name=n) for n in board_rows]
+			),
+			patch.object(
+				announcements,
+				"_visible_event_row",
+				side_effect=lambda r, n: frappe._dict(name=n) if n in event_rows else None,
+			),
+			patch.object(announcements, "_record_read"),
+			patch.object(announcements, "_confirmed", return_value=False),
+			patch.object(
+				announcements, "_payload", return_value={"name": "EV1", "acknowledge_required": True}
+			),
+			patch.object(frappe, "get_doc", return_value=doc),
+		):
+			return announcements.get_announcement("EV1")
+
+	def test_live_on_the_board(self):
+		self.assertTrue(self._open(board_rows=["EV1"], event_rows=["EV1"])["live"])
+
+	def test_opened_from_the_calendar_off_the_board_is_not_live(self):
+		self.assertFalse(self._open(board_rows=[], event_rows=["EV1"])["live"])
