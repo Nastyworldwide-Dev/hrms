@@ -15,8 +15,14 @@ from werkzeug.wrappers import Response
 
 logger = logging.getLogger(__name__)
 
+BUILD = Path(__file__).resolve().parent.parent / "public" / "frontend"
 ROUTE = "hrms/sw.js"
-SW_FILE = Path(__file__).resolve().parent.parent / "public" / "frontend" / "sw.js"
+SW_FILE = BUILD / "sw.js"
+# The page links its manifest at /hrms/manifest.webmanifest (vite buildBase "/hrms/",
+# set for the worker). Unserved, Frappe answered it with the app page: no manifest,
+# so Android offered no install and an iPhone saved no name or icon (27 Oct 2026).
+MANIFEST_ROUTE = "hrms/manifest.webmanifest"
+MANIFEST_FILE = BUILD / "manifest.webmanifest"
 
 
 class ServiceWorkerPage:
@@ -25,9 +31,13 @@ class ServiceWorkerPage:
 		self.http_status_code = http_status_code or 200
 
 	def can_render(self):
+		if self.path == MANIFEST_ROUTE:
+			return MANIFEST_FILE.is_file()
 		return self.path == ROUTE and SW_FILE.is_file()
 
 	def render(self):
+		if self.path == MANIFEST_ROUTE:
+			return self._manifest()
 		"""The built sw.js with no-cache, so a new deploy reaches phones on their next check."""
 		body = SW_FILE.read_bytes()
 		response = Response(body, status=200, mimetype="application/javascript")
@@ -38,4 +48,13 @@ class ServiceWorkerPage:
 		# browser rejected scope "/hrms" until the server allowed it.
 		response.headers["Service-Worker-Allowed"] = "/hrms"
 		logger.info("[hrms.sw] served %s bytes", len(body))
+		return response
+
+	def _manifest(self):
+		"""The built manifest, as a manifest, never cached (a deploy may change it)."""
+		body = MANIFEST_FILE.read_bytes()
+		response = Response(body, status=200, mimetype="application/manifest+json")
+		response.headers["Cache-Control"] = "no-cache"
+		response.headers["X-Content-Type-Options"] = "nosniff"
+		logger.info("[hrms.sw] served the manifest, %s bytes", len(body))
 		return response

@@ -93,6 +93,8 @@ website_generators = ["Job Opening"]
 # own folder, so it must live at /hrms to make the app work offline (alpha.12 C1).
 website_route_rules = [
 	{"from_route": "/hrms/sw.js", "to_route": "hrms/sw.js"},
+	# the page's <link rel="manifest"> (27 Oct 2026: unrouted, it got the app page and nothing installed)
+	{"from_route": "/hrms/manifest.webmanifest", "to_route": "hrms/manifest.webmanifest"},
 	{"from_route": "/hrms/<path:app_path>", "to_route": "hrms"},
 	{"from_route": "/hr/<path:app_path>", "to_route": "roster"},
 ]

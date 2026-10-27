@@ -1,14 +1,20 @@
-# Every way a person leaves forgets the remembered heights (owner approved the logout fix 27 Oct 2026)
+# Plan: the app installs again (owner, 27 Oct 2026: "check why android user cant install pwa both android and iphone")
 
-Security review of e23b473b8: only the explicit Log out ran forgetAllHeights. Same approved change,
-covering the two other ways a person leaves a shared phone.
+## GOAL
+/hrms/manifest.webmanifest returns the built manifest, so Android Chrome offers install and an iPhone's
+Add to Home Screen saves the app with its name and icon.
 
 ## FLOW
-- frontend/src/utils/personalCache.js sessionEnded(): forgetAllHeights() beside clearCachedPages().
-- frontend/src/data/session.js login success: forgetAllHeights() beside clearCachedPages().
-- checkin.pendingTap:<employee> (short-lived, cleared on success) -> ticket, not this change.
+page <link rel="manifest" href="/hrms/manifest.webmanifest"> -> hooks.py website_route_rules (own rule, ahead of
+/hrms/<path:app_path>) -> ServiceWorkerPage.can_render (MANIFEST_ROUTE) -> render -> built
+hrms/public/frontend/manifest.webmanifest as application/manifest+json, Cache-Control no-cache
 
-## MOCKUP: NOT NEEDED (no screen changes)
+## MOCKUP: NOT NEEDED (server route only; no screen changes)
 
 ## EXPECTED OUTPUT
-- After a session ends on its own, or a new login on the same phone, no `hrms:ph:` key remains.
+- curl /hrms/manifest.webmanifest -> 200 application/manifest+json (was 200 text/html, the app page)
+- Chrome CDP Page.getAppManifest: errors [] (was "Line: 1, column: 1, Syntax error"); getInstallabilityErrors: []
+- hrms/www/test_service_worker.py: 8 passed (route test and manifest tests red first)
+
+## RISK
+One new route rule for one exact path, before the catch-all; every other /hrms path unchanged. Rollback: drop the rule.
