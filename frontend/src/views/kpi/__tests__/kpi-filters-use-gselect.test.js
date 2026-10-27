@@ -31,3 +31,13 @@ test("each filter is a GSelect that still calls its handler", () => {
 		assert.match(tag, new RegExp(`@update:model-value="${handler}"`), model)
 	}
 })
+
+// Design review of d42b472a9: GSelect's .g-field is width 100%, so on desktop Year and Cycle
+// stacked full width (640 px each, measured) where they had sat side by side. A filter is as
+// wide as its choices, like .g-filter-row > .g-field, and still capped for long names.
+test("a filter is as wide as its choices, not the whole row", () => {
+	const rule = src.match(/\.g-kpi-filter \{[^}]*\}/)?.[0] ?? ""
+	assert.match(rule, /flex: none;/)
+	assert.match(rule, /width: auto;/)
+	assert.match(rule, /max-width: 100%;/)
+})

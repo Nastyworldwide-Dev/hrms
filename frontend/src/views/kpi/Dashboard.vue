@@ -807,6 +807,10 @@ const teamRows = computed(() =>
    these are user-named masters (a company, "Human Resources - VRFC") that can pass a 375 px
    column: min-width 0 on the flex item lets max-width cap it instead of pushing the page sideways. */
 .g-kpi-filter {
+	/* as wide as its choices (like .g-filter-row > .g-field), side by side on a wide screen;
+	   GSelect's .g-field is width 100% and stacked them full width (review of d42b472a9) */
+	flex: none;
+	width: auto;
 	min-width: 0;
 	max-width: 100%;
 }
