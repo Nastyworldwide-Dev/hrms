@@ -31,3 +31,8 @@ test("Needs you holds its last answered height while it loads", () => {
 	assert.match(src, /rememberedHeight\("needs-you", sessionUser\(\)\)/)
 	assert.match(src, /rememberHeight\("needs-you", sessionUser\(\), blockEl\.value/)
 })
+
+test("an emptied Needs you forgets its height", () => {
+	const src = readFileSync(fileURLToPath(new URL("../NeedsYou.vue", import.meta.url)), "utf8")
+	assert.match(src, /if \(!rows\.value\.length\) return forgetHeight\("needs-you", sessionUser\(\)\)/)
+})

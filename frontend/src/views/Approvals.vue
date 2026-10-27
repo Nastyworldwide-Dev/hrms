@@ -658,6 +658,8 @@ watch(
 	async (data) => {
 		if (!data) return
 		await nextTick()
+		// the first page only: a group someone opened with "See all" is not what the next visit draws
+		if (Object.keys(expanded).length) return
 		rememberHeight("approvals", sessionUser(), queueEl.value?.getBoundingClientRect().height)
 	}
 )

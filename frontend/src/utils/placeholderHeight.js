@@ -25,3 +25,28 @@ export function rememberedHeight(block, user) {
 		return 0
 	}
 }
+
+//: An empty answer removes the block, so there is nothing to measure: without this, the old
+//: tall height was held on the next load and the page jumped up (review of bcfbeaa8e).
+export function forgetHeight(block, user) {
+	if (!user) return
+	try {
+		localStorage.removeItem(KEY(block, user))
+	} catch {
+		// storage blocked: nothing was stored either
+	}
+}
+
+//: Logout: the keys carry the person's email, so a shared phone keeps none of them.
+export function forgetAllHeights() {
+	try {
+		const ours = []
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i)
+			if (key?.startsWith("hrms:ph:")) ours.push(key)
+		}
+		for (const key of ours) localStorage.removeItem(key)
+	} catch {
+		// storage blocked: nothing was stored either
+	}
+}

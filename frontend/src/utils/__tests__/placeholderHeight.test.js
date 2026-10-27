@@ -14,6 +14,7 @@ beforeEach(() => {
 	globalThis.localStorage = {
 		getItem: (k) => (store.has(k) ? store.get(k) : null),
 		setItem: (k, v) => store.set(k, String(v)),
+		removeItem: (k) => store.delete(k),
 	}
 })
 
@@ -43,4 +44,26 @@ test("a page with no storage (private mode) still renders", () => {
 	}
 	assert.doesNotThrow(() => rememberHeight("approvals", "a@x", 100))
 	assert.equal(rememberedHeight("approvals", "a@x"), 0)
+})
+
+// Review of bcfbeaa8e/d612c8d07: (1) a block whose answer is empty disappears, so nothing was
+// measured and the old tall height stayed: the next load held it, then jumped UP. An empty
+// answer forgets. (2) Logout must not leave a key with the person's email on a shared phone.
+import { forgetHeight, forgetAllHeights } from "../placeholderHeight.js"
+
+test("an emptied block forgets its height", () => {
+	rememberHeight("needs-you", "a@x", 300)
+	forgetHeight("needs-you", "a@x")
+	assert.equal(rememberedHeight("needs-you", "a@x"), 0)
+})
+
+test("logout forgets every remembered height, and only those", () => {
+	rememberHeight("needs-you", "a@x", 300)
+	rememberHeight("approvals", "b@x", 200)
+	store.set("hrms:install-prompt-dismissed", "1")
+	globalThis.localStorage.key = (i) => [...store.keys()][i] ?? null
+	globalThis.localStorage.removeItem = (k) => store.delete(k)
+	Object.defineProperty(globalThis.localStorage, "length", { get: () => store.size, configurable: true })
+	forgetAllHeights()
+	assert.deepEqual([...store.keys()], ["hrms:install-prompt-dismissed"])
 })

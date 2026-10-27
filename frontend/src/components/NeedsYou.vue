@@ -112,7 +112,7 @@ import { needsYouResource } from "@/data/needsYou"
 import { isApprover } from "@/data/team"
 import { countOf } from "@/utils/countWords"
 import { sessionUser } from "@/utils/personalCache"
-import { rememberHeight, rememberedHeight } from "@/utils/placeholderHeight"
+import { forgetHeight, rememberHeight, rememberedHeight } from "@/utils/placeholderHeight"
 
 const __ = inject("$translate")
 const router = useRouter()
@@ -206,7 +206,7 @@ const rows = computed(() => {
 //: (alpha.8 r3, measured in WebKit).
 const firstRead = computed(() => Boolean(needsYouResource.loading && !needsYouResource.data))
 //: The last answered height, held while the first read loads (see the template), measured after
-//: each answer draws. An empty answer removes the block, so nothing is remembered for it.
+//: each answer draws. An empty answer removes the block and forgets the height.
 const blockEl = ref(null)
 const heldHeight = rememberedHeight("needs-you", sessionUser())
 watch(
@@ -214,6 +214,8 @@ watch(
 	async (data) => {
 		if (!data) return
 		await nextTick()
+		// nothing waiting removes the block: forget, or the next load holds the old height
+		if (!rows.value.length) return forgetHeight("needs-you", sessionUser())
 		rememberHeight("needs-you", sessionUser(), blockEl.value?.getBoundingClientRect().height)
 	}
 )

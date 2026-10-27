@@ -416,3 +416,9 @@ test("the queue holds its last answered height while it loads", () => {
 	assert.match(script, /rememberedHeight\("approvals", sessionUser\(\)\)/)
 	assert.match(script, /rememberHeight\("approvals", sessionUser\(\), queueEl\.value/)
 })
+
+// Review of d612c8d07: a queue measured with a group opened by "See all" (up to 100 rows) held
+// that height on the next visit, then collapsed. Only the first page is remembered.
+test("the queue remembers only its first-page height", () => {
+	assert.match(script, /if \(Object\.keys\(expanded\)\.length\) return\s*rememberHeight\("approvals"/)
+})
