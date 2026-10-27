@@ -10,6 +10,17 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.65] — Install Again — 2026-10-27
+
+### Fixed
+- **The app installs again, on Android and iPhone.** Since alpha.12 the
+  app's install file answered with the app page, so Android offered no
+  Install and an iPhone's Add to Home Screen saved a plain bookmark. It is
+  served again; Chrome reads it with no errors.
+- **The bell and the notification list catch up.** After the phone slept,
+  or when a notification arrived while the app was open, the bell and the
+  list stayed as they were until a full reload. They now refresh.
+
 ## [2.0.0-alpha.64] — Calendar Events — 2026-10-27
 
 ### Added

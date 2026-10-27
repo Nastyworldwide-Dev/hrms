@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.64",
-	"releaseName": "Calendar Events",
+	"version": "2.0.0-alpha.65",
+	"releaseName": "Install Again",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
