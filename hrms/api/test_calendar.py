@@ -127,7 +127,7 @@ class TestMonthFlags(FrappeTestCase):
 		from hrms.api import calendar
 
 		source = inspect.getsource(calendar._event_days)
-		self.assertIn("from hrms.api.announcements import _reader, _visible_rows", source)
+		self.assertIn("from hrms.api.announcements import _reader, _visible_event_rows", source)
 
 
 class TestDaySheet(FrappeTestCase):

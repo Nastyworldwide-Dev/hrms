@@ -128,6 +128,54 @@ def _visible_rows(reader) -> list[dict]:
 	return visible
 
 
+def _visible_event_row(reader, name: str):
+	"""This Event if the reader may see it on their calendar (published, category Event, the same
+	audience fence), whatever its board dates. None otherwise. The calendar row's tap target."""
+	rows = frappe.get_all(
+		"HR Announcement",
+		filters={"name": name, "published": 1, "category": "Event", "event_date": ("is", "set")},
+		fields=["name", "audience", "audience_value"],
+		limit_page_length=1,
+	)
+	row = rows[0] if rows else None
+	return row if row and audience_matches(row.audience, row.audience_value, reader) else None
+
+
+def _visible_event_rows(reader, start, end) -> list[dict]:
+	"""Every Event this reader may see that HAPPENS between `start` and `end`, soonest first.
+
+	The calendar's read (owner, 27 Oct 2026). Dated by `event_date`, and deliberately NOT by
+	publish_from / publish_until: an event is on the calendar on its day whether or not its
+	notice is on the board today (announced for 20 Nov, shown from 1 Nov, still dotted on
+	20 Nov in October; dotted in the past after the notice came down). Same published flag and
+	the SAME audience_matches fence as _visible_rows, applied in Python for the same reason.
+	"""
+	rows = frappe.get_all(
+		"HR Announcement",
+		filters={
+			"published": 1,
+			"category": "Event",
+			"event_date": ("between", [start, end]),
+		},
+		fields=["name", "title", "summary", "event_date", "audience", "audience_value"],
+		order_by="event_date asc, modified desc",
+	)
+	visible = [row for row in rows if audience_matches(row.audience, row.audience_value, reader)]
+	logger.info(
+		"[announcements] events employee=%s %s..%s found=%d visible=%d",
+		reader.name,
+		start,
+		end,
+		len(rows),
+		len(visible),
+	)
+	for row in visible:
+		# As _visible_rows: how the fence decided is not the reader's business.
+		row.pop("audience", None)
+		row.pop("audience_value", None)
+	return visible
+
+
 def _read_state(employee: str, names: list[str]) -> dict[str, dict]:
 	if not names:
 		return {}
@@ -224,7 +272,9 @@ def get_announcement(name: str, preview: int | str = 0) -> dict:
 		frappe.throw(_("Announcements are for employees."), frappe.PermissionError)
 
 	visible = {row.name for row in _visible_rows(reader)}
-	if name not in visible:
+	# An event on the reader's calendar opens on its day too, live or not (owner, 27 Oct 2026),
+	# behind the same audience fence.
+	if name not in visible and not _visible_event_row(reader, name):
 		# Same message whether it is missing, expired, unpublished or addressed
 		# to somebody else: a different one for each would let a caller map the
 		# board by probing it.

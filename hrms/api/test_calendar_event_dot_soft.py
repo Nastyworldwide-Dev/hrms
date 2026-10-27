@@ -27,23 +27,23 @@ from hrms.api import calendar
 
 class TestEventDotFailsSoft(unittest.TestCase):
 	def test_no_board_means_no_event_dots_not_an_error(self):
-		def boom(reader):
+		def boom(reader, start=None, end=None):
 			raise frappe.DoesNotExistError("DocType HR Announcement not found")
 
 		with (
 			patch("hrms.api.announcements._reader", return_value=frappe._dict(name="E1")),
-			patch("hrms.api.announcements._visible_rows", side_effect=boom),
+			patch("hrms.api.announcements._visible_event_rows", side_effect=boom),
 		):
 			self.assertEqual(calendar._event_days("E1", None, None), set())
 
 	def test_a_real_bug_in_the_board_still_fails_loudly(self):
 		# Review of 8fc7dbe6a: only "the board is not there" is swallowed.
-		def bug(reader):
+		def bug(reader, start=None, end=None):
 			raise KeyError("department")
 
 		with (
 			patch("hrms.api.announcements._reader", return_value=frappe._dict(name="E1")),
-			patch("hrms.api.announcements._visible_rows", side_effect=bug),
+			patch("hrms.api.announcements._visible_event_rows", side_effect=bug),
 			self.assertRaises(KeyError),
 		):
 			calendar._event_days("E1", None, None)

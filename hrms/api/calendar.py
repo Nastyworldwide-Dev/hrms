@@ -241,15 +241,17 @@ def _event_days(employee: str, start, end) -> set:
 
 	Reuses the announcement board's own fence rather than re-deriving who sees
 	what: an Event dot on a day the reader may not see the announcement for
-	would tell them something is happening and refuse to say what.
+	would tell them something is happening and refuse to say what. The dot is on
+	the day the event HAPPENS (`event_date`), read by date window rather than
+	"notices live today" (owner, 27 Oct 2026).
 	"""
-	from hrms.api.announcements import _reader, _visible_rows
+	from hrms.api.announcements import _reader, _visible_event_rows
 
 	reader = _reader()
 	if not reader:
 		return set()
 	try:
-		rows = _visible_rows(reader)
+		rows = _visible_event_rows(reader, start, end)
 	except Exception as error:
 		if not _board_missing(error):
 			raise
@@ -262,12 +264,33 @@ def _event_days(employee: str, start, end) -> set:
 		return set()
 	days = set()
 	for row in rows:
-		if row.get("category") != "Event":
-			continue
-		day = getdate(row.get("publish_from"))
+		day = getdate(row.event_date)
 		if start <= day <= end:
 			days.add(day)
 	return days
+
+
+def _day_events(day) -> list[dict]:
+	"""The company events happening on one day, for the day sheet: name, title, summary.
+
+	The same board read and the same fence as the month's Event dot (_event_days), so a
+	row here is always on a day that drew a dot, and the reader may open what it names.
+	Session-scoped: the reader is the caller, never anything sent.
+	"""
+	from hrms.api.announcements import _reader, _visible_event_rows
+
+	reader = _reader()
+	if not reader:
+		return []
+	try:
+		rows = _visible_event_rows(reader, day, day)
+	except Exception as error:
+		if not _board_missing(error):
+			raise
+		# As _event_days: the least of the sections; a site without the board still opens the day.
+		logger.exception("[calendar] announcements unavailable; no events on the day sheet")
+		return []
+	return [{"name": row.name, "title": row.title, "summary": row.summary} for row in rows]
 
 
 def _needs_you_days(employee: str, start, end, worked: dict, marked: set) -> set:
@@ -676,11 +699,18 @@ def get_day(date: str) -> dict:
 		sections["team"] = team
 		sections["coverage"] = _coverage(team)
 
+	# Company events on this day (owner, 27 Oct 2026). Only when there are some: a section
+	# that did not arrive renders nothing.
+	events = _day_events(day)
+	if events:
+		sections["events"] = events
+
 	logger.info(
-		"[calendar] day employee=%s date=%s sections=%s team=%d",
+		"[calendar] day employee=%s date=%s sections=%s team=%d events=%d",
 		employee,
 		day,
 		sorted(sections),
 		len(team),
+		len(events),
 	)
 	return sections
