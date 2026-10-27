@@ -1,4 +1,2 @@
-CLASS: SOPs had one grouping (department), no topic
-hrms/api/sop.py get_sops same-root — folders counted under the existing fence; filed SOPs listed only in their folder
-hrms/hr/doctype/sop_folder same-root — new record; delete refused while it holds SOPs
-hrms/overrides/sop_document_row_scope not-affected — who sees an SOP is unchanged
+CLASS: HR could only manage SOP folders in Desk
+hrms/api/sop.py save_folder/move_folder/delete_folder same-root — HR-only (the get_sops is_hr rule), inputs checked; delete refused by the record when not empty

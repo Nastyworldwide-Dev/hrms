@@ -362,3 +362,80 @@ def remove_attachment(name: str):
 		len(file_names),
 	)
 	return {"removed": len(file_names)}
+
+
+# ---------------------------------------------------------------------------
+# SOP folders, managed by HR from the app (owner, 27 Oct 2026). HR only: the same
+# rule get_sops uses for is_hr. Deleting a folder that holds SOPs is refused by
+# the record itself (SOPFolder.on_trash), so Desk and the app agree.
+
+FOLDER_NAME_MAX = 80
+
+
+def _require_sop_hr():
+	if not _unrestricted(frappe.session.user):
+		logger.warning("[sop] %s refused a folder change", frappe.session.user)
+		frappe.throw(_("Only HR can change SOP folders."), frappe.PermissionError)
+
+
+def _clean_name(value) -> str:
+	name = value.strip() if isinstance(value, str) else ""
+	if not name or len(name) > FOLDER_NAME_MAX:
+		frappe.throw(_("Name the folder in up to {0} characters.").format(FOLDER_NAME_MAX))
+	return name
+
+
+@frappe.whitelist(methods=["POST"])
+def save_folder(folder_name, name=None, description=None) -> dict:
+	"""Create a folder (placed last), or rename one when `name` is given."""
+	_require_sop_hr()
+	folder_name = _clean_name(folder_name)
+	if name:
+		new = frappe.rename_doc("SOP Folder", _clean_name(name), folder_name, force=False)
+		if description is not None:
+			frappe.db.set_value("SOP Folder", new, "description", str(description)[:500])
+		logger.info("[sop] folder %s renamed to %s by %s", name, new, frappe.session.user)
+		return {"name": new}
+	orders = [row.sort_order or 0 for row in frappe.get_all("SOP Folder", fields=["sort_order"])]
+	doc = frappe.get_doc(
+		{
+			"doctype": "SOP Folder",
+			"folder_name": folder_name,
+			"sort_order": max(orders, default=0) + 10,
+			"description": str(description)[:500] if description else None,
+		}
+	).insert()
+	logger.info("[sop] folder %s created by %s", doc.name, frappe.session.user)
+	return {"name": doc.name}
+
+
+@frappe.whitelist(methods=["POST"])
+def move_folder(name, direction) -> dict:
+	"""Move a folder one place up or down; the order is renumbered 10, 20, 30..."""
+	_require_sop_hr()
+	if direction not in ("up", "down"):
+		frappe.throw(_("Move a folder up or down."))
+	rows = frappe.get_all(
+		"SOP Folder", fields=["name", "sort_order"], order_by="sort_order asc, folder_name asc"
+	)
+	names = [row.name for row in rows]
+	if name not in names:
+		frappe.throw(_("That folder is not there."), frappe.DoesNotExistError)
+	i = names.index(name)
+	j = i - 1 if direction == "up" else i + 1
+	if 0 <= j < len(names):
+		names[i], names[j] = names[j], names[i]
+	for position, folder in enumerate(names, start=1):
+		frappe.db.set_value("SOP Folder", folder, "sort_order", position * 10, update_modified=False)
+	logger.info("[sop] folder %s moved %s by %s", name, direction, frappe.session.user)
+	return {"order": names}
+
+
+@frappe.whitelist(methods=["POST"])
+def delete_folder(name) -> dict:
+	"""Delete an empty folder; one that holds SOPs is refused by SOPFolder.on_trash."""
+	_require_sop_hr()
+	name = _clean_name(name)
+	frappe.delete_doc("SOP Folder", name)
+	logger.info("[sop] folder %s deleted by %s", name, frappe.session.user)
+	return {"deleted": name}
