@@ -1,5 +1,4 @@
-CLASS: the backup approver asked or named by reminders
-hrms/utils/approval_reminders.py plan_reminders/_waiting_requests same-root — first approver only, no away read
-hrms/setup.py approval_backup_after_days same-root — hidden, column kept
-hrms/utils/cancel_notice.py not-affected — tells the line about a cancel; not a reminder
-hrms/hr/utils.py get_designated_approvers not-affected — who MAY approve is unchanged (owner ruling: reminders only)
+CLASS: a daily reminder that can arrive twice or on the approver's day off
+hrms/utils/approval_reminders.py send_daily_reminders same-root — _reminded_today + _off_today
+hrms/utils/shift_reminders.py not-affected — dedupes per shift (_sent_this_shift) and checks _is_working_day
+hrms/hooks.py comment only

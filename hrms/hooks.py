@@ -727,8 +727,8 @@ scheduler_events = {
 		"*/5 * * * *": [
 			"hrms.utils.shift_reminders.send_due_reminders",
 		],
-		# Owner, 29 Sep 2026: approvers are reminded each working morning, the
-		# first approver first, the backup only after (hrms.utils.approval_reminders).
+		# Owner, 27 Oct 2026: the FIRST approver is reminded each of their working
+		# mornings until they decide; nobody else is (hrms.utils.approval_reminders).
 		"37 8 * * 1-6": [
 			"hrms.utils.approval_reminders.send_daily_reminders",
 		],

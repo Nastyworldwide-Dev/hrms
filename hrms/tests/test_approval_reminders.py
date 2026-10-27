@@ -205,3 +205,38 @@ class TestEveryApprovableTypeIsReminded(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestDailyMeansOnceAndOnTheirWorkingDay(unittest.TestCase):
+	"""Review of ecadbe2c9: with a reminder every working day, a second run of the job the
+	same day sent a second message, and Saturday's run reached an approver on their day off
+	(the waited count skipped rest days; the send did not)."""
+
+	def _send(self, *, already=(), off=(), plan=None):
+		plan = plan or [{"to": "a@x", "message": "m"}, {"to": "b@x", "message": "m"}]
+		inserted = []
+
+		class _Doc(dict):
+			def insert(self, **kw):
+				inserted.append(self["to_user"])
+
+		with (
+			patch.object(approval_reminders, "_waiting_requests", return_value=[]),
+			patch.object(approval_reminders, "plan_reminders", return_value=plan),
+			patch.object(approval_reminders, "_setting", return_value=1),
+			patch.object(approval_reminders, "_reminded_today", return_value=set(already)),
+			patch.object(approval_reminders, "_off_today", side_effect=lambda user: user in off),
+			patch.object(frappe, "get_doc", side_effect=lambda d: _Doc(d)),
+			patch.object(frappe, "db"),
+		):
+			sent = approval_reminders.send_daily_reminders()
+		return sent, inserted
+
+	def test_an_approver_already_reminded_today_is_not_reminded_again(self):
+		sent, inserted = self._send(already={"a@x"})
+		self.assertEqual(inserted, ["b@x"])
+		self.assertEqual(sent, 1)
+
+	def test_no_reminder_on_the_approvers_own_day_off(self):
+		_, inserted = self._send(off={"b@x"})
+		self.assertEqual(inserted, ["a@x"])

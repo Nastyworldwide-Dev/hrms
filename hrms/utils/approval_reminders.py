@@ -135,15 +135,54 @@ def _waiting_requests() -> list[dict]:
 	return out
 
 
+def _reminded_today() -> set[str]:
+	"""Approvers this job already reminded today (a second run must not send twice)."""
+	return {
+		user.lower()
+		for user in frappe.get_all(
+			"PWA Notification",
+			filters={
+				"from_user": "Administrator",
+				"message": ("like", "%waiting for you.%"),
+				"creation": (">=", getdate(now_datetime())),
+			},
+			pluck="to_user",
+		)
+	}
+
+
+def _off_today(user: str) -> bool:
+	"""Today is the approver's own rest day or holiday: no reminder until their next
+	working day. Read on the approver's calendar; an approver with no Employee record
+	(an outside approver) has no day off to respect."""
+	from hrms.utils.ot_calculation import _classify_day
+
+	employee = frappe.db.get_value("Employee", {"user_id": user, "status": "Active"}, "name")
+	if not employee:
+		return False
+	try:
+		return _classify_day(employee, getdate(now_datetime()), "normal") != "normal"
+	except Exception:
+		logger.warning("[approval_reminders] could not read %s's day; reminded anyway", user, exc_info=True)
+		return False
+
+
 def send_daily_reminders() -> int:
-	"""Scheduler entry, once each morning. Weekends and public holidays are
-	skipped by the working-day count (a request made on Friday has waited 1 day
-	on Monday). Returns how many notifications were sent."""
+	"""Scheduler entry, once each morning. Waited days count working days (a request
+	made on Friday has waited 1 day on Monday); an approver is not reminded on their
+	own rest day or holiday, nor twice in one day. Returns how many were sent."""
 	settings = {"reminder_after": _setting("approval_reminder_after_days", 1)}
 	requests = _waiting_requests()
 	plan = plan_reminders(requests, settings)
+	already = _reminded_today()
 	sent = 0
 	for item in plan:
+		if item["to"].lower() in already:
+			logger.info("[approval_reminders] %s already reminded today; skipped", item["to"])
+			continue
+		if _off_today(item["to"]):
+			logger.info("[approval_reminders] %s is off today; reminded next working day", item["to"])
+			continue
 		try:
 			frappe.get_doc(
 				{
