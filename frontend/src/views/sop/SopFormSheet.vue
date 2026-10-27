@@ -63,6 +63,22 @@
 				<p class="g-form-footer" aria-live="polite">{{ whoSees }}</p>
 			</section>
 
+			<!-- Folder (owner, 27 Oct 2026): an SOP sits in one folder, or none. -->
+			<section class="g-form-section">
+				<div class="g-form-group">
+					<label class="g-form-row">
+						<span class="g-form-row__label">{{ __("Folder") }}</span>
+						<GSelect
+							:options="folderOptions"
+							:model-value="form.folder"
+							:aria-label="__('Folder')"
+							@update:model-value="pickFolder"
+						/>
+					</label>
+				</div>
+				<p class="g-form-footer">{{ __("An SOP sits in one folder. Staff find it there.") }}</p>
+			</section>
+
 			<section class="g-form-section">
 				<div class="g-form-group">
 					<div v-for="toggle in TOGGLES" :key="toggle.field" class="g-form-row">
@@ -132,6 +148,40 @@
 				<GGhostButton class="flex-1" :label="__('Cancel')" @click="close" />
 				<GButton class="flex-1" :label="__('Save')" :pending="saving" :disabled="saving" @click="save" />
 			</div>
+		</div>
+	</GModal>
+
+	<GModal :is-open="newFolderOpen" :title="__('New folder')" @did-dismiss="newFolderOpen = false">
+		<div class="g-form-body">
+			<section class="g-form-section">
+				<div class="g-form-group">
+					<label class="g-form-row">
+						<span class="g-form-row__label">{{ __("Name") }}</span>
+						<GInput
+							v-model="newFolderName"
+							:aria-label="__('Folder name')"
+							:placeholder="__('e.g. Safety')"
+							:maxlength="80"
+						/>
+					</label>
+				</div>
+				<!-- a dimmed Create says why, visibly and to a screen reader -->
+				<p
+					v-if="!newFolderName.trim()"
+					:id="newFolderHintId"
+					class="g-form-footer"
+					aria-live="polite"
+				>
+					{{ __("Name the folder") }}
+				</p>
+			</section>
+			<GButton
+				:label="__('Create')"
+				:pending="createFolder.loading"
+				:disabled="!newFolderName.trim() || createFolder.loading"
+				:aria-describedby="newFolderName.trim() ? undefined : newFolderHintId"
+				@click="submitNewFolder"
+			/>
 		</div>
 	</GModal>
 </template>
@@ -212,6 +262,7 @@ const emptyForm = () => ({
 	pinned: false,
 	published: true,
 	content: "",
+	folder: "",
 })
 
 const form = reactive(emptyForm())
@@ -265,6 +316,7 @@ const detail = createResource({
 			published: !!doc.published,
 			// an old plain-text SOP opens as paragraphs the editor can show
 			content: toHtml(doc.content),
+			folder: doc.folder || "",
 		})
 		existingAttachment.value = doc.attachment || null
 	},
@@ -296,6 +348,51 @@ const companyLookup = createResource({
 		console.warn("[SOP] Could not read the SOP's company:", error)
 	},
 })
+
+// The folders are the SOP list's own answer (same cache key as SopList): one
+// fetch for the list, the picker and Manage folders.
+const library = createResource({
+	url: "hrms.api.sop.get_sops",
+	cache: personalCacheKey("hrms:sops"),
+	auto: true,
+})
+const NEW_FOLDER = "__new__"
+const folderOptions = computed(() => [
+	{ value: "", label: __("No folder") },
+	...(library.data?.folders || []).map((f) => ({ value: f.name, label: f.folder_name })),
+	{ value: NEW_FOLDER, label: __("New folder…") },
+])
+
+const newFolderOpen = ref(false)
+const newFolderName = ref("")
+const newFolderHintId = useId()
+const createFolder = createResource({ url: "hrms.api.sop.save_folder" })
+
+const pickFolder = (value) => {
+	if (value !== NEW_FOLDER) {
+		form.folder = value || ""
+		return
+	}
+	newFolderName.value = ""
+	newFolderOpen.value = true
+}
+
+const submitNewFolder = async () => {
+	if (!newFolderName.value.trim()) return
+	try {
+		const folder = await createFolder.fetch({ folder_name: newFolderName.value.trim() })
+		await library.reload()
+		form.folder = folder.name
+		newFolderOpen.value = false
+	} catch (error) {
+		console.warn("[SOP] Folder create failed:", error)
+		gToast({
+			title: __("Error"),
+			text: saveFailedSentence(error, __("Could not create the folder")),
+			variant: "error",
+		})
+	}
+}
 
 const sopDocs = createListResource({ doctype: "SOP Document" })
 
@@ -420,6 +517,7 @@ const save = async () => {
 			pinned: form.pinned ? 1 : 0,
 			published: form.published ? 1 : 0,
 			content: contentForSave(form.content),
+			folder: form.folder || "",
 		}
 		// "" (not missing) is "all companies": a missing company is filled in from
 		// the saver's Company permission (frappe update_if_missing). Left out of an

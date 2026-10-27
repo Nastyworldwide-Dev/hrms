@@ -125,6 +125,7 @@
 				@update:open="sheetOpen = $event"
 				@saved="sops.reload()"
 			/>
+			<SopManageFolders v-if="isHR" v-model:open="manageOpen" :sops="sops" />
 		</template>
 	</BaseLayout>
 </template>
@@ -147,6 +148,7 @@ import { computed, inject, onBeforeUnmount, ref, watch } from "vue"
 import BaseLayout from "@/components/BaseLayout.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import SopFormSheet from "./SopFormSheet.vue"
+import SopManageFolders from "./SopManageFolders.vue"
 
 import { userResource } from "@/data/user"
 import { hasHRRole } from "@/utils/issueBoard"

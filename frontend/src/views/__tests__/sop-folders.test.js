@@ -23,3 +23,23 @@ test("a folder opens its own page that reads the list's answer", () => {
 	assert.match(page, /personalCacheKey\("hrms:sops"\)/)
 	assert.match(page, /No SOPs in this folder yet/)
 })
+
+test("the SOP sheet picks a folder, or makes a new one with a Create that says why it is dimmed", () => {
+	const sheet = read("views/sop/SopFormSheet.vue")
+	assert.match(sheet, /__\("No folder"\)/)
+	assert.match(sheet, /__\("New folder…"\)/)
+	assert.match(sheet, /folder: form\.folder \|\| ""/)
+	assert.match(sheet, /:disabled="!newFolderName\.trim\(\) \|\| createFolder\.loading"/)
+	assert.match(sheet, /:aria-describedby="newFolderName\.trim\(\) \? undefined : newFolderHintId"/)
+	assert.match(sheet, /:id="newFolderHintId"[^>]*>\s*\{\{ __\("Name the folder"\) \}\}/)
+	assert.match(sheet, /url: "hrms\.api\.sop\.save_folder"/)
+})
+
+test("Manage folders moves and renames every folder, deletes only an empty one", () => {
+	const sheet = read("views/sop/SopManageFolders.vue")
+	assert.match(sheet, /__\('Move \{0\} up', \[folder\.folder_name\]\)/)
+	assert.match(sheet, /__\('Move \{0\} down', \[folder\.folder_name\]\)/)
+	assert.match(sheet, /v-if="folder\.count === 0"[\s\S]*?__\("Delete"\)/)
+	assert.match(sheet, /A folder with SOPs in it cannot be deleted\. Move its SOPs first\./)
+	assert.match(sheet, /await props\.sops\.reload\(\)/)
+})
