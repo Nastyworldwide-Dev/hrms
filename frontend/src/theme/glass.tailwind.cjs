@@ -208,6 +208,7 @@ module.exports = {
 		"tab-lens": "var(--g-motion-tab-lens-easing)",
 	},
 	zIndex: {
+		bar: "var(--g-layer-bar)",
 		overlay: "var(--g-layer-overlay)",
 		scrim: "var(--g-layer-scrim)",
 		"scrim-backdrop": "var(--g-layer-scrim-backdrop)",

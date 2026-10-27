@@ -16,5 +16,5 @@ test("in the installed iPhone app the top bar is pinned and opaque", () => {
 	assert.ok(at > 0, "a standalone-only rule")
 	const block = css.slice(at, css.indexOf("\n}\n", at))
 	assert.match(block, /@supports \(-webkit-touch-callout: none\)/, "iOS only")
-	assert.match(block, /\.g-page ion-header\.header-ios,\s*\.g-page \.g-header,\s*\.g-header \{[^}]*position: sticky;[^}]*top: 0;[^}]*background: var\(--g-bg\);/)
+	assert.match(block, /\.g-page ion-header\.header-ios,\s*\.g-page \.g-header,\s*\.g-header \{[^}]*position: sticky;[^}]*top: 0;[^}]*z-index: var\(--g-layer-bar\);[^}]*background: var\(--g-bg\);/)
 })

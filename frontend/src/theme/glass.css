@@ -120,6 +120,7 @@
 	--g-shadow-focus-ring: 0 0 0 2px var(--g-ink), 0 0 0 5px var(--g-brand);
 	--g-shadow-focus-ring-inset: inset 0 0 0 2px var(--g-ink), inset 0 0 0 5px var(--g-brand);
 	/* layer */
+	--g-layer-bar: 10;
 	--g-layer-overlay: 100;
 	--g-layer-scrim: 10000;
 	--g-layer-scrim-backdrop: 10000;

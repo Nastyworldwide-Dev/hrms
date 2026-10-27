@@ -5065,7 +5065,8 @@ ion-modal.g-mustread {
    turns it off; WebKit leaves it out when a fixed or sticky, opaque,
    full-width container sits at the top edge. Installed iPhone app only (the
    @supports picks iOS WebKit), painted the page ground it already shows
-   through, so nothing looks different. ceiling: other projects report iOS 27
+   through (--g-bg: the page has no gradient at the top edge), so nothing
+   looks different. ceiling: other projects report iOS 27
    still blurs; upgrade: if a real iPhone still does, pad the bar below the
    blur zone in standalone. */
 @media (display-mode: standalone) {
@@ -5077,7 +5078,7 @@ ion-modal.g-mustread {
 		.g-header {
 			position: sticky;
 			top: 0;
-			z-index: 10;
+			z-index: var(--g-layer-bar);
 			background: var(--g-bg);
 		}
 	}
