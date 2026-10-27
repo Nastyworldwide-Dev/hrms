@@ -227,3 +227,37 @@ class TestFlagOrder(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestLeaveDaysReadLikeHome(unittest.TestCase):
+	"""27 Oct 2026 (review of aee25b247): the month grid read leave its own way and drew a
+	HALF day as a whole day off, while Home, reminders and Team treat it as a working day.
+	It now reads hrms.utils.leave_day: a half day is not a leave day on the grid; an AM half
+	and a PM half on the same day together are."""
+
+	def _leave(self, rows):
+		with patch.object(frappe, "get_all", return_value=[frappe._dict(r) for r in rows], create=True):
+			return calendar._leave_days("EMP-1", START, END)
+
+	def test_a_whole_day_is_a_leave_day(self):
+		days = self._leave([{"from_date": D(2026, 9, 3), "to_date": D(2026, 9, 4), "half_day": 0}])
+		self.assertEqual(days, {D(2026, 9, 3), D(2026, 9, 4)})
+
+	def test_a_half_day_is_a_working_day(self):
+		row = {"from_date": D(2026, 9, 3), "to_date": D(2026, 9, 3), "half_day": 1, "half_day_session": "AM"}
+		self.assertEqual(self._leave([row]), set())
+
+	def test_the_half_of_a_longer_leave_is_a_working_day_the_rest_are_off(self):
+		row = {
+			"from_date": D(2026, 9, 3),
+			"to_date": D(2026, 9, 5),
+			"half_day": 1,
+			"half_day_date": D(2026, 9, 5),
+			"half_day_session": "PM",
+		}
+		self.assertEqual(self._leave([row]), {D(2026, 9, 3), D(2026, 9, 4)})
+
+	def test_an_am_half_and_a_pm_half_make_a_whole_day(self):
+		am = {"from_date": D(2026, 9, 8), "to_date": D(2026, 9, 8), "half_day": 1, "half_day_session": "AM"}
+		pm = {"from_date": D(2026, 9, 8), "to_date": D(2026, 9, 8), "half_day": 1, "half_day_session": "PM"}
+		self.assertEqual(self._leave([am, pm]), {D(2026, 9, 8)})

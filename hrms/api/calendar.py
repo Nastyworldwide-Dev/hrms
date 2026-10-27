@@ -71,14 +71,17 @@ def _window(from_date: str, to_date: str):
 
 
 def _leave_days(employee: str, start, end) -> set:
-	"""Days the employee is on approved leave.
+	"""Days the employee is off all day on approved leave.
 
 	Submitted only. A leave application still waiting on an approver is not a
 	day off — marking it as one on the grid is how somebody books a flight
-	against leave that is later rejected.
+	against leave that is later rejected. A HALF day is a working day here, as
+	on Home, in reminders and on Team (hrms.utils.leave_day, 27 Oct 2026); an AM
+	half and a PM half on one day together are a whole day off.
 	"""
-	days = set()
-	for row in frappe.get_all(
+	from hrms.utils.leave_day import off_session
+
+	rows = frappe.get_all(
 		"Leave Application",
 		filters={
 			"employee": employee,
@@ -87,15 +90,14 @@ def _leave_days(employee: str, start, end) -> set:
 			"from_date": ("<=", end),
 			"to_date": (">=", start),
 		},
-		fields=["from_date", "to_date"],
+		fields=["from_date", "to_date", "half_day", "half_day_date", "half_day_session"],
 		ignore_permissions=True,
-	):
-		day = max(getdate(row.from_date), start)
-		last = min(getdate(row.to_date), end)
-		while date_diff(last, day) >= 0:
-			days.add(day)
-			day = add_days(day, 1)
-	return days
+	)
+	covering = {}
+	for row in rows:
+		for day in _span(row.from_date, row.to_date, start, end):
+			covering.setdefault(day, []).append(row)
+	return {day for day, on in covering.items() if not off_session(on, day)}
 
 
 def _span(first, last, start, end) -> set:
