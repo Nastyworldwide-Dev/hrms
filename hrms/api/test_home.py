@@ -115,6 +115,31 @@ class TestHomeWeek(_Base):
 		)
 		self.assertEqual(out["days_worked"], 0)
 
+	def test_days_on_leave_are_counted_apart_from_days_worked(self):
+		# 27 Oct 2026 (intelligence gaps, item 2): a week with leave read "3 days worked"
+		# and nothing else, as if the leave days were missed. Whole days off only, as on
+		# the calendar (calendar._leave_days); a half day still counts as worked.
+		out = self.run_fn(
+			home.get_home_week,
+			{
+				"Attendance": [{"attendance_date": D(2026, 9, 21)}],
+				"Leave Application": [
+					{"from_date": D(2026, 9, 22), "to_date": D(2026, 9, 23), "half_day": 0},
+					{
+						"from_date": D(2026, 9, 24),
+						"to_date": D(2026, 9, 24),
+						"half_day": 1,
+						"half_day_session": "AM",
+					},
+				],
+			},
+		)
+		self.assertEqual(out["days_worked"], 1)
+		self.assertEqual(out["days_on_leave"], 2)
+		leave = self.filters_for("Leave Application")[0]
+		self.assertEqual(leave["employee"], "E1")
+		self.assertEqual(leave["status"], "Approved")
+
 	def test_overtime_comes_from_the_requests_summary_not_new_maths(self):
 		out = self.run_fn(home.get_home_week, {}, overtime=1.5)
 		self.assertEqual(out["overtime_hours"], 1.5)

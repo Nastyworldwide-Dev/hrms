@@ -1,7 +1,8 @@
 <!--
   HomeWeek — "This week" on Home (owner-approved Home, 23 Sep 2026).
 
-  One row: "4 days worked · 1h 30m overtime to claim ›", tapping to the OT
+  One row: "4 days worked · 1 day on leave", then "1h 30m overtime to claim ›",
+  tapping to the OT
   form. ALWAYS renders: a skeleton on first load, one plain line if the call
   fails, and "Nothing to claim this week." when there is no overtime waiting —
   a block that vanished read as a broken Home.
@@ -44,9 +45,17 @@ const days = computed(() => Number(homeWeek.data?.days_worked) || 0)
 const overtime = computed(() => Number(homeWeek.data?.overtime_hours) || 0)
 const hasOvertime = computed(() => Boolean(hoursAsTime(overtime.value)))
 
-const daysLine = computed(() =>
-	days.value === 1 ? __("1 day worked") : __("{0} days worked", [days.value])
-)
+// days off on approved leave (27 Oct 2026): without them a week with leave
+// read as days simply missed
+const leave = computed(() => Number(homeWeek.data?.days_on_leave) || 0)
+
+const daysLine = computed(() => {
+	const worked = days.value === 1 ? __("1 day worked") : __("{0} days worked", [days.value])
+	if (!leave.value) return worked
+	return leave.value === 1
+		? __("{0} · 1 day on leave", [worked])
+		: __("{0} · {1} days on leave", [worked, leave.value])
+})
 const claimLine = computed(() =>
 	hasOvertime.value
 		? __("{0} overtime to claim", [hoursAsTime(overtime.value)])

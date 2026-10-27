@@ -44,7 +44,7 @@ def _today(employee: str):
 
 @frappe.whitelist(methods=["GET", "POST"])
 def get_home_week() -> dict:
-	"""Days worked Monday..today and overtime not yet claimed, for the caller."""
+	"""Days worked and days on leave Monday..today, and overtime not yet claimed, for the caller."""
 	from hrms.api.requests_summary import _overtime
 
 	employee = _employee()
@@ -65,19 +65,26 @@ def get_home_week() -> dict:
 		)
 	}
 	worked |= paired_days(employee, monday, today)
+	# whole days off on approved leave, read as the calendar reads them (27 Oct 2026):
+	# without them a week with leave read as days simply missed
+	from hrms.api.calendar import _leave_days
+
+	on_leave = _leave_days(employee, monday, today) - worked
 	overtime = flt((_overtime() or {}).get("unclaimed_hours"))
 	logger.info(
-		"[home] week employee=%s from=%s to=%s days=%d ot=%.2f",
+		"[home] week employee=%s from=%s to=%s days=%d leave=%d ot=%.2f",
 		employee,
 		monday,
 		today,
 		len(worked),
+		len(on_leave),
 		overtime,
 	)
 	return {
 		"from_date": str(monday),
 		"to_date": str(today),
 		"days_worked": len(worked),
+		"days_on_leave": len(on_leave),
 		"overtime_hours": overtime,
 	}
 
