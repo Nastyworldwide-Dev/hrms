@@ -121,11 +121,14 @@
 			     Say which of the four situations this is: one row in a group
 			     under "Pick a day", as iOS shows an empty section (alpha.9 D7:
 			     not a loose grey line above the form). -->
-					<div v-if="emptyReason && !props.id" class="g-form-body g-ot-days">
+					<div
+						v-if="(emptyReason || (otSummary.error && !dayGroups.open.length)) && !props.id"
+						class="g-form-body g-ot-days"
+					>
 						<section class="g-form-section">
 							<h2 class="g-form-section__title">{{ __("Pick a day") }}</h2>
 							<div class="g-form-group">
-								<p class="g-form-row g-form-row--stacked g-ot-empty" role="status">
+								<p v-if="emptyReason" class="g-form-row g-form-row--stacked g-ot-empty" role="status">
 									{{ emptyReason }}
 								</p>
 								<!-- a date typed in the field below whose check failed still gets a
@@ -139,7 +142,7 @@
 									{{ __("Try again") }}
 								</button>
 							</div>
-							<p v-if="otSummary.error" class="g-form-footer" role="status">{{ dayFooter }}</p>
+							<p class="g-form-footer" role="status">{{ otSummary.error ? dayFooter : "" }}</p>
 						</section>
 					</div>
 				</template>

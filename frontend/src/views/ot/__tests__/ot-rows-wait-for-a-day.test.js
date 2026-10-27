@@ -34,8 +34,17 @@ test("Hours shows only once the day's figure is in, and never asks to be typed",
 // left only Send's reason: the Try again row lived inside the day list. A failed check is
 // always retryable; and a saved request never hides its rows (it always has a checked day).
 test("a failed check of a typed date still offers Try again; saved requests keep their rows", () => {
-	const empty = src.match(/<div v-if="emptyReason && !props\.id"[\s\S]*?<\/section>/)?.[0] ?? ""
+	const empty = src.match(/<div\s+v-if="\(emptyReason[\s\S]*?<\/section>/)?.[0] ?? ""
 	assert.match(empty, /v-if="otSummary\.error"[\s\S]*?@click="loadSummary"/, "retry under the empty list")
-	assert.match(empty, /\{\{ dayFooter \}\}/, "and the reason")
+	assert.match(empty, /otSummary\.error \? dayFooter : ""/, "and the reason")
 	assert.match(src, /f\.hidden =\s*props\.id \|\| \(day && otRequest\.value\.punch_ot_hours != null\) \? 0 : 1/)
+})
+
+// Review of b7a3c94dc: (1) a live region added by v-if with its text already in is skipped by
+// some screen readers; the footer is always there and only its words change. (2) If the day
+// list itself failed to load there is no empty reason, so the block (and its retry) must also
+// show when the typed day's check failed and nothing is listed.
+test("the empty block's retry also shows when the day list failed; its status line is always present", () => {
+	assert.match(src, /<div\s+v-if="\(emptyReason \|\| \(otSummary\.error && !dayGroups\.open\.length\)\) && !props\.id"/)
+	assert.match(src, /<p class="g-form-footer" role="status">\{\{ otSummary\.error \? dayFooter : "" \}\}<\/p>/)
 })

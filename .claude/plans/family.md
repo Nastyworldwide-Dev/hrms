@@ -1,3 +1,2 @@
-CLASS: a retry for a failed check drawn only in one of the screen's states (the day list), so another state (no days, a typed date) had no way to retry
-frontend/src/views/ot/OTRequestForm.vue empty-list group same-root — Try again + reason under the empty list
-frontend/src/views/ot/OTRequestForm.vue hide watch same-root — saved requests (props.id) never hide Hours/Note
+CLASS: a retry/status shown only when one source of the empty state is present (days list answered), and a live region inserted with its text already set
+frontend/src/views/ot/OTRequestForm.vue empty block same-root — shows when the typed day failed even if the list read failed; footer always rendered, text bound
