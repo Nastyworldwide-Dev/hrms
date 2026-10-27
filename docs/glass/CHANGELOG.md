@@ -10,6 +10,39 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.63] — Staff Requests — 2026-10-27
+
+### Added
+- **Ask for new staff in Nadi.** A head of department with direct reports
+  opens **Requests → Request staff** and fills six short steps: the role,
+  how many, why, where, when, and the salary. HR edits the questions in
+  **Manpower Request Settings**.
+- **One approval, then HR.** The request goes to the sender's own
+  approver, then to HR. HR is told when it is sent and when it is
+  approved. The sender sees each step on a tracker and can withdraw it
+  while it is open, waiting for HR or recruiting.
+- **HR follows every request.** HR has a **Staff requests** board in Nadi
+  (More) and a Desk report, **Manpower Requests**, with the answers in
+  columns and an Excel export.
+- Needs migrate (Frappe Cloud runs it on deploy).
+
+### Fixed
+- **Confirming a must-read notice no longer leaves a blank screen.** After
+  the tick and Confirm on the last notice, the app now returns to Today.
+- **The tick box looks like Nadi.** A lime box with a dark tick, everywhere
+  a tick box appears, instead of the browser's blue box.
+- **A deleted request says so.** Opening one from an old notification
+  shows "This leave request is no longer here" with Back, not "check your
+  connection" with a Try again that could never work. The same for SOPs,
+  tickets, announcements and issues.
+- **Try again finishes loading.** After a failed first open, Try again now
+  shows the whole request, with Approve and Reject for its approver.
+- **A new claim has one main button.** "Add expense" is the lighter style;
+  Send is the one lime button.
+- **Screen readers.** Every sheet reads its title instead of just
+  "dialog"; an old error is no longer read again on later pages; the
+  must-read text can be scrolled with a keyboard.
+
 ## [2.0.0-alpha.62] — Cost Split by Month — 2026-10-22
 
 ### Changed
