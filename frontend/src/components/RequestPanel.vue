@@ -27,7 +27,7 @@
 		<div role="status" class="contents">
 			<p v-if="isPartlyLoaded" class="text-caption text-ink-600 mt-2">
 				{{ __("Some requests didn't load.") }}
-				<button type="button" class="g-seclink g-focusable underline" @click="retryLastFive">
+				<button type="button" class="g-backlink g-touch-area g-focusable" @click="retryLastFive">
 					{{ __("Try again") }}
 				</button>
 			</p>

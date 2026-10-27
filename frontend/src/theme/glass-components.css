@@ -899,6 +899,27 @@ html[data-theme="dark"] .g-badge--open {
    measured by hit-test on Time off and Expenses). The link sits above it. */
 .g-seclink {
 	z-index: 1;
+	/* One look for every section-header link ("See all", "Open team roster", "Edit"): it was
+	   drawn four ways, plain, underlined, ink-800 and accent (design audit 27 Oct 2026). */
+	font-family: var(--g-type-kra-label-family);
+	font-size: var(--g-type-kra-label-size);
+	font-weight: var(--g-type-kra-label-weight);
+	line-height: var(--g-type-kra-label-line-height);
+	color: rgb(var(--g-accent-ink-rgb));
+	background: none;
+	border: 0;
+	padding: 0;
+	cursor: pointer;
+}
+/* Back and breadcrumb links inside a page: navigation, in the body ink, underlined so a
+   word in a sentence reads as a link without colour alone (WCAG 1.4.1). */
+.g-backlink {
+	color: var(--g-ink);
+	text-decoration: underline;
+	background: none;
+	border: 0;
+	padding: 0;
+	cursor: pointer;
 }
 /* One expander, two names: .g-seclink for section-header links, .g-touch-area
    for any control whose visual is deliberately smaller than its target (the

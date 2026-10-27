@@ -84,7 +84,7 @@
 				<template v-else-if="openedName">
 					<button
 						type="button"
-						class="g-seclink g-focusable self-start text-ink-800"
+						class="g-backlink g-touch-area g-focusable self-start"
 						@click="closeEmployee({ restoreFocus: true })"
 					>
 						← {{ __("Back to {0}", [teamTabLabel]) }}
@@ -256,7 +256,7 @@
 								<button
 									v-if="i < treeCrumbs.length - 1"
 									type="button"
-									class="g-seclink g-focusable underline text-ink-800"
+									class="g-backlink g-touch-area g-focusable"
 									@click="openDepartment(crumb.name)"
 								>
 									{{ crumb.label }}

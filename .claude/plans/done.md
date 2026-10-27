@@ -1,3 +1,3 @@
-GOAL: HR Issue Board urgency uses the Glass status chip, not raw Tailwind palette colours (design audit 27 Oct, finding 4).
-DONE WHEN: no text-/border-(red|amber)-N in HRIssueBoard.vue; urgency is GStatusChip with the manpower map; lint baseline holds the real count.
-CHECK: node --test frontend/src/views/__tests__/issue-urgency-status-chip.test.js; node design/gates/lint.mjs (0 new, total 40).
+GOAL: every section-header link looks the same, set in .g-seclink; in-sentence links share .g-backlink (design audit 27 Oct, finding 5).
+DONE WHEN: no screen adds style classes to .g-seclink; computed style identical on Leave, Expense, Team; in-sentence links keep a 44 px target.
+CHECK: node --test frontend/src/components/__tests__/section-link-one-look.test.js; Playwright measure on /dashboard/leaves, /dashboard/expense-claims, /team.

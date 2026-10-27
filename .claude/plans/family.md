@@ -1,4 +1,4 @@
-CLASS: status/urgency drawn with raw Tailwind palette colours outside the Glass chip
-frontend/src/views/issues/HRIssueBoard.vue urgency chip + High urgency tile same-root — GStatusChip with the manpower map; tile plain
-frontend/src/views/manpower/ManpowerRequestWizard.vue URGENCY_CHIP not-affected — already GStatusChip
-design/lint-baseline.json same-root — shrunk to the real 40 (was 175, incl. deleted/cleaned files) so cleaned debt cannot return
+CLASS: one shared link class restyled per screen with utility classes, so the same control looked four ways
+frontend/src/theme/glass-components.css .g-seclink same-root — the look lives in the class; .g-backlink for in-sentence/back links
+LeaveBalance, leave/expense dashboards, TeamDashboard, TeamRoster, Manpower Edit same-root — extra classes removed
+KPI Back + breadcrumb, Manpower "Fix it", AttendanceCalendar "N to fix", RequestPanel "Try again" same-root — in-sentence links -> .g-backlink + .g-touch-area (44 px)

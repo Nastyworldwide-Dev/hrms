@@ -44,7 +44,7 @@
 			{{ summary.worked === 1 ? __("1 day worked") : __("{0} days worked", [summary.worked]) }}
 			<template v-if="summary.toFix">
 				·
-				<button type="button" class="g-seclink g-focusable" @click="openFirstToFix">
+				<button type="button" class="g-backlink g-touch-area g-focusable" @click="openFirstToFix">
 					{{ summary.toFix === 1 ? __("1 to fix") : __("{0} to fix", [summary.toFix]) }}
 				</button>
 			</template>

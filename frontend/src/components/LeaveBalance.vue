@@ -7,7 +7,7 @@
 			<router-link
 				v-if="leaveBalance.data"
 				:to="{ name: 'LeaveApplicationListView' }"
-				class="g-focusable g-seclink text-kra-label text-accent-ink"
+				class="g-focusable g-seclink"
 			>
 				{{ __("See all") }}
 			</router-link>

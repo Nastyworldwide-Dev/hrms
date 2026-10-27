@@ -377,7 +377,7 @@
 								<button
 									v-if="step === REVIEW_STEP && unfinished"
 									type="button"
-									class="g-seclink g-focusable underline"
+									class="g-backlink g-touch-area g-focusable"
 									@click="goTo(unfinished.step)"
 								>
 									{{ __("Fix it") }}

@@ -37,7 +37,7 @@
 							<h2 class="g-form-section__title">{{ __("Recent leave") }}</h2>
 							<router-link
 								:to="{ name: 'LeaveApplicationListView' }"
-								class="g-focusable g-seclink text-kra-label text-accent-ink"
+								class="g-focusable g-seclink"
 							>
 								{{ __("See all") }}
 							</router-link>
