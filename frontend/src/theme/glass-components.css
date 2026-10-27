@@ -5060,6 +5060,29 @@ ion-modal.g-mustread {
 	background: var(--g-bg);
 }
 
+/* iOS 26 blurs the top ~40 pt of an installed web app (Liquid Glass scroll
+   edge; owner screenshot 27 Oct 2026: the bar "looks blurry"). No meta tag
+   turns it off; WebKit leaves it out when a fixed or sticky, opaque,
+   full-width container sits at the top edge. Installed iPhone app only (the
+   @supports picks iOS WebKit), painted the page ground it already shows
+   through, so nothing looks different. ceiling: other projects report iOS 27
+   still blurs; upgrade: if a real iPhone still does, pad the bar below the
+   blur zone in standalone. */
+@media (display-mode: standalone) {
+	@supports (-webkit-touch-callout: none) {
+		/* .g-page ion-header and .g-page__content set `position: relative`; the
+		   page scope here outranks them, as Ionic's .header-ios does a bare tag */
+		.g-page ion-header.header-ios,
+		.g-page .g-header,
+		.g-header {
+			position: sticky;
+			top: 0;
+			z-index: 10;
+			background: var(--g-bg);
+		}
+	}
+}
+
 /* The leave balances row on Requests (25 Sep 2026). */
 .g-balances-row {
 	justify-content: space-between;
