@@ -378,11 +378,14 @@ watch(
 //: day), so they wait for it: with nothing to claim the form showed three empty
 //: rows under "nothing to claim yet" (UX review 21 Oct 2026, F5). The day field
 //: itself stays, for a day not in the list.
+//: They also wait for that day's checked figure: Hours is read-only now, and a
+//: row drawn before the check answered read "0" (review of b303c5542).
 watch(
-	[() => otRequest.value.ot_date, () => formFields.data],
+	[() => otRequest.value.ot_date, () => otRequest.value.punch_ot_hours, () => formFields.data],
 	([day]) => {
 		for (const f of formFields.data || [])
-			if (["claimed_hours", "explanation"].includes(f.fieldname)) f.hidden = day ? 0 : 1
+			if (["claimed_hours", "explanation"].includes(f.fieldname))
+				f.hidden = day && otRequest.value.punch_ot_hours != null ? 0 : 1
 	},
 	{ immediate: true }
 )
@@ -491,7 +494,10 @@ const saveError = computed(() => {
 			__("No punch-verified overtime for this date — nothing to claim")
 		)
 	const claimed = Number(otRequest.value.claimed_hours)
-	if (!Number.isFinite(claimed) || claimed <= 0) return __("Enter the hours to claim.")
+	// Hours is filled from the day and cannot be typed (owner, 27 Oct 2026): a zero here is a
+	// day whose overtime rounds to nothing, not a box left empty
+	if (!Number.isFinite(claimed) || claimed <= 0)
+		return __("No punch-verified overtime for this date — nothing to claim")
 	return claimed > cap
 		? __("Cannot claim more than the punch-verified {0} h", [formatHoursCap(cap)])
 		: ""

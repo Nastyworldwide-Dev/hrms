@@ -1,3 +1,3 @@
-CLASS: an owner ruling (claimed hours = verified hours, read-only) undone by a later refactor with no test pinning it
-frontend/src/views/ot/OTRequestForm.vue claimed_hours same-root — fixed: read_only on new claims, test pins it
-hrms/hr/doctype/ot_request/ot_request.py validate_claimed_hours not-affected — server cap check stays as the guard
+CLASS: a read-only value drawn (or asked for) before the figure that fills it is known
+frontend/src/views/ot/OTRequestForm.vue claimed_hours row same-root — waits for punch_ot_hours; zero says nothing to claim instead of "Enter the hours"
+frontend/src/views/ot/OTRequestForm.vue saved claims (props.id) not-affected — FormView isFormReadOnly: a sent request is read-only (owner 27 Sep)
