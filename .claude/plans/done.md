@@ -1,3 +1,3 @@
-GOAL: Employee cost split is per Year/Month and labelled Cost Tag/Center.
-DONE WHEN: validate checks 100% per month; report picks latest month <= slip month; old rows stamped by patch.
-CHECK: PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_employee_interco_allocation.py hrms/payroll/report/intercompany_salary_cost_allocation/test_intercompany_salary_cost_allocation.py hrms/tests/test_stamp_cost_allocation_month_patch.py
+GOAL: HR Issue Board urgency uses the Glass status chip, not raw Tailwind palette colours (design audit 27 Oct, finding 4).
+DONE WHEN: no text-/border-(red|amber)-N in HRIssueBoard.vue; urgency is GStatusChip with the manpower map; lint baseline holds the real count.
+CHECK: node --test frontend/src/views/__tests__/issue-urgency-status-chip.test.js; node design/gates/lint.mjs (0 new, total 40).

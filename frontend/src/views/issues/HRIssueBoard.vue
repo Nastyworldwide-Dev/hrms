@@ -65,12 +65,11 @@
 							<span class="text-caption font-bold tracking-wide text-ink-600">
 								{{ issue.name }} · {{ dayjs(issue.creation).format("D MMM, HH:mm") }}
 							</span>
-							<span
-								class="g-eyebrow tracking-wider px-2 py-0.5 border bg-transparent"
-								:class="URGENCY_CHIP[issue.urgency]"
-							>
-								{{ __(issue.urgency) }}
-							</span>
+							<GStatusChip
+								v-if="issue.urgency"
+								:status="URGENCY_CHIP[issue.urgency]"
+								:label="__(issue.urgency)"
+							/>
 						</span>
 						<span class="block text-card-title font-bold text-inkbase mb-0.5">
 							{{ issue.employee_name }}
@@ -155,6 +154,7 @@ import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GSegmented from "@/components/glass/GSegmented.vue"
 import GSearchBar from "@/components/glass/GSearchBar.vue"
 import GStatTile from "@/components/glass/GStatTile.vue"
+import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GStatPanel from "@/components/glass/GStatPanel.vue"
 import GModal from "@/components/glass/GModal.vue"
 import GButton from "@/components/glass/GButton.vue"
@@ -177,11 +177,9 @@ const TYPE_SHORT = {
 	"Check-in / Check-out Problem": "Check-in/out",
 	"Other HR Issue": "Other HR",
 }
-const URGENCY_CHIP = {
-	High: "text-red-600 border-red-600",
-	Medium: "text-amber-700 border-amber-700 dark:text-amber-500 dark:border-amber-500",
-	Low: "text-ink-600 border-ink-600",
-}
+//: Urgency's colour key for GStatusChip (the word on the chip says the urgency), the same map
+//: the manpower wizard uses; Low is neutral here, as an issue's Low asks nothing of HR.
+const URGENCY_CHIP = { High: "rejected", Medium: "waiting", Low: "draft" }
 
 const activeStatus = ref("Open")
 const search = ref("")
@@ -245,7 +243,7 @@ const statTiles = computed(() => [
 		value: counts.value[status],
 		classes: "text-inkbase",
 	})),
-	{ label: __("High urgency"), value: counts.value.high, classes: "text-red-600" },
+	{ label: __("High urgency"), value: counts.value.high },
 ])
 
 // full doc (incl. permlevel-1 hr_notes, readable by HR) for the sheet

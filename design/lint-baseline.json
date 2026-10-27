@@ -9,74 +9,13 @@
 	"components/SideNav.vue": {
 		"arbitrary": 1
 	},
-	"theme/__tests__/contrast.test.js": {
-		"hex": 2
-	},
 	"theme/glass-components.css": {
 		"hex": 1
 	},
 	"theme/variables.css": {
-		"hex": 47
-	},
-	"views/AppSettings.vue": {
-		"rawPalette": 4,
-		"arbitrary": 9
-	},
-	"views/ChangePassword.vue": {
-		"rawPalette": 1
-	},
-	"views/More.vue": {
-		"arbitrary": 7
-	},
-	"views/Notifications.vue": {
-		"arbitrary": 2
-	},
-	"views/Profile.vue": {
-		"arbitrary": 17
-	},
-	"views/RemoteApprovals.vue": {
-		"rawPalette": 3,
-		"arbitrary": 4
-	},
-	"views/expense_claim/Dashboard.vue": {
-		"arbitrary": 1
-	},
-	"views/helpdesk/HelpdeskList.vue": {
-		"arbitrary": 3
-	},
-	"views/helpdesk/TicketDetail.vue": {
-		"arbitrary": 1
-	},
-	"views/helpdesk/TicketNew.vue": {
-		"arbitrary": 2
+		"hex": 34
 	},
 	"views/issues/HRIssueBoard.vue": {
-		"rawPalette": 11,
-		"arbitrary": 3
-	},
-	"views/kpi/Dashboard.vue": {
-		"outline": 1
-	},
-	"views/kpi/KpiDetail.vue": {
-		"outline": 1
-	},
-	"views/leave/Form.vue": {
-		"rawPalette": 1
-	},
-	"views/sop/SopDetail.vue": {
-		"arbitrary": 9
-	},
-	"views/sop/SopFormSheet.vue": {
-		"rawPalette": 7,
-		"arbitrary": 10
-	},
-	"views/sop/SopList.vue": {
-		"arbitrary": 22
-	},
-	"views/team/TeamDashboard.vue": {
-		"arbitrary": 1
-	},
-	"views/team/TeamRoster.vue": {
 		"arbitrary": 1
 	}
 }

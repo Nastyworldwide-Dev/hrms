@@ -1,4 +1,4 @@
-CLASS: a Glass field (width 100%) dropped into a flex-wrap filter row stacks full width unless sized to its content
-frontend/src/views/kpi/Dashboard.vue .g-kpi-filter same-root — flex none, width auto, capped
-frontend/src/theme/glass-components.css .g-filter-row > .g-field not-affected — already sized this way
-frontend/src/views/helpdesk/TicketNew.vue not-affected — its GSelects sit in a 2-column grid, full width by design
+CLASS: status/urgency drawn with raw Tailwind palette colours outside the Glass chip
+frontend/src/views/issues/HRIssueBoard.vue urgency chip + High urgency tile same-root — GStatusChip with the manpower map; tile plain
+frontend/src/views/manpower/ManpowerRequestWizard.vue URGENCY_CHIP not-affected — already GStatusChip
+design/lint-baseline.json same-root — shrunk to the real 40 (was 175, incl. deleted/cleaned files) so cleaned debt cannot return
