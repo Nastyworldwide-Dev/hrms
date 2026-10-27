@@ -230,10 +230,20 @@ def _board_missing(error: Exception) -> bool:
 	be loud (review of 8fc7dbe6a). By name for the DB error, so this reads no
 	`frappe.db` at import, when there is no connection yet.
 	"""
-	return isinstance(error, frappe.DoesNotExistError) or type(error).__name__ in (
+	if isinstance(error, frappe.DoesNotExistError) or type(error).__name__ in (
 		"ProgrammingError",
 		"TableMissingError",
-	)
+	):
+		return True
+	# A column not there yet: code live before migrate adds event_date (review of 029e16c12).
+	# MySQL 1054 "Unknown column" only; any other OperationalError (lock, lost connection) is loud.
+	return type(error).__name__ == "OperationalError" and _sql_code(error) == 1054
+
+
+def _sql_code(error) -> int | None:
+	"""The MySQL error number from a pymysql-style error (args[0]), else None."""
+	args = getattr(error, "args", ()) or ()
+	return args[0] if args and isinstance(args[0], int) else None
 
 
 def _event_days(employee: str, start, end) -> set:

@@ -47,3 +47,26 @@ class TestEventDotFailsSoft(unittest.TestCase):
 			self.assertRaises(KeyError),
 		):
 			calendar._event_days("E1", None, None)
+
+
+class TestBeforeMigrate(unittest.TestCase):
+	"""Review of 029e16c12: the calendar now reads HR Announcement.event_date. Between the code going
+	live and migrate adding the column, the read raises the DB's Unknown column (1054,
+	OperationalError) and the whole month 500'd for every employee. A missing COLUMN is a board not
+	yet there, like a missing table: no event dots, the rest of the month still answers. Any other
+	OperationalError (a lock timeout, a lost connection) is still loud."""
+
+	def _error(self, code):
+		# shaped like pymysql.err.OperationalError(1054, "Unknown column ...")
+		error = type("OperationalError", (Exception,), {})(code, "x")
+		return error
+
+	def test_unknown_column_means_no_event_dots(self):
+		from hrms.api import calendar
+
+		self.assertTrue(calendar._board_missing(self._error(1054)))
+
+	def test_other_operational_errors_stay_loud(self):
+		from hrms.api import calendar
+
+		self.assertFalse(calendar._board_missing(self._error(1205)))
