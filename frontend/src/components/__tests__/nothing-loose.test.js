@@ -34,7 +34,7 @@ test("D9 You: the version is the last group's footer", () => {
 test("D7 Overtime: why there is nothing to claim is a row in the day group", () => {
 	const src = read("../../views/ot/OTRequestForm.vue")
 	assert.doesNotMatch(src, /class="g-empty-line mx-4/)
-	assert.match(src, /<p class="g-form-row g-form-row--stacked g-ot-empty" role="status">\s*\{\{ emptyReason \}\}/)
+	assert.match(src, /<p v-if="emptyReason" class="g-form-row g-form-row--stacked g-ot-empty" role="status">\s*\{\{ emptyReason \}\}/)
 })
 
 test("D8 Expense: items are rows in one group, the total is the footer", () => {
