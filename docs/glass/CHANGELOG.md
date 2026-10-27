@@ -10,6 +10,26 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.66] — First Approver — 2026-10-27
+
+### Changed
+- **Only the first approver is reminded.** Each working morning until they
+  decide, on leave or not; never twice in a day, never on their own day
+  off. From the third day the reminder says how long it has waited. Nobody
+  else is asked or named. The person above can still decide a request they
+  open themselves (HR Settings "Backup approval levels" is unchanged); the
+  old "ask the backup after" setting is hidden.
+- **This week on Home says your leave.** "3 days worked · 2 days on leave";
+  weekends and holidays inside a leave are not counted.
+
+### Fixed
+- **A half-day leave showed as a whole day off on the calendar.** It is a
+  working day there now, as on Home.
+- **The top bar looked blurred in the installed iPhone app** (iOS 26 blurs
+  the top of Home Screen web apps). The bar is now solid there; it looks
+  the same.
+- Needs migrate (Frappe Cloud runs it on deploy).
+
 ## [2.0.0-alpha.65] — Install Again — 2026-10-27
 
 ### Fixed
