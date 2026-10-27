@@ -45,6 +45,7 @@ class HRAnnouncement(Document):
 		self.set_defaults()
 		self.resolve_audience()
 		self.validate_dates()
+		self.validate_event_date()
 		self.enforce_single_pin()
 		self.clean_summary()
 		self.bump_version()
@@ -103,6 +104,16 @@ class HRAnnouncement(Document):
 	def validate_dates(self):
 		if getdate(self.publish_until) < getdate(self.publish_from):
 			frappe.throw(_("An announcement cannot stop showing before it starts."))
+
+	def validate_event_date(self):
+		"""An Event is a thing that happens on a day, and the calendar puts its dot on
+		that day (owner, 27 Oct 2026). Any other category has no such day: one left
+		behind by an edit from Event to Notice is cleared, not kept."""
+		if self.category == "Event":
+			if not self.event_date:
+				frappe.throw(_("Choose the day this event happens."))
+			return
+		self.event_date = None
 
 	def enforce_single_pin(self):
 		"""One pin. Two pinned announcements are two things claiming to be the

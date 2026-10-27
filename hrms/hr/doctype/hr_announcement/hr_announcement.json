@@ -8,6 +8,7 @@
  "field_order": [
   "title",
   "category",
+  "event_date",
   "column_break_meta",
   "pinned",
   "acknowledge_required",
@@ -46,6 +47,14 @@
    "default": "Notice",
    "in_list_view": 1,
    "description": "Drives the colour and the icon. Nothing else."
+  },
+  {
+   "fieldname": "event_date",
+   "fieldtype": "Date",
+   "label": "Event date",
+   "depends_on": "eval:doc.category=='Event'",
+   "mandatory_depends_on": "eval:doc.category=='Event'",
+   "description": "The day it happens. Shown on the calendar."
   },
   {
    "fieldname": "column_break_meta",
@@ -175,7 +184,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-22 18:00:00.000000",
+ "modified": "2026-10-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Announcement",
