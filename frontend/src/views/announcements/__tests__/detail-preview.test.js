@@ -12,5 +12,5 @@ test("preview is marked and records nothing", () => {
 	assert.match(src, /const preview = computed\(\(\) => route\.query\.preview === "1"\)/)
 	assert.match(src, /announcementDetail\.fetch\(\{ name: id, preview: preview\.value \? 1 : 0 \}\)/)
 	assert.match(src, /__\("Preview — not published to anyone yet"\)|__\("Preview — as staff will see it"\)/)
-	assert.match(src, /v-else-if="doc\.acknowledge_required && !preview"/)
+	assert.match(src, /v-else-if="doc\.acknowledge_required && !preview && doc\.live !== false"/)
 })
