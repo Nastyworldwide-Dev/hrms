@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url"
 const src = readFileSync(fileURLToPath(new URL("../OTRequestForm.vue", import.meta.url)), "utf8")
 
 test("hours and note hide until a day is chosen; the day field stays", () => {
-	assert.match(src, /\["claimed_hours", "explanation"\]\.includes\(f\.fieldname\)\)\s*f\.hidden = day && /)
+	assert.match(src, /\["claimed_hours", "explanation"\]\.includes\(f\.fieldname\)\)\s*f\.hidden =\s*props\.id \|\| \(day && /)
 })
 
 // Owner, 27 Oct 2026 (restating 4 Sep, f1c38b274): the hours claimed are the day's verified
@@ -26,6 +26,16 @@ test("a new claim's hours are the day's verified hours, read-only", () => {
 // flight the read-only row drew "0". Hours waits for the checked figure; a zero prefill says
 // there is nothing to claim.
 test("Hours shows only once the day's figure is in, and never asks to be typed", () => {
-	assert.match(src, /f\.hidden = day && otRequest\.value\.punch_ot_hours != null \? 0 : 1/)
+	assert.match(src, /f\.hidden =\s*props\.id \|\| \(day && otRequest\.value\.punch_ot_hours != null\) \? 0 : 1/)
 	assert.doesNotMatch(src, /Enter the hours to claim\./)
+})
+
+// Review of a41daa157: with no open days listed, a date typed in the field whose check failed
+// left only Send's reason: the Try again row lived inside the day list. A failed check is
+// always retryable; and a saved request never hides its rows (it always has a checked day).
+test("a failed check of a typed date still offers Try again; saved requests keep their rows", () => {
+	const empty = src.match(/<div v-if="emptyReason && !props\.id"[\s\S]*?<\/section>/)?.[0] ?? ""
+	assert.match(empty, /v-if="otSummary\.error"[\s\S]*?@click="loadSummary"/, "retry under the empty list")
+	assert.match(empty, /\{\{ dayFooter \}\}/, "and the reason")
+	assert.match(src, /f\.hidden =\s*props\.id \|\| \(day && otRequest\.value\.punch_ot_hours != null\) \? 0 : 1/)
 })

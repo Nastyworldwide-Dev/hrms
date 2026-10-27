@@ -128,7 +128,18 @@
 								<p class="g-form-row g-form-row--stacked g-ot-empty" role="status">
 									{{ emptyReason }}
 								</p>
+								<!-- a date typed in the field below whose check failed still gets a
+								     retry here (review of a41daa157: the list's Try again is not drawn) -->
+								<button
+									v-if="otSummary.error"
+									type="button"
+									class="g-form-row g-form-row--action g-ot-more"
+									@click="loadSummary"
+								>
+									{{ __("Try again") }}
+								</button>
 							</div>
+							<p v-if="otSummary.error" class="g-form-footer" role="status">{{ dayFooter }}</p>
 						</section>
 					</div>
 				</template>
@@ -385,7 +396,7 @@ watch(
 	([day]) => {
 		for (const f of formFields.data || [])
 			if (["claimed_hours", "explanation"].includes(f.fieldname))
-				f.hidden = day && otRequest.value.punch_ot_hours != null ? 0 : 1
+				f.hidden = props.id || (day && otRequest.value.punch_ot_hours != null) ? 0 : 1
 	},
 	{ immediate: true }
 )

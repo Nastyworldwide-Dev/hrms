@@ -1,3 +1,3 @@
-CLASS: a read-only value drawn (or asked for) before the figure that fills it is known
-frontend/src/views/ot/OTRequestForm.vue claimed_hours row same-root — waits for punch_ot_hours; zero says nothing to claim instead of "Enter the hours"
-frontend/src/views/ot/OTRequestForm.vue saved claims (props.id) not-affected — FormView isFormReadOnly: a sent request is read-only (owner 27 Sep)
+CLASS: a retry for a failed check drawn only in one of the screen's states (the day list), so another state (no days, a typed date) had no way to retry
+frontend/src/views/ot/OTRequestForm.vue empty-list group same-root — Try again + reason under the empty list
+frontend/src/views/ot/OTRequestForm.vue hide watch same-root — saved requests (props.id) never hide Hours/Note
