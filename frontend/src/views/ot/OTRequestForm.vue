@@ -335,6 +335,9 @@ const formFields = createResource({
 				// reason is back and MANDATORY — the approver needs the why, and HR asked
 				// for it after it was briefly removed.
 				if (field.fieldname === "explanation") field.reqd = 1
+				// the day's verified hours, filled in when a day is picked, never typed
+				// (owner 4 Sep, restated 27 Oct 2026); the cap check stays as a guard
+				if (field.fieldname === "claimed_hours") field.read_only = 1
 				return field
 			})
 	},
