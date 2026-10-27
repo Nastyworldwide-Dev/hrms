@@ -27,215 +27,219 @@
 				     ceiling: a person row whose label wraps (320-326 wide, a long name) is
 				     taller than its skeleton row, 22 pt, cold only; upgrade: keep the last
 				     row count and height in the cache if an owner report names it. -->
-				<template v-if="waiting.loading && !waiting.data">
-					<GBanner variant="warning" class="g-approvals__ghost-banner" aria-hidden="true">
-						<p class="m-0 font-semibold">&nbsp;</p>
-						<p class="m-0 text-caption text-ink-600">
-							{{ __("Staff attendance and pay wait on your decision.") }}
-						</p>
-					</GBanner>
-					<p class="g-form-footer" aria-hidden="true">&nbsp;</p>
-					<div class="g-approvals__ghost-chips" aria-hidden="true" />
-					<!-- the "Yours" section it becomes: 144 pt, measured 29 Sep 2026 -->
-					<div class="g-approvals__placeholder">
-						<GListPanel loading :rows="2" />
-					</div>
-				</template>
+				<!-- Holds its last answered height while it loads (iOS gate 27 Oct 2026: the one-group
+				     placeholder was 144 pt, the answer taller, and the panel below jumped 208 pt). -->
+				<div ref="queueEl" :style="queueHold">
+					<template v-if="waiting.loading && !waiting.data">
+						<GBanner variant="warning" class="g-approvals__ghost-banner" aria-hidden="true">
+							<p class="m-0 font-semibold">&nbsp;</p>
+							<p class="m-0 text-caption text-ink-600">
+								{{ __("Staff attendance and pay wait on your decision.") }}
+							</p>
+						</GBanner>
+						<p class="g-form-footer" aria-hidden="true">&nbsp;</p>
+						<div class="g-approvals__ghost-chips" aria-hidden="true" />
+						<!-- the "Yours" section it becomes: 144 pt, measured 29 Sep 2026 -->
+						<div class="g-approvals__placeholder">
+							<GListPanel loading :rows="2" />
+						</div>
+					</template>
 
-				<template v-else-if="!waiting.error">
-					<!-- The approver's own deadline, said plainly (HR, 4 Oct 2026: "make sure the
+					<template v-else-if="!waiting.error">
+						<!-- The approver's own deadline, said plainly (HR, 4 Oct 2026: "make sure the
 					     approver notices and does their job"). A banner only: it blocks nothing
 					     and forces nothing (owner, 5 Oct). -->
-					<GBanner v-if="headline" variant="warning" data-testid="approvals-banner">
-						<p class="m-0 font-semibold">
-							{{
-								__("{0} waiting. Oldest since {1}.", [
-									headline.count,
-									$dayjs(headline.oldest).format("D MMM"),
-								])
-							}}
+						<GBanner v-if="headline" variant="warning" data-testid="approvals-banner">
+							<p class="m-0 font-semibold">
+								{{
+									__("{0} waiting. Oldest since {1}.", [
+										headline.count,
+										$dayjs(headline.oldest).format("D MMM"),
+									])
+								}}
+							</p>
+							<p class="m-0 text-caption text-ink-600">
+								{{ __("Staff attendance and pay wait on your decision.") }}
+							</p>
+						</GBanner>
+						<p v-if="rows.length" class="g-form-footer">
+							{{ summary }}
 						</p>
-						<p class="m-0 text-caption text-ink-600">
-							{{ __("Staff attendance and pay wait on your decision.") }}
+						<div v-if="rows.length" class="flex items-center justify-between gap-3">
+							<div class="g-approvals__chips" role="group" :aria-label="__('Filter by type')">
+								<button
+									v-for="chip in chips"
+									:key="chip.key"
+									type="button"
+									class="g-focusable g-approvals__chip"
+									:class="{ 'g-approvals__chip--on': kindFilter === chip.key }"
+									:aria-pressed="String(kindFilter === chip.key)"
+									@click="kindFilter = chip.key"
+								>
+									{{ chipLabel(chip, __) }}
+								</button>
+							</div>
+							<!-- department, employee and dates live in one sheet; the count says how many are on -->
+							<div class="flex flex-none items-center gap-1">
+								<button
+									v-if="filterCount"
+									type="button"
+									class="g-focusable g-approvals__clear"
+									:aria-label="__('Clear filters')"
+									@click="clearFilters"
+								>
+									{{ __("Clear") }}
+								</button>
+								<button
+									type="button"
+									class="g-focusable g-approvals__chip"
+									:class="{ 'g-approvals__chip--on': filterCount }"
+									aria-haspopup="dialog"
+									@click="filterOpen = true"
+								>
+									<ListFilter class="g-row-icon" aria-hidden="true" />
+									{{ filterCount ? __("Filter ({0})", [filterCount]) : __("Filter") }}
+								</button>
+							</div>
+						</div>
+						<p v-if="nothingTickable(visibleRows)" class="text-caption text-ink-600 m-0">
+							{{ __("Check-ins are decided one at a time. Tap one to open it.") }}
 						</p>
-					</GBanner>
-					<p v-if="rows.length" class="g-form-footer">
-						{{ summary }}
-					</p>
-					<div v-if="rows.length" class="flex items-center justify-between gap-3">
-						<div class="g-approvals__chips" role="group" :aria-label="__('Filter by type')">
-							<button
-								v-for="chip in chips"
-								:key="chip.key"
-								type="button"
-								class="g-focusable g-approvals__chip"
-								:class="{ 'g-approvals__chip--on': kindFilter === chip.key }"
-								:aria-pressed="String(kindFilter === chip.key)"
-								@click="kindFilter = chip.key"
-							>
-								{{ chipLabel(chip, __) }}
-							</button>
+						<div v-if="pickable.length" class="flex items-center">
+							<GCheckbox
+								:model-value="allState === 'all'"
+								:label="
+									leftOver(visibleRows)
+										? __('Select the oldest {0}', [BULK_CAP])
+										: __('Select all {0}', [pickable.length])
+								"
+								@update:model-value="ticked = toggleAll(ticked, visibleRows)"
+							/>
 						</div>
-						<!-- department, employee and dates live in one sheet; the count says how many are on -->
-						<div class="flex flex-none items-center gap-1">
-							<button
-								v-if="filterCount"
-								type="button"
-								class="g-focusable g-approvals__clear"
-								:aria-label="__('Clear filters')"
-								@click="clearFilters"
-							>
-								{{ __("Clear") }}
-							</button>
-							<button
-								type="button"
-								class="g-focusable g-approvals__chip"
-								:class="{ 'g-approvals__chip--on': filterCount }"
-								aria-haspopup="dialog"
-								@click="filterOpen = true"
-							>
-								<ListFilter class="g-row-icon" aria-hidden="true" />
-								{{ filterCount ? __("Filter ({0})", [filterCount]) : __("Filter") }}
-							</button>
-						</div>
-					</div>
-					<p v-if="nothingTickable(visibleRows)" class="text-caption text-ink-600 m-0">
-						{{ __("Check-ins are decided one at a time. Tap one to open it.") }}
-					</p>
-					<div v-if="pickable.length" class="flex items-center">
-						<GCheckbox
-							:model-value="allState === 'all'"
-							:label="
-								leftOver(visibleRows)
-									? __('Select the oldest {0}', [BULK_CAP])
-									: __('Select all {0}', [pickable.length])
-							"
-							@update:model-value="ticked = toggleAll(ticked, visibleRows)"
-						/>
-					</div>
-					<!-- Select all stops at the cap (review of b47084495): say so, never tick 150 and refuse later -->
-					<p v-if="leftOver(visibleRows)" class="m-0 text-caption text-ink-600">
-						{{ __("{0} more wait. Decide these first, or filter.", [leftOver(visibleRows)]) }}
-					</p>
-					<!-- The same 51 pt row as the skeleton above (alpha.8 r3: three
+						<!-- Select all stops at the cap (review of b47084495): say so, never tick 150 and refuse later -->
+						<p v-if="leftOver(visibleRows)" class="m-0 text-caption text-ink-600">
+							{{ __("{0} more wait. Decide these first, or filter.", [leftOver(visibleRows)]) }}
+						</p>
+						<!-- The same 51 pt row as the skeleton above (alpha.8 r3: three
 					     skeleton rows collapsing to one grey line moved the page
 					     132 pt; alpha.9 D5: nothing loose). -->
-					<GListPanel v-if="!rows.length">
-						<GListRow
-							:label="__('Nothing is waiting on you.')"
-							:tint="TILE.neutral"
-							:tappable="false"
-							wrap
-						>
-							<template #icon>
-								<CircleCheckBig class="g-row-icon" />
-							</template>
-						</GListRow>
-					</GListPanel>
+						<GListPanel v-if="!rows.length">
+							<GListRow
+								:label="__('Nothing is waiting on you.')"
+								:tint="TILE.neutral"
+								:tappable="false"
+								wrap
+							>
+								<template #icon>
+									<CircleCheckBig class="g-row-icon" />
+								</template>
+							</GListRow>
+						</GListPanel>
 
-					<!-- the filters hide everything: say so (Clear sits beside the Filter button) -->
-					<GListPanel v-if="rows.length && !visibleRows.length">
-						<GListRow :label="__('Nothing matches these filters.')" :tappable="false" wrap />
-					</GListPanel>
+						<!-- the filters hide everything: say so (Clear sits beside the Filter button) -->
+						<GListPanel v-if="rows.length && !visibleRows.length">
+							<GListRow :label="__('Nothing matches these filters.')" :tappable="false" wrap />
+						</GListPanel>
 
-					<!-- YOURS: sent to you to decide -->
-					<section v-if="groups.yours.count" class="flex flex-col gap-3">
-						<h2 class="g-eyebrow">{{ __("Yours") }} · {{ groups.yours.count }}</h2>
-						<!-- ONE panel for the section, groups separated by captions (§15.2:
+						<!-- YOURS: sent to you to decide -->
+						<section v-if="groups.yours.count" class="flex flex-col gap-3">
+							<h2 class="g-eyebrow">{{ __("Yours") }} · {{ groups.yours.count }}</h2>
+							<!-- ONE panel for the section, groups separated by captions (§15.2:
 						     a grouped list is flattened into one surface, as the balance
 						     grid and issue list are). -->
-						<GListPanel>
-							<template v-for="dept in groups.yours.departments" :key="dept.key">
-								<p class="g-approvals__dept text-caption text-ink-600">
-									{{ dept.name || __("No department") }} · {{ dept.count }}
-								</p>
-								<template v-for="kind in dept.kinds" :key="`${dept.key}:${kind.key}`">
-									<p class="g-approvals__kind text-caption text-ink-600">
-										{{ __(kind.kind) }} · {{ kind.count }}
+							<GListPanel>
+								<template v-for="dept in groups.yours.departments" :key="dept.key">
+									<p class="g-approvals__dept text-caption text-ink-600">
+										{{ dept.name || __("No department") }} · {{ dept.count }}
 									</p>
-									<!-- A decided person leaves and the list closes the gap,
+									<template v-for="kind in dept.kinds" :key="`${dept.key}:${kind.key}`">
+										<p class="g-approvals__kind text-caption text-ink-600">
+											{{ __(kind.kind) }} · {{ kind.count }}
+										</p>
+										<!-- A decided person leaves and the list closes the gap,
 									     instead of the rows jumping when the queue reloads
 									     (alpha.13). -->
-									<TransitionGroup name="g-leave">
-										<template
-											v-for="person in shown(`${dept.key}:${kind.key}`, kind.people).rows"
-											:key="person.key"
-										>
-											<!-- one row per request, so the approver ticks what they mean (a person can
+										<TransitionGroup name="g-leave">
+											<template
+												v-for="person in shown(`${dept.key}:${kind.key}`, kind.people).rows"
+												:key="person.key"
+											>
+												<!-- one row per request, so the approver ticks what they mean (a person can
 											     have three requests of one kind). The tick is a 44 pt control of its own
 											     and the text opens the request: with no Select mode a tap on the row can no
 											     longer mean "tick", and a request must stay readable (reason, file) before
 											     it is decided (owner ruling 8 Oct 2026). -->
-											<template v-if="person.rows.some(canBulk)">
-												<div
-													v-for="req in person.rows.filter(canBulk)"
-													:key="rowKey(req)"
-													class="g-approvals__req"
-												>
-													<button
-														type="button"
-														role="checkbox"
-														class="g-focusable g-approvals__tickbtn"
-														:aria-checked="String(ticked.has(rowKey(req)))"
-														:aria-label="rowLabel(req)"
-														@click="ticked = toggle(ticked, req)"
+												<template v-if="person.rows.some(canBulk)">
+													<div
+														v-for="req in person.rows.filter(canBulk)"
+														:key="rowKey(req)"
+														class="g-approvals__req"
 													>
-														<span
-															class="g-approvals__tick"
-															:class="{ 'g-approvals__tick--on': ticked.has(rowKey(req)) }"
-															aria-hidden="true"
+														<button
+															type="button"
+															role="checkbox"
+															class="g-focusable g-approvals__tickbtn"
+															:aria-checked="String(ticked.has(rowKey(req)))"
+															:aria-label="rowLabel(req)"
+															@click="ticked = toggle(ticked, req)"
 														>
-															<Check v-if="ticked.has(rowKey(req))" class="g-row-icon" />
-														</span>
-													</button>
-													<GListRow
-														class="g-approvals__reqbody"
-														:label="reqLabel(req)"
-														wrap
-														:sublabel="rowDetails(req, __)"
-														@click="open(req)"
-													>
-														<template #badge>
 															<span
-																class="g-approvals__age"
-																:class="`g-approvals__age--${tone(req)}`"
-																>{{ ageWords(req) }}</span
+																class="g-approvals__tick"
+																:class="{ 'g-approvals__tick--on': ticked.has(rowKey(req)) }"
+																aria-hidden="true"
 															>
-														</template>
-													</GListRow>
-												</div>
-											</template>
-											<GListRow
-												v-else
-												:label="personLine(person, __)"
-												wrap
-												:sublabel="personWhen(person)"
-												@click="openPerson(person)"
-											>
-												<template #badge>
-													<span
-														class="g-approvals__age"
-														:class="`g-approvals__age--${tone(person.rows[0])}`"
-														>{{ ageWords(person.rows[0]) }}</span
-													>
+																<Check v-if="ticked.has(rowKey(req))" class="g-row-icon" />
+															</span>
+														</button>
+														<GListRow
+															class="g-approvals__reqbody"
+															:label="reqLabel(req)"
+															wrap
+															:sublabel="rowDetails(req, __)"
+															@click="open(req)"
+														>
+															<template #badge>
+																<span
+																	class="g-approvals__age"
+																	:class="`g-approvals__age--${tone(req)}`"
+																	>{{ ageWords(req) }}</span
+																>
+															</template>
+														</GListRow>
+													</div>
 												</template>
-											</GListRow>
-										</template>
-									</TransitionGroup>
-									<GroupMore
-										:page="shown(`${dept.key}:${kind.key}`, kind.people)"
-										@all="expand(`${dept.key}:${kind.key}`)"
-										@more="more(`${dept.key}:${kind.key}`)"
-									/>
+												<GListRow
+													v-else
+													:label="personLine(person, __)"
+													wrap
+													:sublabel="personWhen(person)"
+													@click="openPerson(person)"
+												>
+													<template #badge>
+														<span
+															class="g-approvals__age"
+															:class="`g-approvals__age--${tone(person.rows[0])}`"
+															>{{ ageWords(person.rows[0]) }}</span
+														>
+													</template>
+												</GListRow>
+											</template>
+										</TransitionGroup>
+										<GroupMore
+											:page="shown(`${dept.key}:${kind.key}`, kind.people)"
+											@all="expand(`${dept.key}:${kind.key}`)"
+											@more="more(`${dept.key}:${kind.key}`)"
+										/>
+									</template>
 								</template>
-							</template>
-						</GListPanel>
-					</section>
+							</GListPanel>
+						</section>
 
-					<p v-if="waiting.data?.capped" class="text-caption text-ink-600">
-						{{ __("Showing the oldest first. More are waiting.") }}
-					</p>
-				</template>
+						<p v-if="waiting.data?.capped" class="text-caption text-ink-600">
+							{{ __("Showing the oldest first. More are waiting.") }}
+						</p>
+					</template>
+				</div>
 
 				<!-- Ruling 2 (23 Sep): what you already answered stays reachable,
 				     worded for what is behind it: requests on the Requests page,
@@ -557,7 +561,7 @@
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, h, inject, reactive, ref, watch } from "vue"
+import { computed, defineAsyncComponent, h, inject, nextTick, reactive, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { createResource } from "frappe-ui"
 
@@ -577,7 +581,8 @@ import GTextarea from "@/components/glass/GTextarea.vue"
 const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
 import { Check, CircleCheckBig, ListFilter } from "lucide-vue-next"
 import { TILE } from "@/utils/iconTile"
-import { personalCacheKey } from "@/utils/personalCache"
+import { personalCacheKey, sessionUser } from "@/utils/personalCache"
+import { rememberHeight, rememberedHeight } from "@/utils/placeholderHeight"
 import { REQUEST_SUMMARY_FIELDS } from "@/data/config/requestSummaryFields"
 import { decidedForApproverResource } from "@/data/remoteCheckin"
 import { isApprover } from "@/data/team"
@@ -638,6 +643,24 @@ const waiting = createResource({
 	cache: personalCacheKey("nsty:approvals-waiting"),
 	auto: true,
 })
+
+//: The queue's last answered height, held as a minimum while the next answer loads (see the
+//: wrapper above). Measured after each answer has drawn.
+const queueEl = ref(null)
+const heldHeight = rememberedHeight("approvals", sessionUser())
+const queueHold = computed(() =>
+	waiting.loading && !waiting.data && heldHeight
+		? { minHeight: `${heldHeight}px`, display: "flex", flexDirection: "column", gap: "inherit" }
+		: { display: "flex", flexDirection: "column", gap: "inherit" }
+)
+watch(
+	() => waiting.data,
+	async (data) => {
+		if (!data) return
+		await nextTick()
+		rememberHeight("approvals", sessionUser(), queueEl.value?.getBoundingClientRect().height)
+	}
+)
 const rows = computed(() => onlyYours(waiting.data?.rows || []))
 
 // Filter by type (HR, 4 Oct 2026), then by department, employee and dates (owner, 8 Oct 2026).

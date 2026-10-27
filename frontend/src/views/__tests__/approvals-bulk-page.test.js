@@ -407,3 +407,12 @@ test("when only check-ins wait, the page says why there are no ticks", () => {
 	assert.match(template, /v-if="nothingTickable\(visibleRows\)"[\s\S]*?Check-ins are decided one at a time\. Tap one to open it\./)
 	assert.doesNotMatch(template, /These are approved one by one/)
 })
+
+// iOS gate (scroll-and-shift), 27 Oct 2026: the queue's placeholder held one group (144 pt), the
+// answer was taller, and "already answered" under it jumped 208 pt on every visit. The queue
+// remembers its last answered height (utils/placeholderHeight) and holds it while loading.
+test("the queue holds its last answered height while it loads", () => {
+	assert.match(template, /<div ref="queueEl" :style="queueHold">\s*<template v-if="waiting\.loading && !waiting\.data">/)
+	assert.match(script, /rememberedHeight\("approvals", sessionUser\(\)\)/)
+	assert.match(script, /rememberHeight\("approvals", sessionUser\(\), queueEl\.value/)
+})
