@@ -7,6 +7,11 @@ Owner ruling, 23 Sep 2026:
   is told "You're still checked in. Tap to check out."
 - Only people with a shift that day (Active submitted Shift Assignment covering
   the day, else Employee.default_shift), never on a rest day or holiday.
+- Never on a day of approved leave (owner, 27 Oct 2026: "on the day I leave, the
+  one that is approved, I still get notified to check in"). A half day moves the
+  reminder past the half that is off, at the middle of the shift (the boundary
+  late/early marking uses, half_day_session.py). A half day with no AM/PM (filed
+  before 25 Sep) is not guessed: no reminder that day.
 - No manager copy. Staff can turn it off on the You page (ON by default).
 
 Runs every 5 minutes (hooks.py cron). Each reminder has a 5-minute due window
@@ -73,31 +78,35 @@ def send_due_reminders() -> int:
 			if not times:
 				continue
 			start, end = shift_bounds(day, times.start_time, times.end_time)
-			kind = due_kind(now, start, end)
-			if kind:
-				candidates.append(
-					frappe._dict(
-						employee=person.name,
-						user=person.user_id,
-						shift=shift,
-						day=day,
-						start=start,
-						end=end,
-						now=now,
-						kind=kind,
-						early=datetime.timedelta(
-							minutes=_minutes(
-								times.get("begin_check_in_before_shift_start_time"), DEFAULT_EARLY_MINUTES
-							)
-						),
-						late=datetime.timedelta(
-							minutes=_minutes(
-								times.get("allow_check_out_after_shift_end_time"), DEFAULT_LATE_MINUTES
-							)
-						),
-					)
+			# Whether a reminder is due is decided after leave has moved the bounds (a half
+			# day's reminder falls at mid-shift, when the full shift has none due).
+			candidates.append(
+				frappe._dict(
+					employee=person.name,
+					user=person.user_id,
+					shift=shift,
+					day=day,
+					start=start,
+					end=end,
+					now=now,
+					kind=None,
+					early=datetime.timedelta(
+						minutes=_minutes(
+							times.get("begin_check_in_before_shift_start_time"), DEFAULT_EARLY_MINUTES
+						)
+					),
+					late=datetime.timedelta(
+						minutes=_minutes(
+							times.get("allow_check_out_after_shift_end_time"), DEFAULT_LATE_MINUTES
+						)
+					),
 				)
+			)
 
+	candidates = _apply_leave(candidates)
+	for c in candidates:
+		c.kind = due_kind(c.now, c.start, c.end)
+	candidates = [c for c in candidates if c.kind]
 	candidates = [c for c in candidates if _is_working_day(c)]
 	if not candidates:
 		logger.info("[shift_reminders] %d people checked, no reminder due", len(people))
@@ -198,6 +207,58 @@ def _is_working_day(c) -> bool:
 		logger.info("[shift_reminders] %s is a %s for %s; no reminder", c.day, kind, c.employee)
 		return False
 	return True
+
+
+def _approved_leave(employees, day):
+	"""Approved, submitted leave covering `day` for these employees. One read per day."""
+	return frappe.get_all(
+		"Leave Application",
+		filters={
+			"docstatus": 1,
+			"status": "Approved",
+			"employee": ["in", list(employees)],
+			"from_date": ["<=", day],
+			"to_date": [">=", day],
+		},
+		fields=["employee", "half_day", "half_day_date", "half_day_session", "from_date", "to_date"],
+		limit_page_length=0,
+	)
+
+
+def _half_on(row, day):
+	"""Is `day` the half day of this leave? A one-day half day may leave half_day_date empty."""
+	if not row.get("half_day"):
+		return False
+	half = row.get("half_day_date") or (
+		row.get("from_date") if row.get("from_date") == row.get("to_date") else None
+	)
+	return half is None or getdate(half) == getdate(day)
+
+
+def _apply_leave(candidates):
+	"""Drop reminders on approved leave; on a half day, move them to the middle of the shift."""
+	from hrms.utils.half_day_session import late_early_bounds
+
+	out = []
+	by_day = {}
+	for c in candidates:
+		by_day.setdefault(c.day, []).append(c)
+	for day, group in by_day.items():
+		leave = {}
+		for row in _approved_leave({c.employee for c in group}, day):
+			leave[row.employee] = row
+		for c in group:
+			row = leave.get(c.employee)
+			if not row:
+				out.append(c)
+				continue
+			session = row.get("half_day_session") if _half_on(row, day) else None
+			if not _half_on(row, day) or session not in ("AM", "PM"):
+				logger.info("[shift_reminders] %s on approved leave %s; no reminder", c.employee, day)
+				continue
+			c.start, c.end = late_early_bounds(c.start, c.end, session)
+			out.append(c)
+	return out
 
 
 def _assignments_by_employee(system_today):

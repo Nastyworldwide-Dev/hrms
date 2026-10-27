@@ -1,4 +1,4 @@
-CLASS: a remembered layout value with no forget path (empty answer, logout, an expanded state) is held when it no longer applies
-frontend/src/components/NeedsYou.vue same-root — empty answer forgets
-frontend/src/views/Approvals.vue same-root — measured only with no group expanded
-frontend/src/data/session.js ticket .claude/plans/ticket-logout-forget-heights.md — risky path (logout); forgetAllHeights() is ready, wiring waits for approval
+CLASS: a person-facing reminder that knows the shift and the rest day but not the approved leave
+hrms/utils/shift_reminders.py send_due_reminders same-root — _apply_leave drops full-day leave, half day moves to mid-shift
+hrms/utils/approval_reminders.py _away_approvers not-affected — already reads approved leave (skips away approvers)
+hrms/utils/announcement push / attendance health not-affected — not tied to a shift day

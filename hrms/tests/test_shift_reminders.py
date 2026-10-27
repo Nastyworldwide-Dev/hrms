@@ -258,3 +258,72 @@ class TestOwnSetting(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestApprovedLeave(unittest.TestCase):
+	"""Owner, 27 Oct 2026: "I take leave ... on the day I leave, the one that is approved, but I
+	still get notified to check in." The reminder skipped rest days and holidays but never read
+	approved leave. A full day off gets no reminder; a half day moves the reminder past the half
+	that is off (the same mid-shift boundary late/early marking uses, half_day_session.py); a half
+	day filed without AM/PM (before 25 Sep) is not guessed: no reminder that day."""
+
+	def _with_leave(self, now, rows, **kw):
+		def leave_rows(employees, day):
+			return [frappe._dict(r) for r in rows]
+
+		with patch.object(sr, "_approved_leave", side_effect=leave_rows, create=False):
+			return _run(now, **kw)
+
+	def test_full_day_leave_gets_no_check_in_reminder(self):
+		# Day shift 09:00, check-in reminder due 09:15
+		count, inserted, _ = self._with_leave(
+			DT(2026, 9, 23, 9, 16), [{"employee": "E1", "half_day": 0, "half_day_session": None}]
+		)
+		self.assertEqual(count, 0)
+		self.assertEqual(inserted, [])
+
+	def test_no_leave_still_reminds(self):
+		count, _, _ = self._with_leave(DT(2026, 9, 23, 9, 16), [])
+		self.assertEqual(count, 1)
+
+	def test_morning_half_day_moves_check_in_past_midday(self):
+		leave = [{"employee": "E1", "half_day": 1, "half_day_session": "AM"}]
+		count, _, _ = self._with_leave(DT(2026, 9, 23, 9, 16), leave)
+		self.assertEqual(count, 0, "not at 09:15: the morning is off")
+		# Day 09:00-18:00, middle 13:30, reminder due 13:45
+		count, inserted, _ = self._with_leave(DT(2026, 9, 23, 13, 46), leave)
+		self.assertEqual(count, 1)
+		self.assertEqual(inserted[0]["message"], sr.CHECK_IN_MESSAGE)
+
+	def test_afternoon_half_day_moves_check_out_to_midday(self):
+		leave = [{"employee": "E1", "half_day": 1, "half_day_session": "PM"}]
+		punches = [{"employee": "E1", "time": DT(2026, 9, 23, 8, 55), "log_type": "IN"}]
+		# check-out reminder due 30 min after the middle (13:30) = 14:00
+		count, inserted, _ = self._with_leave(DT(2026, 9, 23, 14, 1), leave, punches=punches)
+		self.assertEqual(count, 1)
+		self.assertEqual(inserted[0]["message"], sr.CHECK_OUT_MESSAGE)
+		count, _, _ = self._with_leave(DT(2026, 9, 23, 18, 31), leave, punches=punches)
+		self.assertEqual(count, 0, "no second check-out reminder at the shift's end")
+
+	def test_half_day_without_a_session_is_not_guessed(self):
+		count, _, _ = self._with_leave(
+			DT(2026, 9, 23, 9, 16), [{"employee": "E1", "half_day": 1, "half_day_session": None}]
+		)
+		self.assertEqual(count, 0)
+
+	def test_leave_lookup_reads_approved_submitted_leave_covering_the_day(self):
+		calls = {}
+
+		def get_all(doctype, filters=None, **kw):
+			calls[doctype] = (filters, kw.get("fields"))
+			return []
+
+		with patch.object(sr.frappe, "get_all", side_effect=get_all):
+			sr._approved_leave(["E1", "E2"], datetime.date(2026, 9, 23))
+		filters, fields = calls["Leave Application"]
+		self.assertEqual(filters["docstatus"], 1)
+		self.assertEqual(filters["status"], "Approved")
+		self.assertEqual(filters["employee"], ["in", ["E1", "E2"]])
+		self.assertEqual(filters["from_date"], ["<=", datetime.date(2026, 9, 23)])
+		self.assertEqual(filters["to_date"], [">=", datetime.date(2026, 9, 23)])
+		self.assertIn("half_day_session", fields)
