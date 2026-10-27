@@ -647,21 +647,25 @@ def get_custom_fields():
 				),
 				"insert_after": "require_supporting_attachment",
 			},
-			# Reminders to approvers (owner, 29 Sep 2026: the first approver owns
-			# it; nudge first, then ask the backup). Working days.
+			# Reminders to approvers (owner, 27 Oct 2026: only the first approver is
+			# reminded, every working day, until they decide). Working days.
 			{
 				"default": "1",
 				"fieldname": "approval_reminder_after_days",
 				"fieldtype": "Int",
 				"label": _("Remind the approver after (working days)"),
+				"description": _("Then every working day until they decide. Only the first approver is reminded."),
 				"insert_after": "approval_levels",
 			},
+			# Unused since 27 Oct 2026 (the backup is never asked). Hidden, not dropped: the
+			# column and any stored value stay, so a rollback finds them as they were.
 			{
 				"default": "3",
 				"fieldname": "approval_backup_after_days",
 				"fieldtype": "Int",
+				"hidden": 1,
 				"label": _("Ask the backup approver after (working days)"),
-				"description": _("Leave starting within 2 days asks the backup on the first day."),
+				"description": _("No longer used: only the first approver is reminded."),
 				"insert_after": "approval_reminder_after_days",
 			},
 		],

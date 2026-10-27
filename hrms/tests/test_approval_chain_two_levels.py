@@ -164,8 +164,17 @@ class TestHrSetsTheLevels(unittest.TestCase):
 		ast.parse(source)
 
 	def test_it_reaches_live_sites_through_the_sync_patch(self):
+		# the sync patch re-applies every setup.py field on migrate; its line is re-dated per
+		# change (a fixed date here broke on the next field, 22 Oct 2026), so only require that
+		# it is dated on or after the day these settings shipped
+		import re
+
 		patches = (Path(__file__).resolve().parents[1] / "patches.txt").read_text()
-		self.assertIn("sync_custom_fields_with_code #2026-09-29", patches)
+		dated = re.search(
+			r"^hrms\.patches\.v16_0\.sync_custom_fields_with_code #(\d{4}-\d{2}-\d{2})", patches, re.M
+		)
+		self.assertIsNotNone(dated)
+		self.assertGreaterEqual(dated.group(1), "2026-09-29")
 
 	def test_blank_or_zero_means_the_default(self):
 		for raw in (None, "", "0", 0, "junk"):

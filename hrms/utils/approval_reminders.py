@@ -1,18 +1,16 @@
-"""Reminders to approvers: the first approver owns the request.
+"""Reminders to approvers: the first approver owns the request, and only they are reminded.
 
-Owner, 29 Sep 2026: "we want to encourage the first approver to act ... our
-reminder/notification is being deliberate ... even if they take approved
-leave". So the first approver is nudged first, then told a backup can help,
-and only then is the backup asked — and the owner is told before that
-happens. One summary per person per day, never a ping per request.
+Owner, 27 Oct 2026: "we want to encourage the first and only approver, approve.
+that's their job." The first approver is reminded every working day from the
+reminder day until they decide, on leave or not; the backup is never asked or
+named. This replaces the 29 Sep backup step and ruling R2 (6 Oct, an approver
+on leave handed over after 2 days). The person above may still approve if they
+open the request themselves (HR Settings "Backup approval levels"); the
+reminders simply never send them. One summary per person per day, never a ping
+per request.
 
-Owner ruling R2, 6 Oct 2026: an approver who is AWAY (approved leave covering
-today) does not hold a request. The backup is asked after 2 working days, and
-both people are told.
-
-HR sets the days in HR Settings (approval_reminder_after_days, default 1;
-approval_backup_after_days, default 3). Days are WORKING days. Leave that
-starts within 2 days skips straight to asking the backup.
+HR sets the reminder day in HR Settings (approval_reminder_after_days, default
+1). Days are WORKING days.
 
 `plan_reminders` is pure (unit-tested); `send_daily_reminders` is the
 scheduler entry that gathers what is waiting and delivers the plan as PWA
@@ -28,14 +26,8 @@ from frappe.utils import add_days, getdate, now_datetime
 
 logger = logging.getLogger(__name__)
 
-#: A request whose leave starts this soon (calendar days) cannot wait for the
-#: normal steps: the backup is asked on the first reminder day.
-URGENT_WITHIN_DAYS = 2
-
-#: Working days an away first approver gets before the backup is asked (R2,
-#: 6 Oct 2026): someone on approved leave cannot act, so waiting the full
-#: approval_backup_after_days only delays the employee.
-AWAY_BACKUP_AFTER_DAYS = 2
+#: From this many working days the reminder says how long it has waited.
+SAY_HOW_LONG_FROM_DAYS = 3
 
 #: The request types an approver decides, and the words for each.
 KIND_WORDS = {
@@ -53,94 +45,29 @@ def plan_reminders(requests: list[dict], settings: dict) -> list[dict]:
 	"""Who hears what today. Pure.
 
 	`requests`: one dict per waiting request — name, waited (working days),
-	first / backup (logins, backup may be None), first_name / backup_name,
-	employee_name, kind (word), starts_in (calendar days until it starts, or
-	None), first_away (the first approver is on approved leave today).
-	Returns [{to, message}], at most one message per person.
+	first (login), employee_name, kind (word).
+	Returns [{to, message}], one message per first approver.
 	"""
 	remind_at = max(int(settings.get("reminder_after") or 1), 1)
-	backup_at = max(int(settings.get("backup_after") or 3), remind_at)
 
-	owner_waiting: dict[str, list[dict]] = {}
-	owner_helped: dict[str, list[dict]] = {}
-	backup_asked: dict[str, list[dict]] = {}
-
+	waiting: dict[str, list[dict]] = {}
 	for r in requests:
-		waited = r["waited"]
-		if waited < remind_at:
-			continue
-		urgent = r.get("starts_in") is not None and r["starts_in"] <= URGENT_WITHIN_DAYS
-		away = bool(r.get("first_away")) and waited >= AWAY_BACKUP_AFTER_DAYS
-		ask_backup = bool(r.get("backup")) and (waited >= backup_at or urgent or away)
-		if ask_backup:
-			backup_asked.setdefault(r["backup"], []).append(r)
-			owner_helped.setdefault(r["first"], []).append(r)
-		else:
-			owner_waiting.setdefault(r["first"], []).append(r)
-
-	# One message per person: someone who owns one request and backs up another
-	# hears both in the same summary, never two notifications.
-	out = []
-	for user in sorted(set(owner_waiting) | set(owner_helped) | set(backup_asked)):
-		parts = []
-		if user in owner_waiting or user in owner_helped:
-			parts.append(_owner_words(owner_waiting.get(user, []), owner_helped.get(user, [])))
-		if user in backup_asked:
-			parts.append(_backup_words(backup_asked[user]))
-		out.append({"to": user, "message": " ".join(parts)})
-	return out
+		if r["waited"] >= remind_at:
+			waiting.setdefault(r["first"], []).append(r)
+	return [{"to": user, "message": _owner_words(waiting[user])} for user in sorted(waiting)]
 
 
-def _owner_words(waiting: list[dict], helped: list[dict]) -> str:
-	parts = []
-	if waiting:
-		if len(waiting) == 1:
-			r = waiting[0]
-			line = f"{r['employee_name']}'s {r['kind']} is waiting for you."
-		else:
-			line = f"{len(waiting)} requests are waiting for you."
-		# Day two onwards: say who can step in, so the owner knows it will not
-		# wait forever — and still has the first move.
-		nudge = [r for r in waiting if r.get("backup") and r["waited"] > 1]
-		if nudge:
-			line += f" If you can't, {nudge[0]['backup_name']} can act for you."
-		parts.append(line)
-	if helped:
-		r = helped[0]
-		away = all(h.get("first_away") for h in helped)
-		if len(helped) == 1 and away:
-			days = "day" if r["waited"] == 1 else "days"
-			parts.append(
-				f"{r['employee_name']}'s {r['kind']} waited {r['waited']} {days} while you are away; "
-				f"{r['backup_name']} was asked to decide."
-			)
-		elif away:
-			parts.append(
-				f"{len(helped)} requests waited while you are away; "
-				f"{r['backup_name']} was asked to decide them."
-			)
-		elif len(helped) == 1:
-			parts.append(
-				f"{r['backup_name']} has been asked to help with {r['employee_name']}'s {r['kind']}."
-			)
-		else:
-			parts.append(f"{r['backup_name']} has been asked to help with {len(helped)} of your requests.")
-	return " ".join(parts)
-
-
-def _backup_words(asked: list[dict]) -> str:
-	away = [r for r in asked if r.get("first_away")]
-	if len(asked) == 1:
-		r = asked[0]
-		days = "day" if r["waited"] == 1 else "days"
-		who = f"{r['first_name']}, who is away" if away else r["first_name"]
-		return (
-			f"{r['employee_name']}'s {r['kind']} has waited {r['waited']} {days} for "
-			f"{who}. You can decide it for them."
-		)
-	line = f"{len(asked)} requests have waited for your team's approvers. You can decide them for them."
-	if away:
-		line += " Everyone is away." if len(away) == len(asked) else " Some of them are away."
+def _owner_words(waiting: list[dict]) -> str:
+	if len(waiting) == 1:
+		r = waiting[0]
+		line = f"{r['employee_name']}'s {r['kind']} is waiting for you."
+		if r["waited"] >= SAY_HOW_LONG_FROM_DAYS:
+			line += f" It has waited {r['waited']} days."
+		return line
+	line = f"{len(waiting)} requests are waiting for you."
+	oldest = max(r["waited"] for r in waiting)
+	if oldest >= SAY_HOW_LONG_FROM_DAYS:
+		line += f" The oldest has waited {oldest} days."
 	return line
 
 
@@ -174,48 +101,8 @@ def _working_days_between(employee: str, start, end) -> int:
 	return days
 
 
-def _away_approvers(today) -> set[str]:
-	"""Logins of everyone off all of today on approved leave. ONE read for the whole run,
-	however many requests wait; compared lower-case, as logins are. Which day is the half
-	is the shared reading (hrms.utils.leave_day.half_on, 27 Oct 2026): a half day off today
-	is not away (half the day is still at work), an AM half and a PM half together are, and
-	a long leave whose half day falls on another date is away today."""
-	from hrms.utils.leave_day import half_on
-
-	rows = frappe.get_all(
-		"Leave Application",
-		filters={
-			"docstatus": 1,
-			"status": "Approved",
-			"from_date": ["<=", today],
-			"to_date": [">=", today],
-		},
-		fields=[
-			"employee.user_id as user_id",
-			"half_day",
-			"half_day_date",
-			"half_day_session",
-			"from_date",
-			"to_date",
-		],
-		limit_page_length=0,
-	)
-	by_user = {}
-	for r in rows:
-		if r.user_id:
-			by_user.setdefault(r.user_id.lower(), []).append(r)
-	away = set()
-	for user, on in by_user.items():
-		# any full day of leave covering today is away; halves only when both are taken
-		# (a half with no AM/PM recorded, made before 25 Sep 2026, is still only a half)
-		if any(not half_on(r, today) for r in on) or {"AM", "PM"} <= {r.get("half_day_session") for r in on}:
-			away.add(user)
-	return away
-
-
 def _waiting_requests() -> list[dict]:
-	"""Every request still waiting on a decision, with its line, age and whether
-	its first approver is away today."""
+	"""Every request still waiting on a decision, with its first approver and age."""
 	from hrms.api.approval import DECIDE_THEN_SUBMIT, DESIGNATED_APPROVER_DOCTYPES
 	from hrms.hr.utils import get_designated_approvers
 
@@ -225,8 +112,7 @@ def _waiting_requests() -> list[dict]:
 		if doctype not in DECIDE_THEN_SUBMIT or not frappe.db.exists("DocType", doctype):
 			continue
 		field, pending = DECIDE_THEN_SUBMIT[doctype]
-		start_field = "from_date" if doctype == "Leave Application" else None
-		fields = ["name", "employee", "employee_name", "creation"] + ([start_field] if start_field else [])
+		fields = ["name", "employee", "employee_name", "creation"]
 		for doc in frappe.get_all(
 			doctype, filters={field: pending, "docstatus": 0}, fields=fields, limit_page_length=0
 		):
@@ -236,27 +122,16 @@ def _waiting_requests() -> list[dict]:
 			chain = get_designated_approvers(doc.employee, *pair)
 			if not chain:
 				continue
-			first, backup = chain[0], (chain[1] if len(chain) > 1 else None)
-			starts = doc.get(start_field) if start_field else None
+			first = chain[0]
 			out.append(
 				{
 					"name": doc.name,
 					"waited": _working_days_between(doc.employee, getdate(doc.creation), today),
 					"first": first,
-					"backup": backup,
-					"first_name": frappe.db.get_value("User", first, "first_name") or first,
-					"backup_name": (frappe.db.get_value("User", backup, "first_name") or backup)
-					if backup
-					else None,
 					"employee_name": (doc.employee_name or "").split(" ")[0] or doc.employee,
 					"kind": words,
-					"starts_in": (getdate(starts) - today).days if starts else None,
 				}
 			)
-	if out:
-		away = _away_approvers(today)
-		for r in out:
-			r["first_away"] = r["first"].lower() in away
 	return out
 
 
@@ -264,10 +139,7 @@ def send_daily_reminders() -> int:
 	"""Scheduler entry, once each morning. Weekends and public holidays are
 	skipped by the working-day count (a request made on Friday has waited 1 day
 	on Monday). Returns how many notifications were sent."""
-	settings = {
-		"reminder_after": _setting("approval_reminder_after_days", 1),
-		"backup_after": _setting("approval_backup_after_days", 3),
-	}
+	settings = {"reminder_after": _setting("approval_reminder_after_days", 1)}
 	requests = _waiting_requests()
 	plan = plan_reminders(requests, settings)
 	sent = 0
