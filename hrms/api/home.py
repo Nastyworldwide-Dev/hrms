@@ -67,9 +67,10 @@ def get_home_week() -> dict:
 	worked |= paired_days(employee, monday, today)
 	# whole days off on approved leave, read as the calendar reads them (27 Oct 2026):
 	# without them a week with leave read as days simply missed
+	# A rest day or holiday inside a leave was never a working day to be away from.
 	from hrms.api.calendar import _leave_days
 
-	on_leave = _leave_days(employee, monday, today) - worked
+	on_leave = _leave_days(employee, monday, today) - worked - _rest_days(employee, monday, today)
 	overtime = flt((_overtime() or {}).get("unclaimed_hours"))
 	logger.info(
 		"[home] week employee=%s from=%s to=%s days=%d leave=%d ot=%.2f",
@@ -87,6 +88,13 @@ def get_home_week() -> dict:
 		"days_on_leave": len(on_leave),
 		"overtime_hours": overtime,
 	}
+
+
+def _rest_days(employee: str, start, end) -> set:
+	"""Holidays and weekly offs in the window, as the calendar draws them."""
+	from hrms.api.calendar import _holidays
+
+	return _holidays(employee, start, end)
 
 
 def _holiday_list(employee: str, today) -> str | None:

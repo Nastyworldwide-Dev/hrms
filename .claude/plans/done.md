@@ -1,3 +1,3 @@
-GOAL: Home's This week line names days on approved leave beside days worked
-DONE WHEN: get_home_week returns days_on_leave (whole days off, as the calendar); HomeWeek says "N days worked · M days on leave"
+GOAL: Home's days on leave skips rest days and holidays inside a leave
+DONE WHEN: a leave spanning a weekly off counts only its working days
 CHECK: python3 -m pytest -q hrms/api/test_home.py

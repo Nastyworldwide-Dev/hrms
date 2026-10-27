@@ -56,6 +56,7 @@ class _Base(unittest.TestCase):
 			patch.object(hrms.api, "get_current_employee", return_value="E1", create=True),
 			patch.object(home, "employee_now", return_value=THURSDAY_NIGHT) as self.clock,
 			patch.object(home, "_holiday_list", return_value=holiday_list),
+			patch("hrms.api.get_holidays_for_calendar", return_value=[], create=True),
 			patch(
 				"hrms.api.requests_summary._overtime",
 				return_value={"unclaimed_days": 1, "unclaimed_hours": overtime, "compensation": "Pay"},
@@ -139,6 +140,20 @@ class TestHomeWeek(_Base):
 		leave = self.filters_for("Leave Application")[0]
 		self.assertEqual(leave["employee"], "E1")
 		self.assertEqual(leave["status"], "Approved")
+
+	def test_a_rest_day_inside_a_leave_is_not_a_day_on_leave(self):
+		# review of 93b3473d0: a Wed..Mon leave read on Saturday counted the weekend as
+		# days on leave; a holiday or rest day was never a working day to be away from
+		with patch.object(home, "_rest_days", return_value={D(2026, 9, 21)}):
+			out = self.run_fn(
+				home.get_home_week,
+				{
+					"Leave Application": [
+						{"from_date": D(2026, 9, 21), "to_date": D(2026, 9, 22), "half_day": 0}
+					]
+				},
+			)
+		self.assertEqual(out["days_on_leave"], 1)
 
 	def test_overtime_comes_from_the_requests_summary_not_new_maths(self):
 		out = self.run_fn(home.get_home_week, {}, overtime=1.5)
