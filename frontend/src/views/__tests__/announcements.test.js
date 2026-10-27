@@ -28,6 +28,8 @@ function code(text) {
 const block = code(read("components/Announcements.vue"))
 const list = code(read("views/announcements/List.vue"))
 const detail = code(read("views/announcements/Detail.vue"))
+//: The badge words moved with the rule they belong to (27 Oct 2026), shared by Home and the board.
+const rowRule = code(read("utils/announcementRow.js"))
 
 test("an empty board says so in one line on Home", () => {
 	// SUPERSEDED 23 Sep (owner: "Home is broken top to bottom"; plan P1-1,
@@ -68,8 +70,8 @@ test("the category is mapped, never translated", () => {
 test("unread and waiting are said in words, not only in colour", () => {
 	// §14.1: colour may never be the only signal. A coloured dot is invisible
 	// to a colour-blind reader and to a greyscale screenshot.
-	assert.match(block, /__\("Confirm"\)/, "a card that wants something says so")
-	assert.match(block, /__\("New"\)/, "and an unread one says that")
+	assert.match(rowRule, /__\("Confirm"\)/, "a card that wants something says so")
+	assert.match(rowRule, /__\("New"\)/, "and an unread one says that")
 	assert.doesNotMatch(block, /g-dot/, "not a bare dot")
 })
 

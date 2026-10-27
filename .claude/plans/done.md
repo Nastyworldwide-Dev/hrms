@@ -1,3 +1,3 @@
-GOAL: an Event opened from the calendar off the board shows no Confirm (owner, 27 Oct 2026).
-DONE WHEN: get_announcement returns live; Detail hides tick + Confirm when live is false.
-CHECK: pytest hrms/api/test_calendar_events_by_date.py; node --test frontend/src/components/__tests__/must-read-tickbox.test.js
+GOAL: the announcement board draws each notice like Home (tile, summary, badge, age), To confirm then Latest (owner-approved mockup 27 Oct).
+DONE WHEN: List.vue and Home share utils/announcementRow.js; board sections "To confirm · N" / "Latest", urgent first; Home output unchanged.
+CHECK: node --test frontend/src/utils/__tests__/announcementRow.test.js frontend/src/views/announcements/__tests__/List.board.test.js frontend/src/components/__tests__/announcement-cards-a7.test.js

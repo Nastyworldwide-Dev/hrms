@@ -5,8 +5,11 @@
   cards: an employee arriving here is usually looking for one thing they half
   remember, and eight expanded bodies is a scroll rather than a board.
 
-  Grouped into "needs you" and the rest, because those are two different jobs.
-  A policy waiting for confirmation is a task; everything else is reading.
+  Grouped into "To confirm" and "Latest", because those are two different jobs.
+  A policy waiting for confirmation is a task; everything else is reading, urgent
+  first. Every row is the Home row (red tile, HR's summary, Confirm / Urgent /
+  New), drawn by the one rule in utils/announcementRow.js, with its age on the
+  right (owner-approved mockup, 27 Oct 2026).
 -->
 <template>
 	<BaseLayout :pageTitle="__('Announcements')">
@@ -21,47 +24,41 @@
 				<GListPanel v-if="allAnnouncements.loading && !rows.length" loading />
 
 				<template v-else>
-					<template v-if="needsYou.length">
-						<div class="g-eyebrow">{{ __("Needs your confirmation") }}</div>
+					<section v-for="group in groups" :key="group.key" class="flex flex-col gap-2">
+						<h2 class="g-eyebrow ml-4">{{ group.title }}</h2>
 						<GListPanel>
 							<GListRow
-								v-for="card in needsYou"
+								v-for="card in group.rows"
 								:key="card.name"
 								:label="card.title"
-								:sublabel="when(card)"
+								:sublabel="subline(card)"
+								:tint="TILE.announcement"
 								@click="open(card)"
 							>
 								<template #icon>
 									<component :is="iconFor(card.category)" class="g-row-icon" />
 								</template>
 								<template #badge>
-									<GBadge variant="open">{{ __("Confirm") }}</GBadge>
+									<!-- A WORD over the age, right aligned: the badge says what to do,
+									     the age says how old it is. -->
+									<span
+										v-if="badge(card) || age(card)"
+										class="flex flex-col items-end gap-0.5 shrink-0"
+									>
+										<template v-if="badge(card)">
+											<span v-if="badge(card).variant === 'urgent'" class="g-badge g-chip--danger">
+												{{ badge(card).text }}
+											</span>
+											<GBadge v-else :variant="badge(card).variant">{{ badge(card).text }}</GBadge>
+										</template>
+										<span v-if="age(card)" class="text-caption text-ink-700 whitespace-nowrap">{{
+											age(card)
+										}}</span>
+									</span>
 								</template>
 							</GListRow>
 						</GListPanel>
-					</template>
-
-					<template v-if="rest.length">
-						<div v-if="needsYou.length" class="g-eyebrow">
-							{{ __("Everything else") }}
-						</div>
-						<GListPanel>
-							<GListRow
-								v-for="card in rest"
-								:key="card.name"
-								:label="card.title"
-								:sublabel="when(card)"
-								@click="open(card)"
-							>
-								<template #icon>
-									<component :is="iconFor(card.category)" class="g-row-icon" />
-								</template>
-								<template v-if="!card.read" #badge>
-									<GBadge variant="accent">{{ __("New") }}</GBadge>
-								</template>
-							</GListRow>
-						</GListPanel>
-					</template>
+					</section>
 
 					<!-- Not on error: ResourceError above already says what happened, and
 					     "nothing live" beside "could not load" is two opposite claims. -->
@@ -94,9 +91,10 @@ import GListRow from "@/components/glass/GListRow.vue"
 const GPullRefresh = defineAsyncComponent(() => import("@/components/glass/GPullRefresh.vue"))
 
 import { allAnnouncements } from "@/data/announcements"
+import { badgeFor, boardSections, subtitle, trailAge } from "@/utils/announcementRow"
+import { TILE } from "@/utils/iconTile"
 
 const __ = inject("$translate")
-const $dayjs = inject("$dayjs")
 const router = useRouter()
 
 //: Mapped, never `__(category)`: a doctype Select value is not in the
@@ -109,16 +107,28 @@ const ICONS = {
 }
 
 const rows = computed(() => allAnnouncements.data?.announcements || [])
-const needsYou = computed(() => rows.value.filter((card) => card.needs_acknowledgement))
-const rest = computed(() => rows.value.filter((card) => !card.needs_acknowledgement))
+const sections = computed(() => boardSections(rows.value))
+//: A section with nothing in it draws nothing, not a heading over an empty panel.
+const groups = computed(() =>
+	[
+		{
+			key: "confirm",
+			title: `${__("To confirm")} · ${sections.value.toConfirm.length}`,
+			rows: sections.value.toConfirm,
+		},
+		{ key: "latest", title: __("Latest"), rows: sections.value.latest },
+	].filter((group) => group.rows.length)
+)
 
 function iconFor(category) {
 	return ICONS[category] || Megaphone
 }
 
-function when(card) {
-	return card.publish_from ? siteTime(card.publish_from).fromNow() : ""
-}
+//: The age on the site's clock, as the board has always read it.
+const ageOf = (date) => siteTime(date).fromNow()
+const badge = (card) => badgeFor(card, __)
+const subline = (card) => subtitle(card, __, ageOf)
+const age = (card) => trailAge(card, __, ageOf)
 
 function open(card) {
 	router.push({ name: "AnnouncementDetail", params: { id: card.name } })

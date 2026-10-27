@@ -7,9 +7,19 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
 const src = readFileSync(fileURLToPath(new URL("../Announcements.vue", import.meta.url)), "utf8")
+// The badge and the line under the title moved to one shared rule (27 Oct 2026) so the board
+// and Home cannot drift apart; the same assertions now read it where the code lives.
+const rule = readFileSync(
+	fileURLToPath(new URL("../../utils/announcementRow.js", import.meta.url)),
+	"utf8"
+)
+
+test("Home reads the shared row rule rather than keeping its own", () => {
+	assert.match(src, /from "@\/utils\/announcementRow"/)
+})
 
 test("the preview line is HR's summary", () => {
-	assert.match(src, /card\.summary/)
+	assert.match(rule, /card\.summary/)
 })
 
 test("a cover shows as a thumbnail; otherwise the red tile", () => {
@@ -18,6 +28,6 @@ test("a cover shows as a thumbnail; otherwise the red tile", () => {
 })
 
 test("an urgent notice says so in words", () => {
-	assert.match(src, /card\.urgent/)
-	assert.match(src, /__\("Urgent"\)/)
+	assert.match(rule, /card\.urgent/)
+	assert.match(rule, /__\("Urgent"\)/)
 })

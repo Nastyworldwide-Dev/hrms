@@ -123,6 +123,7 @@ import GBadge from "@/components/glass/GBadge.vue"
 
 import { homeAnnouncements } from "@/data/announcements"
 import { TILE } from "@/utils/iconTile"
+import { badgeFor as badgeRule, subtitle as subtitleRule } from "@/utils/announcementRow"
 
 const __ = inject("$translate")
 const $dayjs = inject("$dayjs")
@@ -147,23 +148,10 @@ function iconFor(category) {
 	return ICONS[category] || Megaphone
 }
 
-function badgeFor(card) {
-	// Red status text, as iOS marks urgency; lime is only the primary action (Q1).
-	if (card.urgent && !card.read) return { variant: "urgent", text: __("Urgent") }
-	if (card.needs_acknowledgement) return { variant: "open", text: __("Confirm") }
-	if (!card.read) return { variant: "accent", text: __("New") }
-	return null
-}
-
-function subtitle(card) {
-	// What the reader needs to decide whether to open it: whether it wants
-	// something from them, and how old it is. Not the category — the icon
-	// already says that, and saying it twice spends the line.
-	// HR's own one-line Summary (alpha.7 §10.1), never text cut from the body.
-	if (card.summary) return card.summary
-	if (card.needs_acknowledgement) return __("Needs your confirmation")
-	return card.publish_from ? $dayjs(card.publish_from).fromNow() : ""
-}
+//: The badge and the line under the title are the board's too, so the rule lives once
+//: (utils/announcementRow.js) and both screens read it.
+const badgeFor = (card) => badgeRule(card, __)
+const subtitle = (card) => subtitleRule(card, __, (date) => $dayjs(date).fromNow())
 
 function open(card) {
 	router.push({ name: "AnnouncementDetail", params: { id: card.name } })
