@@ -91,8 +91,13 @@ test("visual: every screen matches its baseline", async () => {
 					// visibility:hidden paints nothing, so the region matches the
 					// background whatever the content's width, and only a change that
 					// moves the SURROUNDING layout can still register.
+					// Toasts too: one page is reused for every screen, so a toast raised by the
+					// screen before (a refused claim read, 27 Oct 2026) was still up when the
+					// next one was shot, and two baselines carried a stray "Something didn't
+					// load". A toast is transient and has its own tests; it is never layout.
 					await page.addStyleTag({
-						content: "[data-visual-mask]{visibility:hidden !important}",
+						content:
+							"[data-visual-mask],#frappeui-toast-root{visibility:hidden !important}",
 					})
 					await expect(page).toHaveScreenshot(name, TOLERANCE[s.slug] || {})
 				} catch (e) {
