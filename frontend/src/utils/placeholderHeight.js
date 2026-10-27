@@ -1,0 +1,27 @@
+// How tall a block was the last time it answered, so its loading placeholder can hold that space
+// and the content under it does not jump when the answer lands (iOS gate scroll-and-shift,
+// 27 Oct 2026: Approvals 208 pt, Home Needs you 54 pt, on every visit). frappe-ui reads its own
+// cache back after the first paint, so the cache alone never prevented the jump.
+// Per person and per block: a height says how much work someone has, nothing to share.
+// A min-height only, never a fixed height: a shorter answer still collapses (once).
+
+const KEY = (block, user) => `hrms:ph:${block}:${user}`
+
+export function rememberHeight(block, user, px) {
+	if (!user || !(px > 0)) return
+	try {
+		localStorage.setItem(KEY(block, user), String(Math.round(px)))
+	} catch {
+		// private mode or storage blocked: the placeholder falls back to its own size
+	}
+}
+
+export function rememberedHeight(block, user) {
+	if (!user) return 0
+	try {
+		const px = Number(localStorage.getItem(KEY(block, user)))
+		return Number.isFinite(px) && px > 0 ? px : 0
+	} catch {
+		return 0
+	}
+}

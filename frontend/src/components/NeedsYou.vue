@@ -38,7 +38,14 @@
 	<!-- While an approver's first read is in flight the block holds its place
 	     (skeleton row), so the rows arriving never push Home down (alpha.8 r3,
 	     scroll-and-shift audit). An empty answer then removes it. -->
-	<div v-if="rows.length || needsYouResource.error || (isApprover.data && firstRead)" class="w-full">
+	<!-- Holds its last answered height while the first read loads (iOS gate 27 Oct 2026: one
+	     skeleton row, two answers, Your week jumped 54 pt). -->
+	<div
+		v-if="rows.length || needsYouResource.error || (isApprover.data && firstRead)"
+		ref="blockEl"
+		class="w-full"
+		:style="firstRead && heldHeight ? { minHeight: `${heldHeight}px` } : undefined"
+	>
 		<div class="g-eyebrow mb-4">{{ __("Needs you") }}</div>
 		<p v-if="!rows.length && needsYouResource.error" class="text-caption text-ink-600" role="alert">
 			{{ __("We couldn't load what needs you. Pull down to try again.") }}
@@ -82,7 +89,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue"
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 import {
 	AlarmClock,
@@ -104,6 +111,8 @@ import { pendingCountResource } from "@/data/remoteCheckin"
 import { needsYouResource } from "@/data/needsYou"
 import { isApprover } from "@/data/team"
 import { countOf } from "@/utils/countWords"
+import { sessionUser } from "@/utils/personalCache"
+import { rememberHeight, rememberedHeight } from "@/utils/placeholderHeight"
 
 const __ = inject("$translate")
 const router = useRouter()
@@ -196,6 +205,18 @@ const rows = computed(() => {
 //: row (51 px) and back moved every block under it twice on each visit
 //: (alpha.8 r3, measured in WebKit).
 const firstRead = computed(() => Boolean(needsYouResource.loading && !needsYouResource.data))
+//: The last answered height, held while the first read loads (see the template), measured after
+//: each answer draws. An empty answer removes the block, so nothing is remembered for it.
+const blockEl = ref(null)
+const heldHeight = rememberedHeight("needs-you", sessionUser())
+watch(
+	() => needsYouResource.data,
+	async (data) => {
+		if (!data) return
+		await nextTick()
+		rememberHeight("needs-you", sessionUser(), blockEl.value?.getBoundingClientRect().height)
+	}
+)
 const shown = computed(() => (showAll.value ? rows.value : rows.value.slice(0, HOME_ROWS)))
 const hidden = computed(() => (showAll.value ? 0 : Math.max(0, rows.value.length - HOME_ROWS)))
 

@@ -21,3 +21,13 @@ test("Announcements always shows, saying there is no news", () => {
 	assert.match(src, /__\("No new announcements"\)/)
 	assert.doesNotMatch(src, /v-else-if="cards\.length" class="w-full"/)
 })
+
+// iOS gate (scroll-and-shift), 27 Oct 2026: Needs you held one skeleton row, an approver had
+// two, and Your week jumped 54 pt. The block remembers its last answered height
+// (utils/placeholderHeight) and holds it while the first read loads.
+test("Needs you holds its last answered height while it loads", () => {
+	const src = readFileSync(fileURLToPath(new URL("../NeedsYou.vue", import.meta.url)), "utf8")
+	assert.match(src, /ref="blockEl"[\s\S]*?:style="firstRead && heldHeight \? \{ minHeight: `\$\{heldHeight\}px` \} : undefined"/)
+	assert.match(src, /rememberedHeight\("needs-you", sessionUser\(\)\)/)
+	assert.match(src, /rememberHeight\("needs-you", sessionUser\(\), blockEl\.value/)
+})

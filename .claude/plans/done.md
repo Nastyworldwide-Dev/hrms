@@ -1,3 +1,3 @@
-GOAL: every section-header link looks the same, set in .g-seclink; in-sentence links share .g-backlink (design audit 27 Oct, finding 5).
-DONE WHEN: no screen adds style classes to .g-seclink; computed style identical on Leave, Expense, Team; in-sentence links keep a 44 px target.
-CHECK: node --test frontend/src/components/__tests__/section-link-one-look.test.js; Playwright measure on /dashboard/leaves, /dashboard/expense-claims, /team.
+GOAL: Approvals and Home "Needs you" hold their last answered height while loading, so the content below stops jumping (design audit 27 Oct, finding 1).
+DONE WHEN: on a return visit the "already answered" panel and "Your week" do not move; a first-ever visit may move once; private mode still renders.
+CHECK: node --test frontend/src/utils/__tests__/placeholderHeight.test.js; PASS=warm node frontend/e2e/scroll-and-shift-audit.mjs (Home, Approvals not listed).
