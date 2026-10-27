@@ -26,3 +26,11 @@ test("a Log out that fails clears its mark, so a later expired session still say
 	assert.match(logout, /onError\(\) \{\s*clearLoggingOut\(\)/)
 	assert.match(session, /import \{[^}]*\bclearLoggingOut\b[^}]*\} from "@\/utils\/personalCache"/)
 })
+
+// Owner approved 27 Oct 2026 (review of bcfbeaa8e): the remembered placeholder heights are kept
+// under `hrms:ph:<block>:<email>`; a shared phone must not keep the last person's email.
+test("logout forgets every remembered placeholder height", () => {
+	const session = readFileSync(fileURLToPath(new URL("../session.js", import.meta.url)), "utf8")
+	assert.match(session, /import \{ forgetAllHeights \} from "@\/utils\/placeholderHeight"/)
+	assert.match(session, /await clearPersonalCaches\(session\.user\)\s*forgetAllHeights\(\)/)
+})

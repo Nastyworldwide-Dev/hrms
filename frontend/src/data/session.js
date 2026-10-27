@@ -1,3 +1,4 @@
+import { forgetAllHeights } from "@/utils/placeholderHeight"
 import { computed, reactive } from "vue"
 import { createResource, call } from "frappe-ui"
 import { userResource } from "./user"
@@ -60,6 +61,7 @@ export const session = reactive({
 		async onSuccess() {
 			announceSessionChange()
 			await clearPersonalCaches(session.user)
+			forgetAllHeights()
 			await clearCachedPages()
 			userResource.reset()
 			employeeResource.reset()

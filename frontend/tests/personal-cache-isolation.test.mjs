@@ -101,6 +101,8 @@ function browser(
 		vm.runInContext(executable(readFileSync(helper, "utf8")), context)
 	// alpha.14: session.js also clears the offline page copy; no Cache Storage here
 	vm.runInContext(executable(source("src/utils/cachedPages.js")), context)
+	// 27 Oct 2026: logout also forgets the remembered placeholder heights
+	vm.runInContext(executable(source("src/utils/placeholderHeight.js")), context)
 	vm.runInContext(executable(source("src/resourceConfig.js")), context)
 	vm.runInContext(executable(source("src/data/overtime.js")), context)
 	vm.runInContext(executable(source("src/data/notifications.js")), context)
