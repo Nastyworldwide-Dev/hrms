@@ -33,8 +33,25 @@ test("no cap stays no cap, so the form's own checks still say why", () => {
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
-test("the OT form prefills the claim through prefillClaim, never the raw cap", () => {
+test("the OT form prefills the claim through claimAfterCheck (prefillClaim), never the raw cap", () => {
 	const form = readFileSync(fileURLToPath(new URL("../OTRequestForm.vue", import.meta.url)), "utf8")
-	assert.match(form, /retainedClaim \?\? prefillClaim\(cap\)/)
+	assert.match(form, /claimed_hours: claimAfterCheck\(\{[\s\S]*?retained: retainedClaim,\s*cap,\s*\}\)/)
 	assert.doesNotMatch(form, /retainedClaim \?\? cap\b/)
+})
+
+// Regression, 27 Oct 2026 (owner): picking a claimable day left Hours empty. Since 21 Oct
+// (9bf8f6b6d) the Hours row appears only once a day is picked, so its FormField mounts then and
+// seeds "" before the day check answers; the merge kept "" because `??` replaces only
+// null/undefined. "" and null both mean "nothing claimed yet".
+import { claimAfterCheck } from "../claimPrefill.js"
+
+test("a picked day's hours fill the box even after the row seeded it empty", () => {
+	assert.equal(claimAfterCheck({ current: "", retained: null, cap: 2 }), 2)
+	assert.equal(claimAfterCheck({ current: null, retained: null, cap: 4.5 }), 4.5)
+	assert.equal(claimAfterCheck({ current: undefined, retained: null, cap: 8.876944444 }), 8.87)
+})
+
+test("a saved claim reopened keeps its own hours", () => {
+	assert.equal(claimAfterCheck({ current: 1.5, retained: null, cap: 2 }), 1.5)
+	assert.equal(claimAfterCheck({ current: "", retained: 1, cap: 2 }), 1)
 })

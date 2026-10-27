@@ -8,3 +8,11 @@ export const prefillClaim = (cap) => {
 	if (!Number.isFinite(hours) || hours <= 0) return hours
 	return Math.floor(hours * 100 + 1e-9) / 100
 }
+
+//: What Claimed hours holds once the picked day's check answers: what is already there (a
+//: saved claim reopened), else what was kept across a reload of the same day, else the day's
+//: cap. "" counts as nothing: the Hours row mounts when a day is picked and seeds "" before the
+//: check answers, and `??` kept that "" (27 Oct 2026, the box stayed empty).
+const isBlank = (value) => value == null || value === ""
+export const claimAfterCheck = ({ current, retained, cap }) =>
+	!isBlank(current) ? current : !isBlank(retained) ? retained : prefillClaim(cap)

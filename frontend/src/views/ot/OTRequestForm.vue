@@ -148,7 +148,7 @@ import FormView from "@/components/FormView.vue"
 import GPage from "@/components/glass/GPage.vue"
 import { settings } from "@/data/settings"
 import { formatHoursCap } from "@/utils/formatters"
-import { prefillClaim } from "./claimPrefill.js"
+import { claimAfterCheck } from "./claimPrefill.js"
 import { halfHourNote } from "./halfHourNote.js"
 import { hoursAsTime } from "@/utils/daySheet"
 import { countOf } from "@/utils/countWords"
@@ -448,7 +448,11 @@ function loadSummary() {
 					shift: data.shift,
 					compensation: data.compensation,
 					punch_ot_hours: cap,
-					claimed_hours: otRequest.value.claimed_hours ?? retainedClaim ?? prefillClaim(cap),
+					claimed_hours: claimAfterCheck({
+						current: otRequest.value.claimed_hours,
+						retained: retainedClaim,
+						cap,
+					}),
 				})
 			},
 		}),
