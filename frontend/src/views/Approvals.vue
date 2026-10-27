@@ -100,7 +100,7 @@
 						</div>
 					</div>
 					<p v-if="nothingTickable(visibleRows)" class="text-caption text-ink-600 m-0">
-						{{ __("These are approved one by one. Tap one to open it.") }}
+						{{ __("Check-ins are decided one at a time. Tap one to open it.") }}
 					</p>
 					<div v-if="pickable.length" class="flex items-center">
 						<GCheckbox

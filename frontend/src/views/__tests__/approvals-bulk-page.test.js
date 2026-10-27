@@ -158,7 +158,7 @@ test("a failure stays in the sheet with the ticks kept and a way to try again", 
 test("a filter with nothing tickable says why", () => {
 	// 8 Oct 2026: no Select mode, so the line shows whenever only check-ins are left
 	assert.match(template, /v-if="nothingTickable\(visibleRows\)"/)
-	assert.match(template, /approved one by one/)
+	assert.match(template, /decided one at a time/)
 })
 
 test("the sticky bar sits above the floating tab bar and the home indicator, never under them", () => {
@@ -398,4 +398,12 @@ test("Select all past the cap says it takes the oldest and how many it left (rev
 		template,
 		/__\("\{0\} more wait\. Decide these first, or filter\.", \[leftOver\(visibleRows\)\]\)/
 	)
+})
+
+// Design audit, 27 Oct 2026: "These are approved one by one. Tap one to open it." did not say why
+// there are no ticks. The line shows only when every row is a check-in (approvalBulk ONE_BY_ONE),
+// so it says that, in the person's words.
+test("when only check-ins wait, the page says why there are no ticks", () => {
+	assert.match(template, /v-if="nothingTickable\(visibleRows\)"[\s\S]*?Check-ins are decided one at a time\. Tap one to open it\./)
+	assert.doesNotMatch(template, /These are approved one by one/)
 })
