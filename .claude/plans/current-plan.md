@@ -1,17 +1,14 @@
-# Logout forgets remembered placeholder heights (owner approved 27 Oct 2026)
+# Every way a person leaves forgets the remembered heights (owner approved the logout fix 27 Oct 2026)
 
-Ticket: .claude/plans/ticket-logout-forget-heights.md. Review of bcfbeaa8e/d612c8d07.
+Security review of e23b473b8: only the explicit Log out ran forgetAllHeights. Same approved change,
+covering the two other ways a person leaves a shared phone.
 
 ## FLOW
-- frontend/src/data/session.js logout onSuccess: after clearPersonalCaches(session.user), call
-  forgetAllHeights() (utils/placeholderHeight.js, tested) so no `hrms:ph:<block>:<email>` key stays
-  on a shared phone.
-- frontend/tests/personal-cache-isolation.test.mjs loads utils/placeholderHeight.js into its vm
-  context (it evaluates session.js by hand).
-- Test: a source test that logout calls forgetAllHeights after clearPersonalCaches.
+- frontend/src/utils/personalCache.js sessionEnded(): forgetAllHeights() beside clearCachedPages().
+- frontend/src/data/session.js login success: forgetAllHeights() beside clearCachedPages().
+- checkin.pendingTap:<employee> (short-lived, cleared on success) -> ticket, not this change.
 
-## MOCKUP: NOT NEEDED (no screen changes; logout behaves the same for the person)
+## MOCKUP: NOT NEEDED (no screen changes)
 
 ## EXPECTED OUTPUT
-- After logout, localStorage has no key starting `hrms:ph:`; other keys (install prompt) remain.
-- personal-cache-isolation and session tests stay green.
+- After a session ends on its own, or a new login on the same phone, no `hrms:ph:` key remains.

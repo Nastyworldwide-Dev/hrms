@@ -19,8 +19,9 @@ export { sessionUser }
 async function handleLogin(response) {
 	if (response.message === "Logged In") {
 		announceSessionChange()
-		// the last person's offline page copy (a session that only expired
-		// never passed through logout)
+		// the last person's offline page copy and remembered heights (a session
+		// that only expired never passed through logout)
+		forgetAllHeights()
 		await clearCachedPages()
 		session.user = sessionUser()
 		console.info("[session] logged in as", session.user, "— full reload")

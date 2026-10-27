@@ -1,5 +1,6 @@
 import { keys, delMany } from "idb-keyval"
 import { clearCachedPages } from "./cachedPages.js"
+import { forgetAllHeights } from "./placeholderHeight.js"
 
 const PRIVATE_CACHE = "hrms:private:v1"
 const SESSION_EPOCH = "hrms:session-epoch"
@@ -91,6 +92,9 @@ export function sessionEnded() {
 	// the last person's offline copy of the page (a session that only expired never passed through
 	// Log out). The page is hidden at once; the reload waits for the clear, capped, so a stuck Cache
 	// Storage cannot keep the old page alive (review of R1: an unawaited clear could lose the race).
+	// and the remembered placeholder heights, whose keys carry the person's email (security review of
+	// e23b473b8: only Log out forgot them)
+	forgetAllHeights()
 	leavePage(Promise.race([clearCachedPages(), new Promise((r) => setTimeout(r, CLEAR_CAP_MS))]))
 	return true
 }

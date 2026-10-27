@@ -34,3 +34,16 @@ test("logout forgets every remembered placeholder height", () => {
 	assert.match(session, /import \{ forgetAllHeights \} from "@\/utils\/placeholderHeight"/)
 	assert.match(session, /await clearPersonalCaches\(session\.user\)\s*forgetAllHeights\(\)/)
 })
+
+// Security review of e23b473b8: only the explicit Log out forgot the heights. A session that ends
+// on its own (personalCache.sessionEnded, the reload onto Login) and a new login on the same phone
+// also leave the previous person behind; both already clear the page copy, so both forget the
+// heights beside it.
+test("every way a person leaves forgets the remembered heights", () => {
+	const session = readFileSync(fileURLToPath(new URL("../session.js", import.meta.url)), "utf8")
+	assert.match(session, /announceSessionChange\(\)[\s\S]{0,200}?forgetAllHeights\(\)\s*await clearCachedPages\(\)/)
+	const cache = readFileSync(fileURLToPath(new URL("../../utils/personalCache.js", import.meta.url)), "utf8")
+	const ended = cache.slice(cache.indexOf("export function sessionEnded"))
+	assert.match(ended, /forgetAllHeights\(\)\s*leavePage\(/)
+	assert.match(cache, /import \{ forgetAllHeights \} from "\.\/placeholderHeight\.js"/)
+})
