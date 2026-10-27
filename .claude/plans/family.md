@@ -1,3 +1,2 @@
-CLASS: a calendar dated by when a notice is SHOWN, not when the event HAPPENS
-hrms/hr/doctype/hr_announcement event_date same-root — new field, required for Event, cleared otherwise
-hrms/patches/v16_0/backfill_announcement_event_date same-root — existing Events keep their dot (event_date = publish_from), shadowing Property Setters removed
+CLASS: a day sheet with no place for the day's company events
+frontend/src/components/DaySheet.vue same-root — "Events" section, tap opens the announcement

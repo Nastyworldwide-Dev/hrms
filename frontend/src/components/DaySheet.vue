@@ -62,6 +62,22 @@
 					<p v-if="hoursLine" class="g-form-footer">{{ hoursLine }}</p>
 				</section>
 
+				<!-- Company events on this day (owner, 27 Oct 2026): the server sends
+				     this section only when the day has one the reader may see, so a
+				     quiet day shows nothing here. A tap opens the announcement. -->
+				<section v-if="eventRows.length" class="g-form-section">
+					<h2 class="g-form-section__title">{{ __("Events") }}</h2>
+					<GListPanel>
+						<GListRow
+							v-for="event in eventRows"
+							:key="event.name"
+							:label="event.title"
+							:sublabel="event.summary"
+							@click="openEvent(event)"
+						/>
+					</GListPanel>
+				</section>
+
 				<!-- The team, ONCE (owner, 29 Sep 2026, after Hafiz's report: the
 				     sheet said 6 and listed 5, and showed the team three times).
 				     One heading with the day's count, then every name, grouped;
@@ -144,6 +160,8 @@ const $dayjs = inject("$dayjs")
 const router = useRouter()
 
 const me = computed(() => daySheet.data?.me)
+//: The day's company events (announcements, category Event): {name, title, summary}.
+const eventRows = computed(() => daySheet.data?.events || [])
 //: The day's team, grouped (utils/dayTeamGroups.js): every member, once.
 const teamRows = computed(() => daySheet.data?.team || [])
 const teamGroups = computed(() => dayTeamGroups(teamRows.value))
@@ -209,6 +227,11 @@ function fixDay() {
 	// Pre-filled with the date, because the whole reason to open a day sheet
 	// and then a form is that the form already knows which day.
 	router.push({ name: "AttendanceRequestFormView", query: { date: props.date } })
+}
+
+function openEvent(event) {
+	console.info("[DaySheet] opening event announcement", event.name, "from", props.date)
+	router.push({ name: "AnnouncementDetail", params: { id: event.name } })
 }
 
 function openRoster() {
