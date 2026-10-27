@@ -162,10 +162,16 @@ def _roles_for(user):
 class _Ctx:
 	"""Patch the frappe surface these modules touch, for one session user."""
 
-	def __init__(self, user, sops=None, file_rows=None):
+	def __init__(self, user, sops=None, file_rows=None, folders=None, folder_field=True):
 		self.user = user
 		self.sops = sops if sops is not None else SOPS
 		self.file_rows = file_rows or []
+		# SOP Folder rows, and whether the SOP Document table has its `folder` column yet
+		self.folders = folders or []
+		self.folder_field = folder_field
+		# what the code under test asked the database for
+		self.sop_fields = []
+		self.folder_query = {}
 
 	def __enter__(self):
 		def get_list(doctype, filters=None, fields=None, **kwargs):
@@ -178,7 +184,11 @@ class _Ctx:
 			# strict user-permission check) and ignores filters for the same reason
 			# as get_list above
 			if doctype == "SOP Document":
+				self.sop_fields = list(fields or [])
 				return [frappe._dict(row) for row in self.sops]
+			if doctype == "SOP Folder":
+				self.folder_query = {"fields": fields, **kwargs}
+				return [frappe._dict(row) for row in self.folders]
 			if doctype != "File":
 				return []
 			rows = [frappe._dict(row) for row in self.file_rows]
@@ -194,6 +204,12 @@ class _Ctx:
 			patch.object(frappe, "get_list", side_effect=get_list),
 			patch.object(frappe, "get_all", side_effect=get_all),
 			patch.object(frappe, "has_permission", return_value=True),
+			# SOP Document has its `folder` column once migrate has run
+			patch.object(
+				frappe,
+				"get_meta",
+				return_value=types.SimpleNamespace(has_field=lambda field: self.folder_field),
+			),
 			# the canonical identity lookup (query builder) the fake db cannot answer: the Active
 			# employees claiming this login, from EMPLOYEES, as hrms.utils.identity resolves them
 			patch.object(row_scope, "own_employees", side_effect=_own_employees),

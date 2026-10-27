@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 LIST_FIELDS = (
 	"name",
 	"title",
+	"folder",
 	"scope",
 	"department",
 	"company",
@@ -49,6 +50,7 @@ def _card(row, attached_names=()) -> dict:
 	return {
 		"name": row.name,
 		"title": row.title,
+		"folder": row.get("folder") or None,
 		"scope": row.scope,
 		"department": row.department,
 		"pinned": bool(row.pinned),
@@ -75,6 +77,21 @@ def _names_with_file_rows(names: list[str]) -> set[str]:
 	return attached
 
 
+def _folder_rows(has_folder: bool) -> list:
+	"""Every SOP Folder in the order staff see them. Empty until migrate has added
+	the table and the SOP's folder column: code goes live a moment before migrate,
+	and a missing folder must not take the whole SOP page down (as the calendar's
+	event_date did, 27 Oct 2026)."""
+	if not has_folder:
+		return []
+	return frappe.get_all(
+		"SOP Folder",
+		fields=["name", "folder_name", "sort_order"],
+		order_by="sort_order asc, folder_name asc",
+		limit_page_length=0,
+	)
+
+
 @frappe.whitelist(methods=["GET", "POST"])
 def get_sops() -> dict:
 	"""Everything the SOP Library screen needs, scoped to the session user."""
@@ -93,10 +110,11 @@ def get_sops() -> dict:
 	# company is blank, i.e. every SOP saved from Nadi ("for the whole group"),
 	# and staff saw an empty list (owner, 15 Oct 2026). The role gate stays.
 	frappe.has_permission("SOP Document", "read", throw=True)
+	has_folder = frappe.get_meta("SOP Document").has_field("folder")
 	rows = frappe.get_all(
 		"SOP Document",
 		filters=filters,
-		fields=list(LIST_FIELDS),
+		fields=[field for field in LIST_FIELDS if has_folder or field != "folder"],
 		order_by="title asc",
 		limit_page_length=0,
 	)
@@ -106,24 +124,49 @@ def get_sops() -> dict:
 		_record_why_empty(user, rows, department, company)
 	attached_names = _names_with_file_rows([row.name for row in visible_rows if not row.attachment])
 
-	pinned, general, by_department = [], [], {}
+	folder_rows = _folder_rows(has_folder)
+	known_folders = {folder.name for folder in folder_rows}
+
+	pinned, general, by_department, by_folder = [], [], {}, {}
 	for row in visible_rows:
 		card = _card(row, attached_names)
+		# a folder counts and lists every SOP the reader may see in it, pinned or not
+		filed = card["folder"] in known_folders
+		if filed:
+			by_folder.setdefault(card["folder"], []).append(card)
+		# pinned stays in Essentials; any other filed SOP is listed under its folder only
 		if card["pinned"]:
 			pinned.append(card)
+		elif filed:
+			continue
 		elif row.scope == "General":
 			general.append(card)
 		else:
 			by_department.setdefault(row.department, []).append(card)
 
+	# counted from what THIS reader may see; a folder with none of it is not listed,
+	# except to HR, whose picker and Manage folders sheet need the empty ones
+	folders = [
+		{
+			"name": folder.name,
+			"folder_name": folder.folder_name,
+			"sort_order": folder.sort_order or 0,
+			"count": len(by_folder.get(folder.name, [])),
+			"sops": by_folder.get(folder.name, []),
+		}
+		for folder in folder_rows
+		if is_hr or by_folder.get(folder.name)
+	]
+
 	logger.info(
-		"[sop] get_sops user=%s is_hr=%s department=%s pinned=%d general=%d departments=%d",
+		"[sop] get_sops user=%s is_hr=%s department=%s pinned=%d general=%d departments=%d folders=%d",
 		user,
 		is_hr,
 		department,
 		len(pinned),
 		len(general),
 		len(by_department),
+		len(folders),
 	)
 	return {
 		"is_hr": is_hr,
@@ -131,6 +174,7 @@ def get_sops() -> dict:
 		"pinned": pinned,
 		"general": general,
 		"departments": [{"department": dept, "sops": by_department[dept]} for dept in sorted(by_department)],
+		"folders": folders,
 	}
 
 
@@ -195,6 +239,7 @@ def get_sop(name: str) -> dict:
 		"is_hr": is_hr,
 		"name": doc.name,
 		"title": doc.title,
+		"folder": doc.get("folder") or None,
 		"scope": doc.scope,
 		"department": doc.department,
 		"pinned": bool(doc.pinned),
