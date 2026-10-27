@@ -238,6 +238,16 @@ class TestHalfDayLeaveIsNotAway(unittest.TestCase):
 		}
 		self.assertEqual(self._away([row]), set())
 
+	def test_an_am_half_and_a_pm_half_on_one_day_are_away(self):
+		# 27 Oct 2026: the shared leave rule (hrms.utils.leave_day): two halves are a whole day
+		am = {"user_id": "a@x", "half_day": 1, "half_day_date": "2026-10-06", "half_day_session": "AM"}
+		pm = {"user_id": "A@x", "half_day": 1, "half_day_date": "2026-10-06", "half_day_session": "PM"}
+		self.assertEqual(self._away([am, pm]), {"a@x"})
+
+	def test_a_half_day_with_its_session_set_is_still_not_away(self):
+		row = {"user_id": "a@x", "half_day": 1, "half_day_date": "2026-10-06", "half_day_session": "AM"}
+		self.assertEqual(self._away([row]), set())
+
 
 class TestWaitingRequestsReadsLeaveOnce(unittest.TestCase):
 	"""`first_away` for every waiting request comes from ONE Leave Application

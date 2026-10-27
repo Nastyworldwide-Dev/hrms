@@ -175,10 +175,13 @@ def _working_days_between(employee: str, start, end) -> int:
 
 
 def _away_approvers(today) -> set[str]:
-	"""Logins of everyone on approved leave today. ONE read for the whole run,
-	however many requests wait; compared lower-case, as logins are. A half day
-	off TODAY is not away (half the day is still at work); a long leave whose
-	half day falls on another date is away today."""
+	"""Logins of everyone off all of today on approved leave. ONE read for the whole run,
+	however many requests wait; compared lower-case, as logins are. Which day is the half
+	is the shared reading (hrms.utils.leave_day.half_on, 27 Oct 2026): a half day off today
+	is not away (half the day is still at work), an AM half and a PM half together are, and
+	a long leave whose half day falls on another date is away today."""
+	from hrms.utils.leave_day import half_on
+
 	rows = frappe.get_all(
 		"Leave Application",
 		filters={
@@ -187,22 +190,26 @@ def _away_approvers(today) -> set[str]:
 			"from_date": ["<=", today],
 			"to_date": [">=", today],
 		},
-		fields=["employee.user_id as user_id", "half_day", "half_day_date", "from_date", "to_date"],
+		fields=[
+			"employee.user_id as user_id",
+			"half_day",
+			"half_day_date",
+			"half_day_session",
+			"from_date",
+			"to_date",
+		],
 		limit_page_length=0,
 	)
-	day = str(getdate(today))
-	away = set()
+	by_user = {}
 	for r in rows:
-		if not r.user_id:
-			continue
-		if r.get("half_day"):
-			# a one-day half day may leave half_day_date empty: its only day is the half
-			half = r.get("half_day_date") or (
-				r.get("from_date") if r.get("from_date") == r.get("to_date") else None
-			)
-			if half and str(getdate(half)) == day:
-				continue
-		away.add(r.user_id.lower())
+		if r.user_id:
+			by_user.setdefault(r.user_id.lower(), []).append(r)
+	away = set()
+	for user, on in by_user.items():
+		# any full day of leave covering today is away; halves only when both are taken
+		# (a half with no AM/PM recorded, made before 25 Sep 2026, is still only a half)
+		if any(not half_on(r, today) for r in on) or {"AM", "PM"} <= {r.get("half_day_session") for r in on}:
+			away.add(user)
 	return away
 
 
