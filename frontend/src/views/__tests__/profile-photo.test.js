@@ -76,6 +76,6 @@ test("error is role=alert in the danger ink token, no hard-coded fallbacks", () 
 
 test("action rows carry icons; company footer", () => {
 	assert.match(profile, /icon: ImageIcon/)
-	assert.match(profile, /icon: Trash2/)
+	assert.match(profile, /icon: Trash,/)
 	assert.match(profile, /Your photo is seen by people in/)
 })

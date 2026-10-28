@@ -72,8 +72,7 @@
 								<ResourceError :resource="employeeDoc.get" :what="__('your details')" />
 								<div
 									v-if="!employeeDoc.get.error"
-									v-value-row
-									class="g-form-row g-form-row--readonly"
+									v-value-row class="g-form-row g-form-row--readonly"
 								>
 									<span class="g-form-row__label">{{ __("Manager") }}</span>
 									<GSkeleton v-if="managerLoading" width="96px" height="11px" />
@@ -91,8 +90,7 @@
 								</div>
 								<div
 									v-if="!employeeDoc.get.error"
-									v-value-row
-									class="g-form-row g-form-row--readonly"
+									v-value-row class="g-form-row g-form-row--readonly"
 								>
 									<span class="g-form-row__label">{{ __("Shift") }}</span>
 									<GSkeleton v-if="!employeeDoc.doc" width="96px" height="11px" />
@@ -189,11 +187,7 @@
 								</button>
 							</div>
 							<p class="g-form-footer g-form-footer--center">
-								{{
-									releaseName
-										? __("Nadi {0} · {1}", [versionString, __(releaseName)])
-										: __("Nadi {0}", [versionString])
-								}}
+								{{ releaseName ? __("Nadi {0} · {1}", [versionString, __(releaseName)]) : __("Nadi {0}", [versionString]) }}
 							</p>
 						</section>
 					</div>
@@ -252,7 +246,7 @@
 </template>
 
 <script setup>
-import { Camera, ChevronRight, Image as ImageIcon, KeyRound, Trash2, User } from "lucide-vue-next"
+import { Camera, ChevronRight, Image as ImageIcon, KeyRound, Trash, User } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import { computed, inject, ref, watch } from "vue"
 import { useListUpdate } from "@/composables/realtime"
@@ -576,7 +570,7 @@ const photoActions = computed(() => {
 		actions.push({
 			key: "remove",
 			label: __("Remove photo"),
-			icon: Trash2,
+			icon: Trash,
 			destructive: true,
 		})
 	}

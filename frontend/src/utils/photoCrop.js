@@ -1,7 +1,7 @@
 // Photo crop utilities for photo upload flow.
 // Pure functions: no DOM, no async.
 
-export const PHOTO_MAX_BYTES = 5 * 1024 * 1024
+const PHOTO_MAX_BYTES = 5 * 1024 * 1024
 
 /**
  * Check if a file can be uploaded as a photo.

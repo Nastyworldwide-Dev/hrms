@@ -88,7 +88,8 @@ import GModal from "@/components/glass/GModal.vue"
 import GButton from "@/components/glass/GButton.vue"
 import { sourceRect, clampOffset } from "@/utils/photoCrop"
 
-const STAGE = 300
+const STAGE = 300 // design size; the real stage shrinks with the column, see stageSize()
+const stageSize = () => stageEl.value?.clientWidth || STAGE
 const STEP = 10
 const __ = inject("$translate")
 
@@ -149,7 +150,7 @@ function drawCrop() {
 	const rect = sourceRect({
 		imgW,
 		imgH,
-		stage: STAGE,
+		stage: stageSize(),
 		zoom: zoom.value,
 		offsetX: offsetX.value,
 		offsetY: offsetY.value,
@@ -167,7 +168,7 @@ function setZoom(z) {
 	const { ox, oy } = clampOffset({
 		imgW,
 		imgH,
-		stage: STAGE,
+		stage: stageSize(),
 		sSize,
 		offsetX: offsetX.value,
 		offsetY: offsetY.value,
@@ -200,7 +201,7 @@ function moveBy(dx, dy) {
 	const { ox, oy } = clampOffset({
 		imgW,
 		imgH,
-		stage: STAGE,
+		stage: stageSize(),
 		sSize,
 		offsetX: offsetX.value,
 		offsetY: offsetY.value,
@@ -283,7 +284,7 @@ function usePhoto() {
 	const rect = sourceRect({
 		imgW,
 		imgH,
-		stage: STAGE,
+		stage: stageSize(),
 		zoom: zoom.value,
 		offsetX: offsetX.value,
 		offsetY: offsetY.value,
@@ -300,8 +301,8 @@ function usePhoto() {
 <style scoped>
 .photo-stage {
 	position: relative;
-	width: 300px;
-	height: 300px;
+	width: min(300px, 100%);
+	aspect-ratio: 1;
 	margin: 4px auto 0;
 	border-radius: 14px;
 	overflow: hidden;

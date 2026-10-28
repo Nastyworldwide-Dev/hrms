@@ -36,7 +36,7 @@
 
 				<!-- Error state, also when the request never produced a person -->
 				<div v-else-if="nodeData.error || !person" class="g-empty">
-					<AlertTriangle class="w-12 h-12 oc-warn-icon" />
+					<TriangleAlert class="w-12 h-12 oc-warn-icon" />
 					<h2 class="g-empty__title">{{ __("Could not load the chart") }}</h2>
 					<p class="g-empty__body">{{ __("Check your connection, then try again.") }}</p>
 					<GButton class="oc-retry" :label="__('Retry')" @click="retryFetch" />
@@ -87,7 +87,7 @@
 									@click="gapsExpanded = !gapsExpanded"
 								>
 									<span class="g-row__well oc-well-warn">
-										<AlertTriangle class="w-4 h-4" />
+										<TriangleAlert class="w-4 h-4" />
 									</span>
 									<span class="g-row__body">
 										<span class="g-row__label oc-wrap">{{ gapsMessage }}</span>
@@ -263,7 +263,7 @@
 
 <script setup>
 import {
-	AlertTriangle,
+	TriangleAlert,
 	ChevronDown,
 	LocateFixed,
 	Network,
@@ -313,9 +313,6 @@ const peersExpanded = ref(false)
 const gapsExpanded = ref(false)
 const focusCard = ref(null)
 
-// HR is told by the server: only HR receives data.gaps
-const isHR = computed(() => nodeData.data?.gaps !== undefined)
-
 // Load the org chart node data (params are not reactive in frappe-ui: refetch on focus change)
 const nodeData = createResource({
 	url: "hrms.api.org_chart.get_node",
@@ -323,14 +320,12 @@ const nodeData = createResource({
 })
 watch(focusedId, (id) => nodeData.submit(id ? { employee: id } : {}), { immediate: true })
 
+// HR is told by the server: only HR receives data.gaps
+const isHR = computed(() => nodeData.data?.gaps !== undefined)
+
 // Compute current person
 const person = computed(() => nodeData.data?.person)
 const reports = computed(() => nodeData.data?.reports || [])
-
-// Check if empty (no manager and no reports)
-const isEmpty = computed(() => {
-	return !chainRows.value.length && !reports.value.length
-})
 
 // Build chain up (reports to)
 const chainRows = computed(() => {
@@ -340,6 +335,11 @@ const chainRows = computed(() => {
 		...entry,
 		name: entry.name || __("(no name)"),
 	}))
+})
+
+// Check if empty (no manager and no reports)
+const isEmpty = computed(() => {
+	return !chainRows.value.length && !reports.value.length
 })
 
 // Team display with preview logic
