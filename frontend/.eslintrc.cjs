@@ -10,6 +10,7 @@ module.exports = {
 		// it would be writing to a literal.
 		__APP_BUILD__: "readonly",
 		__APP_VERSION__: "readonly",
+		__APP_RELEASE_NAME__: "readonly",
 	},
 	extends: [
 		"eslint:recommended",

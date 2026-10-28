@@ -37,7 +37,7 @@ test("every read-only label/value row in the app uses it", () => {
 	for (const file of ["../../views/Profile.vue", "../../components/LateCheckoutDialog.vue", "../../components/RemoteCheckinDialog.vue"]) {
 		const src = read(file)
 		const rows = src.match(/class="g-form-row g-form-row--readonly"/g) || []
-		const directed = src.match(/v-value-row class="g-form-row g-form-row--readonly"/g) || []
+		const directed = src.match(/v-value-row\s+class="g-form-row g-form-row--readonly"/g) || []
 		assert.equal(directed.length, rows.length, file)
 	}
 	assert.match(read("../../components/FormField.vue"), /v-value-row\s+class="g-form-row"/)

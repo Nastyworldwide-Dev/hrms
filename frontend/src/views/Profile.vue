@@ -72,7 +72,8 @@
 								<ResourceError :resource="employeeDoc.get" :what="__('your details')" />
 								<div
 									v-if="!employeeDoc.get.error"
-									v-value-row class="g-form-row g-form-row--readonly"
+									v-value-row
+									class="g-form-row g-form-row--readonly"
 								>
 									<span class="g-form-row__label">{{ __("Manager") }}</span>
 									<GSkeleton v-if="managerLoading" width="96px" height="11px" />
@@ -90,7 +91,8 @@
 								</div>
 								<div
 									v-if="!employeeDoc.get.error"
-									v-value-row class="g-form-row g-form-row--readonly"
+									v-value-row
+									class="g-form-row g-form-row--readonly"
 								>
 									<span class="g-form-row__label">{{ __("Shift") }}</span>
 									<GSkeleton v-if="!employeeDoc.doc" width="96px" height="11px" />
@@ -186,6 +188,7 @@
 									{{ __("Log out") }}
 								</button>
 							</div>
+							<!-- prettier-ignore -->
 							<p class="g-form-footer g-form-footer--center">
 								{{ releaseName ? __("Nadi {0} · {1}", [versionString, __(releaseName)]) : __("Nadi {0}", [versionString]) }}
 							</p>
