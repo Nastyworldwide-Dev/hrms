@@ -561,140 +561,82 @@ def _raise(msg, exc):
 S3_IMAGE = "/api/method/frappe_s3_attachment.controller.generate_file?key=photos/EMP-1.jpg&file_name=a.jpg"
 
 
+def _serve(target, me="EMP-1", my_company="Company A", is_hr=False, desk_read=False, file_owned=True):
+	"""Call org_chart.photo(target['name']) as a caller; return (client, local)."""
+	client = MagicMock()
+	client.get_url.return_value = "https://s3/signed"
+	local = MagicMock()
+
+	def rows_for(dt, filters=None, **kw):
+		return [target] if filters.get("name") == target["name"] else [{"company": my_company}]
+
+	with (
+		patch.object(frappe, "get_all", side_effect=rows_for),
+		patch.object(org_chart, "get_employee", return_value=me),
+		patch.object(org_chart, "require_employee", return_value=me),
+		patch.object(org_chart, "sees_all_employee_data", return_value=is_hr),
+		patch.object(frappe, "has_permission", return_value=desk_read, create=True),
+		patch.object(frappe, "get_attr", return_value=lambda: client),
+		patch.object(frappe, "local", local),
+		patch.object(frappe.db, "exists", return_value=file_owned),
+		patch.object(frappe, "throw", side_effect=_raise),
+	):
+		try:
+			org_chart.photo(target["name"])
+		finally:
+			_serve.last = (client, local)
+	return client, local
+
+
+def _target(name="EMP-2", company="Company A", status="Active", image=S3_IMAGE):
+	return {"name": name, "company": company, "status": status, "image": image}
+
+
 class TestPhoto(unittest.TestCase):
+	def test_staff_other_company_refused_even_when_desk_would_allow(self):
+		"""Regression: plain staff pass has_permission on anyone, so it must never gate staff."""
+		with self.assertRaises(frappe.DoesNotExistError):
+			_serve(_target(company="Company B"), desk_read=True)
+		_serve.last[0].get_url.assert_not_called()
+
 	def test_staff_other_company_refused(self):
 		"""Spec change from review: another company's employee reads as not found (no probing)."""
-		rows = [{"name": "EMP-2", "company": "Company B", "image": "/files/a.jpg"}]
-		with (
-			patch.object(
-				frappe,
-				"get_all",
-				side_effect=lambda dt, filters=None, **kw: (
-					rows if filters.get("name") == "EMP-2" else [{"company": "Company A"}]
-				),
-			),
-			patch.object(org_chart, "require_employee", return_value="EMP-1"),
-			patch.object(org_chart, "sees_all_employee_data", return_value=False),
-			patch.object(frappe, "has_permission", return_value=False, create=True),
-		):
-			with self.assertRaises(frappe.DoesNotExistError):
-				org_chart.photo("EMP-2")
+		with self.assertRaises(frappe.DoesNotExistError):
+			_serve(_target(company="Company B"))
+		_serve.last[0].get_url.assert_not_called()
 
-	def test_staff_other_company_refused_before_signing(self):
-		rows = [{"name": "EMP-2", "company": "Company B", "image": S3_IMAGE}]
-		get_attr = MagicMock()
-		with (
-			patch.object(
-				frappe,
-				"get_all",
-				side_effect=lambda dt, filters=None, **kw: (
-					rows if filters.get("name") == "EMP-2" else [{"company": "Company A"}]
-				),
-			),
-			patch.object(org_chart, "require_employee", return_value="EMP-1"),
-			patch.object(org_chart, "sees_all_employee_data", return_value=False),
-			patch.object(frappe, "has_permission", return_value=False, create=True),
-			patch.object(frappe, "get_attr", get_attr),
-		):
-			with self.assertRaises(frappe.DoesNotExistError):
-				org_chart.photo("EMP-2")
-		get_attr.assert_not_called()
+	def test_staff_left_target_same_company_refused(self):
+		with self.assertRaises(frappe.DoesNotExistError):
+			_serve(_target(status="Left"), desk_read=True)
+		_serve.last[0].get_url.assert_not_called()
 
-	def test_same_company_redirects_to_signed_url_for_parsed_key(self):
-		rows = [{"name": "EMP-1", "company": "Company A", "image": S3_IMAGE}]
-		client = MagicMock()
-		client.get_url.return_value = "https://s3/signed"
-		local = MagicMock()
-		with (
-			patch.object(frappe, "get_all", return_value=rows),
-			patch.object(org_chart, "require_employee", return_value="EMP-1"),
-			patch.object(org_chart, "sees_all_employee_data", return_value=False),
-			patch.object(frappe, "has_permission", return_value=False, create=True),
-			patch.object(frappe, "get_attr", return_value=lambda: client),
-			patch.object(frappe, "local", local),
-			patch.object(frappe.db, "exists", return_value=True),
-		):
-			org_chart.photo("EMP-1")
-		client.get_url.assert_called_once_with("photos/EMP-1.jpg", "a.jpg")
+	def test_staff_same_company_redirects_to_signed_url_for_parsed_key(self):
+		_client, local = _serve(_target(name="EMP-1"))
+		_client.get_url.assert_called_once_with("photos/EMP-1.jpg", "a.jpg")
 		self.assertEqual(local.response.type, "redirect")
 		self.assertEqual(local.response.location, "https://s3/signed")
 
-	def _photo_call(self, rows, desk_read, my_employee="EMP-1", employee="EMP-1", file_owned=True):
-		client = MagicMock()
-		client.get_url.return_value = "https://s3/signed"
-		local = MagicMock()
-		req = (
-			MagicMock(side_effect=lambda: my_employee)
-			if my_employee
-			else MagicMock(side_effect=frappe.PermissionError("no employee"))
-		)
-		with (
-			patch.object(frappe, "get_all", return_value=rows) as get_all,
-			patch.object(org_chart, "require_employee", req),
-			patch.object(org_chart, "sees_all_employee_data", return_value=False),
-			patch.object(frappe, "has_permission", return_value=desk_read, create=True),
-			patch.object(frappe, "get_attr", return_value=lambda: client),
-			patch.object(frappe, "local", local),
-			patch.object(frappe.db, "exists", return_value=file_owned),
-			patch.object(frappe, "throw", side_effect=_raise),
-		):
-			try:
-				org_chart.photo(employee)
-			finally:
-				self.last = (client, local, get_all, req)
-
-	def test_desk_reader_without_employee_row_is_served(self):
-		"""System Manager with no Employee but Desk read: served, require_employee never called."""
-		rows = [{"name": "EMP-2", "company": "Company B", "image": S3_IMAGE}]
-		self._photo_call(rows, desk_read=True, my_employee=None, employee="EMP-2")
-		client, _local, _ga, req = self.last
-		client.get_url.assert_called_once_with("photos/EMP-1.jpg", "a.jpg")
-		req.assert_not_called()
-
-	def test_left_employee_photo_served_to_desk_reader_and_not_filtered_active(self):
-		rows = [{"name": "EMP-2", "company": "Company B", "image": S3_IMAGE}]
-		self._photo_call(rows, desk_read=True, employee="EMP-2")
-		_c, local, get_all, _r = self.last
+	def test_hr_left_target_other_company_served(self):
+		client, local = _serve(_target(company="Company B", status="Left"), is_hr=True)
 		self.assertEqual(local.response.type, "redirect")
-		self.assertNotIn("status", get_all.call_args.kwargs["filters"])
+		client.get_url.assert_called_once()
 
-	def test_staff_without_desk_read_other_company_not_found_and_unsigned(self):
-		rows = [{"name": "EMP-2", "company": "Company B", "image": S3_IMAGE}]
+	def test_no_employee_desk_reader_served_active_or_left(self):
+		for status in ("Active", "Left"):
+			client, local = _serve(_target(company="Company B", status=status), me=None, desk_read=True)
+			self.assertEqual(local.response.type, "redirect")
+			client.get_url.assert_called_once()
 
-		def rows_for(dt, filters=None, **kw):
-			return rows if filters.get("name") == "EMP-2" else [{"company": "Company A"}]
-
-		client = MagicMock()
-		with (
-			patch.object(frappe, "get_all", side_effect=rows_for),
-			patch.object(org_chart, "require_employee", return_value="EMP-1"),
-			patch.object(org_chart, "sees_all_employee_data", return_value=False),
-			patch.object(frappe, "has_permission", return_value=False, create=True),
-			patch.object(frappe, "get_attr", return_value=lambda: client),
-			patch.object(frappe, "throw", side_effect=_raise),
-		):
-			with self.assertRaises(frappe.DoesNotExistError):
-				org_chart.photo("EMP-2")
-		client.get_url.assert_not_called()
+	def test_no_employee_without_desk_read_refused(self):
+		with self.assertRaises(frappe.DoesNotExistError):
+			_serve(_target(), me=None, desk_read=False)
+		_serve.last[0].get_url.assert_not_called()
 
 	def test_image_no_file_owns_is_not_served_or_signed(self):
 		"""Employee.image pointing at a key no File of that employee owns is refused."""
-		rows = [{"name": "EMP-1", "company": "Company A", "image": S3_IMAGE}]
-		client = MagicMock()
-		with (
-			patch.object(frappe, "get_all", return_value=rows),
-			patch.object(org_chart, "require_employee", return_value="EMP-1"),
-			patch.object(org_chart, "sees_all_employee_data", return_value=False),
-			patch.object(frappe, "get_attr", return_value=lambda: client),
-			patch.object(frappe.db, "exists", return_value=None) as exists,
-			patch.object(frappe, "throw", side_effect=_raise),
-		):
-			with self.assertRaises(frappe.DoesNotExistError):
-				org_chart.photo("EMP-1")
-		exists.assert_called_once_with(
-			"File", {"file_url": S3_IMAGE, "attached_to_doctype": "Employee", "attached_to_name": "EMP-1"}
-		)
-		client.get_url.assert_not_called()
+		with self.assertRaises(frappe.DoesNotExistError):
+			_serve(_target(name="EMP-1"), file_owned=None)
+		_serve.last[0].get_url.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ from frappe.utils import getdate
 
 from hrms.api.profile_photo import photo_url
 from hrms.hr.utils import sees_all_employee_data
-from hrms.utils.identity import require_employee
+from hrms.utils.identity import get_employee, require_employee
 from hrms.utils.leave_day import by_employee, off_session
 
 logger = logging.getLogger(__name__)
@@ -159,19 +159,28 @@ def get_node(employee: str | None = None, company: str | None = None) -> dict:
 def photo(employee: str, v: str | None = None):
 	"""Serve an employee's photo (User.user_image points here).
 
-	Anyone Desk lets read the Employee is served (HR, System Manager, no Employee
-	row needed, Left employees too); everyone else gets the staff company fence.
+	HR is served any company, Active or Left. A caller with no Employee row
+	(System Manager, Administrator) is served when Desk lets them read it. Staff get
+	the company fence and Active targets only; Desk permission is never consulted
+	for staff, because Employee is an org-wide directory in Desk.
 	"""
 	rows = frappe.get_all(
 		"Employee",
 		filters={"name": employee},
-		fields=["name", "company", "image"],
+		fields=["name", "company", "status", "image"],
 		limit=1,
 	)
 	if not rows:
 		frappe.throw(_("Employee not found."), frappe.DoesNotExistError)
-	if not frappe.has_permission("Employee", "read", doc=employee):
-		_fence(rows[0].get("company"), sees_all_employee_data(), require_employee())
+	if sees_all_employee_data():
+		pass
+	elif get_employee() is None:
+		if not frappe.has_permission("Employee", "read", doc=employee):
+			frappe.throw(_("Employee not found."), frappe.DoesNotExistError)
+	else:
+		if rows[0].get("status") != "Active":
+			frappe.throw(_("Employee not found."), frappe.DoesNotExistError)
+		_fence(rows[0].get("company"), False, require_employee())
 
 	image = rows[0].get("image")
 	if not image:
