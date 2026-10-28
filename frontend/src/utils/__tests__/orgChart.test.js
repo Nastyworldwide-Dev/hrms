@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { teamPreview, awayCount, subline, chainRows } from "../orgChart.js"
+import { teamPreview, awayCount, subline, chainRows, gapsMessage, gapSub } from "../orgChart.js"
 
 test("teamPreview shows first n reports with overflow", () => {
 	const reports = [
@@ -100,4 +100,23 @@ test("chainRows with all active managers", () => {
 test("chainRows with empty chain", () => {
 	const result = chainRows([])
 	assert.deepEqual(result, [])
+})
+
+const fmt = (s, a = []) => a.reduce((acc, v) => acc.replace("%s", v), s)
+
+test("gapsMessage names the company and both counts", () => {
+	assert.equal(
+		gapsMessage(fmt, "Acme", 3, 2),
+		"In Acme: 3 people have no manager set · 2 report to someone who has left"
+	)
+})
+
+test("gapsMessage drops a zero part and uses singular", () => {
+	assert.equal(gapsMessage(fmt, "Acme", 1, 0), "In Acme: 1 person has no manager set")
+	assert.equal(gapsMessage(fmt, "Acme", 0, 2), "In Acme: 2 report to someone who has left")
+})
+
+test("gapSub joins designation and company, skipping blanks", () => {
+	assert.equal(gapSub({ designation: "Clerk", company: "Acme" }), "Clerk · Acme")
+	assert.equal(gapSub({ designation: "", company: "Acme" }), "Acme")
 })

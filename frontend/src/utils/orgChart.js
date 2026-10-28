@@ -50,3 +50,26 @@ export function chainRows(chain) {
 		return row
 	})
 }
+
+/**
+ * "In {company}: N people have no manager set · M report to someone who has left".
+ * @param {Function} __ - translate function
+ */
+export function gapsMessage(__, company, noManager, leftManager) {
+	const parts = []
+	if (noManager > 0) {
+		parts.push(
+			noManager === 1
+				? __("%s person has no manager set", [noManager])
+				: __("%s people have no manager set", [noManager])
+		)
+	}
+	if (leftManager > 0) parts.push(__("%s report to someone who has left", [leftManager]))
+	const body = parts.join(" · ")
+	return company ? __("In %s: %s", [company, body]) : body
+}
+
+/** Designation and company for a gap row, skipping blanks. */
+export function gapSub(card) {
+	return [card.designation, card.company].filter(Boolean).join(" · ")
+}

@@ -38,3 +38,41 @@ test("More.vue has Org chart entry", () => {
 	assert.match(source, /Org chart|OrgChart/, "should mention Org chart")
 	assert.match(source, /\/org-chart/, "should route to /org-chart")
 })
+
+const src = () => readFileSync(new URL("../OrgChart.vue", import.meta.url), "utf8")
+const template = () => src().slice(0, src().indexOf("<script setup>"))
+
+test("template never reads .value (refs unwrap there)", () => {
+	assert.doesNotMatch(template(), /\.value\b/)
+})
+
+test("search empty copy speaks of the view, not a company", () => {
+	assert.match(template(), /in this view/)
+	assert.doesNotMatch(template(), /any company|your company/)
+	assert.doesNotMatch(template(), /slice\(0, 8\)/)
+})
+
+test("You button is hidden, not disabled, when already on yourself", () => {
+	assert.match(template(), /v-if="!isSearching && !isOnSelf"/)
+	assert.doesNotMatch(src(), /aria-disabled/)
+})
+
+test("HR gap links say who they fix, and expanders declare what they control", () => {
+	assert.match(template(), /__\('Fix %s in Desk', \[item\.name\]\)/)
+	assert.match(template(), /aria-controls="oc-gaps-detail"/)
+	assert.match(template(), /aria-controls="oc-team-list"/)
+	assert.match(template(), /aria-controls="oc-peers-list"/)
+})
+
+test("Team section is always shown with an empty line", () => {
+	assert.doesNotMatch(template(), /v-if="teamDisplay\.all\.length > 0"/)
+	assert.match(template(), /No one reports to %s\./)
+	assert.match(template(), /<h2 class="oc-focus-card__name"/)
+	assert.match(template(), /:size="64"/)
+})
+
+test("no scoped copy of shared glass classes, no undefined tokens", () => {
+	const style = src().slice(src().indexOf("<style scoped>"))
+	assert.doesNotMatch(style, /^\.g-/m)
+	assert.doesNotMatch(style, /--g-warn-bg|--g-leave-bg|--g-leave-dot|cubic-bezier/)
+})
