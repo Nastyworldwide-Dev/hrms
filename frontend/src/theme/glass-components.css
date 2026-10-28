@@ -2885,7 +2885,9 @@ textarea {
 }
 /* owner, 28 Oct 2026: two letters on a black disc with a lime ring, the same
    in light and dark, so a list of "M" names stops looking like one row
-   repeated. Inset ring, so a photo keeps it too. */
+   repeated. The ring is an outline drawn inward, not an inset shadow: a
+   photo (<img>) paints over an inset shadow, but not over an outline. The
+   badge rule is below the Organizational Chart rule. */
 /* Organizational Chart boxes are outlined in ink (black) on light and in the
    accent (lime) on dark. Set here because a scoped style cannot see the html
    theme attribute. */
@@ -2895,7 +2897,8 @@ html[data-theme="dark"] .oc-flow {
 .g-avatar--badge {
 	background: var(--g-person-badge);
 	color: var(--g-on-person-badge);
-	box-shadow: inset 0 0 0 2px var(--g-brand);
+	outline: var(--g-avatar-ring, 2px) solid var(--g-brand);
+	outline-offset: calc(var(--g-avatar-ring, 2px) * -1);
 	letter-spacing: 0.02em;
 }
 

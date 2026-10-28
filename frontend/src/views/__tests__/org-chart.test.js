@@ -124,3 +124,60 @@ test("Fix in Desk link has ExternalLink icon", () => {
 	assert.match(template, /aria-hidden="true"/, "icon should be aria-hidden")
 	assert.match(template, /__\('Fix \{0\} in Desk', \[item\.name\]\)/, "link text should say 'Fix in Desk'")
 })
+
+test("team boxes stay buttons to a screen reader: the list role sits on a wrapper", () => {
+	const t = template()
+	assert.doesNotMatch(t, /<button[^>]*role="listitem"/)
+	assert.match(t, /<div[^>]*role="listitem"[^>]*class="oc-kid-slot"|<div[^>]*class="oc-kid-slot"[^>]*role="listitem"/)
+	// the connector lines key off the slot now, not the button
+	const style = src().slice(src().indexOf("<style scoped>"))
+	assert.match(style, /\.oc-kid-slot:nth-child\(odd\)::after/)
+	assert.doesNotMatch(style, /\.oc-kid:nth-child/)
+})
+
+test("opening the higher managers keeps one unbroken line and full-width boxes", () => {
+	const t = template()
+	assert.match(t, /id="oc-above-list" class="oc-above"/)
+	const style = src().slice(src().indexOf("<style scoped>"))
+	assert.match(style, /\.oc-above\s*\{[^}]*align-self:\s*stretch/)
+	assert.doesNotMatch(style.match(/\.oc-above\s*\{[^}]*\}/)[0], /margin-bottom/)
+})
+
+test("a manager who has left is never a badge in the more-above pill", () => {
+	assert.match(template(), /v-for="p in aboveStack"/)
+	assert.match(src(), /const aboveStack = computed\(\(\) =>\s*ladder\.value\.above\.filter\(\(p\) => !p\.message\)\.slice\(-3\)/)
+})
+
+const style = () => src().slice(src().indexOf("<style scoped>"))
+
+test("a keyboard user sees which box has focus, in place of its outline", () => {
+	assert.match(
+		style(),
+		/\.oc-node:focus-visible,\s*\.oc-kid:focus-visible\s*\{[^}]*outline:\s*none;[^}]*box-shadow:\s*var\(--g-shadow-focus-ring\)/
+	)
+})
+
+test("connector lines are ink2 at full strength (3:1 against the page)", () => {
+	for (const sel of [".oc-line", ".oc-kid-slot::before", ".oc-kid-slot:nth-child(odd)::after"]) {
+		const rule = style().match(new RegExp(`${sel.replace(/[.():]/g, "\\$&")}\\s*\\{([^}]*)\\}`))[1]
+		assert.match(rule, /background:\s*var\(--g-ink2\)/, sel)
+		assert.doesNotMatch(rule, /opacity/, sel)
+	}
+	assert.match(style(), /\.oc-line--dash\s*\{[^}]*border-left:\s*2px dashed var\(--g-ink2\)/)
+})
+
+test("Away today carries the moon, as in the mockup", () => {
+	const t = template()
+	assert.ok((t.match(/<Moon[^>]*aria-hidden="true"/g) || []).length >= 3)
+})
+
+test("the person in focus has the mockup's thicker 3px ring, boxes the mockup's widths", () => {
+	assert.match(style(), /\.oc-node--focus\s*\{[^}]*--g-avatar-ring:\s*3px/)
+	assert.match(style(), /\.oc-node\s*\{[^}]*max-width:\s*300px/)
+	assert.match(style(), /\.oc-node--focus\s*\{[^}]*max-width:\s*340px/)
+})
+
+test("no dead styles left from the list layout, chips on the type scale", () => {
+	assert.doesNotMatch(style(), /\.oc-chip--sm|\.oc-strong|\.oc-sec__head/)
+	assert.match(style(), /\.oc-chip\s*\{[^}]*font-size:\s*0\.8125rem/)
+})

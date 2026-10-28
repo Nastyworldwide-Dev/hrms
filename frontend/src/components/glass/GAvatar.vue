@@ -23,7 +23,8 @@
     badge  boolean — two letters ("MH", the given name before bin/binti/a/l)
            on a black disc with a lime ring, the same in both themes. For
            lists of people where one grey letter makes every row look alike
-           (Organizational Chart). A photo keeps the lime ring.
+           (Organizational Chart). A photo keeps the lime ring (an outline,
+           which an <img> does not paint over).
 -->
 <template>
 	<img
@@ -73,6 +74,9 @@ const box = computed(() => ({
 	width: `${props.size}px`,
 	height: `${props.size}px`,
 	// two letters need a smaller face than one to keep the same margin
-	fontSize: `${Math.round(props.size * (props.badge ? 0.36 : 0.4))}px`,
+	// …but never below 11px, the smallest size in the type scale
+	fontSize: `${
+		props.badge ? Math.max(11, Math.round(props.size * 0.36)) : Math.round(props.size * 0.4)
+	}px`,
 }))
 </script>

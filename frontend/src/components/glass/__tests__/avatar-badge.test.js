@@ -20,10 +20,18 @@ test("the badge is a black disc, white letters and a lime ring, from tokens only
 	const r = rule(".g-avatar--badge")
 	assert.match(r, /background:\s*var\(--g-person-badge\)/)
 	assert.match(r, /color:\s*var\(--g-on-person-badge\)/)
-	assert.match(r, /box-shadow:[^;]*var\(--g-brand\)/)
+	// outline, not an inset box-shadow: a photo (<img>) paints over an inset
+	// shadow, so the ring vanished for anyone with a picture
+	assert.match(r, /outline:\s*var\(--g-avatar-ring, 2px\) solid var\(--g-brand\)/)
+	assert.match(r, /outline-offset:\s*calc\(var\(--g-avatar-ring, 2px\) \* -1\)/)
+	assert.doesNotMatch(r, /box-shadow/)
 	assert.doesNotMatch(r, /#[0-9a-f]{3,8}\b|rgb\(/i)
 })
 
 test("the badge does not change in dark mode", () => {
 	assert.doesNotMatch(css, /data-theme="dark"\]\s*\.g-avatar--badge/)
+})
+
+test("badge letters never drop below 11px, the smallest size in the type scale", () => {
+	assert.match(src, /Math\.max\(11, Math\.round\(props\.size \* 0\.36\)\)/)
 })

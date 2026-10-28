@@ -133,7 +133,7 @@
 								>
 									<span v-if="!aboveExpanded" class="oc-stack" aria-hidden="true">
 										<GAvatar
-											v-for="p in ladder.above.slice(-3)"
+											v-for="p in aboveStack"
 											:key="p.id || p.name"
 											:image="p.image"
 											:label="p.name"
@@ -153,7 +153,7 @@
 									<ChevronDown class="oc-chev" />
 								</button>
 								<span class="oc-line" aria-hidden="true"></span>
-								<div v-if="aboveExpanded" id="oc-above-list" class="oc-flow">
+								<div v-if="aboveExpanded" id="oc-above-list" class="oc-above">
 									<template v-for="p in ladder.above" :key="p.id || p.name">
 										<button class="oc-node" :disabled="!!p.message" @click="focusPerson(p.id)">
 											<GAvatar v-if="!p.message" :image="p.image" :label="p.name" round badge />
@@ -194,7 +194,10 @@
 										<span class="oc-node__sub">
 											{{ ladder.direct.designation }}
 											<template v-if="ladder.direct.away">
-												· <span class="oc-away">{{ __("Away today") }}</span>
+												·
+												<span class="oc-away"
+													><Moon class="oc-moon" aria-hidden="true" />{{ __("Away today") }}</span
+												>
 											</template>
 										</span>
 									</span>
@@ -243,25 +246,28 @@
 									role="list"
 									:aria-label="__('Team') + ' · ' + teamDisplay.all.length"
 								>
-									<button
+									<div
 										v-for="p in teamDisplay.shown"
 										:key="p.id"
-										class="oc-kid"
 										role="listitem"
-										@click="focusPerson(p.id)"
+										class="oc-kid-slot"
 									>
-										<span
-											v-if="p.team_size"
-											class="oc-count"
-											:aria-label="__('Team of {0}', [p.team_size])"
-										>
-											<Users class="w-3 h-3" aria-hidden="true" />{{ p.team_size }}
-										</span>
-										<GAvatar :image="p.image" :label="p.name" round badge />
-										<span class="oc-kid__name">{{ p.name }}</span>
-										<span class="oc-kid__sub">{{ p.designation }}</span>
-										<span v-if="p.away" class="oc-away">{{ __("Away today") }}</span>
-									</button>
+										<button class="oc-kid" @click="focusPerson(p.id)">
+											<span
+												v-if="p.team_size"
+												class="oc-count"
+												:aria-label="__('Team of {0}', [p.team_size])"
+											>
+												<Users class="w-3 h-3" aria-hidden="true" />{{ p.team_size }}
+											</span>
+											<GAvatar :image="p.image" :label="p.name" round badge />
+											<span class="oc-kid__name">{{ p.name }}</span>
+											<span class="oc-kid__sub">{{ p.designation }}</span>
+											<span v-if="p.away" class="oc-away">
+												<Moon class="oc-moon" aria-hidden="true" />{{ __("Away today") }}
+											</span>
+										</button>
+									</div>
 								</div>
 								<button
 									v-if="teamDisplay.more > 0 || teamExpanded"
@@ -278,6 +284,7 @@
 									<ChevronDown class="oc-chev" />
 								</button>
 								<p v-if="teamAwayCount > 0" class="oc-sec__aside oc-team-away">
+									<Moon class="oc-moon" aria-hidden="true" />
 									{{ __("{0} of {1} away today", [teamAwayCount, teamDisplay.all.length]) }}
 								</p>
 							</template>
@@ -331,6 +338,7 @@ import {
 	ExternalLink,
 	LocateFixed,
 	Network,
+	Moon,
 	Search,
 	UserRoundX,
 	Users,
@@ -406,6 +414,9 @@ const chainRows = computed(() => {
 
 // The chart's managers: direct one above the person, the rest folded, top first
 const ladder = computed(() => chainLadder(chainRows.value))
+// The pill's small avatars: the three nearest the direct manager. A manager
+// who has left has no real name to make letters from, so they are left out.
+const aboveStack = computed(() => ladder.value.above.filter((p) => !p.message).slice(-3))
 
 // Team display with preview logic
 const teamDisplay = computed(() => {
@@ -529,13 +540,6 @@ function desktopLink(id) {
 	gap: 8px;
 	margin-bottom: 24px;
 }
-.oc-sec__head {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 8px;
-	padding: 0 16px;
-}
 .oc-sec__title {
 	margin: 0;
 	font-size: 0.8125rem;
@@ -553,9 +557,6 @@ function desktopLink(id) {
 .oc-wrap {
 	white-space: normal;
 	overflow-wrap: anywhere;
-}
-.oc-strong {
-	font-weight: 600;
 }
 .oc-warn-icon {
 	color: var(--g-warn-ink);
@@ -588,17 +589,18 @@ function desktopLink(id) {
 	align-items: center;
 	margin-bottom: 24px;
 }
+/* connectors are ink2 at full strength: they carry the hierarchy, so they
+   meet 3:1 against the page in both themes */
 .oc-line {
 	width: 2px;
 	height: 20px;
 	flex: none;
-	background: var(--g-ink3);
-	opacity: 0.5;
+	background: var(--g-ink2);
 }
 .oc-line--dash {
 	width: 0;
 	background: none;
-	border-left: 2px dashed var(--g-ink3);
+	border-left: 2px dashed var(--g-ink2);
 }
 .oc-node {
 	position: relative;
@@ -606,7 +608,7 @@ function desktopLink(id) {
 	align-items: center;
 	gap: 12px;
 	width: 100%;
-	max-width: 320px;
+	max-width: 300px;
 	min-height: 56px;
 	padding: 10px 14px;
 	border: 0;
@@ -687,7 +689,8 @@ button.oc-node:active,
 
 /* the person in focus: centred, avatar on top so a long name gets the full width */
 .oc-node--focus {
-	max-width: 360px;
+	--g-avatar-ring: 3px;
+	max-width: 340px;
 	flex-direction: column;
 	gap: 4px;
 	padding: 20px 16px 18px;
@@ -737,6 +740,16 @@ button.oc-node:active,
 	}
 }
 
+/* the higher managers, opened: a plain column without .oc-flow's bottom
+   margin, so the line runs on unbroken into the direct manager and each box
+   is as wide as the others */
+.oc-above {
+	align-self: stretch;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
 /* the team: two columns hung off one line down the middle gutter */
 .oc-kids {
 	width: 100%;
@@ -747,8 +760,15 @@ button.oc-node:active,
 	row-gap: 12px;
 	padding-top: 12px;
 }
-.oc-kid {
+/* the slot carries the list role and the connector arms; the box inside it
+   stays a plain button for screen readers */
+.oc-kid-slot {
 	position: relative;
+	min-width: 0;
+	display: flex;
+}
+.oc-kid {
+	flex: 1;
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
@@ -766,33 +786,31 @@ button.oc-node:active,
 	margin-bottom: 6px;
 }
 /* a short arm from each box to the line in the gutter */
-.oc-kid::before {
+.oc-kid-slot::before {
 	content: "";
 	position: absolute;
 	top: 50%;
 	width: 12px;
 	height: 2px;
-	background: var(--g-ink3);
-	opacity: 0.5;
+	background: var(--g-ink2);
 }
-.oc-kid:nth-child(odd)::before {
+.oc-kid-slot:nth-child(odd)::before {
 	right: -12px;
 }
-.oc-kid:nth-child(even)::before {
+.oc-kid-slot:nth-child(even)::before {
 	left: -12px;
 }
 /* the line itself, drawn by the left column down to the last row's arm */
-.oc-kid:nth-child(odd)::after {
+.oc-kid-slot:nth-child(odd)::after {
 	content: "";
 	position: absolute;
 	right: -13px;
 	top: -12px;
 	bottom: 0;
 	width: 2px;
-	background: var(--g-ink3);
-	opacity: 0.5;
+	background: var(--g-ink2);
 }
-.oc-kid:nth-child(odd):nth-last-child(-n + 2)::after {
+.oc-kid-slot:nth-child(odd):nth-last-child(-n + 2)::after {
 	bottom: 50%;
 }
 .oc-kid__name {
@@ -835,6 +853,24 @@ button.oc-node:active,
 .oc-node__sub .oc-away {
 	font-size: inherit;
 }
+.oc-away,
+.oc-team-away {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+.oc-moon {
+	width: 12px;
+	height: 12px;
+	flex: none;
+}
+/* the box outline is a shadow too, so focus swaps it for the shared ring
+   rather than being lost against it */
+.oc-node:focus-visible,
+.oc-kid:focus-visible {
+	outline: none;
+	box-shadow: var(--g-shadow-focus-ring);
+}
 .oc-team-away {
 	margin: 12px 0 0;
 }
@@ -846,8 +882,8 @@ button.oc-node:active,
 	min-height: 28px;
 	padding: 0 10px;
 	border-radius: 14px;
-	font-size: 0.75rem;
-	line-height: 1rem;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
 	font-weight: 600;
 	white-space: nowrap;
 	background: var(--g-icon-bg);
@@ -864,21 +900,12 @@ button.oc-node:active,
 	border-radius: 50%;
 	background: var(--g-leave);
 }
-.oc-chip--sm {
-	min-height: 22px;
-	padding: 0 8px;
-	font-size: 0.6875rem;
-}
-.oc-chip--sm.oc-chip--away::before {
-	width: 5px;
-	height: 5px;
-}
 
 .oc-sk-box {
-	max-width: 320px;
+	max-width: 300px;
 }
 .oc-sk-focus {
-	max-width: 360px;
+	max-width: 340px;
 }
 
 .oc-gap-h {
