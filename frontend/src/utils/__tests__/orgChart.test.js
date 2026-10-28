@@ -102,7 +102,7 @@ test("chainRows with empty chain", () => {
 	assert.deepEqual(result, [])
 })
 
-const fmt = (s, a = []) => a.reduce((acc, v) => acc.replace("%s", v), s)
+const fmt = (s, a = []) => a.reduce((acc, v, i) => acc.replace(`{${i}}`, v), s)
 
 test("gapsMessage names the company and both counts", () => {
 	assert.equal(

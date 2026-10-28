@@ -60,13 +60,13 @@ export function gapsMessage(__, company, noManager, leftManager) {
 	if (noManager > 0) {
 		parts.push(
 			noManager === 1
-				? __("%s person has no manager set", [noManager])
-				: __("%s people have no manager set", [noManager])
+				? __("{0} person has no manager set", [noManager])
+				: __("{0} people have no manager set", [noManager])
 		)
 	}
-	if (leftManager > 0) parts.push(__("%s report to someone who has left", [leftManager]))
+	if (leftManager > 0) parts.push(__("{0} report to someone who has left", [leftManager]))
 	const body = parts.join(" · ")
-	return company ? __("In %s: %s", [company, body]) : body
+	return company ? __("In {0}: {1}", [company, body]) : body
 }
 
 /** Designation and company for a gap row, skipping blanks. */

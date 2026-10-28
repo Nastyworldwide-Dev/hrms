@@ -58,7 +58,7 @@ test("You button is hidden, not disabled, when already on yourself", () => {
 })
 
 test("HR gap links say who they fix, and expanders declare what they control", () => {
-	assert.match(template(), /__\('Fix %s in Desk', \[item\.name\]\)/)
+	assert.match(template(), /__\('Fix \{0\} in Desk', \[item\.name\]\)/)
 	assert.match(template(), /aria-controls="oc-gaps-detail"/)
 	assert.match(template(), /aria-controls="oc-team-list"/)
 	assert.match(template(), /aria-controls="oc-peers-list"/)
@@ -66,7 +66,7 @@ test("HR gap links say who they fix, and expanders declare what they control", (
 
 test("Team section is always shown with an empty line", () => {
 	assert.doesNotMatch(template(), /v-if="teamDisplay\.all\.length > 0"/)
-	assert.match(template(), /No one reports to %s\./)
+	assert.match(template(), /No one reports to \{0\}\./)
 	assert.match(template(), /<h2 class="oc-focus-card__name"/)
 	assert.match(template(), /:size="64"/)
 })

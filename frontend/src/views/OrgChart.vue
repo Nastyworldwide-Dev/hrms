@@ -70,7 +70,7 @@
 							<Search class="w-12 h-12 text-ink-3" />
 							<h2 class="g-empty__title">{{ __("No one found") }}</h2>
 							<p class="g-empty__body">
-								{{ __('Nobody called "%s" in this view.', [searchQuery.trim()]) }}
+								{{ __('Nobody called "{0}" in this view.', [searchQuery.trim()]) }}
 							</p>
 						</div>
 					</template>
@@ -108,7 +108,7 @@
 												:href="desktopLink(item.id)"
 												target="_self"
 												class="oc-link"
-												:aria-label="__('Fix %s in Desk', [item.name])"
+												:aria-label="__('Fix {0} in Desk', [item.name])"
 											>
 												{{ __("Fix in Desk") }}
 											</a>
@@ -162,7 +162,7 @@
 									__("Away today")
 								}}</span>
 								<span class="oc-chip">
-									{{ person.team_size ? __("Team of %s", [person.team_size]) : __("No team") }}
+									{{ person.team_size ? __("Team of {0}", [person.team_size]) : __("No team") }}
 								</span>
 							</div>
 						</section>
@@ -179,13 +179,13 @@
 							<div class="oc-sec__head">
 								<h2 class="oc-sec__title">{{ __("Team") }} · {{ teamDisplay.all.length }}</h2>
 								<span v-if="teamAwayCount > 0" class="oc-sec__aside">
-									{{ __("%s away today", [teamAwayCount]) }}
+									{{ __("{0} away today", [teamAwayCount]) }}
 								</span>
 							</div>
 							<div id="oc-team-list" class="g-form-group">
 								<div v-if="!teamDisplay.all.length" class="g-row">
 									<span class="g-row__sub oc-wrap">
-										{{ __("No one reports to %s.", [person.name]) }}
+										{{ __("No one reports to {0}.", [person.name]) }}
 									</span>
 								</div>
 								<button
@@ -215,7 +215,7 @@
 											{{
 												teamExpanded
 													? __("Show fewer")
-													: __("See all %s", [teamDisplay.all.length])
+													: __("See all {0}", [teamDisplay.all.length])
 											}}
 										</span>
 									</span>
@@ -319,6 +319,7 @@ const isHR = computed(() => nodeData.data?.gaps !== undefined)
 // Load the org chart node data (params are not reactive in frappe-ui: refetch on focus change)
 const nodeData = createResource({
 	url: "hrms.api.org_chart.get_node",
+	method: "GET",
 })
 watch(focusedId, (id) => nodeData.submit(id ? { employee: id } : {}), { immediate: true })
 
