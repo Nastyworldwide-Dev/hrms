@@ -233,17 +233,23 @@ class TestChainUp(unittest.TestCase):
 		result = _get_node(employee="EMP-1", is_hr=False, employees=employees)
 		chain = result["chain_up"]
 		self.assertEqual(len(chain), 1)
-		self.assertEqual(chain[0], {"left": True, "name": "MISSING"})
+		self.assertEqual(chain[0], {"left": True})
+
+	def test_hr_left_stub_keeps_the_id(self):
+		"""Spec change from review: staff get {left} only; HR keeps the manager id."""
+		employees = [_employee("EMP-1", "Ali", reports_to="MISSING")]
+		result = _get_node(employee="EMP-1", is_hr=True, employees=employees)
+		self.assertEqual(result["chain_up"], [{"left": True, "name": "MISSING"}])
 
 	def test_chain_up_stops_at_left_manager(self):
-		"""A manager with status != Active ends the chain with {left, name} only."""
+		"""A Left manager ends the chain; staff get {left} only (spec change from review: no id)."""
 		employees = [
 			_employee("EMP-1", "Ali", reports_to="EMP-2"),
 			{**_employee("EMP-2", "Bob", reports_to="EMP-3"), "status": "Left"},
 			_employee("EMP-3", "Cy", reports_to=None),
 		]
 		result = _get_node(employee="EMP-1", is_hr=False, employees=employees)
-		self.assertEqual(result["chain_up"], [{"left": True, "name": "EMP-2"}])
+		self.assertEqual(result["chain_up"], [{"left": True}])
 
 	def test_chain_up_max_12_steps(self):
 		"""chain_up stops after 12 steps."""
@@ -569,6 +575,7 @@ class TestPhoto(unittest.TestCase):
 			),
 			patch.object(org_chart, "require_employee", return_value="EMP-1"),
 			patch.object(org_chart, "sees_all_employee_data", return_value=False),
+			patch.object(frappe, "has_permission", return_value=False, create=True),
 		):
 			with self.assertRaises(frappe.DoesNotExistError):
 				org_chart.photo("EMP-2")
@@ -586,6 +593,7 @@ class TestPhoto(unittest.TestCase):
 			),
 			patch.object(org_chart, "require_employee", return_value="EMP-1"),
 			patch.object(org_chart, "sees_all_employee_data", return_value=False),
+			patch.object(frappe, "has_permission", return_value=False, create=True),
 			patch.object(frappe, "get_attr", get_attr),
 		):
 			with self.assertRaises(frappe.DoesNotExistError):
@@ -601,6 +609,7 @@ class TestPhoto(unittest.TestCase):
 			patch.object(frappe, "get_all", return_value=rows),
 			patch.object(org_chart, "require_employee", return_value="EMP-1"),
 			patch.object(org_chart, "sees_all_employee_data", return_value=False),
+			patch.object(frappe, "has_permission", return_value=False, create=True),
 			patch.object(frappe, "get_attr", return_value=lambda: client),
 			patch.object(frappe, "local", local),
 			patch.object(frappe.db, "exists", return_value=True),
@@ -609,6 +618,64 @@ class TestPhoto(unittest.TestCase):
 		client.get_url.assert_called_once_with("photos/EMP-1.jpg", "a.jpg")
 		self.assertEqual(local.response.type, "redirect")
 		self.assertEqual(local.response.location, "https://s3/signed")
+
+	def _photo_call(self, rows, desk_read, my_employee="EMP-1", employee="EMP-1", file_owned=True):
+		client = MagicMock()
+		client.get_url.return_value = "https://s3/signed"
+		local = MagicMock()
+		req = (
+			MagicMock(side_effect=lambda: my_employee)
+			if my_employee
+			else MagicMock(side_effect=frappe.PermissionError("no employee"))
+		)
+		with (
+			patch.object(frappe, "get_all", return_value=rows) as get_all,
+			patch.object(org_chart, "require_employee", req),
+			patch.object(org_chart, "sees_all_employee_data", return_value=False),
+			patch.object(frappe, "has_permission", return_value=desk_read, create=True),
+			patch.object(frappe, "get_attr", return_value=lambda: client),
+			patch.object(frappe, "local", local),
+			patch.object(frappe.db, "exists", return_value=file_owned),
+			patch.object(frappe, "throw", side_effect=_raise),
+		):
+			try:
+				org_chart.photo(employee)
+			finally:
+				self.last = (client, local, get_all, req)
+
+	def test_desk_reader_without_employee_row_is_served(self):
+		"""System Manager with no Employee but Desk read: served, require_employee never called."""
+		rows = [{"name": "EMP-2", "company": "Company B", "image": S3_IMAGE}]
+		self._photo_call(rows, desk_read=True, my_employee=None, employee="EMP-2")
+		client, _local, _ga, req = self.last
+		client.get_url.assert_called_once_with("photos/EMP-1.jpg", "a.jpg")
+		req.assert_not_called()
+
+	def test_left_employee_photo_served_to_desk_reader_and_not_filtered_active(self):
+		rows = [{"name": "EMP-2", "company": "Company B", "image": S3_IMAGE}]
+		self._photo_call(rows, desk_read=True, employee="EMP-2")
+		_c, local, get_all, _r = self.last
+		self.assertEqual(local.response.type, "redirect")
+		self.assertNotIn("status", get_all.call_args.kwargs["filters"])
+
+	def test_staff_without_desk_read_other_company_not_found_and_unsigned(self):
+		rows = [{"name": "EMP-2", "company": "Company B", "image": S3_IMAGE}]
+
+		def rows_for(dt, filters=None, **kw):
+			return rows if filters.get("name") == "EMP-2" else [{"company": "Company A"}]
+
+		client = MagicMock()
+		with (
+			patch.object(frappe, "get_all", side_effect=rows_for),
+			patch.object(org_chart, "require_employee", return_value="EMP-1"),
+			patch.object(org_chart, "sees_all_employee_data", return_value=False),
+			patch.object(frappe, "has_permission", return_value=False, create=True),
+			patch.object(frappe, "get_attr", return_value=lambda: client),
+			patch.object(frappe, "throw", side_effect=_raise),
+		):
+			with self.assertRaises(frappe.DoesNotExistError):
+				org_chart.photo("EMP-2")
+		client.get_url.assert_not_called()
 
 	def test_image_no_file_owns_is_not_served_or_signed(self):
 		"""Employee.image pointing at a key no File of that employee owns is refused."""

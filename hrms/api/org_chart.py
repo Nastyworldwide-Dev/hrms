@@ -83,7 +83,7 @@ def get_node(employee: str | None = None, company: str | None = None) -> dict:
 		seen.add(current)
 		manager = _active(name=current)
 		if not manager:
-			chain.append({"left": True, "name": current})
+			chain.append({"left": True, "name": current} if is_hr else {"left": True})
 			break
 		if my_company_only and manager[0].get("company") != target_company:
 			break
@@ -157,19 +157,21 @@ def get_node(employee: str | None = None, company: str | None = None) -> dict:
 
 @frappe.whitelist(methods=["GET"])
 def photo(employee: str, v: str | None = None):
-	"""Serve an employee's photo. Same fence as get_node."""
-	my_employee = require_employee()
-	is_hr = sees_all_employee_data()
+	"""Serve an employee's photo (User.user_image points here).
 
+	Anyone Desk lets read the Employee is served (HR, System Manager, no Employee
+	row needed, Left employees too); everyone else gets the staff company fence.
+	"""
 	rows = frappe.get_all(
 		"Employee",
-		filters={"name": employee, "status": "Active"},
+		filters={"name": employee},
 		fields=["name", "company", "image"],
 		limit=1,
 	)
 	if not rows:
 		frappe.throw(_("Employee not found."), frappe.DoesNotExistError)
-	_fence(rows[0].get("company"), is_hr, my_employee)
+	if not frappe.has_permission("Employee", "read", doc=employee):
+		_fence(rows[0].get("company"), sees_all_employee_data(), require_employee())
 
 	image = rows[0].get("image")
 	if not image:

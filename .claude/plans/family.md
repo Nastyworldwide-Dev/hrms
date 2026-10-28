@@ -1,5 +1,5 @@
-CLASS: a staff photo reachable without the org chart's company fence
-hrms/api/profile_photo.py set_photo same-root — User.user_image now holds the fenced url, not the raw S3 key
-hrms/api/org_chart.py photo same-root — signs only a url a File of that employee owns
-hrms/api/org_chart.py get_node same-root — other company reads as not found; team_size scoped
-hrms/patches/v16_0/repair_public_selfies.py:50 not-affected — a log line mentioning 'photo'; the patch never calls set_photo/photo/photo_url
+CLASS: a fenced photo url that refuses viewers the fence never considered (no Employee row, Left employee)
+hrms/api/org_chart.py photo same-root — Desk read permission on that Employee serves it first
+hrms/api/org_chart.py get_node same-root — staff no longer see a Left manager's id in the chain stub
+hrms/hr/doctype/daily_work_summary/daily_work_summary.py:70 not-affected — reads user[0].image, a key the query never selects, so the email never showed avatars
+hrms/patches/v16_0/repair_public_selfies.py:50 not-affected — a log line mentioning 'photo'; the patch never calls get_node/photo
