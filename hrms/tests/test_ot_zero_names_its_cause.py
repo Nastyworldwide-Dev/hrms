@@ -57,6 +57,14 @@ class TestTheZeroNamesItsCause(unittest.TestCase):
 	def test_no_punches_at_all_says_so(self):
 		self.assertIn("No check-ins", self._explain([]))
 
+	def test_a_day_on_approved_leave_says_the_leave_not_missing_check_ins(self):
+		"""Owner, 27 Oct 2026: the app must use what it knows. A claim for a day
+		the person was on approved leave is told so before Send, not "No check-ins"."""
+		with patch("hrms.utils.leave_day.full_day_leave", return_value="Annual Leave"):
+			said = self._explain([])
+		self.assertIn("Annual Leave", said)
+		self.assertNotIn("No check-ins", said)
+
 	def test_punches_with_no_shift_point_at_the_assignment(self):
 		"""The single biggest silent-zero source: a punch with no shift makes OT
 		evaluate to nothing, and it is HR's to fix, not the employee's."""

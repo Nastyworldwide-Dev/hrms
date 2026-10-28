@@ -1030,6 +1030,15 @@ def _explain_no_overtime(employee, day) -> str:
 		order_by="time asc",
 	)
 	mine, _elsewhere = taps_for_day(rows, day)
+	if not mine:
+		# No taps on an approved-leave day: the leave is the cause, not a missing check-in.
+		from hrms.utils.leave_day import full_day_leave
+
+		leave_type = full_day_leave(employee, day)
+		if leave_type:
+			return _("You were on approved {0} this day, so there is no overtime to claim.").format(
+				_(leave_type)
+			)
 	return explain_no_overtime_rows([frappe._dict(row) for row in mine])[1]
 
 
