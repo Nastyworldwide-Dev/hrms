@@ -76,3 +76,20 @@ test("no scoped copy of shared glass classes, no undefined tokens", () => {
 	assert.doesNotMatch(style, /^\.g-/m)
 	assert.doesNotMatch(style, /--g-warn-bg|--g-leave-bg|--g-leave-dot|cubic-bezier/)
 })
+
+test("gap group title says 'Manager has left' with proper styling", () => {
+	const source = src()
+	assert.match(source, /__\("Manager has left"\)/, "should say 'Manager has left'")
+	// Check .oc-gap-h styling
+	const style = source.slice(source.indexOf("<style scoped>"))
+	assert.match(style, /\.oc-gap-h\s*{[\s\S]*?font-size:\s*0\.75rem/)
+	assert.match(style, /\.oc-gap-h\s*{[\s\S]*?font-weight:\s*600/)
+})
+
+test("Fix in Desk link has ExternalLink icon", () => {
+	const template = src().slice(0, src().indexOf("<script setup>"))
+	assert.match(template, /ExternalLink/, "should use ExternalLink icon")
+	assert.match(template, /class="w-3\.5 h-3\.5"/, "icon should be 3.5 size")
+	assert.match(template, /aria-hidden="true"/, "icon should be aria-hidden")
+	assert.match(template, /__\('Fix \{0\} in Desk', \[item\.name\]\)/, "link text should say 'Fix in Desk'")
+})

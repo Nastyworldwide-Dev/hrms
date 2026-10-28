@@ -79,3 +79,8 @@ test("action rows carry icons; company footer", () => {
 	assert.match(profile, /icon: Trash,/)
 	assert.match(profile, /Your photo is seen by people in/)
 })
+
+test("the crop stage re-clamps when its size changes", () => {
+	assert.match(sheet, /new ResizeObserver\(/)
+	assert.match(sheet, /\.disconnect\(\)/)
+})

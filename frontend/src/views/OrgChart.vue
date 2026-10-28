@@ -111,6 +111,7 @@
 												:aria-label="__('Fix {0} in Desk', [item.name])"
 											>
 												{{ __("Fix in Desk") }}
+												<ExternalLink class="w-3.5 h-3.5" aria-hidden="true" />
 											</a>
 										</div>
 									</template>
@@ -265,6 +266,7 @@
 import {
 	TriangleAlert,
 	ChevronDown,
+	ExternalLink,
 	LocateFixed,
 	Network,
 	Search,
@@ -377,7 +379,7 @@ const gapGroups = computed(() => {
 	const g = nodeData.data?.gaps || {}
 	return [
 		{ key: "none", title: __("No manager set"), rows: g.no_manager || [] },
-		{ key: "left", title: __("Manager left"), rows: g.left_manager || [] },
+		{ key: "left", title: __("Manager has left"), rows: g.left_manager || [] },
 	]
 })
 
@@ -623,7 +625,8 @@ function desktopLink(id) {
 
 .oc-gap-h {
 	padding: 12px 16px 4px;
-	font-size: 0.8125rem;
+	font-size: 0.75rem;
+	font-weight: 600;
 	line-height: 1.125rem;
 	color: var(--g-ink2);
 }

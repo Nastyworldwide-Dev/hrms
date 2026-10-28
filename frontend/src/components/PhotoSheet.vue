@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { ref, watch, inject } from "vue"
+import { ref, watch, inject, onMounted, onBeforeUnmount } from "vue"
 import { Minus, Plus } from "lucide-vue-next"
 import GModal from "@/components/glass/GModal.vue"
 import GButton from "@/components/glass/GButton.vue"
@@ -211,6 +211,21 @@ function moveBy(dx, dy) {
 
 	drawCrop()
 }
+
+// The stage shrinks with the column (rotation, window resize): re-clamp and redraw.
+// The modal content mounts after this component, so follow the ref, not onMounted alone.
+let stageObserver = null
+onMounted(() => {
+	if (typeof ResizeObserver === "undefined") return
+	stageObserver = new ResizeObserver(() => moveBy(0, 0))
+	if (stageEl.value) stageObserver.observe(stageEl.value)
+})
+watch(stageEl, (el, old) => {
+	if (!stageObserver) return
+	if (old) stageObserver.unobserve(old)
+	if (el) stageObserver.observe(el)
+})
+onBeforeUnmount(() => stageObserver?.disconnect())
 
 // Pointer drag support
 const pointers = new Map()
