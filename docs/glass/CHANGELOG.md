@@ -10,6 +10,25 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.69] — Who Reports to Whom — 2026-10-28
+
+### Changed
+- **The Organizational Chart reads like a flow chart.** Boxes joined by
+  lines: higher managers fold into "N more above", then the direct
+  manager, then the person, then their team two to a row (4, then See
+  all). Every box is outlined, black in light and lime in dark. Everyone
+  has a two-letter badge (MH, not M), a black circle with a lime ring.
+  No team is one dashed "No team yet" box, said once.
+- **Cost Tag/Center on Employee is a Cost Center**, not a Territory: every
+  company's cost centers except each company's default "Main". Old rows
+  that matched by name ("Malaysia" → MALAYSIA) were moved over; the rest
+  keep their old tag in an "Old Cost Tag/Center" column and still count.
+  HR limited to one company still sees every company's cost centers.
+
+### Fixed
+- The ring on a person's photo, screen readers on the team boxes, keyboard
+  focus on the chart and faint connector lines (from the reviews).
+
 ## [2.0.0-alpha.68] — Clear Requests — 2026-10-28
 
 ### Changed
