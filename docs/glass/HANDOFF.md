@@ -1,13 +1,14 @@
 # HANDOFF
-prompt:   Cost Tag/Center lists Cost Centers, not Territories (owner, 28 Oct 2026)
+prompt:   Organizational Chart as a flow chart + Cost Tag/Center hides "Main" (owner, 28 Oct 2026)
 status:   done
-commit:   329b0ed83 on nz-glass (feature ee3c86df2)
-files:    hrms/hr/doctype/employee_interco_allocation/employee_interco_allocation.json
-hrms/patches/v16_0/link_cost_allocation_cost_center.py
-hrms/overrides/employee_interco_allocation.py
-hrms/payroll/report/intercompany_salary_cost_allocation/intercompany_salary_cost_allocation.py
+commit:   0c2864947 on nz-glass
+files:    frontend/src/views/OrgChart.vue
+frontend/src/components/glass/GAvatar.vue
+frontend/src/utils/avatar.js
+frontend/src/utils/orgChart.js
+frontend/src/theme/glass-components.css
+design/tokens.json
 hrms/public/js/erpnext/employee.js
-hrms/tests/test_link_cost_allocation_cost_center_patch.py
-verify:   deploy + bench migrate; Employee -> Cost Tag/Center Allocation -> dropdown lists Main, CEOF, PFME...
-flags:    not run on a bench (no local site has hrms); unmatched old rows keep Territory by design
-next:     owner checks on staging; org chart resumes from ~/org-chart-paused/README.md
+verify:   deploy (no migrate); More -> Organizational Chart in light + dark; Employee -> Cost Tag/Center dropdown has no "Main"
+flags:    not seen in a browser (no local site has hrms); avatar letters MH rule and lime ring decided by owner
+next:     owner checks on phone; optional: "(Territory)" field description patch, hide Old Cost Tag/Center on new rows
