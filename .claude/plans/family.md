@@ -1,2 +1,2 @@
-CLASS: a mirrored field the hub now owns being overwritten by a manual re-pull
-hrms/sync/runner.py LOCALLY_OWNED_FIELDS same-root — Employee gains "image"
+CLASS: new endpoint — staff set their own profile photo (no existing callers)
+hrms/api/profile_photo.py set_photo same-root — new
