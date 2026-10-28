@@ -10,6 +10,29 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.68] — Clear Requests — 2026-10-28
+
+### Changed
+- **Manpower request, one name and one set of words.** More, Requests,
+  the form, the list and HR's board all say "Manpower request". A
+  request is Waiting for manager, Needs HR, Recruiting, Filled or
+  Closed — and a closed one says why (withdrawn, rejected, not
+  proceeding).
+- **The request form is calmer.** One kind of picker for one kind of
+  choice; the pay band lists what each band means (E1 — Senior
+  Executive); salaries show RM with thousands; a blocked step says why
+  once, under the field; "If other" appears only for Other; a big
+  department can search for who is being replaced.
+- **The list, the request page and HR's board** look like the rest of
+  the app: icon tiles, status chips, one fact per row, the position as
+  the board row's title with who asked under it.
+
+### Fixed
+- **Typing a salary with cents** (2500.05) no longer turns it into 25005.
+- **Turning the phone while cropping a photo** re-fits the preview.
+- The org chart says "Manager has left", and Fix in Desk shows it opens
+  Desk.
+
 ## [2.0.0-alpha.67] — Faces and Lines — 2026-10-28
 
 ### Added
