@@ -308,7 +308,7 @@ const EMPTY_COPY = {
 		body: __("Worked a rest day? Claim the time back."),
 	},
 	"Manpower Request": {
-		title: __("No staff requests yet"),
+		title: __("No manpower requests yet"),
 		body: __("Need more people? Ask for new or replacement staff."),
 	},
 }

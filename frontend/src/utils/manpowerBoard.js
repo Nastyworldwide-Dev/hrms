@@ -1,6 +1,5 @@
 import dayjs from "dayjs"
 
-import { departmentLabel } from "./departmentLabel.js"
 import { STAGES, stage } from "./manpowerRequest.js"
 
 // HR's manpower board in Nadi (S4, 22 Oct 2026): the rules the board and the Hiring section share, kept
@@ -114,32 +113,48 @@ export function rowChip(row, t = plain) {
 	return { label: t(label), status }
 }
 
-/**
- * A row's second line: "High urgency · Ops · 9 days waiting", or "... · Closed 12 Oct" once finished.
- * A request waiting on HR past OVER_DAYS says so in words as well as in the tile.
- */
-/** "Driver ×3 · Hafiz Rahman": the position, the count when more than one, and who asked, in full. */
+/** "Driver ×3": the position and the count when more than one (the requester goes on the sub line). */
 export function rowTitle(row) {
 	const count = Number(row.headcount) > 1 ? ` ×${row.headcount}` : ""
-	const who = (row.employee_name || "").trim()
-	return `${row.position_title}${count}${who ? ` · ${who}` : ""}`
+	return `${row.position_title}${count}`
 }
 
-export function rowLine(row, { dept = departmentLabel, t = plain } = {}) {
+/**
+ * A board row's second line: "Hafiz Rahman · High urgency · 9 days waiting", or "... · Closed 12 Oct"
+ * once finished. A request waiting on HR past OVER_DAYS says so in words as well as in the tile.
+ */
+export function rowLine(row, { t = plain } = {}) {
 	const days = Number(row.days_open) || 0
-	let age = ""
-	if (row.group === "done") {
-		age = row.closed_on ? t("Closed {0}", [dayjs(row.closed_on).format("D MMM")]) : ""
-	} else {
-		age = t(days === 1 ? "{0} day waiting" : "{0} days waiting", [days])
-		if (row.group === "needs_hr" && days > OVER_DAYS)
-			age += ` · ${t("over {0} days", [OVER_DAYS])}`
-	}
-	return [
-		row.urgency ? t("{0} urgency", [t(row.urgency)]) : "",
-		row.department ? dept(row.department) : "",
-		age,
-	]
+	const age =
+		row.group === "done"
+			? row.closed_on
+				? t("Closed {0}", [dayjs(row.closed_on).format("D MMM")])
+				: ""
+			: t(days === 1 ? "{0} day waiting" : "{0} days waiting", [days]) +
+			  (row.group === "needs_hr" && days > OVER_DAYS
+					? ` · ${t("over {0} days", [OVER_DAYS])}`
+					: "")
+	return [row.employee_name || "", row.urgency ? t("{0} urgency", [t(row.urgency)]) : "", age]
 		.filter(Boolean)
 		.join(" · ")
+}
+
+/**
+ * The My-requests list row's sub line: "Sent 22 Oct · 5 days waiting", or "Sent 22 Oct · Withdrawn"
+ * once Closed (the reason, so the row says why). Filled has nothing left to wait for.
+ * `ownWaitingLine`: the row renders the waiting words as its own line, so the sub line drops the days tail.
+ */
+export function listSubline(doc, { t = plain, now = dayjs(), ownWaitingLine = false } = {}) {
+	const { label, reason } = stage(doc)
+	const sent = doc.creation ? dayjs(doc.creation) : null
+	let tail = ""
+	if (reason) {
+		tail = t(reason)
+	} else if (label !== STAGES.filled.label && sent) {
+		if (!ownWaitingLine) {
+			const days = Math.max(0, now.startOf("day").diff(sent.startOf("day"), "day"))
+			tail = t(days === 1 ? "{0} day waiting" : "{0} days waiting", [days])
+		}
+	}
+	return [sent ? t("Sent {0}", [sent.format("D MMM")]) : "", tail].filter(Boolean).join(" · ")
 }

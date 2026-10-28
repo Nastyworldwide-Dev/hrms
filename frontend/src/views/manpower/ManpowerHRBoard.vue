@@ -34,7 +34,7 @@
 						v-model="search"
 						class="flex-1"
 						:placeholder="__('Search')"
-						:label="__('Search staff requests')"
+						:label="__('Search manpower requests')"
 					/>
 					<GSelect
 						:options="departmentOptions"
@@ -45,17 +45,20 @@
 					/>
 				</div>
 
-				<ResourceError :resource="board" :what="__('the staff requests')" />
+				<ResourceError :resource="board" :what="__('the manpower requests')" />
 
 				<template v-if="board.data">
 					<section v-for="group in groups" :key="group.key" class="flex flex-col gap-2">
-						<h2 class="g-eyebrow">{{ __(group.title) }} · {{ group.count }}</h2>
+						<h2 class="g-eyebrow flex items-center gap-2">
+							{{ __(group.title) }}
+							<GBadge variant="neutral">{{ group.count }}</GBadge>
+						</h2>
 						<GListPanel>
 							<GListRow
 								v-for="row in group.shown"
 								:key="row.name"
 								:label="rowTitle(row)"
-								:sublabel="rowLine(row, { dept: departmentLabel, t: __ })"
+								:sublabel="rowLine(row, { t: __ })"
 								:tint="TILE.sop"
 								@click="open(row)"
 							>
@@ -74,7 +77,7 @@
 
 					<GEmptyState
 						v-if="!groups.length"
-						:title="filtered ? __('Nothing matches') : __('No staff requests yet')"
+						:title="filtered ? __('Nothing matches') : __('No manpower requests yet')"
 						:body="
 							filtered
 								? __('Try a different search or clear the filters.')
@@ -89,11 +92,7 @@
 				<GListPanel v-else-if="board.loading" loading :rows="4" />
 
 				<p class="g-form-footer">
-					{{
-						__(
-							"HR sees every request from the moment it is sent. HR can act on it after the manager approves."
-						)
-					}}
+					{{ __("HR can act once the manager approves.") }}
 				</p>
 			</div>
 		</template>
@@ -108,6 +107,7 @@ import { useRouter } from "vue-router"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import ResourceError from "@/components/ResourceError.vue"
+import GBadge from "@/components/glass/GBadge.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
@@ -160,10 +160,10 @@ async function refresh(event) {
 const counts = computed(() => board.data?.counts || {})
 const hot = computed(() => needsHrState(counts.value, __))
 const tiles = computed(() => [
-	{ key: "w", label: __("Waiting for manager"), value: counts.value.waiting_manager ?? 0 },
+	{ key: "w", label: __("With manager"), value: counts.value.waiting_manager ?? 0 },
 	{ key: "n", label: __("Needs HR"), value: counts.value.needs_hr ?? 0, hot: hot.value.over },
 	{ key: "r", label: __("Recruiting"), value: counts.value.recruiting ?? 0 },
-	{ key: "f", label: __("Filled this month"), value: counts.value.filled_this_month ?? 0 },
+	{ key: "f", label: __("Filled"), value: counts.value.filled_this_month ?? 0 },
 ])
 
 const groups = computed(() => groupRows(board.data?.rows, opened.value))

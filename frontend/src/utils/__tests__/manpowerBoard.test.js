@@ -4,6 +4,7 @@
 // and the approved mockup (tabs 6 and 7), not from the code under test.
 // Run: cd frontend && node --experimental-test-module-mocks --test src/utils/__tests__/manpowerBoard.test.js
 import { STAGE_LABELS } from "../manpowerRequest.js"
+import dayjs from "dayjs"
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
@@ -21,6 +22,7 @@ import {
 	rowChip,
 	rowLine,
 	rowTitle,
+	listSubline,
 } from "../manpowerBoard.js"
 
 const row = (name, group, extra = {}) => ({ name, group, position_title: name, ...extra })
@@ -233,20 +235,30 @@ test("each row's chip says where it stands in the owner's words, with a status k
 	])
 })
 
-test("a live row reads 'High urgency · Ops · 9 days waiting'; a closed one says when it closed", () => {
-	const dept = (d) => d.split(" - ")[0]
+test("a live row reads 'requester · urgency · days waiting'; a closed one says when it closed", () => {
 	assert.equal(
 		rowLine(
-			row("A", "waiting_manager", { urgency: "High", department: "Ops - NW", days_open: 9 }),
-			{ dept }
+			row("A", "waiting_manager", {
+				urgency: "High",
+				department: "Ops - NW",
+				days_open: 9,
+				employee_name: "W0 manager",
+			}),
+			{}
 		),
-		"High urgency · Ops · 9 days waiting"
+		"W0 manager · High urgency · 9 days waiting"
 	)
 	assert.equal(
-		rowLine(row("A", "needs_hr", { urgency: "Low", department: "Ops - NW", days_open: 1 }), {
-			dept,
-		}),
-		"Low urgency · Ops · 1 day waiting"
+		rowLine(
+			row("A", "needs_hr", {
+				urgency: "Low",
+				department: "Ops - NW",
+				days_open: 1,
+				employee_name: "Hafiz Rahman",
+			}),
+			{}
+		),
+		"Hafiz Rahman · Low urgency · 1 day waiting"
 	)
 	assert.equal(
 		rowLine(
@@ -255,10 +267,11 @@ test("a live row reads 'High urgency · Ops · 9 days waiting'; a closed one say
 				department: "Ops - NW",
 				days_open: 28,
 				closed_on: "2026-10-12",
+				employee_name: "Jane Doe",
 			}),
-			{ dept }
+			{}
 		),
-		"Medium urgency · Ops · Closed 12 Oct"
+		"Jane Doe · Medium urgency · Closed 12 Oct"
 	)
 })
 
@@ -291,16 +304,61 @@ test("the words go through the translator the page passes in, with the approver'
 	assert.equal(needsHrState({ needs_hr_over_30: 2 }, t).word, "«2 over 30 days»")
 })
 
-test("a board row names the sender in full, the count only when more than one", () => {
-	// S4 browser check (22 Oct): "Store Supervisor · W0" kept only the first word of "W0 manager",
-	// the same slip S3 fixed on the detail page
+test("a board row title is the position and count only; the requester goes on the sub line", () => {
+	// M4 spec: row title = position only, requester · urgency · days on the sub line (audit row 47)
 	assert.equal(
 		rowTitle({ position_title: "Store Supervisor", headcount: 1, employee_name: "W0 manager" }),
-		"Store Supervisor · W0 manager"
+		"Store Supervisor"
 	)
 	assert.equal(
 		rowTitle({ position_title: "Driver", headcount: 3, employee_name: "Hafiz Rahman" }),
-		"Driver ×3 · Hafiz Rahman"
+		"Driver ×3"
 	)
 	assert.equal(rowTitle({ position_title: "Cook", headcount: 1 }), "Cook")
+})
+
+test("the board row title is the position only; the requester is on the sub line", () => {
+	assert.equal(
+		rowTitle({ position_title: "Driver", headcount: 3, employee_name: "Hafiz" }),
+		"Driver ×3"
+	)
+	assert.equal(rowTitle({ position_title: "Cook", headcount: 1, employee_name: "Hafiz" }), "Cook")
+})
+
+test("list sub line: 'Sent 22 Oct · 5 days waiting' on one line", () => {
+	const now = dayjs("2026-10-27T10:00:00")
+	const open = { status: "Open", creation: "2026-10-22 09:00:00" }
+	assert.equal(listSubline(open, { now }), "Sent 22 Oct · 5 days waiting")
+	assert.equal(
+		listSubline({ ...open, creation: "2026-10-26 09:00:00" }, { now }),
+		"Sent 26 Oct · 1 day waiting"
+	)
+})
+
+test("list sub line: a Closed row shows the reason, a Filled one nothing to wait for", () => {
+	const now = dayjs("2026-10-27T10:00:00")
+	const creation = "2026-10-22 09:00:00"
+	assert.equal(listSubline({ status: "Withdrawn", creation }, { now }), "Sent 22 Oct · Withdrawn")
+	assert.equal(listSubline({ status: "Rejected", creation }, { now }), "Sent 22 Oct · Rejected")
+	assert.equal(
+		listSubline({ status: "Approved", hiring_status: "Not proceeding", creation }, { now }),
+		"Sent 22 Oct · Not proceeding"
+	)
+	assert.equal(
+		listSubline({ status: "Approved", hiring_status: "Filled", creation }, { now }),
+		"Sent 22 Oct"
+	)
+})
+
+test("list sub line: ownWaitingLine drops the days tail, keeps the Closed reason", () => {
+	const now = dayjs("2026-10-27T10:00:00")
+	const creation = "2026-10-22 09:00:00"
+	assert.equal(
+		listSubline({ status: "Open", creation }, { now, ownWaitingLine: true }),
+		"Sent 22 Oct"
+	)
+	assert.equal(
+		listSubline({ status: "Withdrawn", creation }, { now, ownWaitingLine: true }),
+		"Sent 22 Oct · Withdrawn"
+	)
 })

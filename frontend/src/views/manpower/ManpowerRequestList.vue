@@ -36,7 +36,7 @@ import GPage from "@/components/glass/GPage.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { MANPOWER_LIST_FIELDS } from "@/data/manpower"
 import { TILE } from "@/utils/iconTile"
-import { STEPS, readDraft } from "@/utils/manpowerRequest"
+import { STAGE_LABELS, STEPS, readDraft } from "@/utils/manpowerRequest"
 import { sessionUser } from "@/utils/personalCache"
 
 const __ = inject("$translate")
@@ -51,8 +51,8 @@ const FILTER_CONFIG = [
 		fieldtype: "Select",
 		label: __("Status"),
 		options: [
-			{ label: __("Waiting"), value: "Open" },
-			{ label: __("Approved"), value: "Approved" },
+			{ label: __(STAGE_LABELS[0]), value: "Open" },
+			{ label: __(STAGE_LABELS[1]), value: "Approved" },
 			{ label: __("Rejected"), value: "Rejected" },
 			{ label: __("Withdrawn"), value: "Withdrawn" },
 		],
@@ -61,7 +61,11 @@ const FILTER_CONFIG = [
 		fieldname: "urgency",
 		fieldtype: "Select",
 		label: __("Urgency"),
-		options: "\nHigh\nMedium\nLow",
+		options: [
+			{ label: __("High"), value: "High" },
+			{ label: __("Medium"), value: "Medium" },
+			{ label: __("Low"), value: "Low" },
+		],
 	},
 	{ fieldname: "department", fieldtype: "Link", label: __("Department"), options: "Department" },
 ]

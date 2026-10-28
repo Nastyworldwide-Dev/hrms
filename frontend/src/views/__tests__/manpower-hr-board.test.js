@@ -12,14 +12,14 @@ const detail = read("../manpower/ManpowerRequestDetail.vue")
 const more = read("../More.vue")
 const template = (src) => src.slice(0, src.indexOf("<script"))
 
-test("the board is one stat panel of four tiles, with the owner's four words", () => {
+test("the board is one stat panel of four tiles, with the owner's four short words", () => {
 	assert.match(board, /<GStatPanel[^>]*:columns="4"/)
 	assert.equal(
 		(template(board).match(/<GStatTile/g) || []).length,
 		1,
 		"tiles are drawn by one v-for"
 	)
-	for (const word of ["Waiting for manager", "Needs HR", "Recruiting", "Filled this month"])
+	for (const word of ["With manager", "Needs HR", "Recruiting", "Filled"])
 		assert.match(board, new RegExp(`__\\("${word}"\\)`))
 })
 
@@ -66,7 +66,7 @@ test("the detail page has a Hiring section for HR, saved through set_hiring_stat
 	assert.match(detail, /hiringSection\(/)
 	assert.match(detail, /hiringProblems\(/)
 	assert.match(detail, /HIRING_CHOICES/)
-	assert.match(detail, /<GSegmented/)
+	assert.match(detail, /<GListPanel/)
 	assert.match(detail, /<GTextarea/)
 })
 
