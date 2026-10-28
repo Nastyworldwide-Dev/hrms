@@ -89,13 +89,20 @@ class TestCostCenterColumn(unittest.TestCase):
 		self.assertEqual(cc.get("in_list_view"), 1)
 		self.assertLess(order.index("cost_center"), order.index("percentage"))
 
-	def test_the_old_territory_is_kept_hidden_from_the_grid_and_read_only(self):
+	def test_the_old_territory_shows_in_the_grid_read_only(self):
+		# an unmatched old row ("All Territories") must not look like a blank tag
 		_, fields = self._fields()
 		t = fields["territory"]
 		self.assertEqual((t["fieldtype"], t["options"]), ("Link", "Territory"))
-		self.assertFalse(t.get("in_list_view"))
+		self.assertEqual(t.get("in_list_view"), 1)
 		self.assertEqual(t.get("read_only"), 1)
 		self.assertFalse(t.get("reqd"))
+
+	def test_hr_limited_to_one_company_still_sees_every_cost_center(self):
+		# Cost Center has a company; Company user permissions would hide the
+		# other companies' cost centers and refuse them on save
+		_, fields = self._fields()
+		self.assertEqual(fields["cost_center"].get("ignore_user_permissions"), 1)
 
 	def test_the_employee_form_offers_only_enabled_leaf_cost_centers(self):
 		js = (ROOT / "public/js/erpnext/employee.js").read_text()
