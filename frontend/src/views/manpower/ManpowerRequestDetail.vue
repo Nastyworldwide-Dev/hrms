@@ -16,11 +16,21 @@
 						<ResourceError :resource="request" record back :what="__('this manpower request')" />
 
 						<template v-if="doc">
+							<div class="px-1">
+								<h1 class="text-2xl font-semibold">{{ doc.position_title }}</h1>
+								<p class="text-sm text-ink-600">
+									{{ __("Manpower request · {0}", [doc.name]) }}
+								</p>
+							</div>
 							<section class="g-form-section">
 								<div class="g-form-group">
 									<div class="g-form-row g-form-row--readonly">
 										<span class="g-form-row__label">{{ __("Status") }}</span>
 										<GStatusChip :status="where.status" :label="__(where.label)" />
+									</div>
+									<div v-if="where.reason" class="g-form-row g-form-row--readonly">
+										<span class="g-form-row__label">{{ __("Closed because") }}</span>
+										<span class="g-form-row__value">{{ __(where.reason) }}</span>
 									</div>
 									<div
 										v-for="row in summary"
@@ -68,7 +78,9 @@
 										:aria-expanded="showAnswers"
 										@click="showAnswers = !showAnswers"
 									>
-										<span class="g-form-row__label">{{ __("All answers") }}</span>
+										<span class="g-form-row__label">{{
+											__("All answers ({0})", [answers.length])
+										}}</span>
 										<ChevronDown
 											class="h-4 w-4 flex-none"
 											:class="showAnswers ? '' : '-rotate-90'"
@@ -100,11 +112,24 @@
 									<span>{{ hiringWhy }}</span>
 								</p>
 								<div :inert="hiring.locked || undefined" :class="{ 'mp-dim': hiring.locked }">
-									<GSegmented
-										v-model="choice"
-										:buttons="hiringButtons"
-										:label="__('Hiring status')"
-									/>
+									<GListPanel role="radiogroup" :aria-label="__('Hiring status')">
+										<GListRow
+											v-for="b in hiringButtons"
+											:key="b.key"
+											role="radio"
+											:aria-checked="choice === b.key"
+											:label="b.label"
+											:chevron="false"
+											@click="choice = b.key"
+										>
+											<template #badge
+												><Check
+													v-if="choice === b.key"
+													class="h-5 w-5 flex-none"
+													aria-hidden="true"
+											/></template>
+										</GListRow>
+									</GListPanel>
 									<div class="g-form-group mt-3">
 										<div class="g-form-row g-form-row--stacked">
 											<span class="g-form-row__label">
@@ -131,7 +156,7 @@
 										{{ hiringWhy }}
 									</p>
 									<GButton
-										class="mt-2"
+										class="mt-2 w-full"
 										:label="__('Save')"
 										:pending-label="__('Saving…')"
 										:pending="saving"
@@ -153,8 +178,17 @@
 
 							<!-- Withdraw: the sender only, while the server allows it -->
 							<section v-if="offerWithdraw" class="flex flex-col gap-2">
-								<GButton :label="__('Withdraw request')" danger @click="askWithdraw" />
-								<p class="g-form-footer text-center">{{ told }}</p>
+								<div class="g-form-group">
+									<button
+										type="button"
+										class="g-form-row g-form-row--action g-form-row--destructive"
+										aria-describedby="mp-told"
+										@click="askWithdraw"
+									>
+										{{ __("Withdraw request") }}
+									</button>
+								</div>
+								<p id="mp-told" class="g-form-footer">{{ told }}</p>
 							</section>
 						</template>
 						<GSkeleton v-else-if="request.loading" height="160px" />
@@ -176,7 +210,7 @@
 						<FormField
 							fieldtype="Small Text"
 							:label="__('Reason')"
-							:placeholder="__('Optional. For example: the role is covered now')"
+							:placeholder="__('Reason (optional)')"
 							v-model="reason"
 						/>
 					</div>
@@ -198,7 +232,8 @@ import ShellHeader from "@/components/ShellHeader.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import GPage from "@/components/glass/GPage.vue"
-import GSegmented from "@/components/glass/GSegmented.vue"
+import GListPanel from "@/components/glass/GListPanel.vue"
+import GListRow from "@/components/glass/GListRow.vue"
 import GSkeleton from "@/components/glass/GSkeleton.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import GTextarea from "@/components/glass/GTextarea.vue"
@@ -214,7 +249,9 @@ import { firstMessage } from "@/utils/loudRequest"
 import {
 	DOCTYPE,
 	canWithdraw,
-	detailKind,
+	bandLabel,
+	REQUEST_TYPES,
+	EMPLOYMENT_TYPES,
 	optimisticWithdrawn,
 	stage,
 	trackerRows,
@@ -247,16 +284,36 @@ const when = (at) => {
 	const time = siteTime(at)
 	return time.isValid() ? time.format("D MMM, h:mm a") : ""
 }
-const rows = computed(() => trackerRows(shownSteps.value || progress.data || [], { t: __, when }))
+// Manager / HR: the word on the first line, the person on the second; "Not yet" for nothing yet.
+const rows = computed(() => {
+	const steps = shownSteps.value || progress.data || []
+	return trackerRows(steps, { t: __, when }).map((row) => {
+		const who = steps.find((s) => s.key === row.key)?.who
+		if (!["manager", "hr"].includes(row.key)) return row
+		const line = row.line === __("Waiting") ? __("Not yet") : row.line
+		return {
+			...row,
+			title: row.key === "manager" ? __("Manager") : __("HR"),
+			line: who ? (line ? `${who} · ${line}` : who) : line,
+		}
+	})
+})
 
 const sentence = (text) => (text ? String(text) : "")
 const summary = computed(() => {
 	const d = doc.value
+	const employment = __(
+		EMPLOYMENT_TYPES.find((e) => e.value === d.employment_type)?.label || d.employment_type || ""
+	)
+	const reasonForHire =
+		d.request_type === "Replacement"
+			? __("Replacement for {0}", [d.replacing_employee_name || d.replacing_employee || ""])
+			: __(REQUEST_TYPES.find((x) => x.value === d.request_type)?.label || d.request_type || "")
 	return [
-		{ label: __("Position"), value: d.position_title },
 		{ label: __("People needed"), value: String(d.headcount) },
 		{ label: __("Department"), value: departmentLabel(d.department) },
-		{ label: __("This is"), value: detailKind(d, __) },
+		{ label: __("Job type"), value: employment },
+		{ label: __("Reason for hire"), value: reasonForHire },
 		{ label: __("Urgency"), value: d.urgency ? __(d.urgency) : "" },
 		{
 			label: __("Target start"),
@@ -271,7 +328,7 @@ const answers = computed(() => {
 	return [
 		{ label: __("How soon"), value: d.how_soon },
 		{ label: __("Reason"), value: sentence(d.justification) },
-		{ label: __("Band"), value: d.band },
+		{ label: __("Band"), value: bandLabel(d.band) },
 		{ label: __("Budgeted"), value: money(d.budgeted_salary) },
 		{ label: __("Proposed"), value: money(d.proposed_salary) },
 		{
