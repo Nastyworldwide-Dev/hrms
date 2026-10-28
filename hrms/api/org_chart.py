@@ -156,31 +156,41 @@ def get_node(employee: str | None = None, company: str | None = None) -> dict:
 
 
 @frappe.whitelist(methods=["GET"])
-def photo(employee: str, v: str | None = None):
-	"""Serve an employee's photo (User.user_image points here).
+def _may_see_photo(target: dict, *, is_hr: bool, is_system_manager: bool, my_company: str | None) -> bool:
+	"""Who may see an employee's photo. Pure; the one rule, for every kind of caller.
 
-	HR is served any company, Active or Left. A caller with no Employee row
-	(System Manager, Administrator) is served when Desk lets them read it. Staff get
-	the company fence and Active targets only; Desk permission is never consulted
-	for staff, because Employee is an org-wide directory in Desk.
+	HR, and System Manager (Desk avatars; no Employee row), see anyone, Active or Left.
+	Staff see Active people in their own company. A login with no Employee (unlinked, a
+	Left employee still able to sign in, two claimants) has no company, so sees nobody.
+	Desk permission never decides: Employee is an org-wide directory there.
 	"""
+	if is_hr or is_system_manager:
+		return True
+	return bool(my_company) and target.get("company") == my_company and target.get("status") == "Active"
+
+
+def photo(employee: str, v: str | None = None):
+	"""Serve an employee's photo (User.user_image points here), by _may_see_photo."""
 	rows = frappe.get_all(
 		"Employee",
 		filters={"name": employee},
 		fields=["name", "company", "status", "image"],
 		limit=1,
 	)
-	if not rows:
+	me = get_employee()
+	my_company = None
+	if me:
+		mine = frappe.get_all("Employee", filters={"name": me}, fields=["company"], limit=1)
+		my_company = mine[0].get("company") if mine else None
+	allowed = bool(rows) and _may_see_photo(
+		rows[0],
+		is_hr=sees_all_employee_data(),
+		is_system_manager="System Manager" in frappe.get_roles(),
+		my_company=my_company,
+	)
+	if not allowed:
+		# One answer for missing and not-yours, so ids cannot be probed.
 		frappe.throw(_("Employee not found."), frappe.DoesNotExistError)
-	if sees_all_employee_data():
-		pass
-	elif get_employee() is None:
-		if not frappe.has_permission("Employee", "read", doc=employee):
-			frappe.throw(_("Employee not found."), frappe.DoesNotExistError)
-	else:
-		if rows[0].get("status") != "Active":
-			frappe.throw(_("Employee not found."), frappe.DoesNotExistError)
-		_fence(rows[0].get("company"), False, require_employee())
 
 	image = rows[0].get("image")
 	if not image:

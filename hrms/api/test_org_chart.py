@@ -561,7 +561,9 @@ def _raise(msg, exc):
 S3_IMAGE = "/api/method/frappe_s3_attachment.controller.generate_file?key=photos/EMP-1.jpg&file_name=a.jpg"
 
 
-def _serve(target, me="EMP-1", my_company="Company A", is_hr=False, desk_read=False, file_owned=True):
+def _serve(
+	target, me="EMP-1", my_company="Company A", is_hr=False, desk_read=False, file_owned=True, roles=()
+):
 	"""Call org_chart.photo(target['name']) as a caller; return (client, local)."""
 	client = MagicMock()
 	client.get_url.return_value = "https://s3/signed"
@@ -576,6 +578,7 @@ def _serve(target, me="EMP-1", my_company="Company A", is_hr=False, desk_read=Fa
 		patch.object(org_chart, "require_employee", return_value=me),
 		patch.object(org_chart, "sees_all_employee_data", return_value=is_hr),
 		patch.object(frappe, "has_permission", return_value=desk_read, create=True),
+		patch.object(frappe, "get_roles", return_value=list(roles), create=True),
 		patch.object(frappe, "get_attr", return_value=lambda: client),
 		patch.object(frappe, "local", local),
 		patch.object(frappe.db, "exists", return_value=file_owned),
@@ -621,16 +624,51 @@ class TestPhoto(unittest.TestCase):
 		self.assertEqual(local.response.type, "redirect")
 		client.get_url.assert_called_once()
 
-	def test_no_employee_desk_reader_served_active_or_left(self):
+	def test_system_manager_with_no_employee_served_active_or_left(self):
+		"""Desk avatars for System Manager / Administrator, who have no Employee row."""
 		for status in ("Active", "Left"):
-			client, local = _serve(_target(company="Company B", status=status), me=None, desk_read=True)
+			client, local = _serve(
+				_target(company="Company B", status=status), me=None, roles=("System Manager",)
+			)
 			self.assertEqual(local.response.type, "redirect")
 			client.get_url.assert_called_once()
 
-	def test_no_employee_without_desk_read_refused(self):
+	def test_a_login_with_no_employee_is_refused_even_when_desk_would_allow(self):
+		"""Review of c3c99bbd4: get_employee() is None for an unlinked login, a Left employee
+		whose login is still on, and two Active claimants. Desk lets the Employee role read
+		anyone, so Desk permission must never decide for them: no company, no photos."""
 		with self.assertRaises(frappe.DoesNotExistError):
-			_serve(_target(), me=None, desk_read=False)
+			_serve(_target(), me=None, desk_read=True, roles=("Employee",))
 		_serve.last[0].get_url.assert_not_called()
+
+
+class TestWhoMaySeeAPhoto(unittest.TestCase):
+	"""One rule for every kind of caller (four fixes in a row each re-opened a neighbour)."""
+
+	def test_every_kind_of_caller(self):
+		mine = {"company": "A", "status": "Active"}
+		other = {"company": "B", "status": "Active"}
+		left = {"company": "A", "status": "Left"}
+		table = [
+			# (caller, target, expected)
+			(dict(is_hr=True, is_system_manager=False, my_company="A"), other, True),
+			(dict(is_hr=True, is_system_manager=False, my_company=None), left, True),
+			(dict(is_hr=False, is_system_manager=True, my_company=None), other, True),
+			(dict(is_hr=False, is_system_manager=True, my_company=None), left, True),
+			(dict(is_hr=False, is_system_manager=False, my_company="A"), mine, True),
+			(dict(is_hr=False, is_system_manager=False, my_company="A"), other, False),
+			(dict(is_hr=False, is_system_manager=False, my_company="A"), left, False),
+			# no Employee (unlinked, Left, ambiguous): no company, so nobody
+			(dict(is_hr=False, is_system_manager=False, my_company=None), mine, False),
+			(
+				dict(is_hr=False, is_system_manager=False, my_company=None),
+				{"company": None, "status": "Active"},
+				False,
+			),
+		]
+		for caller, target, expected in table:
+			with self.subTest(caller=caller, target=target):
+				self.assertIs(org_chart._may_see_photo(target, **caller), expected)
 
 	def test_image_no_file_owns_is_not_served_or_signed(self):
 		"""Employee.image pointing at a key no File of that employee owns is refused."""
