@@ -41,7 +41,7 @@
 		<div class="photo-zoom-row">
 			<button
 				type="button"
-				class="ps-icon-btn"
+				class="ps-icon-btn g-focusable"
 				:aria-label="__('Zoom out')"
 				:disabled="saving"
 				@click="zoomOut"
@@ -61,7 +61,7 @@
 			/>
 			<button
 				type="button"
-				class="ps-icon-btn"
+				class="ps-icon-btn g-focusable"
 				:aria-label="__('Zoom in')"
 				:disabled="saving"
 				@click="zoomIn"
