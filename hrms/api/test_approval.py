@@ -226,6 +226,33 @@ class TestApprovalIsAuthorisedByRouting(unittest.TestCase):
 		src = ast.unparse(self._fn("_is_routed_approver"))
 		self.assertIn("company_visible", src)
 
+	def test_a_fenced_hr_user_cannot_decide_another_companys_request(self):
+		"""Runs _is_routed_approver: an HR User fenced to Company A, a request whose employee is in
+		Company B, no named approver, not the reports_to manager -> False. Unfenced (company_visible True) -> True.
+		Review of 8a4b18d20: the property test models routing as one flag and could not see this branch."""
+		import sys
+		from unittest.mock import MagicMock, patch
+
+		sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests"))
+		import _erpnext_stub
+		import _frappe_stub
+
+		_frappe_stub.install()
+		_erpnext_stub.install()
+		import frappe
+
+		from hrms.api import approval
+
+		doc = frappe._dict(doctype="Leave Application", employee="EMP-B", leave_approver="someone@else")
+		doc.get = lambda key, default=None: doc[key] if key in doc else default
+		for visible, expected in ((False, False), (True, True)):
+			with (
+				patch.object(frappe, "get_roles", return_value=["HR User"]),
+				patch.object(frappe.db, "get_value", return_value=None),
+				patch("hrms.overrides.company_scope.company_visible", return_value=visible),
+			):
+				self.assertIs(bool(approval._is_routed_approver(doc, "hr@a.com")), expected, visible)
+
 	def test_legacy_finalize_routes_submit_and_approved_cancel(self):
 		"""AMENDED 14 Sep 2026, owner ruling: HR and the approver may cancel an
 		approved request; the employee may not.
@@ -779,6 +806,7 @@ class TestDecideHandsTheReasonToTheNotification(unittest.TestCase):
 		submit = code.index("doc.submit()")
 		self.assertLess(flag, submit)
 		self.assertIn('status == "Rejected"', code[max(0, flag - 160) : flag])
+
 
 class TestADecisionAlwaysCarriesTheRevisionTheApproverSaw(unittest.TestCase):
 	"""6 Oct 2026 (alpha.35). decide() compared the revision only when the caller sent one, so a
