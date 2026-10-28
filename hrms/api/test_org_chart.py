@@ -60,6 +60,7 @@ def _get_node(
 	employees=None,
 	leave_by_employee=None,
 	off_session_result=None,
+	db_reads=None,
 ):
 	"""Call get_node with mocked dependencies."""
 	if employees is None:
@@ -118,6 +119,8 @@ def _get_node(
 
 	def mock_db_get_value(doctype, name, field):
 		"""Mock frappe.db.get_value for employee image reads."""
+		if db_reads is not None:
+			db_reads.append((doctype, name, field))
 		if doctype == "Employee":
 			emp = next((e for e in employees if e["name"] == name), None)
 			if emp:
@@ -154,12 +157,17 @@ class TestVisibleTable(unittest.TestCase):
 
 class TestFencing(unittest.TestCase):
 	def test_staff_sees_only_own_company(self):
-		"""Staff in Company A asking for someone in Company B is refused."""
+		"""Staff in Company A asking for someone in Company B is refused.
+
+		Spec change from review (28 Oct): this raises the same DoesNotExistError
+		("Employee not found.") as a missing employee, so staff cannot probe
+		which ids exist in other companies. It used to be PermissionError.
+		"""
 		employees = [
 			_employee("EMP-1", "Ali", company="Company A", reports_to=None),
 			_employee("EMP-2", "Bob", company="Company B", reports_to=None),
 		]
-		with self.assertRaises(frappe.PermissionError) as ctx:
+		with self.assertRaises(frappe.DoesNotExistError) as ctx:
 			_get_node(
 				employee="EMP-2",
 				company="Company B",
@@ -167,7 +175,7 @@ class TestFencing(unittest.TestCase):
 				my_company="Company A",
 				employees=employees,
 			)
-		self.assertIn("own company", str(ctx.exception))
+		self.assertIn("Employee not found.", str(ctx.exception))
 
 	def test_hr_sees_all_companies(self):
 		"""HR asking for someone in another company is allowed."""
@@ -449,6 +457,36 @@ class TestCard(unittest.TestCase):
 		self.assertNotIn("phone", output_json.lower())
 		self.assertNotIn("email", output_json.lower())
 
+	def test_card_building_does_not_read_image_per_person(self):
+		"""The image comes from the row already read: no frappe.db.get_value per card."""
+		employees = [
+			_employee("EMP-1", "Ali", image="/files/a.jpg"),
+			_employee("EMP-2", "Bob", reports_to="EMP-1", image="/files/b.jpg"),
+		]
+		reads = []
+		result = _get_node(employee="EMP-1", employees=employees, db_reads=reads)
+		self.assertTrue(result["reports"][0]["image"].startswith("/api/method/hrms.api.org_chart.photo?"))
+		self.assertEqual(reads, [])
+
+	def test_staff_team_size_ignores_other_company_reports(self):
+		"""A staff card's team_size never counts people from another company."""
+		employees = [
+			_employee("EMP-1", "Ali", company="Company A"),
+			_employee("EMP-2", "Bob", company="Company A", reports_to="EMP-1"),
+			_employee("EMP-3", "Zed", company="Company B", reports_to="EMP-1"),
+		]
+		result = _get_node(employee="EMP-1", is_hr=False, employees=employees)
+		self.assertEqual(result["person"]["team_size"], 1)
+
+	def test_hr_team_size_counts_all_companies(self):
+		employees = [
+			_employee("EMP-1", "Ali", company="Company A"),
+			_employee("EMP-2", "Bob", company="Company A", reports_to="EMP-1"),
+			_employee("EMP-3", "Zed", company="Company B", reports_to="EMP-1"),
+		]
+		result = _get_node(employee="EMP-1", is_hr=True, employees=employees)
+		self.assertEqual(result["person"]["team_size"], 2)
+
 	def test_card_image_empty_when_no_image(self):
 		"""Card image is empty string when employee has no image."""
 		employees = [_employee("EMP-1", "Ali", image=None)]
@@ -510,11 +548,16 @@ class TestGaps(unittest.TestCase):
 		self.assertEqual(len(left_manager), 0)
 
 
+def _raise(msg, exc):
+	raise exc(msg)
+
+
 S3_IMAGE = "/api/method/frappe_s3_attachment.controller.generate_file?key=photos/EMP-1.jpg&file_name=a.jpg"
 
 
 class TestPhoto(unittest.TestCase):
 	def test_staff_other_company_refused(self):
+		"""Spec change from review: another company's employee reads as not found (no probing)."""
 		rows = [{"name": "EMP-2", "company": "Company B", "image": "/files/a.jpg"}]
 		with (
 			patch.object(
@@ -527,7 +570,7 @@ class TestPhoto(unittest.TestCase):
 			patch.object(org_chart, "require_employee", return_value="EMP-1"),
 			patch.object(org_chart, "sees_all_employee_data", return_value=False),
 		):
-			with self.assertRaises(frappe.PermissionError):
+			with self.assertRaises(frappe.DoesNotExistError):
 				org_chart.photo("EMP-2")
 
 	def test_staff_other_company_refused_before_signing(self):
@@ -545,7 +588,7 @@ class TestPhoto(unittest.TestCase):
 			patch.object(org_chart, "sees_all_employee_data", return_value=False),
 			patch.object(frappe, "get_attr", get_attr),
 		):
-			with self.assertRaises(frappe.PermissionError):
+			with self.assertRaises(frappe.DoesNotExistError):
 				org_chart.photo("EMP-2")
 		get_attr.assert_not_called()
 
@@ -560,11 +603,31 @@ class TestPhoto(unittest.TestCase):
 			patch.object(org_chart, "sees_all_employee_data", return_value=False),
 			patch.object(frappe, "get_attr", return_value=lambda: client),
 			patch.object(frappe, "local", local),
+			patch.object(frappe.db, "exists", return_value=True),
 		):
 			org_chart.photo("EMP-1")
 		client.get_url.assert_called_once_with("photos/EMP-1.jpg", "a.jpg")
 		self.assertEqual(local.response.type, "redirect")
 		self.assertEqual(local.response.location, "https://s3/signed")
+
+	def test_image_no_file_owns_is_not_served_or_signed(self):
+		"""Employee.image pointing at a key no File of that employee owns is refused."""
+		rows = [{"name": "EMP-1", "company": "Company A", "image": S3_IMAGE}]
+		client = MagicMock()
+		with (
+			patch.object(frappe, "get_all", return_value=rows),
+			patch.object(org_chart, "require_employee", return_value="EMP-1"),
+			patch.object(org_chart, "sees_all_employee_data", return_value=False),
+			patch.object(frappe, "get_attr", return_value=lambda: client),
+			patch.object(frappe.db, "exists", return_value=None) as exists,
+			patch.object(frappe, "throw", side_effect=_raise),
+		):
+			with self.assertRaises(frappe.DoesNotExistError):
+				org_chart.photo("EMP-1")
+		exists.assert_called_once_with(
+			"File", {"file_url": S3_IMAGE, "attached_to_doctype": "Employee", "attached_to_name": "EMP-1"}
+		)
+		client.get_url.assert_not_called()
 
 
 if __name__ == "__main__":

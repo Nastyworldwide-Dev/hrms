@@ -31,6 +31,9 @@ PHOTO_MIMETYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"
 #: Max photo size in bytes (5 MB)
 PHOTO_MAX_BYTES = 5 * 1024 * 1024
 
+#: Longest base64 payload worth decoding (base64 of 5 MB is ~6.99M chars)
+PHOTO_MAX_PAYLOAD_CHARS = 7_000_000
+
 
 def _has_image_signature(content: bytes) -> bool:
 	"""True when the bytes start like a JPEG, PNG or WebP (the header is not trusted)."""
@@ -67,6 +70,11 @@ def set_photo(image: str) -> dict:
 	if not extension or not payload:
 		logger.warning("[profile_photo] photo refused for %s: mimetype=%r", employee, mimetype)
 		frappe.throw(_("A profile photo must be a JPEG, PNG or WebP image."))
+
+	# Refuse a huge string before spending memory decoding it
+	if len(payload) > PHOTO_MAX_PAYLOAD_CHARS:
+		logger.warning("[profile_photo] photo refused for %s: payload %d chars", employee, len(payload))
+		frappe.throw(_("This photo is over 5 MB. Pick a smaller one."))
 
 	# Decode base64
 	try:
@@ -111,7 +119,11 @@ def set_photo(image: str) -> dict:
 	frappe.db.set_value("Employee", employee, "image", file_url, update_modified=False)
 	user_id = frappe.db.get_value("Employee", employee, "user_id")
 	if user_id:
-		frappe.db.set_value("User", user_id, "user_image", file_url, update_modified=False)
+		# User is readable by others and the S3 download rule is any-logged-in-user:
+		# keep the raw url off it, point at the fenced endpoint instead.
+		frappe.db.set_value(
+			"User", user_id, "user_image", photo_url(employee, file_url), update_modified=False
+		)
 
 	# Delete old photos (all Files attached to this employee's image field except the new one)
 	old_files = frappe.get_all(
@@ -130,7 +142,7 @@ def set_photo(image: str) -> dict:
 		)  # file_name is a string when using pluck
 
 	logger.info("[profile_photo] photo stored for %s: %s", employee, file_url)
-	return {"image": photo_url(employee)}
+	return {"image": photo_url(employee, file_url)}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -168,16 +180,17 @@ def remove_photo() -> dict:
 	return {"image": ""}
 
 
-def photo_url(employee: str) -> str:
+def photo_url(employee: str, image: str | None = None) -> str:
 	"""Get the photo URL for an employee, with cache-busting query string.
 
 	Args:
 		employee: employee ID
+		image: the Employee.image value when the caller already has it (skips the read)
 
 	Returns:
 		URL to fetch the photo via the org_chart endpoint, or empty string if no photo set
 	"""
-	image_value = frappe.db.get_value("Employee", employee, "image") or ""
+	image_value = image if image is not None else frappe.db.get_value("Employee", employee, "image") or ""
 	if not image_value:
 		return ""
 

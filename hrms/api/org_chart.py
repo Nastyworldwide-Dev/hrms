@@ -42,14 +42,15 @@ def _fence(target_company: str, is_hr: bool, my_employee: str):
 	my_row = frappe.get_all("Employee", filters={"name": my_employee}, fields=["company"], limit=1)
 	my_company = my_row[0].get("company") if my_row else None
 	if not _visible(target_company, is_hr, my_company):
-		frappe.throw(_("You can only see people in your own company."), frappe.PermissionError)
+		# Same answer as a missing employee, so staff cannot probe other companies.
+		frappe.throw(_("Employee not found."), frappe.DoesNotExistError)
 
 
-def _team_sizes(ids) -> dict:
-	"""{manager: Active direct reports}, one grouped read."""
+def _team_sizes(ids, scope: dict | None = None) -> dict:
+	"""{manager: Active direct reports}, one grouped read, under the caller's company scope."""
 	rows = frappe.get_all(
 		"Employee",
-		filters={"status": "Active", "reports_to": ["in", list(ids)]},
+		filters={"status": "Active", "reports_to": ["in", list(ids)], **(scope or {})},
 		fields=["reports_to", {"COUNT": "name", "as": "n"}],
 		group_by="reports_to",
 		limit_page_length=0,
@@ -116,7 +117,7 @@ def get_node(employee: str | None = None, company: str | None = None) -> dict:
 	ids = list({p["name"] for p in people})
 	today = getdate()
 	leaves = by_employee(ids, today)
-	sizes = _team_sizes(ids)
+	sizes = _team_sizes(ids, scope)
 
 	def card(row: dict) -> dict:
 		rid = row["name"]
@@ -128,7 +129,7 @@ def get_node(employee: str | None = None, company: str | None = None) -> dict:
 			"department": row.get("department"),
 			"branch": row.get("branch"),
 			"company": row.get("company"),
-			"image": photo_url(rid) if row.get("image") else "",
+			"image": photo_url(rid, row["image"]) if row.get("image") else "",
 			"away": bool(rows_off) and off_session(rows_off, today) is None,
 			"team_size": sizes.get(rid, 0),
 		}
@@ -172,6 +173,11 @@ def photo(employee: str, v: str | None = None):
 
 	image = rows[0].get("image")
 	if not image:
+		frappe.throw(_("No photo."), frappe.DoesNotExistError)
+
+	if not frappe.db.exists(
+		"File", {"file_url": image, "attached_to_doctype": "Employee", "attached_to_name": employee}
+	):
 		frappe.throw(_("No photo."), frappe.DoesNotExistError)
 
 	logger.info("[org_chart] photo user=%s employee=%s", frappe.session.user, employee)

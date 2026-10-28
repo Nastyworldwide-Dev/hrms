@@ -94,9 +94,49 @@ class TestProfilePhoto(unittest.TestCase):
 			"/files/photo-emp-001-1234567890.jpg",
 			update_modified=False,
 		)
-		mock_set_value.assert_any_call(
-			"User", self.user_id, "user_image", "/files/photo-emp-001-1234567890.jpg", update_modified=False
+		# Spec change from review: User.user_image holds the fenced org_chart.photo url, never the raw file url.
+		user_calls = [c for c in mock_set_value.call_args_list if c.args[0] == "User"]
+		self.assertEqual(len(user_calls), 1)
+		value = user_calls[0].args[3]
+		self.assertTrue(value.startswith("/api/method/hrms.api.org_chart.photo?employee="))
+		self.assertNotIn("generate_file", value)
+
+	@patch("hrms.api.profile_photo.require_employee")
+	@patch("frappe.db.get_value")
+	@patch("frappe.db.set_value")
+	@patch("frappe.get_doc")
+	@patch("frappe.get_all", return_value=[])
+	def test_s3_url_never_reaches_user_image(self, _ga, mock_get_doc, mock_set_value, mock_gv, mock_req):
+		"""The raw S3 generate_file url (any-logged-in download rule) must not land on User."""
+		mock_req.return_value = self.employee_id
+		s3 = "/api/method/frappe_s3_attachment.controller.generate_file?key=k&file_name=a.jpg"
+		mock_get_doc.return_value.insert.return_value.name = "file-1"
+		mock_gv.side_effect = lambda dt, n, f=None: (
+			s3 if dt == "File" else (self.user_id if f == "user_id" else None)
 		)
+		profile_photo.set_photo("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAA==")
+		mock_set_value.assert_any_call("Employee", self.employee_id, "image", s3, update_modified=False)
+		user_value = next(c.args[3] for c in mock_set_value.call_args_list if c.args[0] == "User")
+		self.assertTrue(user_value.startswith("/api/method/hrms.api.org_chart.photo?employee="))
+		self.assertNotIn("generate_file", user_value)
+
+	def test_photo_url_with_image_does_not_read_db(self):
+		with patch("frappe.db.get_value") as gv:
+			url = profile_photo.photo_url("EMP-1", "/files/a.jpg")
+		gv.assert_not_called()
+		self.assertTrue(url.startswith("/api/method/hrms.api.org_chart.photo?employee=EMP-1&v="))
+
+	@patch("hrms.api.profile_photo.require_employee")
+	@patch("frappe.throw")
+	def test_oversized_payload_refused_before_decoding(self, mock_throw, mock_req):
+		"""A payload string over 7,000,000 chars is refused without base64-decoding it."""
+		mock_req.return_value = self.employee_id
+		mock_throw.side_effect = frappe.ValidationError("over 5 MB")
+		with patch("base64.b64decode") as dec:
+			with self.assertRaises(frappe.ValidationError):
+				profile_photo.set_photo("data:image/jpeg;base64," + "A" * 7_000_001)
+		dec.assert_not_called()
+		self.assertIn("5 MB", str(mock_throw.call_args[0][0]))
 
 	@patch("hrms.api.profile_photo.require_employee")
 	@patch("frappe.throw")
