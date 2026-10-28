@@ -17,7 +17,7 @@ from frappe.utils import getdate
 
 from hrms.api.profile_photo import photo_url
 from hrms.hr.utils import sees_all_employee_data
-from hrms.utils.identity import get_employee, require_employee
+from hrms.utils.identity import own_employees, require_employee
 from hrms.utils.leave_day import by_employee, off_session
 
 logger = logging.getLogger(__name__)
@@ -178,10 +178,11 @@ def photo(employee: str, v: str | None = None):
 		fields=["name", "company", "status", "image"],
 		limit=1,
 	)
-	me = get_employee()
+	# Read-only identity: a GET must not provision roles or link accounts (get_employee does).
+	me = own_employees()
 	my_company = None
 	if me:
-		mine = frappe.get_all("Employee", filters={"name": me}, fields=["company"], limit=1)
+		mine = frappe.get_all("Employee", filters={"name": me[0]}, fields=["company"], limit=1)
 		my_company = mine[0].get("company") if mine else None
 	allowed = bool(rows) and _may_see_photo(
 		rows[0],

@@ -574,7 +574,7 @@ def _serve(
 
 	with (
 		patch.object(frappe, "get_all", side_effect=rows_for),
-		patch.object(org_chart, "get_employee", return_value=me),
+		patch.object(org_chart, "own_employees", return_value=[me] if me else []),
 		patch.object(org_chart, "require_employee", return_value=me),
 		patch.object(org_chart, "sees_all_employee_data", return_value=is_hr),
 		patch.object(frappe, "has_permission", return_value=desk_read, create=True),
@@ -662,6 +662,33 @@ class TestPhotoIsTheEndpoint(unittest.TestCase):
 
 	def test_the_rule_is_not_an_endpoint(self):
 		self.assertNotIn("whitelist", self._decorators("_may_see_photo"))
+
+
+class TestOnlyTheseAreEndpoints(unittest.TestCase):
+	"""The class, not the instance: a decorator that slides onto a neighbour fails here."""
+
+	def _whitelisted(self, module):
+		import ast
+		import inspect
+
+		tree = ast.parse(inspect.getsource(module))
+		return {
+			n.name: " ".join(ast.dump(d) for d in n.decorator_list)
+			for n in tree.body
+			if isinstance(n, ast.FunctionDef) and any("whitelist" in ast.dump(d) for d in n.decorator_list)
+		}
+
+	def test_org_chart(self):
+		found = self._whitelisted(org_chart)
+		self.assertEqual(set(found), {"get_node", "photo"})
+		self.assertTrue(all("GET" in d for d in found.values()))
+
+	def test_profile_photo(self):
+		from hrms.api import profile_photo
+
+		found = self._whitelisted(profile_photo)
+		self.assertEqual(set(found), {"set_photo", "remove_photo"})
+		self.assertTrue(all("POST" in d for d in found.values()))
 
 
 class TestWhoMaySeeAPhoto(unittest.TestCase):
