@@ -642,6 +642,28 @@ class TestPhoto(unittest.TestCase):
 		_serve.last[0].get_url.assert_not_called()
 
 
+class TestPhotoIsTheEndpoint(unittest.TestCase):
+	"""Review of 0606d85ee: the whitelist decorator slid onto the pure rule when it was
+	inserted above photo(), so every photo url 403'd and the rule became public. The
+	other tests call photo() as a function and could not see it."""
+
+	def _decorators(self, name):
+		import ast
+		import inspect
+
+		tree = ast.parse(inspect.getsource(org_chart))
+		fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == name)
+		return " ".join(ast.dump(d) for d in fn.decorator_list)
+
+	def test_photo_is_whitelisted_for_get(self):
+		decorators = self._decorators("photo")
+		self.assertIn("whitelist", decorators)
+		self.assertIn("GET", decorators)
+
+	def test_the_rule_is_not_an_endpoint(self):
+		self.assertNotIn("whitelist", self._decorators("_may_see_photo"))
+
+
 class TestWhoMaySeeAPhoto(unittest.TestCase):
 	"""One rule for every kind of caller (four fixes in a row each re-opened a neighbour)."""
 
@@ -655,6 +677,9 @@ class TestWhoMaySeeAPhoto(unittest.TestCase):
 			(dict(is_hr=True, is_system_manager=False, my_company=None), left, True),
 			(dict(is_hr=False, is_system_manager=True, my_company=None), other, True),
 			(dict(is_hr=False, is_system_manager=True, my_company=None), left, True),
+			# a System Manager who IS an employee is staff here, as get_node treats them
+			(dict(is_hr=False, is_system_manager=True, my_company="A"), other, False),
+			(dict(is_hr=False, is_system_manager=True, my_company="A"), mine, True),
 			(dict(is_hr=False, is_system_manager=False, my_company="A"), mine, True),
 			(dict(is_hr=False, is_system_manager=False, my_company="A"), other, False),
 			(dict(is_hr=False, is_system_manager=False, my_company="A"), left, False),

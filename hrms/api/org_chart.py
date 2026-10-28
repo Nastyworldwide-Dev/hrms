@@ -155,20 +155,21 @@ def get_node(employee: str | None = None, company: str | None = None) -> dict:
 	return result
 
 
-@frappe.whitelist(methods=["GET"])
 def _may_see_photo(target: dict, *, is_hr: bool, is_system_manager: bool, my_company: str | None) -> bool:
 	"""Who may see an employee's photo. Pure; the one rule, for every kind of caller.
 
-	HR, and System Manager (Desk avatars; no Employee row), see anyone, Active or Left.
+	HR sees anyone, Active or Left. A System Manager with no Employee row sees anyone too
+	(their Desk avatars); one who IS an employee is staff here, as get_node treats them.
 	Staff see Active people in their own company. A login with no Employee (unlinked, a
 	Left employee still able to sign in, two claimants) has no company, so sees nobody.
 	Desk permission never decides: Employee is an org-wide directory there.
 	"""
-	if is_hr or is_system_manager:
+	if is_hr or (is_system_manager and not my_company):
 		return True
 	return bool(my_company) and target.get("company") == my_company and target.get("status") == "Active"
 
 
+@frappe.whitelist(methods=["GET"])
 def photo(employee: str, v: str | None = None):
 	"""Serve an employee's photo (User.user_image points here), by _may_see_photo."""
 	rows = frappe.get_all(
