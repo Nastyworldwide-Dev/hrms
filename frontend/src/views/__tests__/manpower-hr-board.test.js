@@ -19,8 +19,10 @@ test("the board is one stat panel of four tiles, with the owner's four short wor
 		1,
 		"tiles are drawn by one v-for"
 	)
-	for (const word of ["With manager", "Needs HR", "Recruiting", "Filled"])
-		assert.match(board, new RegExp(`__\\("${word}"\\)`))
+	// tile captions: "Manager" is a caption (the group title says "Waiting for manager"); the rest are stage words
+	assert.match(board, /__\("Manager"\)/)
+	for (const key of ["needsHr", "recruiting", "filled"])
+		assert.match(board, new RegExp(`__\\(STAGES\\.${key}\\.label\\)`))
 })
 
 test("the board carries the HR eyebrow, a search, a department filter and 5-then-See-all lists", () => {
@@ -79,4 +81,23 @@ test("every state that dims Save has one visible reason the button points at", (
 
 test("while the manager has not decided, the Hiring controls cannot be used", () => {
 	assert.match(detail, /inert/)
+})
+
+test("one word source: no re-typed 'With manager' in the manpower files", () => {
+	const files = [
+		"../manpower/ManpowerHRBoard.vue",
+		"../manpower/ManpowerRequestList.vue",
+		"../manpower/ManpowerRequestDetail.vue",
+		"../manpower/ManpowerRequestWizard.vue",
+		"../../components/ManpowerRequestItem.vue",
+		"../../utils/manpowerBoard.js",
+		"../../utils/manpowerRequest.js",
+	]
+	for (const f of files) assert.doesNotMatch(read(f), /With manager/, f)
+	assert.doesNotMatch(read("../manpower/ManpowerRequestList.vue"), /STAGE_LABELS\[/)
+	assert.match(read("../manpower/ManpowerRequestList.vue"), /STAGES\.waiting\.label/)
+})
+
+test("the select is as tall as the search beside it", () => {
+	assert.match(board, /\.g-filter-row[^{]*:deep\(\.g-select__native\)\s*{[^}]*height: 100%/)
 })

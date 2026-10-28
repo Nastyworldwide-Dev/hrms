@@ -70,12 +70,41 @@ test("the replacement list gets a search over 8 people", () => {
 	assert.match(src, /> 8/)
 })
 
-test("review greys a blank optional answer as Not given, edit links get a chevron", () => {
-	assert.match(src, /__\("Not given"\)/)
-	assert.doesNotMatch(src, /Not answered/)
+test("review greys a blank optional answer as Optional, left blank, edit links get a chevron", () => {
+	assert.match(src, /__\("Optional, left blank"\)/)
+	assert.doesNotMatch(src, /Not answered|Not given/)
 	assert.match(tpl, /<ChevronRight/)
 })
 
 test("'If other' questions are filtered, not always drawn", () => {
 	assert.match(src, /visibleQuestions\(/)
+})
+
+test("final pass: money shows raw text while focused, formats on blur", () => {
+	assert.match(tpl, /@focusin=/)
+	assert.match(tpl, /@focusout=/)
+	assert.match(src, /moneyShown\(/)
+})
+
+test("final pass: radio rows rove, arrow keys move between them", () => {
+	assert.match(src, /rovingNext\(/)
+	assert.match(src, /tabStop\(/)
+	assert.equal((tpl.match(/@keydown="\s*radioKey\(/g) || []).length, 5, "five radio groups")
+	assert.equal((tpl.match(/:tabindex="tabStop\(/g) || []).length, 5)
+})
+
+test("final pass: the progress bar stops moving for reduced motion", () => {
+	assert.match(
+		src,
+		/@media \(prefers-reduced-motion: reduce\)\s*{[^}]*\.mp-fill[^}]*transition: none/
+	)
+})
+
+test("final pass: wording from the audit", () => {
+	assert.match(tpl, /:placeholder="__\('Not fixed'\)"/)
+})
+
+test("final pass: the person picker resets with the department and keeps the chosen row", () => {
+	assert.match(src, /staffQuery\.value = ""/)
+	assert.match(src, /p\.name === model\.replacing_employee/)
 })

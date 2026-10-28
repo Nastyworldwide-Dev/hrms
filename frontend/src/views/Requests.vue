@@ -133,8 +133,8 @@ const requestTypes = [
 	{
 		key: "manpower",
 		tint: TILE.sop,
-		label: __("Request staff"),
-		hint: __("Ask for new or replacement staff"),
+		label: __("Manpower request"),
+		hint: __("Ask for new or replacement people"),
 		icon: Users,
 	},
 ]

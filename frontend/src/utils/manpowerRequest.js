@@ -59,7 +59,7 @@ export const REQUEST_TYPES = [
 
 export const STEPS = [
 	{ key: "position", title: "Position", sub: "Who do you need?" },
-	{ key: "type", title: "Type", sub: "What kind of job is it?" },
+	{ key: "type", title: "Job type", sub: "What kind of job is it?" },
 	{ key: "why", title: "Why", sub: "Why do you need them, and how soon?" },
 	{ key: "pay", title: "Pay", sub: "What can you pay?" },
 	{ key: "requirements", title: "Requirements", sub: "What should they bring?" },
@@ -166,7 +166,7 @@ export function stepProblems(
 		const key = questionKey(question)
 		const answer = extra[key]
 		if (blank(answer)) {
-			if (question.required) out.push(problem(key, `Answer: ${question.question}`))
+			if (question.required) out.push(problem(key, addReason(question.question)))
 			continue
 		}
 		const wrong = kindProblem(question, answer)
@@ -312,14 +312,14 @@ export function trackerRows(
 			title = named("HR")
 			const word = {
 				waiting: t("Waiting"),
-				current: step.who ? t("Recruiting") : t("Waiting for HR to pick it up"),
-				done: t("Recruiting"),
+				current: step.who ? t(STAGES.recruiting.label) : t("Waiting for HR to pick it up"),
+				done: t(STAGES.recruiting.label),
 				rejected: t("Not proceeding"),
 			}[step.state]
 			line =
 				step.state === "waiting" || (step.state === "current" && !step.who) ? word : withAt(word)
 		} else if (step.key === "filled") {
-			line = step.state === "done" ? withAt(t("Filled")) : t("Not yet")
+			line = step.state === "done" ? withAt(t(STAGES.filled.label)) : t("Not yet")
 		}
 		if (step.state === "rejected" || step.state === "withdrawn") stopped = true
 		return {
@@ -395,18 +395,43 @@ export function questionField(question) {
 	return { fieldtype }
 }
 
-/** "RM 2,500" typed or shown -> "2500" (digits and one point kept). */
+/** "RM 2,500.05" typed or shown -> 2500.05 (digits and one point kept, 2 decimals); "" when no digits. */
 export const parseMoney = (v) => {
 	const [whole, ...rest] = String(v ?? "")
 		.replace(/[^\d.]/g, "")
 		.split(".")
-	return rest.length ? `${whole}.${rest.join("")}` : whole
+	const text = rest.length ? `${whole}.${rest.join("").slice(0, 2)}` : whole
+	return /\d/.test(text) ? Number(text) : ""
 }
-/** The text a money field shows: "RM 2,500", or "" when empty. */
+/** The text a money field shows once left: "RM 2,500" or "RM 2,500.05", or "" when empty. */
 export const moneyText = (v) => {
-	const text = String(v ?? "")
-	const n = thousands(text.replace(/\.$/, ""))
-	return n ? `RM ${n}${text.endsWith(".") ? "." : ""}` : ""
+	if (String(v ?? "").trim() === "" || !Number.isFinite(Number(v))) return ""
+	const n = Number(v)
+	const digits = Number.isInteger(n) ? 0 : 2
+	return `RM ${n.toLocaleString("en-MY", {
+		minimumFractionDigits: digits,
+		maximumFractionDigits: 2,
+	})}`
+}
+
+//: Radio rows (roving tabindex): the arrow key -> the index to move to, or -1 for any other key.
+//: Up/Left go back and Down/Right go on, wrapping; nothing chosen yet (-1) starts at the first row.
+export function rovingNext(key, index, length) {
+	const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[key]
+	if (!step || !length) return -1
+	if (index < 0) return 0
+	return (index + step + length) % length
+}
+/** tabindex of a radio row: only the chosen one is a tab stop, or the first when none is chosen. */
+export const tabStop = (chosen, value, values) =>
+	(values.includes(chosen) ? chosen === value : values[0] === value) ? 0 : -1
+
+//: "Add the draft job description" for a blank required question; a real question ("...?") keeps "Answer:".
+const addReason = (question) => {
+	const text = String(question).trim()
+	if (text.endsWith("?")) return `Answer: ${text}`
+	const lower = /^[A-Z][^A-Z]/.test(text) ? text[0].toLowerCase() + text.slice(1) : text
+	return `Add the ${lower}`
 }
 
 /**

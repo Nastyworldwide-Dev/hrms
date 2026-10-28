@@ -119,6 +119,7 @@ import GStatTile from "@/components/glass/GStatTile.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { departmentLabel } from "@/utils/departmentLabel"
 import { TILE } from "@/utils/iconTile"
+import { STAGES } from "@/utils/manpowerRequest"
 import { groupRows, needsHrState, rowChip, rowLine, rowTitle } from "@/utils/manpowerBoard"
 
 const __ = inject("$translate")
@@ -160,10 +161,17 @@ async function refresh(event) {
 const counts = computed(() => board.data?.counts || {})
 const hot = computed(() => needsHrState(counts.value, __))
 const tiles = computed(() => [
-	{ key: "w", label: __("With manager"), value: counts.value.waiting_manager ?? 0 },
-	{ key: "n", label: __("Needs HR"), value: counts.value.needs_hr ?? 0, hot: hot.value.over },
-	{ key: "r", label: __("Recruiting"), value: counts.value.recruiting ?? 0 },
-	{ key: "f", label: __("Filled"), value: counts.value.filled_this_month ?? 0 },
+	// "Manager" is a tile caption, short so four fit one line at 390px; the group titles below
+	// carry the full stage word ("Waiting for manager"). The others are the stage words themselves.
+	{ key: "w", label: __("Manager"), value: counts.value.waiting_manager ?? 0 },
+	{
+		key: "n",
+		label: __(STAGES.needsHr.label),
+		value: counts.value.needs_hr ?? 0,
+		hot: hot.value.over,
+	},
+	{ key: "r", label: __(STAGES.recruiting.label), value: counts.value.recruiting ?? 0 },
+	{ key: "f", label: __(STAGES.filled.label), value: counts.value.filled_this_month ?? 0 },
 ])
 
 const groups = computed(() => groupRows(board.data?.rows, opened.value))
@@ -182,6 +190,17 @@ function open(row) {
 </script>
 
 <style scoped>
+/* the department filter is as tall as the search beside it (50 px vs 47 px in the browser check) */
+.g-filter-row > :deep(.g-field),
+.g-filter-row :deep(.g-select) {
+	display: flex;
+}
+.g-filter-row :deep(.g-select) {
+	flex: 1;
+}
+.g-filter-row :deep(.g-select__native) {
+	height: 100%;
+}
 /* the over-30-days tile: the number goes to the danger ink; the word + triangle below carry it too */
 .mp-hot :deep(.g-stat__number) {
 	color: var(--g-danger-ink);

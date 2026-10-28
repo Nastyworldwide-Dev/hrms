@@ -149,12 +149,24 @@
 								<template v-else-if="step === 1">
 									<section class="g-form-section">
 										<h3 id="mp-etype" class="g-eyebrow">{{ __("Employment type") }}</h3>
-										<GListPanel role="radiogroup" aria-labelledby="mp-etype">
+										<GListPanel
+											role="radiogroup"
+											aria-labelledby="mp-etype"
+											@keydown="
+												radioKey(
+													$event,
+													etypeValues,
+													model.employment_type,
+													(v) => (model.employment_type = v)
+												)
+											"
+										>
 											<GListRow
 												v-for="type in EMPLOYMENT_TYPES"
 												:key="type.value"
 												role="radio"
 												:aria-checked="model.employment_type === type.value"
+												:tabindex="tabStop(model.employment_type, type.value, etypeValues)"
 												:label="__(type.label)"
 												:sublabel="__(type.hint)"
 												:chevron="false"
@@ -174,12 +186,24 @@
 									</section>
 									<section class="g-form-section">
 										<h3 id="mp-kind" class="g-eyebrow">{{ __("What is this for?") }}</h3>
-										<GListPanel role="radiogroup" aria-labelledby="mp-kind">
+										<GListPanel
+											role="radiogroup"
+											aria-labelledby="mp-kind"
+											@keydown="
+												radioKey(
+													$event,
+													kindValues,
+													model.request_type,
+													(v) => (model.request_type = v)
+												)
+											"
+										>
 											<GListRow
 												v-for="type in REQUEST_TYPES"
 												:key="type.value"
 												role="radio"
 												:aria-checked="model.request_type === type.value"
+												:tabindex="tabStop(model.request_type, type.value, kindValues)"
 												:label="__(type.label)"
 												:chevron="false"
 												@click="model.request_type = type.value"
@@ -205,12 +229,16 @@
 											v-if="staff.data?.length"
 											role="radiogroup"
 											aria-labelledby="mp-staff"
+											@keydown="
+												radioKey($event, staffValues, model.replacing_employee, pickStaffByName)
+											"
 										>
 											<GListRow
 												v-for="person in shownStaff"
 												:key="person.name"
 												role="radio"
 												:aria-checked="model.replacing_employee === person.name"
+												:tabindex="tabStop(model.replacing_employee, person.name, staffValues)"
 												:label="person.employee_name"
 												:sublabel="
 													[person.designation, leftText(person)].filter(Boolean).join(' · ')
@@ -249,12 +277,19 @@
 								<template v-else-if="step === 2">
 									<section class="g-form-section">
 										<h3 id="mp-soon" class="g-eyebrow">{{ __("How soon do you need them?") }}</h3>
-										<GListPanel role="radiogroup" aria-labelledby="mp-soon">
+										<GListPanel
+											role="radiogroup"
+											aria-labelledby="mp-soon"
+											@keydown="
+												radioKey($event, soonKeys, model.how_soon, (v) => (model.how_soon = v))
+											"
+										>
 											<GListRow
 												v-for="key in soonKeys"
 												:key="key"
 												role="radio"
 												:aria-checked="model.how_soon === key"
+												:tabindex="tabStop(model.how_soon, key, soonKeys)"
 												:label="__(SOON_LABELS[key])"
 												:chevron="false"
 												@click="model.how_soon = key"
@@ -286,6 +321,7 @@
 											/>
 											<FormField
 												fieldtype="Date"
+												:placeholder="__('Not fixed')"
 												:label="__('Start date, if fixed') + ' (' + __('optional') + ')'"
 												:min-date="tomorrow"
 												v-model="model.start_date"
@@ -299,12 +335,17 @@
 								<template v-else-if="step === 3">
 									<section class="g-form-section">
 										<h3 id="mp-band" class="g-eyebrow">{{ __("Pay band") }}</h3>
-										<GListPanel role="radiogroup" aria-labelledby="mp-band">
+										<GListPanel
+											role="radiogroup"
+											aria-labelledby="mp-band"
+											@keydown="radioKey($event, bandValues, model.band, (v) => (model.band = v))"
+										>
 											<GListRow
 												v-for="b in BANDS"
 												:key="b.value"
 												role="radio"
 												:aria-checked="model.band === b.value"
+												:tabindex="tabStop(model.band, b.value, bandValues)"
 												:label="b.label"
 												:sublabel="__(b.meaning)"
 												:chevron="false"
@@ -330,8 +371,10 @@
 												:label="__('Budgeted salary a month')"
 												reqd
 												:placeholder="__('RM')"
-												:model-value="moneyText(model.budgeted_salary)"
-												@update:model-value="model.budgeted_salary = parseMoney($event)"
+												:model-value="moneyShown('budgeted_salary')"
+												@focusin="startMoney('budgeted_salary')"
+												@focusout="moneyFocus = ''"
+												@update:model-value="typeMoney('budgeted_salary', $event)"
 												:error-message="shown('budgeted_salary')"
 											/>
 											<FormField
@@ -340,8 +383,10 @@
 												:label="__('Proposed salary a month')"
 												reqd
 												:placeholder="__('RM')"
-												:model-value="moneyText(model.proposed_salary)"
-												@update:model-value="model.proposed_salary = parseMoney($event)"
+												:model-value="moneyShown('proposed_salary')"
+												@focusin="startMoney('proposed_salary')"
+												@focusout="moneyFocus = ''"
+												@update:model-value="typeMoney('proposed_salary', $event)"
 												:error-message="shown('proposed_salary')"
 											/>
 										</div>
@@ -373,7 +418,7 @@
 											>
 												<span class="g-form-row__label">{{ row.label }}</span>
 												<span class="g-form-row__value" :class="{ 'text-ink-600': !row.value }">{{
-													row.value || __("Not given")
+													row.value || __("Optional, left blank")
 												}}</span>
 											</div>
 										</div>
@@ -504,6 +549,8 @@ import {
 	questionKey,
 	moneyText,
 	parseMoney,
+	rovingNext,
+	tabStop,
 	readDraft,
 	visibleQuestions,
 	reviewGroups,
@@ -576,8 +623,15 @@ const staff = createResource({
 const staffQuery = ref("")
 const shownStaff = computed(() => {
 	const q = staffQuery.value.trim().toLowerCase()
-	return (staff.data || []).filter((p) => !q || p.employee_name.toLowerCase().includes(q))
+	// the chosen person stays in the list whatever the search says
+	return (staff.data || []).filter(
+		(p) => !q || p.employee_name.toLowerCase().includes(q) || p.name === model.replacing_employee
+	)
 })
+const staffValues = computed(() => shownStaff.value.map((p) => p.name))
+const etypeValues = EMPLOYMENT_TYPES.map((e) => e.value)
+const kindValues = REQUEST_TYPES.map((r) => r.value)
+const bandValues = BANDS.map((b) => b.value)
 const urgency = computed(() => URGENCY_BY_HOW_SOON[model.how_soon])
 const tomorrow = dayjs().add(1, "day").format("YYYY-MM-DD")
 const overBudget = computed(
@@ -595,8 +649,35 @@ watch(
 // a department change makes the earlier pick wrong (the server needs the same department)
 watch(
 	() => model.department,
-	() => Object.assign(model, { replacing_employee: "", replacing_label: "" })
+	() => {
+		Object.assign(model, { replacing_employee: "", replacing_label: "" })
+		staffQuery.value = ""
+	}
 )
+
+// Money: while the field is focused it shows what was typed ("2500.", "2500.0"); it formats on blur.
+const moneyFocus = ref("")
+const moneyRaw = ref("")
+const moneyShown = (field) =>
+	moneyFocus.value === field ? moneyRaw.value : moneyText(model[field])
+function startMoney(field) {
+	if (moneyFocus.value === field) return
+	moneyFocus.value = field
+	moneyRaw.value = String(model[field] ?? "")
+}
+function typeMoney(field, text) {
+	moneyRaw.value = text
+	model[field] = parseMoney(text)
+}
+
+// Radio rows: arrows move the choice and the focus; only the chosen row is a tab stop.
+function radioKey(event, values, chosen, pick) {
+	const to = rovingNext(event.key, values.indexOf(chosen), values.length)
+	if (to < 0) return
+	event.preventDefault()
+	pick(values[to])
+	nextTick(() => event.currentTarget.querySelectorAll('[role="radio"]')[to]?.focus())
+}
 // "Left 12 Sep" for a leaver, in the person's language; nothing for staff still here
 const leftText = (person) =>
 	person.status === "Active"
@@ -604,6 +685,7 @@ const leftText = (person) =>
 		: person.relieving_date
 		? __("Left {0}", [dayjs(person.relieving_date).format("D MMM")])
 		: __("Left")
+const pickStaffByName = (name) => pickStaff(staff.data.find((p) => p.name === name))
 function pickStaff(person) {
 	model.replacing_employee = person.name
 	model.replacing_label = person.employee_name
@@ -725,5 +807,10 @@ function onLeave(key) {
 	background: var(--g-accent-ink);
 	transform-origin: left;
 	transition: transform var(--g-motion-progress-duration) var(--g-motion-progress-easing);
+}
+@media (prefers-reduced-motion: reduce) {
+	.mp-fill {
+		transition: none;
+	}
 }
 </style>

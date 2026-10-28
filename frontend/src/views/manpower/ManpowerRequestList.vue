@@ -36,7 +36,7 @@ import GPage from "@/components/glass/GPage.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { MANPOWER_LIST_FIELDS } from "@/data/manpower"
 import { TILE } from "@/utils/iconTile"
-import { STAGE_LABELS, STEPS, readDraft } from "@/utils/manpowerRequest"
+import { STAGES, STEPS, readDraft } from "@/utils/manpowerRequest"
 import { sessionUser } from "@/utils/personalCache"
 
 const __ = inject("$translate")
@@ -51,10 +51,11 @@ const FILTER_CONFIG = [
 		fieldtype: "Select",
 		label: __("Status"),
 		options: [
-			{ label: __(STAGE_LABELS[0]), value: "Open" },
-			{ label: __(STAGE_LABELS[1]), value: "Approved" },
-			{ label: __("Rejected"), value: "Rejected" },
-			{ label: __("Withdrawn"), value: "Withdrawn" },
+			// the server's status field, in the closest stage words; none matches another stage
+			{ label: __(STAGES.waiting.label), value: "Open" },
+			{ label: __("Approved"), value: "Approved" },
+			{ label: `${__(STAGES.closed.label)} · ${__("Rejected")}`, value: "Rejected" },
+			{ label: `${__(STAGES.closed.label)} · ${__("Withdrawn")}`, value: "Withdrawn" },
 		],
 	},
 	{

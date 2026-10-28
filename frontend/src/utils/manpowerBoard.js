@@ -52,8 +52,8 @@ export function needsHrState(counts, t = plain) {
 
 //: What HR can move an approved request to. "Waiting for HR" is where it starts, not a button.
 export const HIRING_CHOICES = [
-	{ key: "Recruiting", label: "Recruiting" },
-	{ key: "Filled", label: "Filled" },
+	{ key: "Recruiting", label: STAGES.recruiting.label },
+	{ key: "Filled", label: STAGES.filled.label },
 	{ key: "Not proceeding", label: "Not proceeding" },
 ]
 

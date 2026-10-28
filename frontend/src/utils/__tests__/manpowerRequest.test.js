@@ -28,6 +28,8 @@ import {
 	thousands,
 	parseMoney,
 	moneyText,
+	rovingNext,
+	tabStop,
 	visibleQuestions,
 	reviewGroups,
 	stage,
@@ -70,7 +72,7 @@ const Q = (step, question, extra = {}) => ({
 test("six steps in the owner's order", () => {
 	assert.deepEqual(
 		STEPS.map((s) => s.title),
-		["Position", "Type", "Why", "Pay", "Requirements", "Review"]
+		["Position", "Job type", "Why", "Pay", "Requirements", "Review"]
 	)
 })
 
@@ -189,7 +191,7 @@ test("HR's questions block their own step when required, and only then", () => {
 	]
 	const key = questionKey(questions[0])
 	assert.deepEqual(asked(stepProblems(4, complete(), {}, questions, { today: TODAY })), [
-		"Answer: Draft job description",
+		"Add the draft job description",
 	])
 	assert.deepEqual(
 		stepProblems(4, complete(), { [key]: "Run campaigns" }, questions, { today: TODAY }),
@@ -542,7 +544,7 @@ test("Review groups the answers by step, each with the step to edit", () => {
 		groups.map((g) => [g.step, g.title]),
 		[
 			[0, "Position"],
-			[1, "Type"],
+			[1, "Job type"],
 			[2, "Why"],
 			[3, "Pay"],
 			[4, "Requirements"],
@@ -666,8 +668,49 @@ test("'If other, which ...' shows only after the choice before it is Other", () 
 test("a money field shows RM and thousands, and reads back to plain digits", () => {
 	assert.equal(moneyText("2500"), "RM 2,500")
 	assert.equal(moneyText(""), "")
-	assert.equal(parseMoney("RM 2,500"), "2500")
-	assert.equal(parseMoney("RM 2,500.50"), "2500.50")
+	assert.equal(parseMoney("RM 2,500"), 2500)
+	assert.equal(parseMoney("RM 2,500.50"), 2500.5)
 	assert.equal(parseMoney("abc"), "")
-	assert.equal(parseMoney(moneyText("1234")), "1234")
+	assert.equal(parseMoney(moneyText("1234")), 1234)
+})
+
+test("money keeps its two decimals: typing 2500.05 is 2500.05, never 25005", () => {
+	assert.equal(parseMoney("RM 2,500.05"), 2500.05)
+	assert.equal(moneyText(2500.05), "RM 2,500.05")
+	assert.equal(moneyText(2500.5), "RM 2,500.50")
+	assert.equal(parseMoney("2500.059"), 2500.05, "a third decimal is not kept")
+	assert.equal(parseMoney("1.2.3"), 1.23, "a second point is dropped, as before")
+})
+
+test("a required question that is blank asks for it by verb, not 'Answer:'", () => {
+	const q = [
+		Q(5, "Draft job description", { required: 1, answer_type: "Long text" }),
+		Q(5, "KPIs", { required: 1 }),
+		Q(5, "What happens if it is late?", { required: 1 }),
+	]
+	assert.deepEqual(
+		stepProblems(4, complete(), {}, q, { today: TODAY }).map((p) => p.message),
+		["Add the draft job description", "Add the KPIs", "Answer: What happens if it is late?"]
+	)
+})
+
+test("arrow keys move between radio rows and wrap; other keys do nothing", () => {
+	assert.equal(rovingNext("ArrowDown", 0, 4), 1)
+	assert.equal(rovingNext("ArrowRight", 3, 4), 0)
+	assert.equal(rovingNext("ArrowUp", 0, 4), 3)
+	assert.equal(rovingNext("ArrowLeft", 2, 4), 1)
+	assert.equal(rovingNext("Tab", 1, 4), -1)
+	assert.equal(rovingNext("ArrowDown", -1, 4), 0, "nothing chosen yet: the first row")
+})
+
+test("only the chosen radio row is in the tab order; with none chosen, the first", () => {
+	const v = ["a", "b", "c"]
+	assert.deepEqual(
+		v.map((x) => tabStop("b", x, v)),
+		[-1, 0, -1]
+	)
+	assert.deepEqual(
+		v.map((x) => tabStop("", x, v)),
+		[0, -1, -1]
+	)
 })
