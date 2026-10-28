@@ -371,7 +371,13 @@ doc_events = {
 		# fires solely on a full save, i.e. at Pending creation, which the status
 		# guard skips. Wired to on_update this never ran at Success. Fires on every
 		# db_set; after_data_import's status guard keeps the work to the terminal one.
-		"on_change": "hrms.utils.naming_series_repair.after_data_import",
+		# Cost Tag/Center Upload rows wait as Pending until their import ends,
+		# then each employee's rows go on together (a 60/40 month only totals
+		# 100% once both rows are in). Same on_change reason as above.
+		"on_change": [
+			"hrms.utils.naming_series_repair.after_data_import",
+			"hrms.hr.doctype.cost_tag_center_upload.cost_tag_center_upload.after_data_import",
+		],
 	},
 	"Timesheet": {"validate": "hrms.hr.utils.validate_active_employee"},
 	"Payment Entry": {
