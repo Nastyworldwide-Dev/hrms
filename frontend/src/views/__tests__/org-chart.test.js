@@ -33,9 +33,9 @@ test("Route OrgChart exists in router", () => {
 	assert.match(source, /name:\s*["']OrgChart["']/, "should have OrgChart name")
 })
 
-test("More.vue has Org chart entry", () => {
+test("More.vue has Organizational Chart entry", () => {
 	const source = readFileSync(new URL("../More.vue", import.meta.url), "utf8")
-	assert.match(source, /Org chart|OrgChart/, "should mention Org chart")
+	assert.match(source, /Organizational Chart/, "should say Organizational Chart")
 	assert.match(source, /\/org-chart/, "should route to /org-chart")
 })
 

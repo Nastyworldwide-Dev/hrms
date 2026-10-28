@@ -239,7 +239,7 @@ const teamItems = computed(() => [
 	{
 		key: "org-chart",
 		icon: markRaw(Network),
-		title: __("Org chart"),
+		title: __("Organizational Chart"),
 		route: "/org-chart",
 		to: "/org-chart",
 	},

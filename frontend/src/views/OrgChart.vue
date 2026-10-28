@@ -1,6 +1,6 @@
 <template>
 	<GPage>
-		<ShellHeader :title="__('Org chart')">
+		<ShellHeader :title="__('Organizational Chart')">
 			<template #actions>
 				<button v-if="!isSearching && !isOnSelf" class="oc-you" @click="goToSelf">
 					<LocateFixed class="h-4 w-4" />
@@ -23,7 +23,7 @@
 					v-if="nodeData.loading"
 					class="oc-loading"
 					role="status"
-					:aria-label="__('Loading the org chart')"
+					:aria-label="__('Loading the organizational chart')"
 				>
 					<div v-for="i in 4" :key="i" class="oc-sk-row">
 						<GSkeleton width="36px" height="36px" radius="50%" class="oc-sk-dot" />
