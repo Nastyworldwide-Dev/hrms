@@ -3,6 +3,7 @@
 // round 2: HR sees a request from the moment it is SENT; actions stay locked until the manager decides)
 // and the approved mockup (tabs 6 and 7), not from the code under test.
 // Run: cd frontend && node --experimental-test-module-mocks --test src/utils/__tests__/manpowerBoard.test.js
+import { STAGE_LABELS } from "../manpowerRequest.js"
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
@@ -25,14 +26,14 @@ import {
 const row = (name, group, extra = {}) => ({ name, group, position_title: name, ...extra })
 const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8")
 
-test("the four lists are Waiting for manager, Needs HR, Recruiting, Done, in that order", () => {
+test("the four lists are Waiting for manager, Needs HR, Recruiting, Closed, in that order", () => {
 	assert.deepEqual(
 		BOARD_GROUPS.map((g) => [g.key, g.title]),
 		[
 			["waiting_manager", "Waiting for manager"],
 			["needs_hr", "Needs HR"],
 			["recruiting", "Recruiting"],
-			["done", "Done"],
+			["done", "Closed"],
 		]
 	)
 })
@@ -199,7 +200,7 @@ test("the board's route name is the one the router and More use", () => {
 test("each row's chip says where it stands in the owner's words, with a status key the chip colours by", () => {
 	const chip = (group, extra) => rowChip(row("A", group, extra))
 	assert.deepEqual(chip("waiting_manager", { status: "Open" }), {
-		label: "With manager",
+		label: "Waiting for manager",
 		status: "waiting",
 	})
 	assert.deepEqual(chip("needs_hr", { status: "Approved" }), {
@@ -215,14 +216,21 @@ test("each row's chip says where it stands in the owner's words, with a status k
 		status: "completed",
 	})
 	assert.deepEqual(chip("done", { status: "Approved", hiring_status: "Not proceeding" }), {
-		label: "Not proceeding",
+		label: "Closed",
 		status: "closed",
 	})
-	assert.deepEqual(chip("done", { status: "Rejected" }), { label: "Rejected", status: "rejected" })
+	assert.deepEqual(chip("done", { status: "Rejected" }), { label: "Closed", status: "rejected" })
 	assert.deepEqual(chip("done", { status: "Withdrawn" }), {
-		label: "Withdrawn",
+		label: "Closed",
 		status: "withdrawn",
 	})
+	assert.deepEqual(STAGE_LABELS, [
+		"Waiting for manager",
+		"Needs HR",
+		"Recruiting",
+		"Filled",
+		"Closed",
+	])
 })
 
 test("a live row reads 'High urgency · Ops · 9 days waiting'; a closed one says when it closed", () => {

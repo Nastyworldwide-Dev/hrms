@@ -1,6 +1,7 @@
 import dayjs from "dayjs"
 
 import { departmentLabel } from "./departmentLabel.js"
+import { STAGES, stage } from "./manpowerRequest.js"
 
 // HR's manpower board in Nadi (S4, 22 Oct 2026): the rules the board and the Hiring section share, kept
 // pure so they are tested without a browser. Owner rulings: .claude/plans/manpower-plan.md (HR sees a
@@ -13,10 +14,10 @@ const plain = (text, args) =>
 
 //: The four lists, in the order they are drawn. `key` is the server's `group`.
 export const BOARD_GROUPS = [
-	{ key: "waiting_manager", title: "Waiting for manager" },
-	{ key: "needs_hr", title: "Needs HR" },
-	{ key: "recruiting", title: "Recruiting" },
-	{ key: "done", title: "Done" },
+	{ key: "waiting_manager", title: STAGES.waiting.label },
+	{ key: "needs_hr", title: STAGES.needsHr.label },
+	{ key: "recruiting", title: STAGES.recruiting.label },
+	{ key: "done", title: STAGES.closed.label },
 ]
 
 //: Owner preference: summary first, tap to narrow; five rows, then "See all". No endless scroll.
@@ -108,15 +109,9 @@ export function hiringProblems(doc, { isHR, approver = "", choice = "", note = "
 
 /** A row's chip: { label, status } where `status` is the key GStatusChip colours by (word always shown). */
 export function rowChip(row, t = plain) {
-	if (row.group === "waiting_manager") return { label: t("With manager"), status: "waiting" }
-	if (row.group === "needs_hr") return { label: t("Needs HR"), status: "waiting" }
-	if (row.group === "recruiting") return { label: t("Recruiting"), status: "in progress" }
-	if (row.status === "Rejected") return { label: t("Rejected"), status: "rejected" }
-	if (row.status === "Withdrawn") return { label: t("Withdrawn"), status: "withdrawn" }
-	if (row.hiring_status === "Filled") return { label: t("Filled"), status: "completed" }
-	if (row.hiring_status === "Not proceeding")
-		return { label: t("Not proceeding"), status: "closed" }
-	return { label: t(row.hiring_status || row.status || "Done"), status: "closed" }
+	const GROUP = { waiting_manager: "waiting", needs_hr: "needsHr", recruiting: "recruiting" }
+	const { label, status } = STAGES[GROUP[row.group]] || stage({ ...row, status: row.status })
+	return { label: t(label), status }
 }
 
 /**

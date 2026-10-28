@@ -53,8 +53,8 @@ test("the board uses theme tokens, never a literal colour", () => {
 	assert.doesNotMatch(board, /\brgba?\(/)
 })
 
-test("More offers 'Staff requests' to HR only, with a count of what needs HR", () => {
-	assert.match(more, /__\("Staff requests"\)/)
+test("More offers 'Manpower requests' to HR only, with a count of what needs HR", () => {
+	assert.match(more, /__\("Manpower requests"\)/)
 	assert.match(more, /userResource\.data/)
 	assert.match(more, /hasHRRole/)
 	assert.match(more, /needs_hr/)

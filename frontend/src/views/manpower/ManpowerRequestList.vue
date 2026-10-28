@@ -2,7 +2,7 @@
 	<GPage>
 		<ListView
 			doctype="Manpower Request"
-			:pageTitle="__('Manpower')"
+			:pageTitle="__('Manpower requests')"
 			:fields="MANPOWER_LIST_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		>

@@ -5,7 +5,7 @@
   utils/manpowerBoard.js; the server decides who may read (hr_board is HR only, company-fenced).
 -->
 <template>
-	<BaseLayout :pageTitle="__('Staff requests')">
+	<BaseLayout :pageTitle="__('Manpower requests')">
 		<template #body>
 			<GPullRefresh @refresh="refresh" />
 			<div

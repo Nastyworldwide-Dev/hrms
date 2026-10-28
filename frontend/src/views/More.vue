@@ -205,7 +205,7 @@ const teamItems = computed(() => [
 				{
 					key: "staff-requests",
 					icon: markRaw(ClipboardList),
-					title: __("Staff requests"),
+					title: __("Manpower requests"),
 					to: { name: boardRoute.name },
 					badge: needsHr.value ? String(needsHr.value) : "",
 				},

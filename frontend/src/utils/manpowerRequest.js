@@ -19,7 +19,19 @@ export const URGENCY_BY_HOW_SOON = {
 export const OTHER_SITE = "Other"
 
 export const MAX_HEADCOUNT = 50
-export const BANDS = ["B", "C", "D", "E1", "E2", "F"]
+export const BANDS = [
+	{ value: "B", label: "B", meaning: "Head / VP" },
+	{ value: "C", label: "C", meaning: "Senior Manager" },
+	{ value: "D", label: "D", meaning: "Assistant Manager / Manager" },
+	{ value: "E1", label: "E1", meaning: "Senior Executive" },
+	{ value: "E2", label: "E2", meaning: "Junior Executive" },
+	{ value: "F", label: "F", meaning: "Assistant" },
+]
+/** "E1 — Senior Executive", or "" for a blank or unknown band. */
+export const bandLabel = (v) => {
+	const band = BANDS.find((b) => b.value === v)
+	return band ? `${band.label} — ${band.meaning}` : ""
+}
 export const EMPLOYMENT_TYPES = [
 	{ value: "Full-Time", label: "Full-time", hint: "Permanent, full working week" },
 	{ value: "Contract", label: "Contract", hint: "Fixed end date" },
@@ -427,17 +439,29 @@ export function reviewGroups(model, extra, questions, { t = (x) => x, me = "" } 
 	}))
 }
 
-/** A request's stage in the owner's words, with the status key GStatusChip colours it by. */
+//: The five words every page uses for where a request stands, with the key GStatusChip colours by.
+//: manpowerBoard's rowChip reads this same table.
+export const STAGES = {
+	waiting: { label: "Waiting for manager", status: "waiting" },
+	needsHr: { label: "Needs HR", status: "waiting" },
+	recruiting: { label: "Recruiting", status: "in progress" },
+	filled: { label: "Filled", status: "completed" },
+	closed: { label: "Closed", status: "closed" },
+}
+export const STAGE_LABELS = Object.values(STAGES).map((s) => s.label)
+
+/** A request's stage: { label, status } and, once Closed, `reason` (Withdrawn | Rejected | Not proceeding). */
 export function stage(doc) {
-	const hiring = {
-		"Waiting for HR": { label: "Approved, waiting for HR", status: "submitted" },
-		Recruiting: { label: "Recruiting", status: "in progress" },
-		Filled: { label: "Filled", status: "completed" },
-		"Not proceeding": { label: "Not proceeding", status: "closed" },
+	if (doc?.status === "Withdrawn")
+		return { ...STAGES.closed, status: "withdrawn", reason: "Withdrawn" }
+	if (doc?.status === "Rejected")
+		return { ...STAGES.closed, status: "rejected", reason: "Rejected" }
+	if (doc?.status === "Approved") {
+		if (doc.hiring_status === "Recruiting") return STAGES.recruiting
+		if (doc.hiring_status === "Filled") return STAGES.filled
+		if (doc.hiring_status === "Not proceeding")
+			return { ...STAGES.closed, reason: "Not proceeding" }
+		return STAGES.needsHr
 	}
-	if (doc?.status === "Withdrawn") return { label: "Withdrawn", status: "withdrawn" }
-	if (doc?.status === "Rejected") return { label: "Rejected", status: "rejected" }
-	if (doc?.status === "Approved")
-		return hiring[doc.hiring_status] || { label: "Approved", status: "approved" }
-	return { label: "Waiting for manager", status: "waiting" }
+	return STAGES.waiting
 }

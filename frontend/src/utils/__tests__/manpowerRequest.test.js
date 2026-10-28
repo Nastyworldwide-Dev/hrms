@@ -2,6 +2,7 @@
 // Expected values come from the owner's rulings (.claude/plans/manpower-plan.md) and the server's
 // own rules (hrms/hr/doctype/manpower_request/manpower_request.py), not from the code under test.
 // Run: cd frontend && node --experimental-test-module-mocks --test src/utils/__tests__/manpowerRequest.test.js
+import { REQUEST_KIND } from "../requestKind.js"
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
@@ -25,6 +26,9 @@ import {
 	questionField,
 	reviewGroups,
 	stage,
+	STAGE_LABELS,
+	BANDS,
+	bandLabel,
 	summaryLine,
 	readDraft,
 	writeDraft,
@@ -558,26 +562,47 @@ test("Review groups the answers by step, each with the step to edit", () => {
 	)
 })
 
-test("a request's stage reads in the owner's words, with the chip key that colours it", () => {
+test("a request's stage uses the five words, with the chip key that colours it", () => {
 	const row = (over) => ({ docstatus: 0, status: "Open", hiring_status: "", ...over })
 	const one = (over) => stage(row(over))
+	const appr = (hiring_status) => ({ docstatus: 1, status: "Approved", hiring_status })
 	assert.deepEqual(one({}), { label: "Waiting for manager", status: "waiting" })
-	assert.deepEqual(one({ docstatus: 1, status: "Approved", hiring_status: "Waiting for HR" }), {
-		label: "Approved, waiting for HR",
-		status: "submitted",
+	assert.deepEqual(one(appr("Waiting for HR")), { label: "Needs HR", status: "waiting" })
+	assert.deepEqual(one(appr("")), { label: "Needs HR", status: "waiting" })
+	assert.deepEqual(one(appr("Recruiting")), { label: "Recruiting", status: "in progress" })
+	assert.deepEqual(one(appr("Filled")), { label: "Filled", status: "completed" })
+	assert.deepEqual(one(appr("Not proceeding")), {
+		label: "Closed",
+		status: "closed",
+		reason: "Not proceeding",
 	})
-	assert.equal(
-		one({ docstatus: 1, status: "Approved", hiring_status: "Recruiting" }).label,
-		"Recruiting"
+	assert.deepEqual(one({ docstatus: 1, status: "Rejected" }), {
+		label: "Closed",
+		status: "rejected",
+		reason: "Rejected",
+	})
+	assert.equal(one({ status: "Withdrawn" }).reason, "Withdrawn")
+	assert.equal(one({ docstatus: 1, status: "Withdrawn" }).label, "Closed")
+	assert.deepEqual(STAGE_LABELS, [
+		"Waiting for manager",
+		"Needs HR",
+		"Recruiting",
+		"Filled",
+		"Closed",
+	])
+})
+
+test("one name and band meanings", () => {
+	assert.deepEqual(
+		BANDS.map((b) => b.value),
+		["B", "C", "D", "E1", "E2", "F"]
 	)
-	assert.equal(one({ docstatus: 1, status: "Approved", hiring_status: "Filled" }).label, "Filled")
-	assert.equal(
-		one({ docstatus: 1, status: "Approved", hiring_status: "Not proceeding" }).label,
-		"Not proceeding"
-	)
-	assert.equal(one({ docstatus: 1, status: "Rejected" }).label, "Rejected")
-	assert.equal(one({ status: "Withdrawn" }).label, "Withdrawn")
-	assert.equal(one({ docstatus: 1, status: "Withdrawn" }).label, "Withdrawn")
+	assert.equal(BANDS[0].meaning, "Head / VP")
+	assert.equal(bandLabel("E1"), "E1 — Senior Executive")
+	assert.equal(bandLabel("F"), "F — Assistant")
+	assert.equal(bandLabel("Z"), "")
+	assert.equal(bandLabel(""), "")
+	assert.equal(REQUEST_KIND["Manpower Request"], "Manpower request")
 })
 
 test("the detail names the employment type and the replaced person in plain words", () => {
