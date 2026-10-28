@@ -89,7 +89,7 @@ def test_capability_is_exactly_the_shared_decision_access(
 	)
 	setattr(doc, decision_field, initial if state == "pending" else state)
 	doc.get = lambda key: getattr(doc, key, None)
-	namespace["_is_routed_approver"] = lambda doc: routed
+	namespace["_is_routed_approver"] = lambda doc, user=None, *, system_manager_counts=True: routed
 	# Identity and "who is above this person" are explicit inputs here, like
 	# every other predicate in this file — the resolver itself is covered by
 	# hrms/tests/test_self_approval_fences_are_canonical.py and
@@ -153,7 +153,8 @@ def test_capability_is_exactly_the_shared_decision_access(
 		return not prevent_self or (doctype == "Leave Application" and action == "Rejected")
 
 	authority = (submit and write and field) or routed
-	baseline = docstatus == 0 and not workflow and company and read and authority
+	# 40d3760a3 (HR, 7 Oct 2026): company fence is HR sight only; a routed approver decides in any company.
+	baseline = docstatus == 0 and not workflow and (company or routed) and read and authority
 	expected = []
 	if baseline:
 		if state == "pending":
