@@ -104,6 +104,14 @@ class TestCostCenterColumn(unittest.TestCase):
 		_, fields = self._fields()
 		self.assertEqual(fields["cost_center"].get("ignore_user_permissions"), 1)
 
+	def test_the_employee_form_hides_each_companys_main(self):
+		# owner, 28 Oct 2026: every company has a default "Main" cost center;
+		# a dozen of them buried CEOF, PFME, NTGY... under the fold
+		js = (ROOT / "public/js/erpnext/employee.js").read_text()
+		block = js[js.index('set_query("cost_center", "interco_cost_allocation"') :]
+		block = block[: block.index("});")]
+		self.assertRegex(block, r'cost_center_name:\s*\["!=",\s*"Main"\]')
+
 	def test_the_employee_form_offers_only_enabled_leaf_cost_centers(self):
 		js = (ROOT / "public/js/erpnext/employee.js").read_text()
 		self.assertRegex(

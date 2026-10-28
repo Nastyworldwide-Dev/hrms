@@ -26,12 +26,14 @@ frappe.ui.form.on("Employee", {
 				};
 			});
 		}
-		// Cost Tag/Center: every company's cost centers, leaves only, not disabled
+		// Cost Tag/Center: every company's cost centers, leaves only, not disabled,
+		// and not each company's default "Main" (they buried the real tags)
 		frm.set_query("cost_center", "interco_cost_allocation", () => {
 			return {
 				filters: {
 					is_group: 0,
 					disabled: 0,
+					cost_center_name: ["!=", "Main"],
 				},
 			};
 		});
