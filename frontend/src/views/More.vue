@@ -130,6 +130,7 @@ import {
 	CalendarRange,
 	ClipboardList,
 	ExternalLink,
+	Network,
 	Plane,
 	SquareCheck,
 	Users,
@@ -235,6 +236,13 @@ const teamItems = computed(() => [
 				},
 		  ]
 		: []),
+	{
+		key: "org-chart",
+		icon: markRaw(Network),
+		title: __("Org chart"),
+		route: "/org-chart",
+		to: "/org-chart",
+	},
 ])
 
 // Offered by the server (hrms.api.app_links; audit F-15). Every employee is offered Approva; someone

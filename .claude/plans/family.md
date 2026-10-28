@@ -1,2 +1,2 @@
-CLASS: new endpoint — the org chart node and its fenced photo (no existing callers)
-hrms/api/org_chart.py get_node same-root — new
+CLASS: new screen — the org chart in Nadi (no existing callers)
+frontend/src/views/OrgChart.vue same-root — new

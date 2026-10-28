@@ -97,6 +97,12 @@ const routes = [
 				component: () => import("@/views/team/TeamRoster.vue"),
 			},
 			{
+				// Org chart: everyone's hierarchy (alpha.67)
+				path: "/org-chart",
+				name: "OrgChart",
+				component: () => import("@/views/OrgChart.vue"),
+			},
+			{
 				// The announcement board (revamp §3). A TAB CHILD rather than a
 				// top-level route: it is reached from Home's block and from More,
 				// and both are inside the tab shell — a top-level route would
