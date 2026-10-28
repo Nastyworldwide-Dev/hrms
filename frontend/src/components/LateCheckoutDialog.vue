@@ -76,7 +76,7 @@ import { computed, inject, ref, watch } from "vue"
 import { gToast } from "@/components/glass/toast"
 
 import { formatTimestamp } from "@/utils/formatters"
-import { defaultCheckoutTime } from "@/utils/checkinSession"
+import { defaultCheckoutTime } from "@/utils/lateCheckout"
 import { submitLateCheckoutResource } from "@/data/remoteCheckin"
 import { firstMessage } from "@/utils/loudRequest"
 

@@ -5,7 +5,7 @@
 // frozen app. Reproduced in WebKit with a 19:30 check-in.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { defaultCheckoutTime } from "../checkinSession.js"
+import { defaultCheckoutTime } from "../lateCheckout.js"
 
 const at = (s) => new Date(s)
 
