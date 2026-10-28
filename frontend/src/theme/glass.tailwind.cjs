@@ -49,6 +49,8 @@ module.exports = {
 		"on-badge": "rgb(var(--g-on-badge-rgb) / <alpha-value>)",
 		"on-brand": "rgb(var(--g-on-brand-rgb) / <alpha-value>)",
 		"on-media-frame": "rgb(var(--g-on-media-frame-rgb) / <alpha-value>)",
+		"on-person-badge": "rgb(var(--g-on-person-badge-rgb) / <alpha-value>)",
+		"person-badge": "rgb(var(--g-person-badge-rgb) / <alpha-value>)",
 		rest: "rgb(var(--g-rest-rgb) / <alpha-value>)",
 		rim: "var(--g-glass-rim)",
 		"rim-hi": "var(--g-rim-hi)",
