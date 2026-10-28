@@ -1,2 +1,2 @@
-CLASS: new endpoint — staff set their own profile photo (no existing callers)
-hrms/api/profile_photo.py set_photo same-root — new
+CLASS: new endpoint — the org chart node and its fenced photo (no existing callers)
+hrms/api/org_chart.py get_node same-root — new
