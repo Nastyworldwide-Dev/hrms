@@ -9,6 +9,7 @@
   Emits:
     use(dataUrl) — canvas.toDataURL("image/jpeg", 0.85) of the cropped 512x512 photo
     did-dismiss  — sheet closed without using
+    error        — the file could not be decoded as an image
   Slot: title customization (optional)
 -->
 <template>
@@ -40,7 +41,7 @@
 		<div class="photo-zoom-row">
 			<button
 				type="button"
-				class="g-icon-btn"
+				class="ps-icon-btn"
 				:aria-label="__('Zoom out')"
 				:disabled="saving"
 				@click="zoomOut"
@@ -60,7 +61,7 @@
 			/>
 			<button
 				type="button"
-				class="g-icon-btn"
+				class="ps-icon-btn"
 				:aria-label="__('Zoom in')"
 				:disabled="saving"
 				@click="zoomIn"
@@ -97,7 +98,7 @@ const props = defineProps({
 	saving: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(["use", "did-dismiss"])
+const emit = defineEmits(["use", "did-dismiss", "error"])
 
 const canvas = ref(null)
 const zoomInput = ref(null)
@@ -130,6 +131,7 @@ watch(
 		}
 		newImg.onerror = () => {
 			URL.revokeObjectURL(url)
+			emit("error")
 		}
 		newImg.src = url
 	}
@@ -219,6 +221,7 @@ function pdist() {
 }
 
 function onPointerDown(e) {
+	if (props.saving) return
 	const cv = stageEl.value
 	if (!cv) return
 	cv.setPointerCapture(e.pointerId)
@@ -227,6 +230,7 @@ function onPointerDown(e) {
 }
 
 function onPointerMove(e) {
+	if (props.saving) return
 	if (!pointers.has(e.pointerId)) return
 	const prev = pointers.get(e.pointerId)
 	pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -244,10 +248,12 @@ function onPointerEnd(e) {
 }
 
 function onWheel(e) {
+	if (props.saving) return
 	setZoom(zoom.value * (e.deltaY < 0 ? 1.08 : 1 / 1.08))
 }
 
 function onKeyDown(e) {
+	if (props.saving) return
 	if (e.key === "ArrowLeft") {
 		moveBy(-STEP, 0)
 		e.preventDefault()
@@ -332,7 +338,7 @@ function usePhoto() {
 	padding: 0 8px;
 }
 
-.g-icon-btn {
+.ps-icon-btn {
 	flex: none;
 	width: 44px;
 	height: 44px;
@@ -347,14 +353,20 @@ function usePhoto() {
 	color: var(--g-ink);
 }
 
-.g-icon-btn:active:not(:disabled) {
+.ps-icon-btn:active:not(:disabled) {
 	transform: scale(0.94);
 	background: var(--g-icon-bg);
 }
 
-.g-icon-btn:disabled {
+.ps-icon-btn:disabled {
 	opacity: 0.4;
 	cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ps-icon-btn {
+		transition: none;
+	}
 }
 
 .photo-zoom-row input[type="range"] {

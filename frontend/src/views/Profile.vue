@@ -15,8 +15,9 @@
 									type="button"
 									class="g-account__avatar-btn"
 									:class="{ busy: photoUploadBusy }"
-									:aria-label="__('Change photo')"
+									:aria-label="__('Change profile photo')"
 									:aria-disabled="photoUploadBusy"
+									:aria-describedby="photoUploadBusy ? 'photo-saving' : undefined"
 									@click="openPhotoActions"
 								>
 									<GAvatar
@@ -25,12 +26,7 @@
 										:size="60"
 										round
 									/>
-									<span
-										v-if="photoUploadBusy"
-										class="g-account__spinner"
-										role="status"
-										:aria-label="__('Saving photo')"
-									/>
+									<span v-if="photoUploadBusy" class="g-account__spinner" aria-hidden="true" />
 									<span v-else class="g-account__badge" aria-hidden="true">
 										<Camera class="h-3.5 w-3.5" />
 									</span>
@@ -41,15 +37,25 @@
 										employee?.data?.employee_name || user.data?.full_name
 									}}</span>
 									<span v-if="roleLine" class="g-account__sub">{{ roleLine }}</span>
-									<span v-if="photoError" class="g-account__error" role="status">{{
-										photoError
-									}}</span>
-									<GButton
-										v-if="photoRetry"
-										:label="__('Try again')"
-										:pending="photoUploadBusy"
-										@click="retryPhoto"
-									/>
+									<span
+										v-if="photoUploadBusy"
+										id="photo-saving"
+										class="g-account__sub"
+										role="status"
+										>{{ __("Saving your photo…") }}</span
+									>
+									<span v-if="photoError" class="g-account__error" role="alert">
+										{{ photoError }}
+										<button
+											v-if="photoRetry"
+											type="button"
+											class="g-account__retry g-focusable"
+											:disabled="photoUploadBusy"
+											@click="retryPhoto"
+										>
+											{{ __("Try again") }}
+										</button>
+									</span>
 								</div>
 							</div>
 							<!-- On the page, not in sheets (PAGE-23; shift pattern by owner
@@ -64,7 +70,11 @@
 							     for: no "could not load" that Try again can never fix. -->
 							<template v-if="!noEmployee">
 								<ResourceError :resource="employeeDoc.get" :what="__('your details')" />
-								<div v-if="!employeeDoc.get.error" v-value-row class="g-form-row g-form-row--readonly">
+								<div
+									v-if="!employeeDoc.get.error"
+									v-value-row
+									class="g-form-row g-form-row--readonly"
+								>
 									<span class="g-form-row__label">{{ __("Manager") }}</span>
 									<GSkeleton v-if="managerLoading" width="96px" height="11px" />
 									<router-link
@@ -79,13 +89,20 @@
 									</router-link>
 									<span v-else class="g-form-row__value">{{ __("None") }}</span>
 								</div>
-								<div v-if="!employeeDoc.get.error" v-value-row class="g-form-row g-form-row--readonly">
+								<div
+									v-if="!employeeDoc.get.error"
+									v-value-row
+									class="g-form-row g-form-row--readonly"
+								>
 									<span class="g-form-row__label">{{ __("Shift") }}</span>
 									<GSkeleton v-if="!employeeDoc.doc" width="96px" height="11px" />
 									<span v-else class="g-form-row__value">{{ shiftName || __("None") }}</span>
 								</div>
 							</template>
 						</div>
+						<p v-if="!noEmployee && photoCompany" class="g-form-footer">
+							{{ __("Your photo is seen by people in {0}.").replace("{0}", photoCompany) }}
+						</p>
 
 						<!-- Details and work: one row, one sheet (was three rows). -->
 						<GListPanel>
@@ -172,7 +189,11 @@
 								</button>
 							</div>
 							<p class="g-form-footer g-form-footer--center">
-								{{ releaseName ? __("Nadi {0} · {1}", [versionString, __(releaseName)]) : __("Nadi {0}", [versionString]) }}
+								{{
+									releaseName
+										? __("Nadi {0} · {1}", [versionString, __(releaseName)])
+										: __("Nadi {0}", [versionString])
+								}}
 							</p>
 						</section>
 					</div>
@@ -202,6 +223,7 @@
 				:file="selectedPhotoFile"
 				:saving="photoUploadBusy"
 				@use="onPhotoUse"
+				@error="onPhotoUndecodable"
 				@did-dismiss="photoCropOpen = false"
 			/>
 
@@ -230,14 +252,13 @@
 </template>
 
 <script setup>
-import { Camera, ChevronRight, KeyRound, User } from "lucide-vue-next"
+import { Camera, ChevronRight, Image as ImageIcon, KeyRound, Trash2, User } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import { computed, inject, ref, watch } from "vue"
 import { useListUpdate } from "@/composables/realtime"
 import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
 import GModal from "@/components/glass/GModal.vue"
-import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import GActionSheet from "@/components/glass/GActionSheet.vue"
 import PhotoSheet from "@/components/PhotoSheet.vue"
@@ -439,12 +460,17 @@ function detailsResource() {
 	console.warn("[You] employee not read yet; details wait for Try again")
 	return {
 		doc: null,
-		get: { error: new Error("employee unknown"), loading: false, reload: () => employee.reload().then(() => location.reload()) },
+		get: {
+			error: new Error("employee unknown"),
+			loading: false,
+			reload: () => employee.reload().then(() => location.reload()),
+		},
 		reload: () => employee.reload().then(() => location.reload()),
 	}
 }
 const employeeDoc = detailsResource()
 
+const photoCompany = computed(() => employeeDoc.doc?.company || employee.data?.company || "")
 const roleLine = computed(() => {
 	const doc = employeeDoc.doc || employee.data || {}
 	const where = [doc.department, doc.branch].filter(Boolean).join(" · ")
@@ -453,7 +479,9 @@ const roleLine = computed(() => {
 // Today's shift as Home reads it (an assignment, else the default), so the two
 // screens never disagree: You said "None" beside Home's "Morning Shift" for
 // anyone on an assignment with no default (UX review 21 Oct 2026, F3).
-const shiftName = computed(() => nowResource.data?.shift?.shift || employeeDoc.doc?.default_shift || null)
+const shiftName = computed(
+	() => nowResource.data?.shift?.shift || employeeDoc.doc?.default_shift || null
+)
 // reload, not fetch-if-empty: the cache may hold another day's shift
 nowResource.reload()?.catch?.((e) => console.warn("[You] today's shift unavailable", e))
 
@@ -473,7 +501,9 @@ watch(
 const managerName = computed(() => (employeeDoc.doc?.reports_to ? reportsToName.data : null))
 //: Until the record says who, and then until the name is read.
 const managerLoading = computed(
-	() => !employeeDoc.doc || Boolean(employeeDoc.doc.reports_to && !reportsToName.data && !reportsToName.error)
+	() =>
+		!employeeDoc.doc ||
+		Boolean(employeeDoc.doc.reports_to && !reportsToName.data && !reportsToName.error)
 )
 
 const getFieldValue = (fieldname) => {
@@ -534,19 +564,19 @@ const photoActions = computed(() => {
 		{
 			key: "choose",
 			label: __("Choose photo"),
-			icon: null,
+			icon: ImageIcon,
 		},
 		{
 			key: "take",
 			label: __("Take photo"),
-			icon: null,
+			icon: Camera,
 		},
 	]
 	if (user.data?.user_image) {
 		actions.push({
 			key: "remove",
 			label: __("Remove photo"),
-			icon: null,
+			icon: Trash2,
 			destructive: true,
 		})
 	}
@@ -554,6 +584,7 @@ const photoActions = computed(() => {
 })
 
 function openPhotoActions() {
+	if (photoUploadBusy.value) return
 	photoError.value = ""
 	photoActionsOpen.value = true
 }
@@ -577,6 +608,7 @@ function onFileSelect(e) {
 
 	photoActionsOpen.value = false
 	photoError.value = ""
+	photoRetry.value = ""
 
 	// Check file size and type
 	const err = checkPick(file)
@@ -594,6 +626,12 @@ function onFileSelect(e) {
 	selectedPhotoFile.value = file
 	photoCropOpen.value = true
 	console.info("[profile] photo selected, opening crop")
+}
+
+function onPhotoUndecodable() {
+	photoCropOpen.value = false
+	photoError.value = __("That file isn't a photo. Pick a JPEG or PNG.")
+	console.info("[profile] photo undecodable")
 }
 
 const setPhotoResource = createResource({
@@ -635,6 +673,7 @@ const removePhotoResource = createResource({
 async function removePhoto() {
 	photoUploadBusy.value = true
 	photoError.value = ""
+	photoRetry.value = ""
 
 	try {
 		await removePhotoResource.submit({})
@@ -680,7 +719,7 @@ async function removePhoto() {
 	display: grid;
 	place-items: center;
 	background: var(--g-ink);
-	color: var(--g-bg, #fff);
+	color: var(--g-bg);
 }
 .g-account__spinner {
 	position: absolute;
@@ -690,6 +729,21 @@ async function removePhoto() {
 	border-radius: 50%;
 	animation: g-photo-spin 0.8s linear infinite;
 }
+@media (prefers-reduced-motion: reduce) {
+	.g-account__spinner {
+		animation: none;
+	}
+}
+.g-account__retry {
+	border: 0;
+	background: transparent;
+	padding: 0 4px;
+	min-height: 44px;
+	color: inherit;
+	font: inherit;
+	text-decoration: underline;
+	cursor: pointer;
+}
 @keyframes g-photo-spin {
 	to {
 		transform: rotate(360deg);
@@ -698,7 +752,7 @@ async function removePhoto() {
 .g-account__error {
 	font-size: 0.8125rem;
 	line-height: 1.125rem;
-	color: var(--g-danger, #b3261e);
+	color: var(--g-danger-ink);
 }
 .g-form-row__link {
 	display: inline-flex;
