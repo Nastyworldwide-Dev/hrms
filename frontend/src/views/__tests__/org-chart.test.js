@@ -64,11 +64,42 @@ test("HR gap links say who they fix, and expanders declare what they control", (
 	assert.match(template(), /aria-controls="oc-peers-list"/)
 })
 
-test("Team section is always shown with an empty line", () => {
-	assert.doesNotMatch(template(), /v-if="teamDisplay\.all\.length > 0"/)
-	assert.match(template(), /No one reports to \{0\}\./)
-	assert.match(template(), /<h2 class="oc-focus-card__name"/)
-	assert.match(template(), /:size="64"/)
+test("flow chart only: boxes, no list view and no view switch", () => {
+	const t = template()
+	assert.match(t, /class="oc-flow"/)
+	assert.match(t, /class="oc-node oc-node--focus"/)
+	assert.match(t, /class="oc-kids"/)
+	assert.doesNotMatch(t, /oc-focus-card|Reports to section/)
+	assert.doesNotMatch(src(), /viewMode|ui\.view|List \(earlier/)
+})
+
+test("the chain is a ladder: N more above, then the direct manager", () => {
+	const t = template()
+	assert.match(t, /__\("\{0\} more above", \[ladder\.above\.length\]\)/)
+	assert.match(t, /__\("Direct manager"\)/)
+	assert.match(t, /aria-controls="oc-above-list"/)
+})
+
+test("empty is said once: no team chip, a dashed No team yet box", () => {
+	const t = template()
+	assert.doesNotMatch(t, /__\("No team"\)|No one reports to/)
+	assert.doesNotMatch(t, /class="oc-chip">\s*\{\{[^}]*Team of/)
+	assert.match(t, /__\("No team yet"\)/)
+	assert.match(t, /__\("No manager set yet"\)/)
+})
+
+test("every person in the chart uses the two-letter badge", () => {
+	const avatars = template().match(/<GAvatar[^>]*>/g) || []
+	assert.ok(avatars.length >= 5)
+	for (const a of avatars) assert.match(a, /\bbadge\b/, a)
+})
+
+test("boxes are outlined black in light and lime in dark, focus thicker, from tokens", () => {
+	const style = src().slice(src().indexOf("<style scoped>"))
+	assert.match(style, /--oc-box-line:\s*var\(--g-ink\)/)
+	const theme = readFileSync(new URL("../../theme/glass-components.css", import.meta.url), "utf8")
+	assert.match(theme, /html\[data-theme="dark"\] \.oc-flow\s*\{[^}]*--oc-box-line:\s*var\(--g-accent-ink\)/)
+	assert.match(style, /\.oc-node--focus\s*\{[^}]*box-shadow:\s*inset 0 0 0 3px var\(--oc-box-line\)/)
 })
 
 test("no scoped copy of shared glass classes, no undefined tokens", () => {

@@ -2886,6 +2886,12 @@ textarea {
 /* owner, 28 Oct 2026: two letters on a black disc with a lime ring, the same
    in light and dark, so a list of "M" names stops looking like one row
    repeated. Inset ring, so a photo keeps it too. */
+/* Organizational Chart boxes are outlined in ink (black) on light and in the
+   accent (lime) on dark. Set here because a scoped style cannot see the html
+   theme attribute. */
+html[data-theme="dark"] .oc-flow {
+	--oc-box-line: var(--g-accent-ink);
+}
 .g-avatar--badge {
 	background: var(--g-person-badge);
 	color: var(--g-on-person-badge);

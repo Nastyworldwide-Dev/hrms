@@ -1,7 +1,15 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { teamPreview, awayCount, subline, chainRows, gapsMessage, gapSub } from "../orgChart.js"
+import {
+	teamPreview,
+	awayCount,
+	subline,
+	chainRows,
+	gapsMessage,
+	gapSub,
+	chainLadder,
+} from "../orgChart.js"
 
 test("teamPreview shows first n reports with overflow", () => {
 	const reports = [
@@ -119,4 +127,33 @@ test("gapsMessage drops a zero part and uses singular", () => {
 test("gapSub joins designation and company, skipping blanks", () => {
 	assert.equal(gapSub({ designation: "Clerk", company: "Acme" }), "Clerk · Acme")
 	assert.equal(gapSub({ designation: "", company: "Acme" }), "Acme")
+})
+
+// The flow chart draws the direct manager right above the person, and folds
+// everyone higher into one "N more above" pill, top manager first.
+test("chainLadder: direct manager is the nearest, the rest go above, top first", () => {
+	const chain = [{ id: "M3" }, { id: "M2" }, { id: "M1" }] // API: nearest first
+	const { direct, above } = chainLadder(chain)
+	assert.equal(direct.id, "M3")
+	assert.deepEqual(
+		above.map((p) => p.id),
+		["M1", "M2"]
+	)
+})
+
+test("chainLadder: one manager has nothing above", () => {
+	const { direct, above } = chainLadder([{ id: "M1" }])
+	assert.equal(direct.id, "M1")
+	assert.deepEqual(above, [])
+})
+
+test("chainLadder: no manager set", () => {
+	assert.deepEqual(chainLadder([]), { direct: null, above: [] })
+	assert.deepEqual(chainLadder(undefined), { direct: null, above: [] })
+})
+
+test("teamPreview default is 4 boxes, two rows of two", () => {
+	const six = Array.from({ length: 6 }, (_, i) => ({ id: String(i) }))
+	assert.equal(teamPreview(six).shown.length, 4)
+	assert.equal(teamPreview(six).more, 2)
 })

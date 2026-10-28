@@ -25,12 +25,14 @@
 					role="status"
 					:aria-label="__('Loading the organizational chart')"
 				>
-					<div v-for="i in 4" :key="i" class="oc-sk-row">
-						<GSkeleton width="36px" height="36px" radius="50%" class="oc-sk-dot" />
-						<span class="oc-sk-lines">
-							<GSkeleton width="60%" height="14px" />
-							<GSkeleton width="38%" height="10px" />
-						</span>
+					<div class="oc-flow">
+						<GSkeleton width="100%" height="56px" radius="18px" class="oc-sk-box" />
+						<span class="oc-line" aria-hidden="true"></span>
+						<GSkeleton width="100%" height="190px" radius="20px" class="oc-sk-focus" />
+						<span class="oc-line" aria-hidden="true"></span>
+						<div class="oc-kids">
+							<GSkeleton v-for="i in 4" :key="i" width="100%" height="110px" radius="18px" />
+						</div>
 					</div>
 				</div>
 
@@ -58,7 +60,7 @@
 									class="g-row g-row--tappable"
 									@click="focusPerson(p.id)"
 								>
-									<GAvatar :image="p.image" :label="p.name" round />
+									<GAvatar :image="p.image" :label="p.name" round badge />
 									<span class="g-row__body">
 										<span class="g-row__label">{{ p.name }}</span>
 										<span class="g-row__sub">{{ subline(p) }}</span>
@@ -119,111 +121,171 @@
 							</div>
 						</section>
 
-						<!-- Reports to section -->
-						<section v-if="chainRows.length" class="oc-sec">
-							<h2 class="oc-sec__title">{{ __("Reports to") }}</h2>
-							<div class="g-form-group">
+						<!-- The chart: managers, then the person, then their team, joined by lines -->
+						<div class="oc-flow">
+							<!-- Managers above the direct one fold into one pill, top first -->
+							<template v-if="ladder.above.length">
 								<button
-									v-for="p in chainRows"
-									:key="p.id || p.name"
-									class="g-row g-row--tappable"
-									@click="focusPerson(p.id)"
-									:disabled="!!p.message"
+									class="oc-node oc-node--pill"
+									:aria-expanded="aboveExpanded"
+									aria-controls="oc-above-list"
+									@click="aboveExpanded = !aboveExpanded"
 								>
-									<GAvatar v-if="!p.message" :image="p.image" :label="p.name" round />
-									<span v-else class="g-row__well oc-well-warn">
+									<span v-if="!aboveExpanded" class="oc-stack" aria-hidden="true">
+										<GAvatar
+											v-for="p in ladder.above.slice(-3)"
+											:key="p.id || p.name"
+											:image="p.image"
+											:label="p.name"
+											:size="24"
+											round
+											badge
+											decorative
+										/>
+									</span>
+									<span class="oc-pill__label">
+										{{
+											aboveExpanded
+												? __("Hide higher managers")
+												: __("{0} more above", [ladder.above.length])
+										}}
+									</span>
+									<ChevronDown class="oc-chev" />
+								</button>
+								<span class="oc-line" aria-hidden="true"></span>
+								<div v-if="aboveExpanded" id="oc-above-list" class="oc-flow">
+									<template v-for="p in ladder.above" :key="p.id || p.name">
+										<button class="oc-node" :disabled="!!p.message" @click="focusPerson(p.id)">
+											<GAvatar v-if="!p.message" :image="p.image" :label="p.name" round badge />
+											<span v-else class="g-row__well oc-well-warn">
+												<UserRoundX class="w-4 h-4" />
+											</span>
+											<span class="oc-node__body">
+												<span class="oc-node__name">{{
+													p.message ? __("Manager has left") : p.name
+												}}</span>
+												<span class="oc-node__sub">{{ p.designation }}</span>
+											</span>
+										</button>
+										<span class="oc-line" aria-hidden="true"></span>
+									</template>
+								</div>
+							</template>
+
+							<!-- Direct manager -->
+							<template v-if="ladder.direct">
+								<div v-if="ladder.direct.message" class="oc-node oc-node--static">
+									<span class="g-row__well oc-well-warn">
 										<UserRoundX class="w-4 h-4" />
 									</span>
-									<span class="g-row__body">
-										<span class="g-row__label">{{
-											p.message ? __("Manager has left") : p.name
-										}}</span>
-										<span v-if="p.message" class="g-row__sub oc-wrap">
+									<span class="oc-node__body">
+										<span class="oc-node__eyebrow">{{ __("Direct manager") }}</span>
+										<span class="oc-node__name">{{ __("Manager has left") }}</span>
+										<span class="oc-node__sub oc-wrap">
 											{{ __("HR sets a new manager in Desk") }}
 										</span>
 									</span>
-								</button>
-							</div>
-						</section>
-
-						<!-- Focus card -->
-						<section ref="focusCard" class="oc-focus-card" tabindex="-1" :aria-label="person.name">
-							<div class="oc-focus-card__top">
-								<GAvatar :size="64" round :image="person.image" :label="person.name" />
-								<div class="oc-focus-card__text">
-									<h2 class="oc-focus-card__name">{{ person.name }}</h2>
-									<p class="oc-focus-card__designation">{{ person.designation }}</p>
-									<p class="oc-focus-card__meta">{{ subline(person) }}</p>
-									<p v-if="isHR" class="oc-focus-card__meta">{{ person.company }}</p>
 								</div>
-							</div>
-							<div class="oc-focus-card__chips">
-								<span v-if="person.id === userId" class="oc-chip">{{ __("This is you") }}</span>
-								<span v-if="person.away" class="oc-chip oc-chip--away">{{
-									__("Away today")
-								}}</span>
-								<span class="oc-chip">
-									{{ person.team_size ? __("Team of {0}", [person.team_size]) : __("No team") }}
-								</span>
-							</div>
-						</section>
-
-						<!-- No manager and no reports -->
-						<div v-if="isEmpty" class="g-empty">
-							<Network class="w-12 h-12 text-ink-3" />
-							<h2 class="g-empty__title">{{ __("No manager set yet") }}</h2>
-							<p class="g-empty__body">{{ __("HR sets this in Desk.") }}</p>
-						</div>
-
-						<!-- Team section, always shown -->
-						<section class="oc-sec">
-							<div class="oc-sec__head">
-								<h2 class="oc-sec__title">{{ __("Team") }} · {{ teamDisplay.all.length }}</h2>
-								<span v-if="teamAwayCount > 0" class="oc-sec__aside">
-									{{ __("{0} away today", [teamAwayCount]) }}
-								</span>
-							</div>
-							<div id="oc-team-list" class="g-form-group">
-								<div v-if="!teamDisplay.all.length" class="g-row">
-									<span class="g-row__sub oc-wrap">
-										{{ __("No one reports to {0}.", [person.name]) }}
+								<button v-else class="oc-node" @click="focusPerson(ladder.direct.id)">
+									<GAvatar :image="ladder.direct.image" :label="ladder.direct.name" round badge />
+									<span class="oc-node__body">
+										<span class="oc-node__eyebrow">{{ __("Direct manager") }}</span>
+										<span class="oc-node__name">{{ ladder.direct.name }}</span>
+										<span class="oc-node__sub">
+											{{ ladder.direct.designation }}
+											<template v-if="ladder.direct.away">
+												· <span class="oc-away">{{ __("Away today") }}</span>
+											</template>
+										</span>
+									</span>
+								</button>
+								<span class="oc-line" aria-hidden="true"></span>
+							</template>
+							<template v-else>
+								<div class="oc-node oc-node--static">
+									<span class="g-row__well oc-well-warn">
+										<Network class="w-4 h-4" />
+									</span>
+									<span class="oc-node__body">
+										<span class="oc-node__name">{{ __("No manager set yet") }}</span>
+										<span class="oc-node__sub oc-wrap">{{ __("HR sets this in Desk.") }}</span>
 									</span>
 								</div>
-								<button
-									v-for="p in teamDisplay.shown"
-									:key="p.id"
-									class="g-row g-row--tappable"
-									@click="focusPerson(p.id)"
+								<span class="oc-line oc-line--dash" aria-hidden="true"></span>
+							</template>
+
+							<!-- The person in focus -->
+							<section
+								ref="focusCard"
+								class="oc-node oc-node--focus"
+								tabindex="-1"
+								:aria-label="person.name"
+							>
+								<GAvatar :size="64" round badge :image="person.image" :label="person.name" />
+								<h2 class="oc-focus__name">{{ person.name }}</h2>
+								<p class="oc-focus__designation">{{ person.designation }}</p>
+								<p class="oc-focus__meta">{{ subline(person) }}</p>
+								<p v-if="isHR" class="oc-focus__meta">{{ person.company }}</p>
+								<div v-if="person.id === userId || person.away" class="oc-focus__chips">
+									<span v-if="person.id === userId" class="oc-chip">{{ __("This is you") }}</span>
+									<span v-if="person.away" class="oc-chip oc-chip--away">{{
+										__("Away today")
+									}}</span>
+								</div>
+							</section>
+
+							<!-- Their team: boxes hung off one line, two to a row -->
+							<template v-if="teamDisplay.all.length">
+								<span class="oc-line" aria-hidden="true"></span>
+								<div
+									id="oc-team-list"
+									class="oc-kids"
+									role="list"
+									:aria-label="__('Team') + ' · ' + teamDisplay.all.length"
 								>
-									<GAvatar :image="p.image" :label="p.name" round />
-									<span class="g-row__body">
-										<span class="g-row__label">{{ p.name }}</span>
-										<span class="g-row__sub">{{ subline(p) }}</span>
-									</span>
-									<span v-if="p.away" class="oc-chip oc-chip--sm oc-chip--away">
-										{{ __("Away today") }}
-									</span>
-								</button>
+									<button
+										v-for="p in teamDisplay.shown"
+										:key="p.id"
+										class="oc-kid"
+										role="listitem"
+										@click="focusPerson(p.id)"
+									>
+										<span
+											v-if="p.team_size"
+											class="oc-count"
+											:aria-label="__('Team of {0}', [p.team_size])"
+										>
+											<Users class="w-3 h-3" aria-hidden="true" />{{ p.team_size }}
+										</span>
+										<GAvatar :image="p.image" :label="p.name" round badge />
+										<span class="oc-kid__name">{{ p.name }}</span>
+										<span class="oc-kid__sub">{{ p.designation }}</span>
+										<span v-if="p.away" class="oc-away">{{ __("Away today") }}</span>
+									</button>
+								</div>
 								<button
 									v-if="teamDisplay.more > 0 || teamExpanded"
-									class="g-row g-row--tappable"
+									class="oc-node oc-node--pill oc-more"
 									:aria-expanded="teamExpanded"
 									aria-controls="oc-team-list"
 									@click="teamExpanded = !teamExpanded"
 								>
-									<span class="g-row__body">
-										<span class="g-row__label oc-strong">
-											{{
-												teamExpanded
-													? __("Show fewer")
-													: __("See all {0}", [teamDisplay.all.length])
-											}}
-										</span>
+									<span class="oc-pill__label">
+										{{
+											teamExpanded ? __("Show fewer") : __("See all {0}", [teamDisplay.all.length])
+										}}
 									</span>
-									<ChevronDown class="g-row__chevron oc-chev" />
+									<ChevronDown class="oc-chev" />
 								</button>
-							</div>
-						</section>
+								<p v-if="teamAwayCount > 0" class="oc-sec__aside oc-team-away">
+									{{ __("{0} of {1} away today", [teamAwayCount, teamDisplay.all.length]) }}
+								</p>
+							</template>
+							<template v-else>
+								<span class="oc-line oc-line--dash" aria-hidden="true"></span>
+								<div class="oc-node oc-node--ghost">{{ __("No team yet") }}</div>
+							</template>
+						</div>
 
 						<!-- Same manager section (peers) -->
 						<section v-if="peers.length > 0" class="oc-sec">
@@ -246,10 +308,10 @@
 										class="g-row g-row--tappable"
 										@click="focusPerson(p.id)"
 									>
-										<GAvatar :image="p.image" :label="p.name" round />
+										<GAvatar :image="p.image" :label="p.name" round badge />
 										<span class="g-row__body">
 											<span class="g-row__label">{{ p.name }}</span>
-											<span class="g-row__sub">{{ subline(p) }}</span>
+											<span class="g-row__sub">{{ p.designation }}</span>
 										</span>
 									</button>
 								</div>
@@ -271,6 +333,7 @@ import {
 	Network,
 	Search,
 	UserRoundX,
+	Users,
 } from "lucide-vue-next"
 import { computed, inject, nextTick, ref, watch } from "vue"
 import { useRouter, useRoute } from "vue-router"
@@ -290,6 +353,7 @@ import {
 	teamPreview,
 	awayCount as countAway,
 	chainRows as makeChainRows,
+	chainLadder,
 	gapsMessage as makeGapsMessage,
 	gapSub,
 } from "@/utils/orgChart"
@@ -312,6 +376,7 @@ const isSearching = computed(() => searchQuery.value.trim().length > 0)
 // UI state
 const teamExpanded = ref(false)
 const peersExpanded = ref(false)
+const aboveExpanded = ref(false)
 const gapsExpanded = ref(false)
 const focusCard = ref(null)
 
@@ -339,15 +404,13 @@ const chainRows = computed(() => {
 	}))
 })
 
-// Check if empty (no manager and no reports)
-const isEmpty = computed(() => {
-	return !chainRows.value.length && !reports.value.length
-})
+// The chart's managers: direct one above the person, the rest folded, top first
+const ladder = computed(() => chainLadder(chainRows.value))
 
 // Team display with preview logic
 const teamDisplay = computed(() => {
 	const all = reports.value
-	const preview = teamPreview(all, teamExpanded.value ? all.length : 5)
+	const preview = teamPreview(all, teamExpanded.value ? all.length : 4)
 	return { shown: preview.shown, all, more: teamExpanded.value ? 0 : preview.more }
 })
 
@@ -411,6 +474,7 @@ function focusPerson(id) {
 	searchQuery.value = ""
 	teamExpanded.value = false
 	peersExpanded.value = false
+	aboveExpanded.value = false
 }
 
 function goToSelf() {
@@ -514,16 +578,153 @@ function desktopLink(id) {
 	color: var(--g-warn-fill);
 }
 
-.oc-focus-card {
+/* ---------- the flow chart ---------- */
+/* Every box is outlined: ink in light (black), accent in dark (lime, set in
+   glass-components.css). The person in focus gets the thicker line. */
+.oc-flow {
+	--oc-box-line: var(--g-ink);
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
-	padding: 20px 16px;
-	border-radius: 26px;
-	background: var(--g-sheet-cell);
-	box-shadow: inset 0 1px 0 var(--g-rim-hi), inset 0 -1px 0 var(--g-rim-lo);
+	align-items: center;
 	margin-bottom: 24px;
+}
+.oc-line {
+	width: 2px;
+	height: 20px;
+	flex: none;
+	background: var(--g-ink3);
+	opacity: 0.5;
+}
+.oc-line--dash {
+	width: 0;
+	background: none;
+	border-left: 2px dashed var(--g-ink3);
+}
+.oc-node {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	max-width: 320px;
+	min-height: 56px;
+	padding: 10px 14px;
+	border: 0;
+	border-radius: 18px;
+	background: var(--g-sheet-cell);
+	color: var(--g-ink);
+	text-align: left;
+	box-shadow: inset 0 0 0 1.5px var(--oc-box-line);
+}
+button.oc-node:active,
+.oc-kid:active {
+	background: var(--g-icon-bg);
+}
+.oc-node--pill {
+	width: auto;
+	min-height: 44px;
+	padding: 6px 14px 6px 8px;
+	border-radius: 22px;
+	gap: 8px;
+}
+.oc-more {
+	margin-top: 12px;
+	padding-left: 16px;
+}
+.oc-pill__label {
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+	color: var(--g-ink2);
+}
+.oc-node--ghost {
+	width: auto;
+	min-height: 44px;
+	justify-content: center;
+	padding: 0 18px;
+	border-radius: 22px;
+	background: none;
+	box-shadow: none;
+	border: 2px dashed var(--g-ink3);
+	color: var(--g-ink2);
+	font-size: 0.8125rem;
+}
+.oc-node__body {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+.oc-node__eyebrow {
+	font-size: 0.6875rem;
+	line-height: 0.8125rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--g-ink2);
+}
+.oc-node__name {
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
+	font-weight: 600;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.oc-node__sub {
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+	color: var(--g-ink2);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.oc-stack {
+	display: inline-flex;
+	gap: 2px;
+	flex: none;
+}
+
+/* the person in focus: centred, avatar on top so a long name gets the full width */
+.oc-node--focus {
+	max-width: 360px;
+	flex-direction: column;
+	gap: 4px;
+	padding: 20px 16px 18px;
+	text-align: center;
+	box-shadow: inset 0 0 0 3px var(--oc-box-line);
 	animation: oc-enter var(--g-motion-state-change-duration) var(--g-motion-state-change-easing);
+}
+.oc-node--focus > .g-avatar {
+	margin-bottom: 8px;
+}
+.oc-focus__name {
+	margin: 0;
+	font-size: 1.375rem;
+	line-height: 1.75rem;
+	font-weight: 600;
+	letter-spacing: -0.26px;
+	text-wrap: balance;
+	overflow-wrap: anywhere;
+}
+.oc-focus__designation {
+	margin: 0;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
+	text-wrap: balance;
+}
+.oc-focus__meta {
+	margin: 0;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+	color: var(--g-ink2);
+}
+.oc-focus__chips {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 6px;
+	margin-top: 10px;
 }
 @keyframes oc-enter {
 	from {
@@ -535,40 +736,107 @@ function desktopLink(id) {
 		transform: none;
 	}
 }
-.oc-focus-card__top {
-	display: flex;
-	gap: 14px;
-	align-items: center;
+
+/* the team: two columns hung off one line down the middle gutter */
+.oc-kids {
+	width: 100%;
+	max-width: 560px;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	column-gap: 24px;
+	row-gap: 12px;
+	padding-top: 12px;
 }
-.oc-focus-card__text {
+.oc-kid {
+	position: relative;
 	min-width: 0;
-	flex: 1;
-}
-.oc-focus-card__name {
-	margin: 0;
-	font-size: 1.375rem;
-	line-height: 1.75rem;
-	letter-spacing: -0.4px;
-	overflow-wrap: anywhere;
-	font-weight: 700;
-}
-.oc-focus-card__designation {
-	margin: 2px 0 0;
-	font-size: 1.0625rem;
-	line-height: 1.375rem;
-	overflow-wrap: anywhere;
-}
-.oc-focus-card__meta {
-	margin: 2px 0 0;
-	font-size: 0.9375rem;
-	line-height: 1.25rem;
-	color: var(--g-ink2);
-	overflow-wrap: anywhere;
-}
-.oc-focus-card__chips {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	padding: 14px 8px 12px;
+	border: 0;
+	border-radius: 18px;
+	background: var(--g-sheet-cell);
+	color: var(--g-ink);
+	text-align: center;
+	box-shadow: inset 0 0 0 1.5px var(--oc-box-line);
+}
+.oc-kid > .g-avatar {
+	margin-bottom: 6px;
+}
+/* a short arm from each box to the line in the gutter */
+.oc-kid::before {
+	content: "";
+	position: absolute;
+	top: 50%;
+	width: 12px;
+	height: 2px;
+	background: var(--g-ink3);
+	opacity: 0.5;
+}
+.oc-kid:nth-child(odd)::before {
+	right: -12px;
+}
+.oc-kid:nth-child(even)::before {
+	left: -12px;
+}
+/* the line itself, drawn by the left column down to the last row's arm */
+.oc-kid:nth-child(odd)::after {
+	content: "";
+	position: absolute;
+	right: -13px;
+	top: -12px;
+	bottom: 0;
+	width: 2px;
+	background: var(--g-ink3);
+	opacity: 0.5;
+}
+.oc-kid:nth-child(odd):nth-last-child(-n + 2)::after {
+	bottom: 50%;
+}
+.oc-kid__name {
+	max-width: 100%;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+	font-weight: 600;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	overflow-wrap: anywhere;
+}
+.oc-kid__sub {
+	max-width: 100%;
+	font-size: 0.6875rem;
+	line-height: 0.8125rem;
+	color: var(--g-ink2);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.oc-count {
+	position: absolute;
+	top: 8px;
+	right: 10px;
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	font-size: 0.6875rem;
+	color: var(--g-ink2);
+	font-variant-numeric: tabular-nums;
+}
+.oc-away {
+	font-size: 0.6875rem;
+	line-height: 0.8125rem;
+	font-weight: 600;
+	color: var(--g-leave-ink);
+}
+.oc-node__sub .oc-away {
+	font-size: inherit;
+}
+.oc-team-away {
+	margin: 12px 0 0;
 }
 
 .oc-chip {
@@ -606,21 +874,11 @@ function desktopLink(id) {
 	height: 5px;
 }
 
-.oc-sk-row {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 12px 16px;
-	min-height: 54px;
+.oc-sk-box {
+	max-width: 320px;
 }
-.oc-sk-dot {
-	flex: none;
-}
-.oc-sk-lines {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
+.oc-sk-focus {
+	max-width: 360px;
 }
 
 .oc-gap-h {
@@ -653,7 +911,7 @@ function desktopLink(id) {
 	.oc-chev {
 		transition: none;
 	}
-	.oc-focus-card {
+	.oc-node--focus {
 		animation: none;
 	}
 }

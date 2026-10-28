@@ -5,10 +5,10 @@
 /**
  * Split reports into shown (first n) and more count.
  * @param {Array} reports - list of report cards
- * @param {number} n - number to show (default 5)
+ * @param {number} n - number to show (default 4: two rows of two boxes)
  * @returns {{shown: Array, more: number}}
  */
-export function teamPreview(reports, n = 5) {
+export function teamPreview(reports, n = 4) {
 	const shown = reports.slice(0, n)
 	const more = Math.max(0, reports.length - n)
 	return { shown, more }
@@ -72,4 +72,15 @@ export function gapsMessage(__, company, noManager, leftManager) {
 /** Designation and company for a gap row, skipping blanks. */
 export function gapSub(card) {
 	return [card.designation, card.company].filter(Boolean).join(" · ")
+}
+
+/**
+ * The flow chart's managers: the direct manager sits right above the person,
+ * everyone higher folds into "N more above", top manager first.
+ * @param {Array} chain - chain_up from get_node(), nearest manager first
+ * @returns {{direct: Object|null, above: Array}}
+ */
+export function chainLadder(chain) {
+	const list = chain || []
+	return { direct: list[0] || null, above: list.slice(1).reverse() }
 }
