@@ -10,6 +10,26 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.67] — Faces and Lines — 2026-10-28
+
+### Added
+- **Your own profile photo.** Tap your photo on You to choose one, take
+  one, or remove it. Crop it in a round frame (drag, pinch, zoom), then
+  Use photo. Up to 5 MB; a bigger file, or one that isn't a photo, is
+  said at once and never sent. Photos are kept private on S3.
+- **Org chart.** More → Org chart: who you report to, you, your team (5,
+  then See all) and the people beside you. Tap anyone to move up or down
+  the line. "Away today" says no more than that. You see your own
+  company; HR sees every company, plus a line naming who has no manager
+  set or reports to someone who has left, with Fix in Desk beside each.
+  Reports to on You opens it.
+
+### Fixed
+- **An OT claim on a day of approved leave said "No check-ins".** It now
+  says you were on leave that day, before Send.
+- A manual re-pull from the old site no longer replaces a photo set in
+  Nadi.
+
 ## [2.0.0-alpha.66] — First Approver — 2026-10-27
 
 ### Changed
