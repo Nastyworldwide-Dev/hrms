@@ -26,6 +26,15 @@ frappe.ui.form.on("Employee", {
 				};
 			});
 		}
+		// Cost Tag/Center: every company's cost centers, leaves only, not disabled
+		frm.set_query("cost_center", "interco_cost_allocation", () => {
+			return {
+				filters: {
+					is_group: 0,
+					disabled: 0,
+				},
+			};
+		});
 		frm.set_df_property("holiday_list", "hidden", 1);
 
 		// hide naming series field based on hr settings

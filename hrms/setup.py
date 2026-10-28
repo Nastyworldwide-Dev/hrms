@@ -502,7 +502,7 @@ def get_custom_fields():
 				"label": _("Cost Tag/Center Allocation"),
 				"options": "Employee Interco Allocation",
 				"insert_after": "interco_allocation_section",
-				"description": _("Percentage of work per Cost Tag/Center (Territory) for each Year/Month; each month must total 100%"),
+				"description": _("Percentage of work per Cost Tag/Center (Cost Center) for each Year/Month; each month must total 100%"),
 			},
 			{
 				"collapsible": 1,

@@ -84,7 +84,7 @@ class TestBuildAllocationRows(unittest.TestCase):
 		emp2 = [r for r in rows if r["employee"] == "EMP-002"]
 
 		self.assertEqual(len(emp2), 1)
-		self.assertIsNone(emp2[0]["territory"])
+		self.assertIsNone(emp2[0]["cost_tag"])
 		self.assertEqual(emp2[0]["percentage"], 100.0)
 		self.assertEqual(emp2[0]["allocated_amount"], 10000.0)
 
@@ -115,7 +115,7 @@ MONTHLY = {
 class TestSplitFollowsYearMonth(unittest.TestCase):
 	def _tags(self, end_date):
 		rows = build_allocation_rows([_slip(end_date)], {}, MONTHLY)
-		return [(r["territory"], r["allocated_amount"]) for r in rows]
+		return [(r["cost_tag"], r["allocated_amount"]) for r in rows]
 
 	def test_a_slip_in_a_set_month_uses_that_month(self):
 		self.assertEqual(self._tags(datetime.date(2026, 10, 31)), [("A", 600.0), ("B", 400.0)])
@@ -128,3 +128,31 @@ class TestSplitFollowsYearMonth(unittest.TestCase):
 
 	def test_a_slip_before_the_first_month_is_unallocated(self):
 		self.assertEqual(self._tags(datetime.date(2026, 9, 30)), [(None, 1000.0)])
+
+
+class TestCostCenterOrOldTerritory(unittest.TestCase):
+	"""The Cost Tag/Center column shows the Cost Center, or the old Territory
+	for rows saved before the switch, so old splits keep their name and total."""
+
+	def test_cost_center_is_shown(self):
+		alloc = {
+			"EMP-9": [
+				{"allocation_month": OCT, "cost_center": "CEOF - NHSB", "territory": None, "percentage": 100}
+			]
+		}
+		rows = build_allocation_rows([_slip(datetime.date(2026, 10, 31))], {}, alloc)
+		self.assertEqual(rows[0]["cost_tag"], "CEOF - NHSB")
+
+	def test_an_old_row_shows_its_territory(self):
+		alloc = {
+			"EMP-9": [
+				{
+					"allocation_month": OCT,
+					"cost_center": None,
+					"territory": "All Territories",
+					"percentage": 100,
+				}
+			]
+		}
+		rows = build_allocation_rows([_slip(datetime.date(2026, 10, 31))], {}, alloc)
+		self.assertEqual((rows[0]["cost_tag"], rows[0]["allocated_amount"]), ("All Territories", 1000.0))

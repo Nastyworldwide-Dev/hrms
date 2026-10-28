@@ -150,3 +150,4 @@ hrms.patches.v16_0.mark_pushed_announcements #2026-10-19 alpha.57: notices pushe
 hrms.patches.v16_0.stamp_cost_allocation_month #2026-10-22 owner: cost split per Year/Month; old rows apply from the joining month
 hrms.patches.v16_0.seed_manpower_request_questions #2026-10-22 owner: Manpower Request questions are data HR edits in Desk; seeded from the MS Manpower Requisition Form
 hrms.patches.v16_0.backfill_announcement_event_date #2026-10-27 owner: an Event announcement carries the day it happens; existing Events take their show-from day, so their calendar dot stays where it was
+hrms.patches.v16_0.link_cost_allocation_cost_center #2026-10-28 owner: Cost Tag/Center is a Cost Center; old Territory rows take the same-named one, the rest keep working

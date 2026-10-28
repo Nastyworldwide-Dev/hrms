@@ -16,7 +16,10 @@ def validate_interco_allocation(doc, method=None):
 	"""Employee.validate hook: Cost Tag/Center allocation rows are grouped by
 	Year/Month (stored as the 1st of the month). Each month must cover exactly
 	100% with no cost tag twice. An empty table is allowed — the allocation
-	report then shows the employee's full cost as unallocated."""
+	report then shows the employee's full cost as unallocated.
+
+	The tag is a Cost Center. Rows saved while it was a Territory keep that
+	Territory and stay valid, so HR never has to re-enter an old split."""
 	rows = doc.get("interco_cost_allocation") or []
 	if not rows:
 		return
@@ -31,11 +34,16 @@ def validate_interco_allocation(doc, method=None):
 			frappe.throw(
 				_("Cost Tag/Center allocation row {0}: percentage must be greater than 0.").format(row.idx)
 			)
-		key = (row.allocation_month, row.territory)
+		tag = row.get("cost_center") or row.get("territory")
+		if not tag:
+			frappe.throw(
+				_("Cost Tag/Center allocation row {0}: Cost Tag/Center is required.").format(row.idx)
+			)
+		key = (row.allocation_month, tag)
 		if key in seen:
 			frappe.throw(
 				_("Cost Tag/Center allocation: {0} appears more than once in {1}.").format(
-					row.territory, row.allocation_month.strftime("%b %Y")
+					tag, row.allocation_month.strftime("%b %Y")
 				)
 			)
 		seen.add(key)

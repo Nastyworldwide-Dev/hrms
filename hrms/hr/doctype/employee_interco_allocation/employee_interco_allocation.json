@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "allocation_month",
+  "cost_center",
   "territory",
   "percentage"
  ],
@@ -19,12 +20,21 @@
    "reqd": 1
   },
   {
-   "fieldname": "territory",
+   "fieldname": "cost_center",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Cost Tag/Center",
+   "options": "Cost Center",
+   "mandatory_depends_on": "eval:!doc.territory"
+  },
+  {
+   "description": "Set before Cost Tag/Center became a Cost Center (28 Oct 2026). Kept so old splits still count; pick a Cost Tag/Center to replace it.",
+   "depends_on": "eval:doc.territory && !doc.cost_center",
+   "fieldname": "territory",
+   "fieldtype": "Link",
+   "label": "Old Cost Tag/Center (Territory)",
    "options": "Territory",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "percentage",
@@ -37,7 +47,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-10-22 10:00:00.000000",
+ "modified": "2026-10-28 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Employee Interco Allocation",

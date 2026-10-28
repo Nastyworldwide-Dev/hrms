@@ -24,8 +24,8 @@ def execute(filters=None):
 	allocations = _get_employee_allocations({s.employee for s in slips})
 
 	rows = build_allocation_rows(slips, employer_costs, allocations)
-	if filters.territory:
-		rows = [r for r in rows if r["territory"] == filters.territory]
+	if filters.cost_center:
+		rows = [r for r in rows if r["cost_tag"] == filters.cost_center]
 	logger.info("[interco_report] user=%s slips=%d rows=%d", frappe.session.user, len(slips), len(rows))
 	return _get_columns(), rows
 
@@ -50,13 +50,14 @@ def build_allocation_rows(slips, employer_costs, allocations) -> list[dict]:
 
 	A slip with no applicable month appears as a single 100% row with a
 	blank Cost Tag/Center so its cost stays visible until the table is filled.
+	A row saved before the tag became a Cost Center shows its old Territory.
 	"""
 	rows = []
 	for slip in slips:
 		contributions = flt(employer_costs.get(slip.name, 0))
 		total_cost = flt(slip.gross_pay) + contributions
 		employee_allocations = split_for_month(allocations.get(slip.employee) or [], slip.end_date) or [
-			{"territory": None, "percentage": 100.0}
+			{"cost_center": None, "territory": None, "percentage": 100.0}
 		]
 
 		allocated_so_far = 0.0
@@ -73,7 +74,7 @@ def build_allocation_rows(slips, employer_costs, allocations) -> list[dict]:
 					"employee": slip.employee,
 					"employee_name": slip.employee_name,
 					"company": slip.company,
-					"territory": allocation["territory"],
+					"cost_tag": allocation.get("cost_center") or allocation.get("territory"),
 					"percentage": flt(allocation["percentage"]),
 					"gross_pay": flt(slip.gross_pay) if i == 0 else 0,
 					"employer_contributions": contributions if i == 0 else 0,
@@ -127,7 +128,7 @@ def _get_employee_allocations(employees):
 	allocation_rows = frappe.get_all(
 		"Employee Interco Allocation",
 		filters={"parenttype": "Employee", "parent": ("in", list(employees))},
-		fields=["parent", "allocation_month", "territory", "percentage"],
+		fields=["parent", "allocation_month", "cost_center", "territory", "percentage"],
 		order_by="parent asc, idx asc",
 	)
 	allocations = {}
@@ -135,6 +136,7 @@ def _get_employee_allocations(employees):
 		allocations.setdefault(row.parent, []).append(
 			{
 				"allocation_month": row.allocation_month,
+				"cost_center": row.cost_center,
 				"territory": row.territory,
 				"percentage": flt(row.percentage),
 			}
@@ -163,11 +165,11 @@ def _get_columns():
 			"width": 150,
 		},
 		{
-			"fieldname": "territory",
+			# a Cost Center, or an old Territory for rows saved before the switch
+			"fieldname": "cost_tag",
 			"label": _("Cost Tag/Center"),
-			"fieldtype": "Link",
-			"options": "Territory",
-			"width": 150,
+			"fieldtype": "Data",
+			"width": 170,
 		},
 		{"fieldname": "percentage", "label": _("%"), "fieldtype": "Percent", "width": 70},
 		{"fieldname": "gross_pay", "label": _("Gross Pay"), "fieldtype": "Currency", "width": 110},
