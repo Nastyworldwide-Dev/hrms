@@ -1,15 +1,13 @@
 # HANDOFF
-prompt:   alpha.58 Leave at a Glance (All balances rings + ticket #4855)
+prompt:   Cost Tag/Center lists Cost Centers, not Territories (owner, 28 Oct 2026)
 status:   done
-commit:   2fb3d8512 on nz-glass (tag v2.0.0-alpha.58)
-files:    frontend/src/components/RequestBalances.vue
-          frontend/src/components/LateCheckoutDialog.vue
-          frontend/src/utils/checkinSession.js
-          frontend/src/utils/requestsPage.js
-          frontend/src/theme/glass-components.css
-          hrms/api/requests_summary.py
-          hrms/api/__init__.py
-          docs/glass/CHANGELOG.md
-verify:   deploy, no migrate; check-in after 18:00, tap Forgot to check out -> opens just after the check-in; Requests -> All balances shows rings
-flags:    iOS gate still fails on untouched screens (Approvals Select all + shift, Report an issue target, Change password desktop load)
-next:     audit RemoteCheckinDialog for silent disabled Send; late checkout default ignores 12h-after-shift-end rule
+commit:   329b0ed83 on nz-glass (feature ee3c86df2)
+files:    hrms/hr/doctype/employee_interco_allocation/employee_interco_allocation.json
+hrms/patches/v16_0/link_cost_allocation_cost_center.py
+hrms/overrides/employee_interco_allocation.py
+hrms/payroll/report/intercompany_salary_cost_allocation/intercompany_salary_cost_allocation.py
+hrms/public/js/erpnext/employee.js
+hrms/tests/test_link_cost_allocation_cost_center_patch.py
+verify:   deploy + bench migrate; Employee -> Cost Tag/Center Allocation -> dropdown lists Main, CEOF, PFME...
+flags:    not run on a bench (no local site has hrms); unmatched old rows keep Territory by design
+next:     owner checks on staging; org chart resumes from ~/org-chart-paused/README.md
