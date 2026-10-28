@@ -35,7 +35,7 @@ TABLE = "interco_cost_allocation"
 class CostTagCenterUpload(Document):
 	def after_insert(self):
 		if not frappe.flags.in_import:
-			apply_pending_uploads()
+			apply_uploads([self.name])
 
 
 def place_row(rows, month, cost_center, territory, percentage):
@@ -62,11 +62,16 @@ def place_row(rows, month, cost_center, territory, percentage):
 	), True
 
 
-def apply_pending_uploads():
-	"""Put every Pending upload row on its employee, one save per employee."""
+def apply_uploads(names):
+	"""Put the named Pending upload rows on their employees, one save each.
+
+	Each employee is its own savepoint: one that fails is rolled back alone,
+	its rows marked Failed with the reason, and the rest carry on. The save
+	runs as a Desk save would (in_import off), not with the importer's
+	shortcuts, so defaults, select checks and notifications all apply."""
 	records = frappe.get_all(
 		DOCTYPE,
-		filters={"status": "Pending"},
+		filters={"status": "Pending", "name": ("in", list(names))},
 		fields=["name", "employee", "allocation_month", "cost_center", "territory", "percentage"],
 		order_by="creation asc",
 	)
@@ -74,38 +79,76 @@ def apply_pending_uploads():
 	for record in records:
 		by_employee.setdefault(record.employee, []).append(record)
 
-	for employee_id, rows in by_employee.items():
-		try:
-			employee = frappe.get_doc("Employee", employee_id)
-			table = employee.get(TABLE) or []
-			for record in rows:
-				row, added = place_row(
-					table, record.allocation_month, record.cost_center, record.territory, record.percentage
-				)
-				if added:
-					# the appended child, not the dict, so a later row of the
-					# same file with the same month and tag replaces it
-					table = employee.get(TABLE) or []
-					if not any(r is row for r in table):
-						employee.append(TABLE, row)
-						table = employee.get(TABLE)
-			employee.save()
-		except Exception as e:
-			_mark(rows, "Failed", _clean(e))
-			logger.warning("[cost_tag_upload] employee=%s rows=%d failed: %s", employee_id, len(rows), e)
-			continue
-		_mark(rows, "Done", None)
-		logger.info("[cost_tag_upload] employee=%s rows=%d applied", employee_id, len(rows))
+	in_import = frappe.flags.in_import
+	frappe.flags.in_import = False
+	try:
+		for i, (employee_id, rows) in enumerate(by_employee.items()):
+			save_point = f"cost_tag_upload_{i}"
+			frappe.db.savepoint(save_point)
+			try:
+				_apply_employee(employee_id, rows)
+			except Exception as e:
+				frappe.db.rollback(save_point=save_point)
+				_mark(rows, "Failed", _clean(e))
+				logger.warning("[cost_tag_upload] employee=%s rows=%d failed: %s", employee_id, len(rows), e)
+				continue
+			_mark(rows, "Done", None)
+			logger.info("[cost_tag_upload] employee=%s rows=%d applied", employee_id, len(rows))
+	finally:
+		frappe.flags.in_import = in_import
+
+
+def _apply_employee(employee_id, rows):
+	employee = frappe.get_doc("Employee", employee_id)
+	table = employee.get(TABLE) or []
+	for record in rows:
+		row, added = place_row(
+			table, record.allocation_month, record.cost_center, record.territory, record.percentage
+		)
+		if added:
+			employee.append(TABLE, row)
+			# re-read: append stores a new child row, and a later row of the
+			# same file with the same month and tag must find it
+			table = employee.get(TABLE)
+	employee.save()
 
 
 def after_data_import(doc, method=None):
-	"""Data Import on_change: once an import of upload rows ends, apply them.
-	db_set fires on_change only, so this hook — not on_update — sees the end."""
+	"""Data Import on_change: once an import of upload rows has ENDED, apply
+	the rows it created.
+
+	The status alone can't tell: the importer sets "Partial Success" after its
+	first row, mid-import. It has ended when its log covers every row of the
+	file (payload_count). An import that stopped (Error, Timed Out) marks its
+	rows Failed instead of leaving them waiting. Never raises — an error here
+	would roll back the whole import — it is logged and the rows stay Pending."""
 	if doc.get("reference_doctype") != DOCTYPE:
 		return
-	if doc.get("status") not in ("Success", "Partial Success"):
+	if doc.get("status") not in ("Success", "Partial Success", "Error", "Timed Out"):
 		return
-	apply_pending_uploads()
+	try:
+		logs = frappe.get_all(
+			"Data Import Log",
+			filters={"data_import": doc.name},
+			fields=["docname", "row_indexes", "success"],
+		)
+		names = [log.docname for log in logs if log.success and log.docname]
+		if doc.get("status") in ("Error", "Timed Out"):
+			# the import stopped: its rows would wait for ever, so say so
+			if names:
+				frappe.db.set_value(
+					DOCTYPE,
+					{"name": ("in", names), "status": "Pending"},
+					{"status": "Failed", "error": _("The import did not finish. Upload the file again.")},
+					update_modified=False,
+				)
+			return
+		if len(logs) < (doc.get("payload_count") or 0):
+			return
+		if names:
+			apply_uploads(names)
+	except Exception:
+		logger.exception("[cost_tag_upload] data_import=%s could not apply its rows", doc.name)
 
 
 def _mark(rows, status, error):

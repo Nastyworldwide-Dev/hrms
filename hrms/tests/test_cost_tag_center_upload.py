@@ -104,7 +104,7 @@ def _record(name, employee, cost_center, pct, month=OCT):
 	)
 
 
-class TestApplyPendingUploads(unittest.TestCase):
+class TestApplyUploads(unittest.TestCase):
 	"""Data Import saves one Excel row at a time, so a 60/40 month would be 60%
 	after the first row and refused. The rows wait (Pending) until the import
 	ends, then each employee's rows go on together, with one save."""
@@ -116,15 +116,15 @@ class TestApplyPendingUploads(unittest.TestCase):
 			patch.object(upload.frappe, "get_doc", side_effect=lambda dt, name: employees[name]),
 			patch.object(upload.frappe, "db", db),
 		):
-			upload.apply_pending_uploads()
+			upload.apply_uploads([r.name for r in records])
 		marks = {}
 		for c in db.set_value.call_args_list:
 			marks[c.args[1]] = c.args[2]
-		return marks
+		return marks, db
 
 	def test_a_split_month_lands_whole_with_one_save(self):
 		emp = _Employee("E1")
-		marks = self._run([_record("u1", "E1", "CEOF", 60), _record("u2", "E1", "PFME", 40)], {"E1": emp})
+		marks, _ = self._run([_record("u1", "E1", "CEOF", 60), _record("u2", "E1", "PFME", 40)], {"E1": emp})
 		self.assertEqual([(r.cost_center, r.percentage) for r in emp.rows], [("CEOF", 60), ("PFME", 40)])
 		self.assertEqual(emp.saves, 1)
 		self.assertEqual(marks["u1"]["status"], "Done")
@@ -140,38 +140,101 @@ class TestApplyPendingUploads(unittest.TestCase):
 		self._run([_record("u1", "E1", "CEOF", 50), _record("u2", "E1", "CEOF", 100)], {"E1": emp})
 		self.assertEqual([(r.cost_center, r.percentage) for r in emp.rows], [("CEOF", 100)])
 
-	def test_one_employee_failing_does_not_stop_the_others_and_says_why(self):
+	def test_one_employee_failing_is_rolled_back_alone_and_says_why(self):
 		bad = _Employee("E1", fail="Cost Tag/Center allocation for Oct 2026 must total 100%, currently 60%.")
 		good = _Employee("E2")
-		marks = self._run(
+		marks, db = self._run(
 			[_record("u1", "E1", "CEOF", 60), _record("u2", "E2", "PFME", 100)], {"E1": bad, "E2": good}
 		)
 		self.assertEqual(marks["u1"]["status"], "Failed")
 		self.assertIn("must total 100%", marks["u1"]["error"])
 		self.assertEqual(marks["u2"]["status"], "Done")
 		self.assertEqual(good.saves, 1)
+		# each employee is its own savepoint; the failing one is rolled back to it
+		self.assertEqual(db.savepoint.call_count, 2)
+		db.rollback.assert_called_once_with(save_point=db.savepoint.call_args_list[0].args[0])
 
-	def test_only_pending_rows_are_picked_up_oldest_first(self):
+	def test_only_the_named_pending_rows_are_picked_up_oldest_first(self):
 		with patch.object(upload.frappe, "get_all", return_value=[]) as ga:
-			upload.apply_pending_uploads()
-		self.assertEqual(ga.call_args.kwargs["filters"], {"status": "Pending"})
+			upload.apply_uploads(["u1", "u2"])
+		self.assertEqual(ga.call_args.kwargs["filters"], {"status": "Pending", "name": ("in", ["u1", "u2"])})
 		self.assertEqual(ga.call_args.kwargs["order_by"], "creation asc")
+
+	def test_the_employee_is_saved_as_a_desk_save_not_mid_import(self):
+		seen = []
+
+		class _Spy(_Employee):
+			def save(self):
+				seen.append(upload.frappe.flags.in_import)
+				super().save()
+
+		flags = frappe._dict(in_import=True)
+		with patch.object(upload.frappe, "flags", flags):
+			self._run([_record("u1", "E1", "CEOF", 100)], {"E1": _Spy("E1")})
+		self.assertEqual(seen, [False])
+		self.assertTrue(flags.in_import)
+
+
+def _log(data_import, docname, rows):
+	return frappe._dict(docname=docname, row_indexes=json.dumps(rows), success=1)
 
 
 class TestWhenTheRowsAreApplied(unittest.TestCase):
-	def test_after_a_data_import_of_uploads_the_pending_rows_are_applied(self):
-		doc = frappe._dict(status="Success", reference_doctype="Cost Tag/Center Upload")
-		with patch.object(upload, "apply_pending_uploads") as apply:
-			upload.after_data_import(doc)
-		apply.assert_called_once()
+	"""Data Import sets "Partial Success" after its FIRST row (importer.py), so
+	the status alone does not mean the import has ended. It has ended when the
+	log covers every row of the file (payload_count)."""
 
-	def test_other_imports_and_unfinished_ones_are_ignored(self):
-		with patch.object(upload, "apply_pending_uploads") as apply:
-			upload.after_data_import(frappe._dict(status="Success", reference_doctype="Employee"))
-			upload.after_data_import(
-				frappe._dict(status="Pending", reference_doctype="Cost Tag/Center Upload")
-			)
+	def _hook(self, doc, logs):
+		with (
+			patch.object(upload.frappe, "get_all", return_value=logs),
+			patch.object(upload, "apply_uploads") as apply,
+		):
+			upload.after_data_import(doc)
+		return apply
+
+	def _doc(self, status, count=2, doctype="Cost Tag/Center Upload"):
+		return frappe._dict(name="DI-1", status=status, reference_doctype=doctype, payload_count=count)
+
+	def test_mid_import_partial_success_does_nothing(self):
+		apply = self._hook(self._doc("Partial Success", count=2), [_log("DI-1", "u1", [2])])
 		apply.assert_not_called()
+
+	def test_when_every_row_is_logged_this_imports_rows_are_applied(self):
+		logs = [_log("DI-1", "u1", [2]), _log("DI-1", "u2", [3])]
+		apply = self._hook(self._doc("Success", count=2), logs)
+		apply.assert_called_once_with(["u1", "u2"])
+
+	def test_a_finished_import_with_some_failed_rows_still_applies_the_good_ones(self):
+		logs = [_log("DI-1", "u1", [2]), frappe._dict(docname=None, row_indexes="[3]", success=0)]
+		apply = self._hook(self._doc("Partial Success", count=2), logs)
+		apply.assert_called_once_with(["u1"])
+
+	def test_a_failed_import_marks_its_waiting_rows_failed_not_stuck(self):
+		logs = [_log("DI-1", "u1", [2])]
+		db = MagicMock()
+		with (
+			patch.object(upload.frappe, "get_all", return_value=logs),
+			patch.object(upload.frappe, "db", db),
+			patch.object(upload, "apply_uploads") as apply,
+		):
+			upload.after_data_import(self._doc("Error", count=2))
+		apply.assert_not_called()
+		args = db.set_value.call_args
+		self.assertEqual(args.args[1], {"name": ("in", ["u1"]), "status": "Pending"})
+		self.assertEqual(args.args[2]["status"], "Failed")
+		self.assertIn("did not finish", args.args[2]["error"])
+
+	def test_other_imports_are_ignored(self):
+		apply = self._hook(self._doc("Success", doctype="Employee"), [])
+		apply.assert_not_called()
+
+	def test_the_hook_never_breaks_the_import(self):
+		with (
+			patch.object(upload.frappe, "get_all", side_effect=RuntimeError("db down")),
+			patch.object(upload, "logger") as log,
+		):
+			upload.after_data_import(self._doc("Success"))
+		log.exception.assert_called_once()
 
 	def test_the_hook_is_wired_on_data_import_change(self):
 		hooks = (ROOT / "hooks.py").read_text()
@@ -233,7 +296,7 @@ class TestTheUploadDoctype(unittest.TestCase):
 		src = (ROOT / "hr/doctype/cost_tag_center_upload/cost_tag_center_upload.py").read_text()
 		self.assertRegex(
 			src,
-			r"def after_insert\(self\):\s*\n\s*if not frappe\.flags\.in_import:\s*\n\s*apply_pending_uploads\(\)",
+			r"def after_insert\(self\):\s*\n\s*if not frappe\.flags\.in_import:\s*\n\s*apply_uploads\(\[self\.name\]\)",
 		)
 
 
