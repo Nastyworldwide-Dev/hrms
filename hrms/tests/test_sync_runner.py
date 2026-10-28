@@ -23,6 +23,7 @@ import datetime
 import importlib.util
 import logging
 import pathlib
+import re
 import sys
 import types
 import unittest
@@ -271,6 +272,7 @@ FAKE_EMPLOYEE_COLUMNS = {
 	"company",
 	"status",
 	"user_id",
+	"image",
 	"company_email",
 	"department",
 	"designation",
@@ -2166,6 +2168,43 @@ class TestLoginMappingIsHubOwned(_RunnerTestCase):
 		self.assertEqual(row["employee_name"], "Aisha Renamed", "other fields must still mirror")
 
 
+class TestStaffPhotoIsHubOwned(_RunnerTestCase):
+	"""`Employee.image` is the staff photo set on this site, not the source's.
+
+	Staff set their own photo in Nadi (28 Oct 2026); a pull from a source that
+	has a different photo must not overwrite it.
+	"""
+
+	SEED_EXCLUDE = ("Employee",)
+
+	def test_image_is_never_written_by_the_mirror(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		remote = [dict(EMPLOYEES[0], image="/files/source-photo.png")]
+
+		runner.sync_doctype(self.client({"Employee": remote}), "Employee")
+
+		self.assertNotIn("image", self.store.rows("Employee")["HR-EMP-0001"])
+
+	def test_an_existing_local_photo_survives_a_pull(self):
+		self.seed_parent("Company", "Acme", company_name="Acme")
+		self.seed_parent("Employee", "HR-EMP-0001", company="Acme", image="/files/hub-photo.png")
+		remote = [dict(EMPLOYEES[0], image="/files/source-photo.png", employee_name="Aisha Renamed")]
+
+		runner.sync_doctype(self.client({"Employee": remote}), "Employee")
+
+		row = self.store.rows("Employee")["HR-EMP-0001"]
+		self.assertEqual(row["image"], "/files/hub-photo.png", "the mirror clobbered the staff photo")
+		self.assertEqual(row["employee_name"], "Aisha Renamed", "other fields must still mirror")
+
+	def test_image_user_id_and_checkin_fields_are_locally_owned(self):
+		"""Verify that image, user_id, multi_site_checkin, and other_checkin_sites
+		are all in LOCALLY_OWNED_FIELDS for Employee."""
+		self.assertEqual(
+			set(runner.LOCALLY_OWNED_FIELDS["Employee"]),
+			{"image", "user_id", "multi_site_checkin", "other_checkin_sites"},
+		)
+
+
 class TestUserStatusIsReconciled(_RunnerTestCase):
 	"""`db.set_value` fires no doc events, so ERPNext's `update_user_status`
 	never ran on a mirrored update and `User.enabled` drifted from
@@ -3131,7 +3170,10 @@ class TestAppendOnlyPunchesAfterCutover(_RunnerTestCase):
 			for line in (HRMS_ROOT / "patches.txt").read_text().splitlines()
 			if line.startswith("hrms.patches.v16_0.sync_custom_fields_with_code")
 		)
-		self.assertIn("source_checkin", line)
+		# The date, not the comment: any later re-date also re-syncs source_checkin (added 2026-09-14).
+		stamp = re.search(r"#(\d{4}-\d{2}-\d{2})", line)
+		self.assertIsNotNone(stamp, line)
+		self.assertGreaterEqual(stamp.group(1), "2026-09-14")
 
 
 if __name__ == "__main__":

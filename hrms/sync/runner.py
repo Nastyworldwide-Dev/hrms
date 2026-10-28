@@ -537,7 +537,8 @@ def _mirror_children(rows: list) -> list:
 LOCALLY_OWNED_FIELDS = {
 	# multi_site_checkin: HR sets it HERE (28 Sep 2026); a pull from a source that
 	# never had it ticked must not switch it back off.
-	"Employee": ("user_id", "multi_site_checkin", "other_checkin_sites"),
+	# image: staff set their own photo in Nadi (28 Oct 2026); a pull must not put the source's back.
+	"Employee": ("user_id", "multi_site_checkin", "other_checkin_sites", "image"),
 	"Department": ("lft", "rgt", "old_parent"),
 	"Cost Center": ("lft", "rgt", "old_parent"),
 }
