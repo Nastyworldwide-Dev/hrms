@@ -1,6 +1,3 @@
-CLASS: Manpower list and HR board rows read differently from every other list (UI audit 28 Oct)
-frontend/src/components/ManpowerRequestItem.vue same-root — icon tile, stage chip, closed reason, the shared waiting line
-frontend/src/views/manpower/ManpowerRequestList.vue same-root — title "Manpower requests"
-frontend/src/views/manpower/ManpowerHRBoard.vue same-root — Issue-board layout, row title/sub line, count chips, one-line footer
-frontend/src/utils/manpowerBoard.js same-root — listSubline, rowTitle, rowLine
-frontend/src/components/ListView.vue same-root — empty state names the feature
+CLASS: Manpower request form mixed three picker styles and showed codes with no meaning (UI audit 28 Oct)
+frontend/src/views/manpower/ManpowerRequestWizard.vue same-root — one picker per kind of choice, band list with meanings, RM money, one blocked reason, replacement search; staff declared before use
+frontend/src/utils/manpowerRequest.js same-root — SOON_LABELS, money helpers, visibleQuestions; review row uses bandLabel

@@ -43,10 +43,7 @@
 
 					<div class="grow flex flex-col min-w-0">
 						<div class="px-4 pt-3">
-							<div class="flex items-baseline justify-between">
-								<b>{{ __("Step {0} of {1}", [step + 1, STEPS.length]) }}</b>
-								<span class="text-ink-600">{{ __(STEPS[step].title) }}</span>
-							</div>
+							<b>{{ __("Step {0} of {1}", [step + 1, STEPS.length]) }}</b>
 							<div
 								class="mp-track"
 								role="progressbar"
@@ -81,6 +78,7 @@
 											fieldtype="Data"
 											:label="__('Position title')"
 											reqd
+											:placeholder="__('Type here')"
 											v-model="model.position_title"
 											:error-message="shown('position_title')"
 										/>
@@ -115,6 +113,7 @@
 											options="Department"
 											:label="__('Department')"
 											reqd
+											:placeholder="__('Choose…')"
 											v-model="model.department"
 											:display="departmentLabel(model.department)"
 											:error-message="shown('department')"
@@ -123,6 +122,7 @@
 											fieldtype="Select"
 											:label="__('Location')"
 											reqd
+											:placeholder="__('Choose…')"
 											:document-list="siteOptions"
 											v-model="model.locationChoice"
 											:error-message="shown('locationChoice')"
@@ -132,7 +132,7 @@
 											fieldtype="Small Text"
 											:label="__('Where will they work?')"
 											reqd
-											:placeholder="__('Not one of our sites. Give the place and why.')"
+											:placeholder="__('Place, and why')"
 											v-model="model.location_other"
 											:error-message="shown('location_other')"
 										/>
@@ -143,9 +143,6 @@
 											<Lock class="h-4 w-4 flex-none" aria-hidden="true" />
 										</div>
 									</div>
-									<p class="g-form-footer">
-										{{ __("Reports to: you, the person sending this. It cannot be changed.") }}
-									</p>
 								</section>
 
 								<!-- 2 Type -->
@@ -176,25 +173,41 @@
 										</p>
 									</section>
 									<section class="g-form-section">
-										<div class="g-form-group">
-											<FormField
-												fieldtype="Select"
-												:label="__('This is')"
-												reqd
-												:document-list="requestTypeOptions"
-												v-model="model.request_type"
-											/>
-										</div>
+										<h3 id="mp-kind" class="g-eyebrow">{{ __("What is this for?") }}</h3>
+										<GListPanel role="radiogroup" aria-labelledby="mp-kind">
+											<GListRow
+												v-for="type in REQUEST_TYPES"
+												:key="type.value"
+												role="radio"
+												:aria-checked="model.request_type === type.value"
+												:label="__(type.label)"
+												:chevron="false"
+												@click="model.request_type = type.value"
+											>
+												<template #badge
+													><Check
+														v-if="model.request_type === type.value"
+														class="h-5 w-5 flex-none"
+														aria-hidden="true"
+												/></template>
+											</GListRow>
+										</GListPanel>
 									</section>
 									<section v-if="model.request_type === 'Replacement'" class="g-form-section">
 										<h3 id="mp-staff" class="g-eyebrow">{{ __("Who is being replaced?") }}</h3>
+										<GSearchBar
+											v-if="(staff.data?.length || 0) > 8"
+											v-model="staffQuery"
+											:placeholder="__('Search by name')"
+											:label="__('Search by name')"
+										/>
 										<GListPanel
 											v-if="staff.data?.length"
 											role="radiogroup"
 											aria-labelledby="mp-staff"
 										>
 											<GListRow
-												v-for="person in staff.data"
+												v-for="person in shownStaff"
 												:key="person.name"
 												role="radio"
 												:aria-checked="model.replacing_employee === person.name"
@@ -236,20 +249,26 @@
 								<template v-else-if="step === 2">
 									<section class="g-form-section">
 										<h3 id="mp-soon" class="g-eyebrow">{{ __("How soon do you need them?") }}</h3>
-										<GSegmented
-											:buttons="soonButtons"
-											v-model="model.how_soon"
-											:label="__('How soon do you need them?')"
-										/>
-										<p class="g-form-footer" role="status">
-											<GStatusChip
-												v-if="urgency"
-												:status="URGENCY_CHIP[urgency]"
-												:label="__('{0} urgency', [__(urgency)])"
-											/>
-											<template v-else>{{
-												__("Pick one. Nadi sets the urgency from your answer.")
-											}}</template>
+										<GListPanel role="radiogroup" aria-labelledby="mp-soon">
+											<GListRow
+												v-for="key in soonKeys"
+												:key="key"
+												role="radio"
+												:aria-checked="model.how_soon === key"
+												:label="__(SOON_LABELS[key])"
+												:chevron="false"
+												@click="model.how_soon = key"
+											>
+												<template #badge
+													><Check
+														v-if="model.how_soon === key"
+														class="h-5 w-5 flex-none"
+														aria-hidden="true"
+												/></template>
+											</GListRow>
+										</GListPanel>
+										<p v-if="urgency" class="g-form-footer" role="status">
+											<GStatusChip status="neutral" :label="__('{0} urgency', [__(urgency)])" />
 										</p>
 										<p v-if="shown('how_soon')" class="g-field-error" role="alert">
 											{{ shown("how_soon") }}
@@ -261,20 +280,18 @@
 												fieldtype="Small Text"
 												:label="__('Why do you need this hire?')"
 												reqd
+												:placeholder="__('Type here')"
 												v-model="model.justification"
 												:error-message="shown('justification')"
 											/>
 											<FormField
 												fieldtype="Date"
-												:label="__('Start date, if fixed')"
+												:label="__('Start date, if fixed') + ' (' + __('optional') + ')'"
 												:min-date="tomorrow"
 												v-model="model.start_date"
 												:error-message="shown('start_date')"
 											/>
 										</div>
-										<p class="g-form-footer">
-											{{ __("Leave the start date empty if it is not fixed.") }}
-										</p>
 									</section>
 								</template>
 
@@ -282,7 +299,25 @@
 								<template v-else-if="step === 3">
 									<section class="g-form-section">
 										<h3 id="mp-band" class="g-eyebrow">{{ __("Pay band") }}</h3>
-										<GSegmented :buttons="BANDS" v-model="model.band" :label="__('Pay band')" />
+										<GListPanel role="radiogroup" aria-labelledby="mp-band">
+											<GListRow
+												v-for="b in BANDS"
+												:key="b.value"
+												role="radio"
+												:aria-checked="model.band === b.value"
+												:label="b.label"
+												:sublabel="__(b.meaning)"
+												:chevron="false"
+												@click="model.band = b.value"
+											>
+												<template #badge
+													><Check
+														v-if="model.band === b.value"
+														class="h-5 w-5 flex-none"
+														aria-hidden="true"
+												/></template>
+											</GListRow>
+										</GListPanel>
 										<p v-if="shown('band')" class="g-field-error" role="alert">
 											{{ shown("band") }}
 										</p>
@@ -290,27 +325,29 @@
 									<section class="g-form-section">
 										<div class="g-form-group">
 											<FormField
-												fieldtype="Currency"
-												:label="__('Budgeted salary (RM)')"
+												fieldtype="Data"
+												inputmode="decimal"
+												:label="__('Budgeted salary a month')"
 												reqd
-												v-model="model.budgeted_salary"
+												:placeholder="__('RM')"
+												:model-value="moneyText(model.budgeted_salary)"
+												@update:model-value="model.budgeted_salary = parseMoney($event)"
 												:error-message="shown('budgeted_salary')"
 											/>
 											<FormField
-												fieldtype="Currency"
-												:label="__('Proposed salary (RM)')"
+												fieldtype="Data"
+												inputmode="decimal"
+												:label="__('Proposed salary a month')"
 												reqd
-												v-model="model.proposed_salary"
+												:placeholder="__('RM')"
+												:model-value="moneyText(model.proposed_salary)"
+												@update:model-value="model.proposed_salary = parseMoney($event)"
 												:error-message="shown('proposed_salary')"
 											/>
 										</div>
-										<p class="g-form-footer" :class="{ 'text-warn-ink': overBudget }">
-											{{
-												overBudget
-													? __("Proposed is more than the budget. HR will see this.")
-													: __("Monthly, in RM.")
-											}}
-										</p>
+										<GBanner v-if="overBudget" variant="warning" class="mt-3">
+											{{ __("Proposed is more than the budget. HR will see this.") }}
+										</GBanner>
 									</section>
 								</template>
 
@@ -324,7 +361,8 @@
 												class="g-seclink g-focusable"
 												@click="goTo(group.step)"
 											>
-												{{ __("Edit") }}<span class="sr-only"> {{ group.title }}</span>
+												{{ __("Edit") }}<span class="sr-only"> {{ group.title }}</span
+												><ChevronRight class="inline h-4 w-4" aria-hidden="true" />
 											</button>
 										</div>
 										<div class="g-form-group">
@@ -334,8 +372,8 @@
 												class="g-form-row g-form-row--readonly"
 											>
 												<span class="g-form-row__label">{{ row.label }}</span>
-												<span class="g-form-row__value">{{
-													row.value || __("Not answered")
+												<span class="g-form-row__value" :class="{ 'text-ink-600': !row.value }">{{
+													row.value || __("Not given")
 												}}</span>
 											</div>
 										</div>
@@ -350,13 +388,18 @@
 								</template>
 
 								<!-- HR's questions for this step (step 5 is all of them), after the fixed fields -->
-								<section v-if="step < REVIEW_STEP && stepQuestions.length" class="g-form-section">
+								<section v-if="step < REVIEW_STEP && shownQuestions.length" class="g-form-section">
 									<div class="g-form-group">
 										<FormField
-											v-for="q in stepQuestions"
+											v-for="q in shownQuestions"
 											:key="questionKey(q)"
 											v-bind="questionField(q)"
-											:label="q.question"
+											:label="q.required ? q.question : q.question + ' (' + __('optional') + ')'"
+											:placeholder="
+												['Choice', 'Yes-No'].includes(q.answer_type)
+													? __('Choose…')
+													: __('Type here')
+											"
 											:reqd="Boolean(q.required)"
 											v-model="extra[questionKey(q)]"
 											:error-message="shown(questionKey(q))"
@@ -384,7 +427,7 @@
 								</button>
 							</p>
 							<div class="flex items-center gap-3">
-								<GGhostButton :label="__('Back')" @click="back" />
+								<GGhostButton :label="step === 0 ? __('Cancel') : __('Back')" @click="back" />
 								<GButton
 									class="grow"
 									:class="{ 'g-btn--disabled': blocker }"
@@ -418,7 +461,7 @@
 
 <script setup>
 import { IonContent } from "@ionic/vue"
-import { Check, Lock, Minus, Plus, Users } from "lucide-vue-next"
+import { Check, ChevronRight, Lock, Minus, Plus, Users } from "lucide-vue-next"
 import { createResource } from "frappe-ui"
 import { computed, inject, nextTick, reactive, ref, watch } from "vue"
 import { useRouter } from "vue-router"
@@ -426,6 +469,7 @@ import { useRouter } from "vue-router"
 import FormField from "@/components/FormField.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import ShellHeader from "@/components/ShellHeader.vue"
+import GBanner from "@/components/glass/GBanner.vue"
 import GActionSheet from "@/components/glass/GActionSheet.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GEmptyState from "@/components/glass/GEmptyState.vue"
@@ -434,7 +478,7 @@ import GIconButton from "@/components/glass/GIconButton.vue"
 import GListPanel from "@/components/glass/GListPanel.vue"
 import GListRow from "@/components/glass/GListRow.vue"
 import GPage from "@/components/glass/GPage.vue"
-import GSegmented from "@/components/glass/GSegmented.vue"
+import GSearchBar from "@/components/glass/GSearchBar.vue"
 import GStatusChip from "@/components/glass/GStatusChip.vue"
 import { gToast } from "@/components/glass/toast"
 import { reloadRequestLists } from "@/data/requestLists"
@@ -449,6 +493,7 @@ import {
 	OTHER_SITE,
 	REQUEST_TYPES,
 	REVIEW_STEP,
+	SOON_LABELS,
 	STEPS,
 	URGENCY_BY_HOW_SOON,
 	blankModel,
@@ -457,7 +502,10 @@ import {
 	nextBlock,
 	questionField,
 	questionKey,
+	moneyText,
+	parseMoney,
 	readDraft,
+	visibleQuestions,
 	reviewGroups,
 	stepProblems,
 	writeDraft,
@@ -519,13 +567,17 @@ const siteOptions = computed(() => [
 	...(sites.data || []).map((site) => ({ label: site.name, value: site.name })),
 	{ label: __("Other"), value: OTHER_SITE },
 ])
-const requestTypeOptions = REQUEST_TYPES.map((type) => ({
-	label: __(type.label),
-	value: type.value,
-}))
-const soonButtons = Object.keys(URGENCY_BY_HOW_SOON).map((key) => ({ key, label: __(key) }))
-// the chip's colour key only; the word beside it says the urgency
-const URGENCY_CHIP = { High: "rejected", Medium: "waiting", Low: "approved" }
+const soonKeys = Object.keys(URGENCY_BY_HOW_SOON)
+const shownQuestions = computed(() => visibleQuestions(stepQuestions.value, extra))
+const staff = createResource({
+	url: "hrms.api.manpower.replaceable_staff",
+	makeParams: () => ({ department: model.department }),
+})
+const staffQuery = ref("")
+const shownStaff = computed(() => {
+	const q = staffQuery.value.trim().toLowerCase()
+	return (staff.data || []).filter((p) => !q || p.employee_name.toLowerCase().includes(q))
+})
 const urgency = computed(() => URGENCY_BY_HOW_SOON[model.how_soon])
 const tomorrow = dayjs().add(1, "day").format("YYYY-MM-DD")
 const overBudget = computed(
@@ -533,11 +585,6 @@ const overBudget = computed(
 		Number(model.proposed_salary) > Number(model.budgeted_salary) &&
 		Number(model.budgeted_salary) > 0
 )
-
-const staff = createResource({
-	url: "hrms.api.manpower.replaceable_staff",
-	makeParams: () => ({ department: model.department }),
-})
 watch(
 	() => [step.value, model.request_type, model.department],
 	([at, type, department]) => {

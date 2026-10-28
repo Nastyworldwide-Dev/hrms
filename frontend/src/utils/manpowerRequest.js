@@ -32,6 +32,18 @@ export const bandLabel = (v) => {
 	const band = BANDS.find((b) => b.value === v)
 	return band ? `${band.label} — ${band.meaning}` : ""
 }
+//: The words the wizard shows for each How soon value. The stored keys stay the server's (pinned by a
+//: test against manpower_request.py); only the label changes.
+export const SOON_LABELS = {
+	"Within 2 weeks": "Within 2 weeks",
+	"3–4 weeks": "Within a month",
+	"1–2 months": "1–2 months",
+}
+/** 2500 -> "2,500" for display; "" when blank or not a number. */
+export const thousands = (v) => {
+	const n = Number(String(v ?? "").trim())
+	return String(v ?? "").trim() === "" || !Number.isFinite(n) ? "" : n.toLocaleString("en-MY")
+}
 export const EMPLOYMENT_TYPES = [
 	{ value: "Full-Time", label: "Full-time", hint: "Permanent, full working week" },
 	{ value: "Contract", label: "Contract", hint: "Fixed end date" },
@@ -383,6 +395,36 @@ export function questionField(question) {
 	return { fieldtype }
 }
 
+/** "RM 2,500" typed or shown -> "2500" (digits and one point kept). */
+export const parseMoney = (v) => {
+	const [whole, ...rest] = String(v ?? "")
+		.replace(/[^\d.]/g, "")
+		.split(".")
+	return rest.length ? `${whole}.${rest.join("")}` : whole
+}
+/** The text a money field shows: "RM 2,500", or "" when empty. */
+export const moneyText = (v) => {
+	const text = String(v ?? "")
+	const n = thousands(text.replace(/\.$/, ""))
+	return n ? `RM ${n}${text.endsWith(".") ? "." : ""}` : ""
+}
+
+/**
+ * HR's questions to draw now. "If other, which ..." follows the choice question before it in the
+ * same step and shows only once that one is answered "Other". Matched by the words, since the
+ * questions are data (Manpower Request Settings).
+ */
+export function visibleQuestions(questions, extra = {}) {
+	return (questions || []).filter((q, i, all) => {
+		if (!/^if other/i.test(String(q.question || "").trim())) return true
+		const lead = all
+			.slice(0, i)
+			.reverse()
+			.find((p) => Number(p.step) === Number(q.step) && p.answer_type === "Choice")
+		return Boolean(lead) && extra[questionKey(lead)] === "Other"
+	})
+}
+
 const money = (value) => `RM ${amount(value).toLocaleString("en-MY")}`
 
 /**
@@ -421,7 +463,7 @@ export function reviewGroups(model, extra, questions, { t = (x) => x, me = "" } 
 			["Start date", m.start_date ? dayjs(m.start_date).format("D MMM YYYY") : t("Not fixed")],
 		],
 		[
-			["Band", m.band],
+			["Band", bandLabel(m.band)],
 			["Budgeted", blank(m.budgeted_salary) ? "" : money(m.budgeted_salary)],
 			["Proposed", blank(m.proposed_salary) ? "" : money(m.proposed_salary)],
 		],

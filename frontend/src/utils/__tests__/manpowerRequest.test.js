@@ -24,6 +24,11 @@ import {
 	trackerRows,
 	draftKey,
 	questionField,
+	SOON_LABELS,
+	thousands,
+	parseMoney,
+	moneyText,
+	visibleQuestions,
 	reviewGroups,
 	stage,
 	STAGE_LABELS,
@@ -551,7 +556,7 @@ test("Review groups the answers by step, each with the step to edit", () => {
 	assert.equal(rows["Reports to"], "Hafiz Rahman")
 	assert.equal(rows["How soon"], "Within 2 weeks · High urgency")
 	assert.equal(rows["Start date"], "1 Dec 2026")
-	assert.equal(rows["Band"], "D")
+	assert.equal(rows["Band"], "D — Assistant Manager / Manager")
 	assert.equal(rows["Budgeted"], "RM 4,000")
 	assert.equal(rows["Draft job description"], "Run campaigns")
 	const empty = reviewGroups(complete(), {}, [Q(5, "KPIs")], { t: (x) => x, me: "H" })
@@ -619,4 +624,50 @@ test("the detail names the employment type and the replaced person in plain word
 		detailKind({ employment_type: "Part-Time", request_type: "New Headcount" }),
 		"Part-time · New job"
 	)
+})
+
+test("the Review band row names the band's meaning, and is blank when unpicked", () => {
+	const band = (m) =>
+		reviewGroups(m, {}, [], { t: (x) => x, me: "" })
+			.flatMap((g) => g.rows)
+			.find((r) => r.label === "Band").value
+	assert.equal(band({ ...complete(), band: "E1" }), "E1 — Senior Executive")
+	assert.equal(band({ ...complete(), band: "" }), "")
+})
+
+test("How soon words: the middle one reads Within a month; keys match the server's", () => {
+	assert.deepEqual(Object.keys(SOON_LABELS), Object.keys(URGENCY_BY_HOW_SOON))
+	assert.equal(SOON_LABELS["3–4 weeks"], "Within a month")
+	assert.equal(SOON_LABELS["Within 2 weeks"], "Within 2 weeks")
+	assert.equal(SOON_LABELS["1–2 months"], "1–2 months")
+})
+
+test("thousands separators for display, blank for blank or junk", () => {
+	assert.equal(thousands("2500"), "2,500")
+	assert.equal(thousands(1234567), "1,234,567")
+	assert.equal(thousands(""), "")
+	assert.equal(thousands("abc"), "")
+})
+
+test("'If other, which ...' shows only after the choice before it is Other", () => {
+	const ind = Q(5, "Industry experience", { answer_type: "Choice", choices: ["Retail", "Other"] })
+	const other = Q(5, "If other, which industry", { answer_type: "Short text" })
+	const plain = Q(5, "Main tasks")
+	const names = (extra) => visibleQuestions([ind, other, plain], extra).map((q) => q.question)
+	assert.deepEqual(names({}), ["Industry experience", "Main tasks"])
+	assert.deepEqual(names({ [questionKey(ind)]: "Retail" }), ["Industry experience", "Main tasks"])
+	assert.deepEqual(names({ [questionKey(ind)]: "Other" }), [
+		"Industry experience",
+		"If other, which industry",
+		"Main tasks",
+	])
+})
+
+test("a money field shows RM and thousands, and reads back to plain digits", () => {
+	assert.equal(moneyText("2500"), "RM 2,500")
+	assert.equal(moneyText(""), "")
+	assert.equal(parseMoney("RM 2,500"), "2500")
+	assert.equal(parseMoney("RM 2,500.50"), "2500.50")
+	assert.equal(parseMoney("abc"), "")
+	assert.equal(parseMoney(moneyText("1234")), "1234")
 })
