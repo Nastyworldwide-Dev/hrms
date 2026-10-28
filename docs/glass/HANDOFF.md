@@ -1,14 +1,11 @@
 # HANDOFF
-prompt:   Organizational Chart as a flow chart + Cost Tag/Center hides "Main" (owner, 28 Oct 2026)
+prompt:   Cost Tag/Center from an Excel upload in Data Import (owner, 28 Oct 2026)
 status:   done
-commit:   0c2864947 on nz-glass
-files:    frontend/src/views/OrgChart.vue
-frontend/src/components/glass/GAvatar.vue
-frontend/src/utils/avatar.js
-frontend/src/utils/orgChart.js
-frontend/src/theme/glass-components.css
-design/tokens.json
-hrms/public/js/erpnext/employee.js
-verify:   deploy (no migrate); More -> Organizational Chart in light + dark; Employee -> Cost Tag/Center dropdown has no "Main"
-flags:    not seen in a browser (no local site has hrms); avatar letters MH rule and lime ring decided by owner
-next:     owner checks on phone; optional: "(Territory)" field description patch, hide Old Cost Tag/Center on new rows
+commit:   v2.0.0-alpha.70 on nz-glass (feature ae1dc9947, review fix 58d8cc0d0)
+files:    hrms/hr/doctype/cost_tag_center_upload/cost_tag_center_upload.json
+hrms/hr/doctype/cost_tag_center_upload/cost_tag_center_upload.py
+hrms/hooks.py
+hrms/tests/test_cost_tag_center_upload.py
+verify:   deploy + bench migrate; Data Import -> Cost Tag/Center Upload -> Download Template -> 60/40 Oct for one ID -> profile shows both
+flags:    not run on a bench (no local site has hrms); Year/Month cell must be a real date (e.g. 2026-10-01)
+next:     owner tries a real file on staging

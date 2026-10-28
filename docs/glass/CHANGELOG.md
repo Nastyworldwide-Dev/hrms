@@ -10,6 +10,18 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.70] — Cost Tags from Excel — 2026-10-28
+
+### Added
+- **Cost Tag/Center from one Excel.** In Desk → Data Import, pick
+  **Cost Tag/Center Upload** and Insert New Records. One row per split:
+  Employee ID, Staff Name, Year/Month, Cost Tag/Center, Old Cost
+  Tag/Center, Percentage. When the import ends, each row lands on that
+  person's profile (Overview → Cost Tag/Center Allocation): the same
+  month and tag is replaced, anything else is a new row. A month that
+  doesn't total 100% is refused for that person only, with the reason on
+  the row. Needs `bench migrate`.
+
 ## [2.0.0-alpha.69] — Who Reports to Whom — 2026-10-28
 
 ### Changed
