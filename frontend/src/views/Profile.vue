@@ -11,18 +11,45 @@
 						     circle and the name beside it, in one grouped row. -->
 						<div class="g-form-group g-account">
 							<div class="g-account__row">
-								<GAvatar
-									:image="user.data?.user_image"
-									:label="user.data?.first_name"
-									:size="60"
-									round
-								/>
+								<button
+									type="button"
+									class="g-account__avatar-btn"
+									:class="{ busy: photoUploadBusy }"
+									:aria-label="__('Change photo')"
+									:aria-disabled="photoUploadBusy"
+									@click="openPhotoActions"
+								>
+									<GAvatar
+										:image="user.data?.user_image"
+										:label="user.data?.first_name"
+										:size="60"
+										round
+									/>
+									<span
+										v-if="photoUploadBusy"
+										class="g-account__spinner"
+										role="status"
+										:aria-label="__('Saving photo')"
+									/>
+									<span v-else class="g-account__badge" aria-hidden="true">
+										<Camera class="h-3.5 w-3.5" />
+									</span>
+								</button>
 								<div class="g-account__text">
 									<!-- a login with no Employee (an Attendance Report Viewer) is named by its account -->
 									<span class="g-account__name">{{
 										employee?.data?.employee_name || user.data?.full_name
 									}}</span>
 									<span v-if="roleLine" class="g-account__sub">{{ roleLine }}</span>
+									<span v-if="photoError" class="g-account__error" role="status">{{
+										photoError
+									}}</span>
+									<GButton
+										v-if="photoRetry"
+										:label="__('Try again')"
+										:pending="photoUploadBusy"
+										@click="retryPhoto"
+									/>
 								</div>
 							</div>
 							<!-- On the page, not in sheets (PAGE-23; shift pattern by owner
@@ -40,7 +67,17 @@
 								<div v-if="!employeeDoc.get.error" v-value-row class="g-form-row g-form-row--readonly">
 									<span class="g-form-row__label">{{ __("Manager") }}</span>
 									<GSkeleton v-if="managerLoading" width="96px" height="11px" />
-									<span v-else class="g-form-row__value">{{ managerName || __("None") }}</span>
+									<router-link
+										v-else-if="employeeDoc.doc?.reports_to"
+										:to="{ name: 'OrgChart', query: { employee: employeeDoc.doc.reports_to } }"
+										class="g-form-row__value g-form-row__link"
+									>
+										{{ managerName || __("None") }}
+										<span class="g-form-row__chevron">
+											<ChevronRight class="h-4 w-4" aria-hidden="true" />
+										</span>
+									</router-link>
+									<span v-else class="g-form-row__value">{{ __("None") }}</span>
 								</div>
 								<div v-if="!employeeDoc.get.error" v-value-row class="g-form-row g-form-row--readonly">
 									<span class="g-form-row__label">{{ __("Shift") }}</span>
@@ -149,18 +186,61 @@
 			>
 				<ProfileInfoModal v-if="detailsOpen" :data="detailRows" />
 			</GModal>
+
+			<!-- Photo actions menu -->
+			<GActionSheet
+				:is-open="photoActionsOpen"
+				:title="__('Profile photo')"
+				:actions="photoActions"
+				@select="onPhotoAction"
+				@did-dismiss="photoActionsOpen = false"
+			/>
+
+			<!-- Photo crop and upload -->
+			<PhotoSheet
+				:is-open="photoCropOpen"
+				:file="selectedPhotoFile"
+				:saving="photoUploadBusy"
+				@use="onPhotoUse"
+				@did-dismiss="photoCropOpen = false"
+			/>
+
+			<GConfirm
+				:is-open="removeConfirmOpen"
+				:title="__('Remove your photo?')"
+				:confirm-label="__('Remove')"
+				destructive
+				:pending="photoUploadBusy"
+				@confirm="removePhoto"
+				@cancel="removeConfirmOpen = false"
+			/>
+
+			<!-- Hidden file inputs for photo pick/capture -->
+			<input ref="fileInputChoose" type="file" accept="image/*" hidden @change="onFileSelect" />
+			<input
+				ref="fileInputCapture"
+				type="file"
+				accept="image/*"
+				capture="user"
+				hidden
+				@change="onFileSelect"
+			/>
 		</ion-content>
 	</GPage>
 </template>
 
 <script setup>
-import { KeyRound, User } from "lucide-vue-next"
+import { Camera, ChevronRight, KeyRound, User } from "lucide-vue-next"
 import GPage from "@/components/glass/GPage.vue"
 import { computed, inject, ref, watch } from "vue"
 import { useListUpdate } from "@/composables/realtime"
 import { useRouter } from "vue-router"
 import { IonContent } from "@ionic/vue"
 import GModal from "@/components/glass/GModal.vue"
+import GButton from "@/components/glass/GButton.vue"
+import GConfirm from "@/components/glass/GConfirm.vue"
+import GActionSheet from "@/components/glass/GActionSheet.vue"
+import PhotoSheet from "@/components/PhotoSheet.vue"
 import { createDocumentResource, createResource } from "frappe-ui"
 import { gToast } from "@/components/glass/toast"
 import GSwitch from "@/components/glass/GSwitch.vue"
@@ -175,6 +255,7 @@ import GSelect from "@/components/glass/GSelect.vue"
 
 import { formatCurrency } from "@/utils/formatters"
 import { nowResource } from "@/data/now"
+import { userResource } from "@/data/user"
 
 import ProfileInfoModal from "@/components/ProfileInfoModal.vue"
 
@@ -183,6 +264,7 @@ import {
 	arePushNotificationsEnabled,
 	enablePushNotifications as requestPushEnable,
 } from "@/data/notifications"
+import { checkPick } from "@/utils/photoCrop"
 
 const DOCTYPE = "Employee"
 
@@ -436,4 +518,193 @@ useListUpdate(socket, DOCTYPE, (name) => {
 	if (name === employee.data?.name) employeeDoc.reload()
 })
 
+//: Photo upload UI state and actions
+const photoActionsOpen = ref(false)
+const photoCropOpen = ref(false)
+const photoUploadBusy = ref(false)
+const photoError = ref("")
+const photoRetry = ref("")
+const removeConfirmOpen = ref(false)
+const selectedPhotoFile = ref(null)
+const fileInputChoose = ref(null)
+const fileInputCapture = ref(null)
+
+const photoActions = computed(() => {
+	const actions = [
+		{
+			key: "choose",
+			label: __("Choose photo"),
+			icon: null,
+		},
+		{
+			key: "take",
+			label: __("Take photo"),
+			icon: null,
+		},
+	]
+	if (user.data?.user_image) {
+		actions.push({
+			key: "remove",
+			label: __("Remove photo"),
+			icon: null,
+			destructive: true,
+		})
+	}
+	return actions
+})
+
+function openPhotoActions() {
+	photoError.value = ""
+	photoActionsOpen.value = true
+}
+
+function onPhotoAction(key) {
+	if (key === "choose") {
+		fileInputChoose.value?.click()
+	} else if (key === "take") {
+		fileInputCapture.value?.click()
+	} else if (key === "remove") {
+		photoActionsOpen.value = false
+		removeConfirmOpen.value = true
+	}
+}
+
+function onFileSelect(e) {
+	const file = e.target.files?.[0]
+	e.target.value = ""
+
+	if (!file) return
+
+	photoActionsOpen.value = false
+	photoError.value = ""
+
+	// Check file size and type
+	const err = checkPick(file)
+	if (err === "too_big") {
+		photoError.value = __("This photo is over 5 MB. Pick a smaller one.")
+		console.info("[profile] photo too_big")
+		return
+	} else if (err === "not_image") {
+		photoError.value = __("That file isn't a photo. Pick a JPEG or PNG.")
+		console.info("[profile] photo not_image")
+		return
+	}
+
+	// Open crop sheet
+	selectedPhotoFile.value = file
+	photoCropOpen.value = true
+	console.info("[profile] photo selected, opening crop")
+}
+
+const setPhotoResource = createResource({
+	url: "hrms.api.profile_photo.set_photo",
+})
+
+async function onPhotoUse(dataUrl) {
+	photoUploadBusy.value = true
+	photoError.value = ""
+	photoRetry.value = dataUrl
+
+	try {
+		await setPhotoResource.submit({ image: dataUrl })
+		gToast({
+			title: __("Photo updated"),
+			variant: "success",
+		})
+		console.info("[profile] photo uploaded")
+		photoRetry.value = ""
+		photoCropOpen.value = false
+		userResource.reload()
+	} catch (error) {
+		console.error("[profile] photo upload failed:", error)
+		photoCropOpen.value = false
+		photoError.value = __("Couldn't save your photo. Try again.")
+	} finally {
+		photoUploadBusy.value = false
+	}
+}
+
+function retryPhoto() {
+	if (photoRetry.value) onPhotoUse(photoRetry.value)
+}
+
+const removePhotoResource = createResource({
+	url: "hrms.api.profile_photo.remove_photo",
+})
+
+async function removePhoto() {
+	photoUploadBusy.value = true
+	photoError.value = ""
+
+	try {
+		await removePhotoResource.submit({})
+		gToast({
+			title: __("Photo removed"),
+			variant: "success",
+		})
+		console.info("[profile] photo removed")
+		removeConfirmOpen.value = false
+		userResource.reload()
+	} catch (error) {
+		console.error("[profile] photo remove failed:", error)
+		removeConfirmOpen.value = false
+		photoError.value = __("Couldn't remove your photo. Try again.")
+	} finally {
+		photoUploadBusy.value = false
+	}
+}
 </script>
+
+<style scoped>
+.g-account__avatar-btn {
+	position: relative;
+	flex: none;
+	width: 60px;
+	height: 60px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	cursor: pointer;
+}
+.g-account__avatar-btn.busy {
+	opacity: 0.5;
+}
+.g-account__badge {
+	position: absolute;
+	right: -2px;
+	bottom: -2px;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	background: var(--g-ink);
+	color: var(--g-bg, #fff);
+}
+.g-account__spinner {
+	position: absolute;
+	inset: 18px;
+	border: 2px solid var(--g-ink2);
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: g-photo-spin 0.8s linear infinite;
+}
+@keyframes g-photo-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+.g-account__error {
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+	color: var(--g-danger, #b3261e);
+}
+.g-form-row__link {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	color: inherit;
+	text-decoration: none;
+}
+</style>
