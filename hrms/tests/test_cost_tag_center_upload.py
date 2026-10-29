@@ -84,6 +84,9 @@ class _Employee:
 	def get(self, key):
 		return self.rows
 
+	def set(self, key, value):
+		self.rows = list(value)
+
 	def append(self, key, row):
 		self.rows.append(frappe._dict(row))
 
@@ -115,8 +118,10 @@ class TestApplyUploads(unittest.TestCase):
 			patch.object(upload.frappe, "get_all", return_value=records),
 			patch.object(upload.frappe, "get_doc", side_effect=lambda dt, name: employees[name]),
 			patch.object(upload.frappe, "db", db),
+			patch.object(upload, "find_employee", side_effect=lambda eid, name: eid),
+			patch.object(upload, "find_cost_center", side_effect=lambda v: v),
 		):
-			upload.apply_uploads([r.name for r in records])
+			upload.apply_uploads([r.name for r in records] + (["_"] if len(records) == 1 else []))
 		marks = {}
 		for c in db.set_value.call_args_list:
 			marks[c.args[1]] = c.args[2]
@@ -130,15 +135,40 @@ class TestApplyUploads(unittest.TestCase):
 		self.assertEqual(marks["u1"]["status"], "Done")
 		self.assertEqual(marks["u2"]["status"], "Done")
 
-	def test_an_existing_row_is_replaced_and_a_new_one_added(self):
-		emp = _Employee("E1", [_existing(OCT, "CEOF", pct=100)])
-		self._run([_record("u1", "E1", "CEOF", 70), _record("u2", "E1", "PFME", 30)], {"E1": emp})
-		self.assertEqual([(r.cost_center, r.percentage) for r in emp.rows], [("CEOF", 70), ("PFME", 30)])
+	def test_the_files_month_replaces_the_profiles_month(self):
+		emp = _Employee("E1", [_existing(OCT, "CEOF", pct=60), _existing(OCT, "PFME", pct=40)])
+		self._run([_record("u1", "E1", "CEOF", 70), _record("u2", "E1", "SPLY", 30)], {"E1": emp})
+		self.assertEqual([(r.cost_center, r.percentage) for r in emp.rows], [("CEOF", 70), ("SPLY", 30)])
 
-	def test_the_same_row_twice_in_one_file_is_one_row(self):
+	def test_the_same_tag_twice_in_one_month_of_the_file_fails_that_person(self):
 		emp = _Employee("E1")
-		self._run([_record("u1", "E1", "CEOF", 50), _record("u2", "E1", "CEOF", 100)], {"E1": emp})
-		self.assertEqual([(r.cost_center, r.percentage) for r in emp.rows], [("CEOF", 100)])
+		marks, _ = self._run([_record("u1", "E1", "CEOF", 50), _record("u2", "E1", "CEOF", 50)], {"E1": emp})
+		self.assertEqual(marks["u1"]["status"], "Failed")
+		self.assertIn("more than once", marks["u1"]["error"])
+		self.assertEqual(emp.saves, 0)
+
+	def test_an_unreadable_row_fails_alone_with_its_reason(self):
+		emp = _Employee("E1")
+		marks, _ = self._run(
+			[_record("u1", "E1", "CEOF", 100), _record("u2", "E2", "PFME", 100, month="next month")],
+			{"E1": emp},
+		)
+		self.assertEqual(marks["u1"]["status"], "Done")
+		self.assertEqual(marks["u2"]["status"], "Failed")
+		self.assertIn("2026-10", marks["u2"]["error"])
+
+	def test_done_rows_keep_what_was_understood(self):
+		marks, _ = self._run(
+			[_record("u1", "E1", "CEOF", "0.6"), _record("u2", "E1", "PFME", "0.4")], {"E1": _Employee("E1")}
+		)
+		self.assertEqual(marks["u1"]["employee_id"], "E1")
+		self.assertEqual(marks["u1"]["month"], OCT)
+		self.assertEqual(marks["u1"]["percent"], 60)
+
+	def test_excel_percent_cells_land_as_60_and_40(self):
+		emp = _Employee("E1")
+		self._run([_record("u1", "E1", "CEOF", 0.6), _record("u2", "E1", "PFME", 0.4)], {"E1": emp})
+		self.assertEqual([(r.cost_center, r.percentage) for r in emp.rows], [("CEOF", 60), ("PFME", 40)])
 
 	def test_one_employee_failing_is_rolled_back_alone_and_says_why(self):
 		bad = _Employee("E1", fail="Cost Tag/Center allocation for Oct 2026 must total 100%, currently 60%.")
@@ -151,7 +181,7 @@ class TestApplyUploads(unittest.TestCase):
 		self.assertEqual(marks["u2"]["status"], "Done")
 		self.assertEqual(good.saves, 1)
 		# each employee is its own savepoint; the failing one is rolled back to it
-		self.assertEqual(db.savepoint.call_count, 2)
+		self.assertEqual(db.savepoint.call_count, 2)  # one per employee
 		db.rollback.assert_called_once_with(save_point=db.savepoint.call_args_list[0].args[0])
 
 	def test_only_the_named_pending_rows_are_picked_up_oldest_first(self):
@@ -274,15 +304,11 @@ class TestTheUploadDoctype(unittest.TestCase):
 		for name in ("status", "error"):
 			self.assertEqual(f[name].get("read_only"), 1, name)
 
-	def test_the_tags_link_to_the_same_lists_as_the_profile(self):
+	def test_the_understood_tag_links_to_the_same_lists_as_the_profile(self):
 		f = {x["fieldname"]: x for x in self._meta()["fields"]}
-		self.assertEqual((f["employee"]["fieldtype"], f["employee"]["options"]), ("Link", "Employee"))
-		self.assertEqual(
-			(f["cost_center"]["fieldtype"], f["cost_center"]["options"]), ("Link", "Cost Center")
-		)
-		self.assertEqual(f["cost_center"].get("ignore_user_permissions"), 1)
+		self.assertEqual(f["cost_center_id"].get("ignore_user_permissions"), 1)
 		self.assertEqual((f["territory"]["fieldtype"], f["territory"]["options"]), ("Link", "Territory"))
-		for name in ("employee", "allocation_month", "percentage"):
+		for name in ("allocation_month", "percentage"):
 			self.assertEqual(f[name].get("reqd"), 1, name)
 
 	def test_only_hr_and_system_manager_can_upload(self):
@@ -297,6 +323,221 @@ class TestTheUploadDoctype(unittest.TestCase):
 		self.assertRegex(
 			src,
 			r"def after_insert\(self\):\s*\n\s*if not frappe\.flags\.in_import:\s*\n\s*apply_uploads\(\[self\.name\]\)",
+		)
+
+
+def setUpModule():
+	# the stub's frappe.bold is a MagicMock; messages must show the real value
+	global _bold
+	_bold = patch.object(upload.frappe, "bold", side_effect=lambda v: str(v))
+	_bold.start()
+
+
+def tearDownModule():
+	_bold.stop()
+
+
+# ---------- trips, owner 29 Oct 2026: "things that can cause trip can we fix that" ----------
+
+
+class TestReadMonth(unittest.TestCase):
+	"""Whatever HR types or Excel stores, as long as it has a year."""
+
+	def test_every_way_hr_writes_a_month(self):
+		for value in (
+			datetime.date(2026, 10, 17),
+			datetime.datetime(2026, 10, 1, 0, 0),
+			"2026-10",
+			"2026-10-01",
+			"2026/10",
+			"Oct 2026",
+			"October 2026",
+			"oct-2026",
+			"10/2026",
+			"10-2026",
+			"01/10/2026",
+			" 2026-10 ",
+		):
+			self.assertEqual(upload.read_month(value), OCT, value)
+
+	def test_no_year_or_nonsense_is_refused_with_an_example(self):
+		for value in ("Oct", "10", "", None, "next month", "13/2026"):
+			with self.assertRaises(frappe.ValidationError, msg=value) as ctx:
+				upload.read_month(value)
+			self.assertIn("2026-10", str(ctx.exception))
+
+
+class TestReadPercent(unittest.TestCase):
+	def test_number_or_with_a_percent_sign(self):
+		self.assertEqual(upload.read_percent("60"), 60)
+		self.assertEqual(upload.read_percent("60%"), 60)
+		self.assertEqual(upload.read_percent(" 40 % "), 40)
+		self.assertEqual(upload.read_percent(33.5), 33.5)
+
+	def test_blank_or_text_is_refused(self):
+		for value in ("", None, "sixty", "-5", "0"):
+			with self.assertRaises(frappe.ValidationError, msg=value):
+				upload.read_percent(value)
+
+	def test_excel_percent_cells_are_scaled_when_the_month_adds_up_to_one(self):
+		# Excel stores a 60% cell as 0.6
+		self.assertEqual(upload.scale_fractions([0.6, 0.4]), [60, 40])
+		self.assertEqual(upload.scale_fractions([1]), [100])
+		self.assertEqual(upload.scale_fractions([60, 40]), [60, 40])
+		self.assertEqual(upload.scale_fractions([0.5, 50]), [0.5, 50])
+
+
+class TestFindCostCenter(unittest.TestCase):
+	CENTERS = (
+		frappe._dict(name="CEOF - NHSB", cost_center_name="CEOF"),
+		frappe._dict(name="PFME - NHSB", cost_center_name="PFME"),
+		frappe._dict(name="Main - NHSB", cost_center_name="Main"),
+		frappe._dict(name="Main - DSDS", cost_center_name="Main"),
+	)
+
+	def _find(self, value):
+		with patch.object(upload.frappe, "get_all", return_value=self.CENTERS):
+			return upload.find_cost_center(value)
+
+	def test_the_short_name_or_the_full_name_any_case(self):
+		for value in ("CEOF", "ceof", " CEOF - NHSB ", "ceof - nhsb"):
+			self.assertEqual(self._find(value), "CEOF - NHSB", value)
+
+	def test_a_short_name_in_two_companies_asks_for_the_full_name(self):
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			self._find("Main")
+		self.assertIn("Main - NHSB", str(ctx.exception))
+		self.assertIn("Main - DSDS", str(ctx.exception))
+
+	def test_an_unknown_tag_says_so(self):
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			self._find("CEOFF")
+		self.assertIn("CEOFF", str(ctx.exception))
+
+	def test_only_enabled_leaf_cost_centers_are_looked_at(self):
+		with patch.object(upload.frappe, "get_all", return_value=self.CENTERS) as ga:
+			upload.find_cost_center("CEOF")
+		self.assertEqual(ga.call_args.kwargs["filters"], {"is_group": 0, "disabled": 0})
+
+
+class TestFindEmployee(unittest.TestCase):
+	def _find(self, employee_id, name, rows):
+		def get_all(doctype, filters=None, **kw):
+			if "name" in (filters or {}):
+				return [r for r in rows if r.name == filters["name"]]
+			return [r for r in rows if r.employee_name.strip().lower() == filters["employee_name"][1].lower()]
+
+		with patch.object(upload.frappe, "get_all", side_effect=get_all):
+			return upload.find_employee(employee_id, name)
+
+	PEOPLE = (
+		frappe._dict(name="HR-EMP-0001", employee_name="Ahmad bin Ali"),
+		frappe._dict(name="HR-EMP-0002", employee_name="Siti Aminah"),
+		frappe._dict(name="HR-EMP-0003", employee_name="Siti Aminah"),
+	)
+
+	def test_the_id_decides(self):
+		self.assertEqual(self._find("HR-EMP-0001", "Ahmad bin Ali", self.PEOPLE), "HR-EMP-0001")
+
+	def test_a_name_that_does_not_match_the_id_is_refused_naming_both(self):
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			self._find("HR-EMP-0001", "Siti Aminah", self.PEOPLE)
+		self.assertIn("Ahmad bin Ali", str(ctx.exception))
+		self.assertIn("Siti Aminah", str(ctx.exception))
+
+	def test_name_case_and_spaces_do_not_matter(self):
+		self.assertEqual(self._find("HR-EMP-0001", "  ahmad BIN ali ", self.PEOPLE), "HR-EMP-0001")
+
+	def test_no_id_but_one_person_with_that_name_is_found(self):
+		self.assertEqual(self._find(None, "Ahmad bin Ali", self.PEOPLE), "HR-EMP-0001")
+
+	def test_no_id_and_two_people_with_that_name_asks_for_the_id(self):
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			self._find(None, "Siti Aminah", self.PEOPLE)
+		self.assertIn("HR-EMP-0002", str(ctx.exception))
+
+	def test_an_unknown_id_says_so(self):
+		with self.assertRaises(frappe.ValidationError):
+			self._find("HR-EMP-9999", None, self.PEOPLE)
+
+
+class TestTheFilesMonthReplacesTheMonth(unittest.TestCase):
+	"""Owner, 29 Oct 2026: a year+month in the file is the truth for that
+	person's year+month; months not in the file stay."""
+
+	def test_a_tag_dropped_from_the_month_drops_off(self):
+		existing = [
+			_existing(OCT, "CEOF - NHSB", pct=60),
+			_existing(OCT, "PFME - NHSB", pct=40),
+			_existing(datetime.date(2025, 10, 1), "PFME - NHSB", pct=100),
+		]
+		kept = upload.replace_months(
+			existing,
+			[
+				frappe._dict(allocation_month=OCT, cost_center="CEOF - NHSB", territory=None, percentage=70),
+				frappe._dict(allocation_month=OCT, cost_center="SPLY - NHSB", territory=None, percentage=30),
+			],
+		)
+		self.assertEqual(
+			sorted((str(r["allocation_month"]), r["cost_center"], r["percentage"]) for r in kept),
+			[
+				("2025-10-01", "PFME - NHSB", 100),
+				("2026-10-01", "CEOF - NHSB", 70),
+				("2026-10-01", "SPLY - NHSB", 30),
+			],
+		)
+
+	def test_the_same_month_of_another_year_is_left_alone(self):
+		existing = [_existing(datetime.date(2025, 10, 1), "CEOF - NHSB", pct=100)]
+		kept = upload.replace_months(
+			existing,
+			[frappe._dict(allocation_month=OCT, cost_center="PFME - NHSB", territory=None, percentage=100)],
+		)
+		self.assertEqual(len(kept), 2)
+
+	def test_the_same_tag_twice_in_one_month_of_the_file_is_refused(self):
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			upload.replace_months(
+				[],
+				[
+					frappe._dict(
+						allocation_month=OCT, cost_center="CEOF - NHSB", territory=None, percentage=50
+					),
+					frappe._dict(
+						allocation_month=OCT, cost_center="CEOF - NHSB", territory=None, percentage=50
+					),
+				],
+			)
+		self.assertIn("CEOF - NHSB", str(ctx.exception))
+
+
+class TestTheUploadIsTypedLoosely(unittest.TestCase):
+	"""Year/Month, Cost Tag/Center and Percentage arrive as typed, so a cell
+	Data Import would refuse outright becomes a per-row reason instead."""
+
+	def _meta(self):
+		m = json.loads((ROOT / "hr/doctype/cost_tag_center_upload/cost_tag_center_upload.json").read_text())
+		return {f["fieldname"]: f for f in m["fields"]}
+
+	def test_the_cells_hr_types_are_text(self):
+		f = self._meta()
+		for name in ("employee", "allocation_month", "cost_center", "percentage"):
+			self.assertEqual(f[name]["fieldtype"], "Data", name)
+		self.assertFalse(f["employee"].get("reqd"))
+
+	def test_what_was_understood_is_kept_beside_what_was_typed(self):
+		f = self._meta()
+		self.assertEqual((f["employee_id"]["fieldtype"], f["employee_id"]["options"]), ("Link", "Employee"))
+		self.assertEqual((f["month"]["fieldtype"]), "Date")
+		self.assertEqual((f["cost_center_id"]["options"]), "Cost Center")
+		for name in ("employee_id", "month", "cost_center_id", "percent"):
+			self.assertEqual(f[name].get("read_only"), 1, name)
+
+	def test_status_and_reason_from_the_template_are_ignored_on_upload(self):
+		src = (ROOT / "hr/doctype/cost_tag_center_upload/cost_tag_center_upload.py").read_text()
+		self.assertRegex(
+			src,
+			r"def before_insert\(self\):[\s\S]{0,300}self\.status = \"Pending\"[\s\S]{0,80}self\.error = None",
 		)
 
 

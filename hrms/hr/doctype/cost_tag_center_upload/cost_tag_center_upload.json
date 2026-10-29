@@ -13,40 +13,42 @@
   "territory",
   "percentage",
   "status",
-  "error"
+  "error",
+  "understood_section",
+  "employee_id",
+  "month",
+  "cost_center_id",
+  "percent"
  ],
  "fields": [
   {
+   "description": "The staff ID, e.g. HR-EMP-0001. It decides whose profile the row goes on. Blank: the Staff Name finds the person if only one has it.",
    "fieldname": "employee",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Employee ID",
-   "options": "Employee",
-   "reqd": 1
+   "label": "Employee ID"
   },
   {
-   "description": "For reading the file; the Employee ID decides whose profile the row goes on.",
+   "description": "Checked against the Employee ID, so a row for the wrong person is caught.",
    "fieldname": "employee_name",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Staff Name"
   },
   {
-   "description": "Any day is saved as the 1st of its month.",
+   "description": "Any way with a year: 2026-10, Oct 2026, 10/2026, or an Excel date.",
    "fieldname": "allocation_month",
-   "fieldtype": "Date",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Year/Month",
    "reqd": 1
   },
   {
+   "description": "The tag, e.g. CEOF or CEOF - NHSB.",
    "fieldname": "cost_center",
-   "fieldtype": "Link",
-   "ignore_user_permissions": 1,
+   "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Cost Tag/Center",
-   "options": "Cost Center"
+   "label": "Cost Tag/Center"
   },
   {
    "description": "Only for a row saved before Cost Tag/Center became a Cost Center. Leave blank for new rows.",
@@ -56,8 +58,9 @@
    "options": "Territory"
   },
   {
+   "description": "60 or 60%. Each person's month must total 100.",
    "fieldname": "percentage",
-   "fieldtype": "Percent",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Percentage",
    "reqd": 1
@@ -78,12 +81,46 @@
    "fieldtype": "Small Text",
    "label": "Why it failed",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "understood_section",
+   "fieldtype": "Section Break",
+   "label": "As understood"
+  },
+  {
+   "fieldname": "employee_id",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "month",
+   "fieldtype": "Date",
+   "label": "Month",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cost_center_id",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "percent",
+   "fieldtype": "Percent",
+   "label": "Percent",
+   "read_only": 1
   }
  ],
  "in_create": 0,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-28 12:00:00.000000",
+ "modified": "2026-10-29 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Cost Tag/Center Upload",

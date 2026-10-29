@@ -28,6 +28,15 @@ DESIGN SKILLS: NONE (Desk doctype + Data Import only; no PWA screen)
 - A month that would not total 100% → that row fails in the import log with the month named.
 - Bench-free tests red first, then green. Needs bench migrate (new doctype).
 
+## FOLLOW-UP (owner, 29 Oct 2026: "things that can cause trip can we fix that"; "it has year so you can differentiate")
+Not yet deployed, so field types can still change. Every trip becomes a per-row reason, never a blocked import:
+- A year+month in the file replaces that person's whole year+month (a dropped tag drops off); other months stay.
+- Cost Tag/Center: "CEOF" or "CEOF - NHSB", any case; a name in two companies asks for the full name.
+- Year/Month: Excel date, 2026-10, 2026-10-01, Oct 2026, October 2026, 10/2026, 01/10/2026; a year is required.
+- Percentage: 60, 60%, or Excel % cells (0.6) when that person's month adds up to 1.
+- Staff Name is checked against the Employee ID; a name alone finds the person if exactly one has it.
+- Status/Why it failed in the template are ignored on upload.
+
 ## RISK
 New standalone doctype (log of uploaded rows, HR-only). Writes through Employee.save, so all Employee validation and
 permission checks still apply. Rollback: revert; uploaded rows already on Employees stay as normal table rows.
