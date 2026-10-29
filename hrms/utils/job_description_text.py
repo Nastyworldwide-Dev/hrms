@@ -22,6 +22,14 @@ logger = logging.getLogger(__name__)
 #: Longer than any JD; keeps a 300-page PDF from landing in a text box.
 MAX_CHARS = 20000
 
+#: A JD is a few pages. Past this a PDF is not read further: a long or crafted file must not
+#: hold a web worker.
+MAX_PDF_PAGES = 30
+
+#: The upload limit is on the zipped .docx; its XML can unpack to hundreds of MB. Read from
+#: the zip index before anything is unpacked.
+MAX_XML_BYTES = 5 * 1024 * 1024
+
 _WORD_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 
@@ -35,12 +43,23 @@ def tidy(text: str) -> str:
 def _pdf_text(content: bytes) -> str:
 	from pypdf import PdfReader
 
-	pages = [page.extract_text() or "" for page in PdfReader(io.BytesIO(content)).pages]
-	return "\n\n".join(p.strip() for p in pages if p and p.strip())
+	texts, length = [], 0
+	for page in PdfReader(io.BytesIO(content)).pages[:MAX_PDF_PAGES]:
+		text = (page.extract_text() or "").strip()
+		if text:
+			texts.append(text)
+			length += len(text)
+		if length >= MAX_CHARS:
+			break
+	return "\n\n".join(texts)
 
 
 def _docx_text(content: bytes) -> str:
 	with zipfile.ZipFile(io.BytesIO(content)) as archive:
+		size = archive.getinfo("word/document.xml").file_size
+		if size > MAX_XML_BYTES:
+			logger.warning("[jd_text] .docx text part unpacks to %d bytes, not read", size)
+			return ""
 		root = ElementTree.fromstring(archive.read("word/document.xml"))
 	paragraphs = []
 	for paragraph in root.iter(f"{_WORD_NS}p"):
@@ -83,11 +102,13 @@ def text_from_file(file_name: str, content: bytes) -> str:
 @frappe.whitelist(methods=["POST"])
 def read_job_description(file_url: str) -> dict:
 	"""The text of the caller's own just-uploaded file (not yet filed under any request)."""
+	# the newest of the caller's own loose rows: one URL can sit on several File rows
 	row = frappe.db.get_value(
 		"File",
-		{"file_url": file_url, "owner": frappe.session.user},
+		{"file_url": file_url, "owner": frappe.session.user, "attached_to_name": ("is", "not set")},
 		["name", "file_name", "owner", "attached_to_name"],
 		as_dict=True,
+		order_by="creation desc",
 	)
 	if not row or row.owner != frappe.session.user or row.attached_to_name:
 		logger.warning("[jd_text] %s refused %s", frappe.session.user, file_url)

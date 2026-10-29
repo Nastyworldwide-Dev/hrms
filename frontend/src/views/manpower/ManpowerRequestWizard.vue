@@ -586,12 +586,14 @@ const filesUploading = ref(false)
 const sendError = ref("")
 
 // An attached JD fills an empty Draft job description box; the box stays editable
-// (owner, 29 Oct 2026). Reading holds Next and Send like an upload does.
+// (owner, 29 Oct 2026). A count, not a flag: the upload clearing its own hold, or a
+// second file, must not release Next and Send while a read is still out.
+const readingFiles = ref(0)
 const jdReader = createResource({ url: "hrms.utils.job_description_text.read_job_description" })
 async function fillFromFile(q, file) {
 	const key = questionKey(q)
 	if (!shouldFillFrom(extra[key], file)) return
-	filesUploading.value = true
+	readingFiles.value++
 	try {
 		const { text } = await jdReader.submit({ file_url: file.file_url })
 		// the person may have started typing while it was read
@@ -614,8 +616,12 @@ async function fillFromFile(q, file) {
 	} catch (error) {
 		// the file stays attached; only the filling is skipped
 		console.warn("[manpower] could not read the job description file", error?.exc_type || "")
+		gToast({
+			title: __("Could not read {0}", [file.file_name]),
+			text: __("The file is attached. Type the job description in the box."),
+		})
 	} finally {
-		filesUploading.value = false
+		readingFiles.value--
 	}
 }
 const leaveOpen = ref(false)
@@ -754,6 +760,7 @@ const shown = (field) =>
 const blocker = computed(() => {
 	if (sending.value) return ""
 	if (filesUploading.value) return __("Wait for the file to finish uploading.")
+	if (readingFiles.value) return __("Reading the job description from the file…")
 	if (questions.loading && !questions.data) return __("Loading the questions…")
 	if (questions.error) return __("The questions did not load. Try again.")
 	if (step.value === REVIEW_STEP)

@@ -92,3 +92,24 @@ test("the wizard fills the box from an upload, through the reader, and the box s
 	assert.match(row, /emit\("uploaded", uploaded\)/)
 	assert.match(row, /:accept="JOB_FILE_TYPES"/)
 })
+
+test("reading a JD holds Next and Send on its own flag, so the upload finishing cannot release it", () => {
+	const src = readFileSync(
+		new URL("../../views/manpower/ManpowerRequestWizard.vue", import.meta.url),
+		"utf8"
+	)
+	const fill = src.slice(
+		src.indexOf("async function fillFromFile"),
+		src.indexOf("const leaveOpen")
+	)
+	assert.doesNotMatch(fill, /filesUploading/)
+	assert.match(fill, /readingFiles\.value\+\+/)
+	assert.match(fill, /readingFiles\.value--/)
+	const blocker = src.slice(
+		src.indexOf("const blocker = computed"),
+		src.indexOf("const groups = computed")
+	)
+	assert.match(blocker, /readingFiles\.value/)
+	// a failed read says so instead of only logging
+	assert.match(fill, /catch \(error\) \{[\s\S]*gToast/)
+})

@@ -73,6 +73,26 @@ class TestTextFromFile(unittest.TestCase):
 		with patch.dict(sys.modules, {"pypdf": bad}):
 			self.assertEqual(jd.text_from_file("JD.pdf", b"junk"), "")
 
+	def test_a_word_file_that_inflates_past_the_cap_is_not_opened(self):
+		# a small upload can unpack to hundreds of MB; the size is read from the zip index first
+		big = io.BytesIO()
+		with zipfile.ZipFile(big, "w", zipfile.ZIP_DEFLATED) as z:
+			z.writestr("word/document.xml", "<w:document/>" + " " * (jd.MAX_XML_BYTES + 1))
+		with patch.object(jd.ElementTree, "fromstring", side_effect=AssertionError("parsed")):
+			self.assertEqual(jd.text_from_file("JD.docx", big.getvalue()), "")
+
+	def test_pdf_reading_stops_at_the_page_cap_and_once_there_is_enough_text(self):
+		module = _fake_pypdf(["page"] * (jd.MAX_PDF_PAGES + 20))
+		with patch.dict(sys.modules, {"pypdf": module}):
+			jd.text_from_file("long.pdf", b"%PDF")
+		pages = module.PdfReader.return_value.pages
+		self.assertEqual(sum(p.extract_text.called for p in pages), jd.MAX_PDF_PAGES)
+
+		module = _fake_pypdf(["x" * jd.MAX_CHARS, "never read"])
+		with patch.dict(sys.modules, {"pypdf": module}):
+			jd.text_from_file("dense.pdf", b"%PDF")
+		self.assertFalse(module.PdfReader.return_value.pages[1].extract_text.called)
+
 	def test_photos_and_old_word_are_not_read(self):
 		for name in ("jd.png", "jd.jpg", "jd.doc", "noextension"):
 			self.assertEqual(jd.text_from_file(name, b"whatever"), "", name)
@@ -108,6 +128,21 @@ class TestReadJobDescription(unittest.TestCase):
 		row = frappe._dict(name="F1", file_name="jd.txt", owner="hafiz@x", attached_to_name="MPR-1")
 		with self.assertRaises(frappe.PermissionError):
 			self._read(row)
+
+	def test_only_the_callers_own_loose_upload_is_looked_up(self):
+		db = MagicMock()
+		db.get_value.return_value = None
+		with (
+			patch.object(jd.frappe, "db", db),
+			patch.object(jd.frappe, "session", frappe._dict(user="hafiz@x")),
+			patch.object(jd.frappe, "throw", side_effect=frappe.PermissionError("no")),
+		):
+			with self.assertRaises(frappe.PermissionError):
+				jd.read_job_description("/private/files/jd.txt")
+		filters = db.get_value.call_args.args[1]
+		self.assertEqual(filters["owner"], "hafiz@x")
+		self.assertEqual(filters["attached_to_name"], ("is", "not set"))
+		self.assertEqual(db.get_value.call_args.kwargs.get("order_by"), "creation desc")
 
 	def test_unknown_url_is_refused(self):
 		with self.assertRaises(frappe.PermissionError):
