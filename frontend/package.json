@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.73",
-	"releaseName": "Employee Cost Tag",
+	"version": "2.0.0-alpha.74",
+	"releaseName": "GL Under Type",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

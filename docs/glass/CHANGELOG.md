@@ -10,6 +10,15 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.74] — GL Under Type — 2026-10-29
+
+### Changed
+- **An expense line shows its GL account on its own row under Type**,
+  read-only, for the claimant's company. It used to be copied into the
+  Description as "GL: Travel Expenses", where it could be edited; the
+  Description is now the person's own note. The account a claim posts to
+  is still set on save, as before.
+
 ## [2.0.0-alpha.73] — Employee Cost Tag — 2026-10-29
 
 ### Changed

@@ -1,11 +1,12 @@
 # HANDOFF
-prompt:   Excel upload renamed "Employee Cost Tag" so Data Import lists it under Employee (owner, 29 Oct 2026)
+prompt:   Expense item: GL account as its own read-only row under Type (owner, 29 Oct 2026)
 status:   done
-commit:   alpha.73 on nz-glass (rename eff37f43d)
-files:    hrms/hr/doctype/employee_cost_tag/employee_cost_tag.json
-hrms/hr/doctype/employee_cost_tag/employee_cost_tag.py
-hrms/tests/test_employee_cost_tag.py
-hrms/hooks.py
-verify:   deploy + bench migrate; Data Import -> Document Type, type "employee" -> Employee Cost Tag is listed
-flags:    no bench here; office Wi-Fi works but location still fails for some staff -> suspect phone settings, not network
-next:     owner checks the failing phone's Location settings (see chat)
+commit:   alpha.74 on nz-glass (8060a989b, b2016feeb, 0fac605ee)
+files:    hrms/api/__init__.py
+frontend/src/components/ExpensesTable.vue
+frontend/src/utils/expenseGlAccount.js
+frontend/src/utils/__tests__/expenseGlAccount.test.js
+hrms/tests/test_expense_claim_types_offered.py
+verify:   deploy (no migrate); New expense claim -> add item -> pick Type -> "GL account" row under it, greyed
+flags:    paused: Manpower Request visibility (~/held-back), Replacement Leave expiry (awaiting "build it")
+next:     owner checks on phone; resume Manpower with the 2 open answers
