@@ -306,6 +306,24 @@ def decision_field(doctype: str) -> str:
 	return entry[0]
 
 
+#: Same set as employee_owned_row_scope.NO_ADMIN_DOCTYPES, named here so the
+#: read gate needs no import for the ordinary case (pinned equal by a test).
+ADMIN_NOT_EXCEPTIONAL = frozenset({"Manpower Request"})
+
+
+def _admin_may_read(doc) -> bool:
+	"""frappe.has_permission is True for the literal Administrator before any app
+	hook. For a doctype where Administrator is not exceptional (Manpower Request:
+	salary, owner 29 Oct 2026), ask the row fence itself: own or shared only."""
+	if frappe.session.user != "Administrator" or doc.doctype not in ADMIN_NOT_EXCEPTIONAL:
+		return True
+	from hrms.overrides.employee_owned_row_scope import has_permission
+
+	allowed = has_permission(doc, "read", "Administrator")
+	logger.info("[approval] Administrator read of %s %s: %s", doc.doctype, doc.name, allowed)
+	return allowed
+
+
 def _request_read_allowed(doc) -> bool:
 	"""Native document visibility plus the explicit company boundary.
 
@@ -320,6 +338,8 @@ def _request_read_allowed(doc) -> bool:
 
 	logger.debug("[approval] checking request visibility for %s", doc.doctype)
 	if not frappe.has_permission(doc.doctype, "read", doc=doc):
+		return False
+	if not _admin_may_read(doc):
 		return False
 	employee = doc.get("employee")
 	company = frappe.db.get_value("Employee", employee, "company") if employee else doc.get("company")

@@ -245,7 +245,7 @@ class TestSetHiringStatus(unittest.TestCase):
 		with (
 			patch.object(frappe, "db", db),
 			patch.object(frappe, "get_doc", return_value=doc),
-			patch.object(manpower, "is_hr_operator", return_value=hr),
+			patch.object(manpower, "holds_hr_role", return_value=hr),
 			patch.object(manpower, "company_visible", return_value=visible) as fence,
 		):
 			result = manpower.set_hiring_status(doc.name, status, note)
@@ -306,7 +306,7 @@ class TestGetProgress(unittest.TestCase):
 			patch.object(frappe, "db", db),
 			patch.object(frappe, "get_doc", return_value=doc),
 			patch.object(frappe, "get_all", side_effect=get_all),
-			patch.object(frappe, "has_permission", return_value=allowed, create=True) as perm,
+			patch.object(manpower, "_request_read_allowed", return_value=allowed) as perm,
 			patch.object(manpower, "get_designated_approvers", return_value=list(approvers)),
 			patch.object(manpower, "get_rejection_reason", return_value=reason),
 		):
@@ -318,8 +318,8 @@ class TestGetProgress(unittest.TestCase):
 
 	def test_the_read_check_is_on_this_request(self):
 		_, perm = self._call(request_doc())
-		self.assertEqual(perm.call_args.args[:2], ("Manpower Request", "read"))
-		self.assertEqual(perm.call_args.kwargs["doc"].name, "HR-MPR-26-10-00001")
+		# the shared gate (sender, approver, HR; never Administrator), on this request
+		self.assertEqual(perm.call_args.args[0].name, "HR-MPR-26-10-00001")
 
 	def test_open_names_the_line_approver_as_the_current_step(self):
 		steps, _ = self._call(request_doc())
@@ -682,7 +682,7 @@ class TestHrBoard(unittest.TestCase):
 			return list(rows)
 
 		with (
-			patch.object(manpower, "is_hr_operator", return_value=hr),
+			patch.object(manpower, "holds_hr_role", return_value=hr),
 			patch.object(frappe, "get_list", side_effect=get_list),
 			patch.object(manpower, "getdate", return_value=TODAY),
 		):
@@ -692,7 +692,7 @@ class TestHrBoard(unittest.TestCase):
 		with self.assertRaises(frappe.PermissionError):
 			self._call(hr=False)
 		with (
-			patch.object(manpower, "is_hr_operator", return_value=False),
+			patch.object(manpower, "holds_hr_role", return_value=False),
 			patch.object(frappe, "get_list") as getter,
 			self.assertRaises(frappe.PermissionError),
 		):

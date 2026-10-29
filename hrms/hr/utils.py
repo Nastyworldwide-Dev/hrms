@@ -87,12 +87,14 @@ def is_hr_operator(user: str | None = None) -> bool:
 
 
 def holds_hr_role(user: str | None = None) -> bool:
-	"""HR User / HR Manager by ROLE, with no Administrator exception.
+	"""HR User / HR Manager by ROLE, and never the Administrator account.
 
 	For surfaces where Administrator is not HR (owner, 29 Oct 2026, Manpower
-	Request: "admin is not hr so cannot"), unlike sees_all_employee_data."""
+	Request: "admin is not hr so cannot"), unlike sees_all_employee_data.
+	Administrator is excluded by name: frappe.get_roles("Administrator")
+	returns every role on the site, HR User and HR Manager included."""
 	user = user or frappe.session.user
-	return bool(HR_SEE_ALL_ROLES & set(frappe.get_roles(user)))
+	return user != "Administrator" and bool(HR_SEE_ALL_ROLES & set(frappe.get_roles(user)))
 
 
 def sees_all_employee_data(user: str | None = None) -> bool:

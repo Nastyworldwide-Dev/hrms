@@ -27,6 +27,9 @@ from hrms.overrides import employee_owned_row_scope as scope
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DT = "Manpower Request"
 LOGIN = {"hafiz@x": "EMP-HAFIZ", "nik@x": "EMP-NIK"}
+#: frappe.get_roles("Administrator") returns EVERY role on the site, HR included
+#: (frappe/permissions.py get_roles). A test that gives it fewer hides the bug.
+ADMIN_ROLES = ["Administrator", "System Manager", "HR User", "HR Manager", "Employee"]
 HR_USERS = {"lina@x"}
 
 
@@ -114,9 +117,9 @@ class TestTheFormRefusesAdministrator(unittest.TestCase):
 		):
 			doc.onload()
 
-	def test_administrator_is_refused(self):
+	def test_administrator_is_refused_even_holding_every_role(self):
 		with self.assertRaises(frappe.PermissionError):
-			self._onload("Administrator", roles=("Administrator", "System Manager"))
+			self._onload("Administrator", roles=ADMIN_ROLES)
 
 	def test_hr_the_sender_and_the_approver_are_not(self):
 		self._onload("lina@x", roles=("HR User",))
@@ -125,29 +128,92 @@ class TestTheFormRefusesAdministrator(unittest.TestCase):
 
 
 class TestHrOnlySurfaces(unittest.TestCase):
-	def _block(self, rel, start):
-		src = (ROOT / rel).read_text()
-		block = src[src.index(start) :]
-		return block[: block.index("frappe.throw(")]
+	"""The HR board, the report and the hiring-status move are HR only — and
+	Administrator holds every role, so "has an HR role" alone would let it in."""
 
-	def test_the_board_and_the_report_ask_for_an_hr_role(self):
-		self.assertIn("holds_hr_role()", self._block("api/manpower.py", "def hr_board("))
-		self.assertIn(
-			"holds_hr_role()", self._block("hr/report/manpower_requests/manpower_requests.py", "def execute(")
-		)
-
-	def test_holds_hr_role_is_the_role_alone(self):
-		from hrms.hr.utils import holds_hr_role
-
-		roles = {
-			"lina@x": ["HR User"],
-			"Administrator": ["Administrator", "System Manager"],
+	def setUp(self):
+		self.ROLES = {
+			"lina@x": ["HR User", "Employee"],
+			"Administrator": ADMIN_ROLES,
 			"sm@x": ["System Manager"],
 		}
-		with patch.object(frappe, "get_roles", side_effect=lambda u: roles[u]):
+
+	def test_holds_hr_role_refuses_administrator_with_all_roles(self):
+		from hrms.hr.utils import holds_hr_role
+
+		with patch.object(frappe, "get_roles", side_effect=lambda u: self.ROLES[u]):
 			self.assertTrue(holds_hr_role("lina@x"))
 			self.assertFalse(holds_hr_role("Administrator"))
 			self.assertFalse(holds_hr_role("sm@x"))
+
+	def _call(self, fn, user):
+		with (
+			patch.object(frappe, "session", frappe._dict(user=user)),
+			patch.object(frappe, "get_roles", side_effect=lambda u=None: self.ROLES[u or user]),
+		):
+			return fn()
+
+	def test_the_board_refuses_administrator(self):
+		from hrms.api import manpower
+
+		with self.assertRaises(frappe.PermissionError):
+			self._call(manpower.hr_board, "Administrator")
+
+	def test_the_report_refuses_administrator(self):
+		from hrms.hr.report.manpower_requests import manpower_requests as report
+
+		with self.assertRaises(frappe.PermissionError):
+			self._call(report.execute, "Administrator")
+
+	def test_hiring_status_refuses_administrator(self):
+		from hrms.api import manpower
+
+		with patch.object(manpower, "_locked_request", return_value=frappe._dict(req())):
+			with self.assertRaises(frappe.PermissionError):
+				self._call(lambda: manpower.set_hiring_status("MPR-0001", "Recruiting"), "Administrator")
+
+
+class TestTheSharedReadGateRefusesAdministrator(unittest.TestCase):
+	"""approval._request_read_allowed is behind the approvals list, decide,
+	request history and the tracker. frappe.has_permission is True for
+	Administrator before any hook, so the gate itself must refuse it."""
+
+	def test_administrator_cannot_read_a_manpower_request_through_the_gate(self):
+		from hrms.api import approval
+
+		with (
+			patch.object(approval.frappe, "session", frappe._dict(user="Administrator")),
+			patch.object(approval.frappe, "has_permission", return_value=True),
+			patch.object(approval, "_admin_may_read", return_value=False),
+		):
+			self.assertFalse(approval._request_read_allowed(frappe._dict(req(), doctype=DT)))
+
+	def test_the_gate_asks_the_row_fence_for_administrator(self):
+		from hrms.api import approval
+
+		with (
+			patch.object(approval.frappe, "session", frappe._dict(user="Administrator")),
+			patch("hrms.overrides.employee_owned_row_scope.has_permission", return_value=False) as fence,
+		):
+			self.assertFalse(approval._admin_may_read(frappe._dict(req(), doctype=DT)))
+		fence.assert_called_once()
+
+	def test_other_doctypes_are_not_affected(self):
+		from hrms.api import approval
+
+		with patch.object(approval.frappe, "session", frappe._dict(user="Administrator")):
+			self.assertTrue(approval._admin_may_read(frappe._dict(doctype="Leave Application", name="LA-1")))
+
+	def test_the_gate_and_the_fence_name_the_same_doctypes(self):
+		from hrms.api import approval
+
+		self.assertEqual(set(approval.ADMIN_NOT_EXCEPTIONAL), set(scope.NO_ADMIN_DOCTYPES))
+
+	def test_the_tracker_uses_the_gate(self):
+		src = (ROOT / "api/manpower.py").read_text()
+		body = src[src.index("def get_progress(") :]
+		body = body[: body.index("versions = ")]
+		self.assertIn("_request_read_allowed(doc)", body)
 
 
 if __name__ == "__main__":

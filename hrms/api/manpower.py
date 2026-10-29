@@ -19,7 +19,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from hrms.api.approval import get_rejection_reason
+from hrms.api.approval import _request_read_allowed, get_rejection_reason
 from hrms.hr.doctype.manpower_request.manpower_request import (
 	REPLACEMENT_LEAVER_MONTHS,
 	board_group,
@@ -27,7 +27,7 @@ from hrms.hr.doctype.manpower_request.manpower_request import (
 	can_file_manpower_request,
 	request_age,
 )
-from hrms.hr.utils import get_designated_approvers, holds_hr_role, is_hr_operator, sees_all_employee_data
+from hrms.hr.utils import get_designated_approvers, holds_hr_role, sees_all_employee_data
 from hrms.overrides.company_scope import company_visible
 from hrms.utils.identity import get_employee, normalize_login
 
@@ -238,7 +238,8 @@ def set_hiring_status(name: str, hiring_status: str, note: str | None = None) ->
 	Not proceeding needs a note) and the notice to the sender run exactly as in Desk.
 	"""
 	doc = _locked_request(name)
-	if not is_hr_operator():
+	# an HR role, not is_hr_operator: Administrator is not HR here (owner, 29 Oct 2026)
+	if not holds_hr_role():
 		logger.warning("[manpower] %s: %s is not HR, hiring status refused", name, frappe.session.user)
 		frappe.throw(_("Only HR can set the hiring status."), frappe.PermissionError)
 	if not company_visible(doc.company):
@@ -285,7 +286,8 @@ def get_progress(name: str) -> list[dict]:
 	if not frappe.db.exists(DOCTYPE, name):
 		frappe.throw(_("{0} {1} not found.").format(_(DOCTYPE), name), frappe.DoesNotExistError)
 	doc = frappe.get_doc(DOCTYPE, name)
-	if not frappe.has_permission(DOCTYPE, "read", doc=doc):
+	# the shared gate: frappe.has_permission alone passes Administrator before any hook
+	if not _request_read_allowed(doc):
 		frappe.throw(_("You cannot read this request."), frappe.PermissionError)
 
 	versions = frappe.get_all(

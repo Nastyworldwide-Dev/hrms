@@ -31,7 +31,13 @@ nodes = []
 for node in ast.parse(SOURCE.read_text()).body:
 	if isinstance(node, ast.Assign) and any(
 		getattr(t, "id", "")
-		in {"DECIDE_THEN_SUBMIT", "DECISIONS", "SUBMIT_IS_APPROVAL", "SELF_APPROVAL_SETTING"}
+		in {
+			"DECIDE_THEN_SUBMIT",
+			"DECISIONS",
+			"SUBMIT_IS_APPROVAL",
+			"SELF_APPROVAL_SETTING",
+			"ADMIN_NOT_EXCEPTIONAL",
+		}
 		for t in node.targets
 	):
 		nodes.append(node)
@@ -39,6 +45,7 @@ for node in ast.parse(SOURCE.read_text()).body:
 		"can_decide",
 		"_decision_access",
 		"_request_read_allowed",
+		"_admin_may_read",
 		"get_decision_actions",
 	}:
 		node.decorator_list = []
