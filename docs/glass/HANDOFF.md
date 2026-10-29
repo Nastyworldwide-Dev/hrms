@@ -1,12 +1,13 @@
 # HANDOFF
-prompt:   Expense item: GL account as its own read-only row under Type (owner, 29 Oct 2026)
+prompt:   Manpower Request: hide from Administrator; sender, approver and HR only (owner, 29 Oct 2026)
 status:   done
-commit:   alpha.75 on nz-glass (label "GL:" on top of alpha.74)
-files:    hrms/api/__init__.py
-frontend/src/components/ExpensesTable.vue
-frontend/src/utils/expenseGlAccount.js
-frontend/src/utils/__tests__/expenseGlAccount.test.js
-hrms/tests/test_expense_claim_types_offered.py
-verify:   deploy (no migrate); New expense claim -> add item -> pick Type -> "GL:" row under it, greyed
-flags:    paused: Manpower Request visibility (~/held-back), Replacement Leave expiry (awaiting "build it")
-next:     owner checks on phone; resume Manpower with the 2 open answers
+commit:   alpha.76 on nz-glass (791270ac4, 11d74bd1b, print fix)
+files:    hrms/overrides/employee_owned_row_scope.py
+hrms/hr/doctype/manpower_request/manpower_request.py
+hrms/api/approval.py
+hrms/api/manpower.py
+hrms/hr/utils.py
+hrms/tests/test_manpower_request_visibility.py
+verify:   deploy (no migrate); log in as Administrator -> Manpower Request list empty, form/print refused
+flags:    open by Frappe design for literal Administrator: /api/resource/... and frappe.client.get
+next:     job-description attachments (WIP in ~/held-back/job-files-wip.patch), then Replacement Leave

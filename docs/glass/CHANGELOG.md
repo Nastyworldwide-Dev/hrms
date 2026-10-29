@@ -10,6 +10,17 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.76] — Salary Stays With HR — 2026-10-29
+
+### Changed
+- **A manpower request (it shows salary) is no longer visible to the
+  Administrator account.** Only its sender, the person it was sent to for
+  approval, and HR (HR User / HR Manager) see it. Administrator gets no
+  rows in the Desk list, report view or export, cannot open, print or
+  download it, and is refused by the HR board, the Manpower Requests
+  report, the approvals list, the tracker and the hiring status. Who else
+  sees a request is unchanged.
+
 ## [2.0.0-alpha.75] — GL Label — 2026-10-29
 
 ### Changed

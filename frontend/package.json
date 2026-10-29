@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.75",
-	"releaseName": "GL Label",
+	"version": "2.0.0-alpha.76",
+	"releaseName": "Salary Stays With HR",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
