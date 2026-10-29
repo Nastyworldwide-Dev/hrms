@@ -1,45 +1,37 @@
-# Plan: Cost Tag/Center from an Excel upload in Data Import (owner, 28 Oct 2026)
+# Plan: check-in finds a location indoors and on mobile data (owner, 29 Oct 2026)
 
-Owner: "the excel will contain staff name, ID, year/month, cost tag/center, old cost tag/center, percentage and will
-auto show on each staff profile under overview" — upload in Desk → Data Import. Rule (owner): "just follow the file
-upload: if have same existing can replace, if new then new row; the name and staff id is for you to read where to put".
+Owner: "some user have problem check in because it does not detect the location" (screenshot: Android, indoors under
+a metal roof, "Location unavailable — Still looking for your location"). Asked how to handle: "it should be can always
+read the location also even the person is using own data".
 
 ## GOAL
-HR uploads one Excel in Data Import; each row lands in that employee's Cost Tag/Center Allocation table (Employee →
-Overview). Same employee + Year/Month + Cost Tag/Center (or Old Cost Tag/Center) already there → that row's percentage
-is replaced. Otherwise → a new row is added. Other rows are untouched.
+The check-in sheet gets a usable reading on a phone indoors whether it is on office Wi-Fi or its own mobile data.
 
-## FLOW
-Data Import, Document Type "Cost Tag/Center Upload", Insert New Records → one Cost Tag/Center Upload record per Excel
-row (employee, employee_name, allocation_month, cost_center, territory, percentage) → its after_insert puts the row
-on the Employee (match on month + tag; replace % or append) and saves the Employee, so the existing check runs
-(each month totals 100%). If it fails, the import row fails with that reason and nothing is half-written.
-Employee ID is what places the row; Staff Name is read for the template and checked loosely, not used to place.
+## CAUSES (from CheckInPanel.vue + utils/geolocation.js)
+1. Only GPS (enableHighAccuracy) is asked first; the network reading (cell towers / Wi-Fi / mobile data) is asked only
+   after GPS gives up (~15 s), and only ONCE per sheet. Indoors GPS times out every 15 s for ever, and if that one
+   network ask failed or was slow, nothing asks again — the person is stuck.
+2. usablePosition() throws away any reading whose timestamp is in the future or > 60 s older than the phone clock. On a
+   phone whose clock is off (manual time, some Samsung), EVERY reading is thrown away.
 
-DESIGN SKILLS: NONE (Desk doctype + Data Import only; no PWA screen)
+## FLOW (after)
+Sheet opens → GPS watch (as now) AND a network reading at once → no fix yet → network reading again every 10 s until a
+fix → sharpest-wins keeps the best → the server (not the phone) still decides what a coarse reading is worth (approval
+vs block), unchanged. Clock: a reading whose time disagrees with the phone clock by > 2 min is judged by when it arrived
+(maximumAge 60 s already bounds the browser's cache); 60 s–2 min old is still refused as stale.
 
-## MOCKUP: NOT NEEDED (Desk Data Import is Frappe's own screen; no new UI)
+DESIGN SKILLS: NONE (logic only; wording of an existing message)
+
+## MOCKUP: NOT NEEDED (no layout change; one message's wording)
 
 ## EXPECTED OUTPUT
-- Template download in Data Import shows: Employee ID, Staff Name, Year/Month, Cost Tag/Center, Old Cost Tag/Center,
-  Percentage.
-- Upload 2 rows for one employee for Oct (60/40) → profile shows both; upload again with 70/30 → same two rows now
-  70/30, no duplicates; a Nov row → added, Oct kept.
-- A month that would not total 100% → that row fails in the import log with the month named.
-- Bench-free tests red first, then green. Needs bench migrate (new doctype).
-
-## FOLLOW-UP (owner, 29 Oct 2026: "things that can cause trip can we fix that"; "it has year so you can differentiate")
-Not yet deployed, so field types can still change. Every trip becomes a per-row reason, never a blocked import:
-- A year+month in the file replaces that person's whole year+month (a dropped tag drops off); other months stay.
-- Cost Tag/Center: "CEOF" or "CEOF - NHSB", any case; a name in two companies asks for the full name.
-- Year/Month: Excel date, 2026-10, 2026-10-01, Oct 2026, October 2026, 10/2026, 01/10/2026; a year is required.
-- Percentage: 60, 60%, or Excel % cells (0.6) when that person's month adds up to 1.
-- Staff Name is checked against the Employee ID; a name alone finds the person if exactly one has it.
-- Status/Why it failed in the template are ignored on upload.
+- Tests red first: network asked at open; asked again every 10 s while no fix; stops once a fix lands; a reading with a
+  phone clock 10 min fast/slow is used; a 90 s-old cached reading is still refused.
+- yarn test green; no server change; no geofence rule change.
 
 ## RISK
-New standalone doctype (log of uploaded rows, HR-only). Writes through Employee.save, so all Employee validation and
-permission checks still apply. Rollback: revert; uploaded rows already on Employees stay as normal table rows.
+More location requests while the sheet is open with no fix (one per 10 s, network only, stops on fix or close).
+Rollback: revert.
 
 ## Pipeline Summary
-owner ask → plan (this) approved → TDD → commit → review → push → owner deploys with migrate.
+owner report → plan → TDD → commit → review → push → release → owner deploys (frontend build only).

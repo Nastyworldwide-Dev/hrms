@@ -228,8 +228,8 @@ test("invalid or stale device fixes never become usable coordinates", () => {
 			coords: { latitude: 3, longitude: 101.5, accuracy: Infinity },
 			timestamp: 1_800_000_000_000,
 		},
-		{ coords: { latitude: 3, longitude: 101.5, accuracy: 20 }, timestamp: 1_800_000_060_000 },
-		{ coords: { latitude: 3, longitude: 101.5, accuracy: 20 }, timestamp: 1_799_999_699_999 },
+		// 90 s old: a cached reading past the 60 s the sheet accepts
+		{ coords: { latitude: 3, longitude: 101.5, accuracy: 20 }, timestamp: 1_799_999_910_000 },
 	]) {
 		const h = panel()
 		h.vm.handleEmployeeCheckin()
@@ -890,4 +890,81 @@ test("an error while a usable fix is still held stays muted", () => {
 	// green while the arm it defends went dead again.
 	assert.equal(h.vm.locationVerdict.value.tone, "muted")
 	assert.equal(h.vm.locationVerdict.value.title, "Location unavailable")
+})
+
+// ---------- owner, 29 Oct 2026: "it should be can always read the location also even the person is using own data" ----------
+// Indoors under a metal roof GPS never fixes. The network reading (cell towers,
+// Wi-Fi, mobile data) is what places the phone there, so it is asked at once
+// and again until a reading lands, not once after GPS gives up.
+
+test("the network reading is asked at once, beside GPS", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	assert.equal(h.watches[0].options.enableHighAccuracy, true)
+	assert.equal(h.coarse.length, 1)
+	assert.equal(h.coarse[0].options.enableHighAccuracy, false)
+})
+
+test("with no reading yet, the network reading is asked again every 10 s", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.coarse[0].error({ code: 2 })
+	h.advance(10_000)
+	assert.equal(h.coarse.length, 2)
+	h.advance(10_000)
+	assert.equal(h.coarse.length, 3)
+})
+
+test("a GPS timeout does not add a second ask on top of the schedule", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.watches[0].error({ code: 3 })
+	h.watches[0].error({ code: 3 })
+	assert.equal(h.coarse.length, 1)
+})
+
+test("a late network reading still places the person", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.advance(10_000)
+	h.advance(10_000)
+	h.coarse.at(-1).success(h.fix(3, 101.5, 900))
+	assert.equal(h.vm.latitude.value, 3)
+	assert.equal(h.vm.accuracyM.value, 900)
+})
+
+test("once a reading lands the asks stop, and start again when it expires", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix())
+	h.advance(30_000)
+	assert.equal(h.coarse.length, 1)
+	h.advance(31_000) // the reading is now past 60 s and cleared
+	assert.equal(h.vm.latitude.value, null)
+	assert.equal(h.coarse.length, 2)
+})
+
+test("closing the sheet stops the asks", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.vm.onModalDismiss()
+	h.advance(30_000)
+	assert.equal(h.coarse.length, 1)
+})
+
+test("a phone whose clock is minutes off still gets its reading used", () => {
+	for (const offset of [10 * 60_000, -10 * 60_000, 30_000]) {
+		const h = panel()
+		h.vm.handleEmployeeCheckin()
+		h.watches[0].success(h.fix(3, 101.5, 20, h.Date.now() + offset))
+		assert.equal(h.vm.latitude.value, 3, `clock off by ${offset} ms`)
+	}
+})
+
+test("a reading used despite a wrong clock still expires 60 s after it arrived", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix(3, 101.5, 20, h.Date.now() - 10 * 60_000))
+	h.advance(61_000)
+	assert.equal(h.vm.latitude.value, null)
 })

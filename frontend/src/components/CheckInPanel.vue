@@ -341,7 +341,15 @@ const LOCATION_DEADLINE_MS = 30000
 // modal open/close, so "do we have a fix yet" must NOT be derived from them —
 // both are reset in fetchLocation() each time the modal opens.
 let hasSessionFix = false
-let coarseFallbackRequested = false
+// The network reading (cell towers, Wi-Fi, a phone on its own mobile data) is
+// what places a phone indoors, where GPS never fixes — under a factory's metal
+// roof it is the only reading there is (owner, 29 Oct 2026: "it should be can
+// always read the location also even the person is using own data"). So it is
+// asked at once beside GPS, and again every NETWORK_RETRY_MS until a reading
+// lands. It was asked once, only after GPS gave up, and if that one ask failed
+// nothing asked again. The server still decides what a coarse reading is worth.
+let networkRetryTimer = null
+const NETWORK_RETRY_MS = 10000
 // Timestamp of the fix we're currently holding. watchPosition's first reading can
 // be a cached one up to maximumAge old (60s): if it happens to be sharp, the
 // sharpest-fix rule would keep it and reject every fresher live reading, pinning a
@@ -683,6 +691,8 @@ function handleLocationSuccess(position, generation) {
 		locationError.value = __(
 			"Your location reading expired. Wait for a fresh reading, then try again."
 		)
+		// GPS may have gone quiet indoors; the network reading starts again
+		askNetworkLocation(generation)
 	}, MAX_FIX_AGE_MS - (Date.now() - readingAt) + 1)
 
 	const parts = [
@@ -711,7 +721,7 @@ function locationErrorMessage(code) {
 			)
 		case GEO_TIMEOUT:
 			return __(
-				"Still looking for your location. Move near a window or wait a moment, then try again."
+				"Still looking for your location. Keep this open; it keeps trying. If it takes long, turn on Location, Wi-Fi and mobile data."
 			)
 		case GEO_INSECURE:
 			return __(
@@ -737,26 +747,25 @@ function handleLocationError(error, generation) {
 	locationError.value = locationStatus.value
 	console.warn("[CheckInPanel] geolocation error:", code, error)
 
-	// The high-accuracy watch gave up before any fix. This is not one
-	// platform's problem: a handset indoors, an iPad with wifi scanning off
-	// and a desk browser with no radio all land here. Grab one coarse
-	// network-based position so the map still centers on the user instead of
-	// staying on the fallback view — the reading arrives with its own accuracy
-	// attached, and the server decides what a coarse one is worth. One attempt
-	// per modal session (watch TIMEOUT recurs every ~15s), re-checked at
-	// resolution so a slower coarse result never overwrites a real fix that
-	// landed in the meantime.
-	if (code !== GEO_DENIED && !hasSessionFix && !coarseFallbackRequested && navigator.geolocation) {
-		coarseFallbackRequested = true
-		navigator.geolocation.getCurrentPosition(
-			(position) => {
-				if (generation === geoGeneration && !hasSessionFix)
-					handleLocationSuccess(position, generation)
-			},
-			() => {},
-			{ enableHighAccuracy: false, maximumAge: MAX_FIX_AGE_MS, timeout: 10000 }
-		)
-	}
+	// No GPS fix is not the end: askNetworkLocation is already on its own
+	// schedule (fetchLocation), so a timeout here adds nothing to it.
+}
+
+// One network reading, then the next one NETWORK_RETRY_MS later while there is
+// still no fix. Stops when a reading lands or the sheet closes (generation).
+function askNetworkLocation(generation) {
+	clearTimeout(networkRetryTimer)
+	networkRetryTimer = null
+	if (generation !== geoGeneration || hasSessionFix || !navigator.geolocation) return
+	console.info("[CheckInPanel] asking for a network location")
+	navigator.geolocation.getCurrentPosition(
+		(position) => {
+			if (generation === geoGeneration) handleLocationSuccess(position, generation)
+		},
+		(error) => console.info("[CheckInPanel] network location not available yet:", error?.code),
+		{ enableHighAccuracy: false, maximumAge: MAX_FIX_AGE_MS, timeout: NETWORK_RETRY_MS }
+	)
+	networkRetryTimer = setTimeout(() => askNetworkLocation(generation), NETWORK_RETRY_MS)
 }
 
 const fetchLocation = () => {
@@ -782,7 +791,6 @@ const fetchLocation = () => {
 		console.warn("[CheckInPanel] no geolocation callback in %d ms", LOCATION_DEADLINE_MS)
 	}, LOCATION_DEADLINE_MS)
 	hasSessionFix = false
-	coarseFallbackRequested = false
 	accuracyM.value = null
 	fixTimestamp = null
 	// watchPosition gives us live updates while the modal is open so the
@@ -805,6 +813,7 @@ const fetchLocation = () => {
 			timeout: 15000,
 		}
 	)
+	askNetworkLocation(generation)
 }
 
 function clearLocationFix() {
@@ -819,7 +828,8 @@ function clearLocationFix() {
 
 function stopWatchingLocation() {
 	geoGeneration += 1
-	coarseFallbackRequested = false
+	clearTimeout(networkRetryTimer)
+	networkRetryTimer = null
 	clearTimeout(locationDeadlineTimer)
 	locationDeadlineTimer = null
 	locationStalled.value = false

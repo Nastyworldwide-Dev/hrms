@@ -95,16 +95,31 @@ export function validCoordinates(latitude, longitude) {
 	)
 }
 
+// A reading's time this far from the phone's own clock is not an old reading,
+// it is a phone whose clock is wrong (set by hand, or a reading stamped with GPS
+// time while the clock drifts). Every reading on such a phone used to be
+// thrown away, so it could never check in (owner, 29 Oct 2026). Nothing the
+// browser hands over is that old: the sheet asks with maximumAge 60 s.
+const CLOCK_SKEW_MS = 2 * 60 * 1000
+
 // Browser timestamps are evidence, not an arrival time. Never relabel a cached
-// or malformed reading as fresh merely because its callback arrived just now.
+// or malformed reading as fresh merely because its callback arrived just now —
+// with one exception: a timestamp so far off the phone's clock (CLOCK_SKEW_MS)
+// that it can only be a wrong clock is judged by when it arrived instead.
 export function usablePosition(position, now = Date.now()) {
 	const coords = position?.coords
-	const timestamp = position?.timestamp
+	let timestamp = position?.timestamp
+	if (Number.isFinite(timestamp) && Math.abs(now - timestamp) > CLOCK_SKEW_MS) {
+		console.warn(
+			"[geolocation] reading time is %d s off the phone clock; using arrival time",
+			Math.round((timestamp - now) / 1000)
+		)
+		timestamp = now
+	}
 	if (
 		!coords ||
 		!validCoordinates(coords.latitude, coords.longitude) ||
 		!Number.isFinite(timestamp) ||
-		timestamp > now ||
 		now - timestamp > MAX_FIX_AGE_MS ||
 		(coords.accuracy != null && (!Number.isFinite(coords.accuracy) || coords.accuracy < 0))
 	) {
@@ -115,7 +130,8 @@ export function usablePosition(position, now = Date.now()) {
 		latitude: coords.latitude,
 		longitude: coords.longitude,
 		accuracy: coords.accuracy ?? null,
-		timestamp,
+		// a reading a little ahead of the clock is as fresh as one taken now
+		timestamp: Math.min(timestamp, now),
 	}
 }
 
