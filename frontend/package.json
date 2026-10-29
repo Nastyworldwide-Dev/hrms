@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.72",
-	"releaseName": "Found Indoors",
+	"version": "2.0.0-alpha.73",
+	"releaseName": "Employee Cost Tag",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

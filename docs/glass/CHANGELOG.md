@@ -10,6 +10,14 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.73] — Employee Cost Tag — 2026-10-29
+
+### Changed
+- **The Cost Tag/Center Excel upload is "Employee Cost Tag".** In Data
+  Import, type "employee" in Document Type and pick **Employee Cost
+  Tag**. It was called Cost Tag/Center Upload (alpha.70–72) and was
+  missing from the dropdown; it was never deployed under that name.
+
 ## [2.0.0-alpha.72] — Found Indoors — 2026-10-29
 
 ### Fixed

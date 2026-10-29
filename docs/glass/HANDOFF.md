@@ -1,9 +1,11 @@
 # HANDOFF
-prompt:   Check-in stuck on "Location unavailable" indoors / on mobile data (owner, 29 Oct 2026)
+prompt:   Excel upload renamed "Employee Cost Tag" so Data Import lists it under Employee (owner, 29 Oct 2026)
 status:   done
-commit:   alpha.72 on nz-glass (fix 9085c0c4c, review fix 8727cfb15)
-files:    frontend/src/components/CheckInPanel.vue
-frontend/src/components/__tests__/CheckInPanel.location.test.js
-verify:   deploy (migrate only if alpha.71 not live); check in indoors where it failed; location appears within ~10 s
-flags:    no device test here; wrong-phone-clock case left as is (owner set it aside)
-next:     affected staff retry from the same indoor spot
+commit:   alpha.73 on nz-glass (rename eff37f43d)
+files:    hrms/hr/doctype/employee_cost_tag/employee_cost_tag.json
+hrms/hr/doctype/employee_cost_tag/employee_cost_tag.py
+hrms/tests/test_employee_cost_tag.py
+hrms/hooks.py
+verify:   deploy + bench migrate; Data Import -> Document Type, type "employee" -> Employee Cost Tag is listed
+flags:    no bench here; office Wi-Fi works but location still fails for some staff -> suspect phone settings, not network
+next:     owner checks the failing phone's Location settings (see chat)
