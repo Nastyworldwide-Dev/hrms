@@ -17,6 +17,7 @@ import {
 	stepProblems,
 	nextBlock,
 	buildInsertPayload,
+	isJobDescription,
 	canWithdraw,
 	leftLabel,
 	optimisticWithdrawn,
@@ -713,4 +714,56 @@ test("only the chosen radio row is in the tab order; with none chosen, the first
 		v.map((x) => tabStop("", x, v)),
 		[0, -1, -1]
 	)
+})
+
+// ---- optional files with the draft job description (owner, 29 Oct 2026) ----
+
+test("files picked with the job description are sent as their URLs", () => {
+	const doc = buildInsertPayload(
+		{
+			...complete(),
+			job_files: [
+				{ file_url: "/private/files/jd.pdf", file_name: "jd.pdf" },
+				{ file_url: "/private/files/org.png", file_name: "org.png" },
+			],
+		},
+		{},
+		[],
+		"HR-EMP-1"
+	)
+	assert.deepEqual(doc.job_files, ["/private/files/jd.pdf", "/private/files/org.png"])
+})
+
+test("no files picked sends no job_files at all", () => {
+	assert.equal("job_files" in buildInsertPayload(complete(), {}, [], "HR-EMP-1"), false)
+	assert.equal(
+		"job_files" in buildInsertPayload({ ...complete(), job_files: [] }, {}, [], "HR-EMP-1"),
+		false
+	)
+})
+
+test("the review lists the files under the job description, or says none", () => {
+	const questions = [Q(5, "Draft job description", { required: 1, answer_type: "Long text" })]
+	const withFiles = reviewGroups(
+		{
+			...complete(),
+			job_files: [
+				{ file_url: "/f/jd.pdf", file_name: "jd.pdf" },
+				{ file_url: "/f/b.docx", file_name: "b.docx" },
+			],
+		},
+		{},
+		questions
+	)
+	const rows = withFiles[4].rows
+	const at = rows.findIndex((r) => r.label === "Draft job description")
+	assert.deepEqual(rows[at + 1], { label: "Attachments", value: "jd.pdf, b.docx" })
+	const none = reviewGroups(complete(), {}, questions)[4].rows
+	assert.equal(none.find((r) => r.label === "Attachments").value, "")
+})
+
+test("a file is placed right after the job description question it belongs to", () => {
+	assert.equal(isJobDescription(Q(5, "Draft job description")), true)
+	assert.equal(isJobDescription(Q(5, "draft Job Description ")), true)
+	assert.equal(isJobDescription(Q(5, "KPIs")), false)
 })

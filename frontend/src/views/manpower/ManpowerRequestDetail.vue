@@ -102,6 +102,26 @@
 								</div>
 							</section>
 
+							<!-- Files sent with the draft job description (owner, 29 Oct 2026). Read through the
+							     request (hrms.api.get_attachments checks read on it), so whoever opens the request
+							     opens them; none, no section. -->
+							<section v-if="jobFiles.length" class="g-form-section">
+								<h3 class="g-eyebrow">{{ __("Attachments ({0})", [jobFiles.length]) }}</h3>
+								<div class="g-form-group">
+									<GAttachmentRow
+										v-for="file in jobFiles"
+										:key="file.name"
+										:file="file"
+										@open="filePreview = file"
+									/>
+								</div>
+								<FilePreviewModal
+									:is-open="Boolean(filePreview)"
+									:file="filePreview || {}"
+									@did-dismiss="filePreview = null"
+								/>
+							</section>
+
 							<!-- Hiring: HR only. Open = visible but locked (the manager decides first). Gone once
 							     Filled / Not proceeding. Every state that dims Save is ONE list
 							     (utils/manpowerBoard.js hiringProblems), shown in #mp-hiring-why. -->
@@ -229,6 +249,8 @@ import { computed, inject, onBeforeUnmount, ref } from "vue"
 import FormField from "@/components/FormField.vue"
 import ResourceError from "@/components/ResourceError.vue"
 import ShellHeader from "@/components/ShellHeader.vue"
+import FilePreviewModal from "@/components/FilePreviewModal.vue"
+import GAttachmentRow from "@/components/glass/GAttachmentRow.vue"
 import GButton from "@/components/glass/GButton.vue"
 import GConfirm from "@/components/glass/GConfirm.vue"
 import GPage from "@/components/glass/GPage.vue"
@@ -271,6 +293,14 @@ const request = createResource({
 	auto: true,
 })
 const doc = computed(() => request.data)
+// files sent with the draft job description: read through the request's own read check
+const attachments = createResource({
+	url: "hrms.api.get_attachments",
+	params: { dt: DOCTYPE, dn: props.id },
+	auto: true,
+})
+const jobFiles = computed(() => attachments.data || [])
+const filePreview = ref(null)
 const progress = createResource({
 	url: "hrms.api.manpower.get_progress",
 	params: { name: props.id },

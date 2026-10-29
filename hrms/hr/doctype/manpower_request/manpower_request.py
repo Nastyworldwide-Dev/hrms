@@ -212,6 +212,57 @@ def build_progress(request: dict, changes: list[dict]) -> list[dict]:
 	return steps
 
 
+def link_job_files(request) -> None:
+	"""Attach the files sent with the draft job description to the request.
+
+	Optional, any number (owner, 29 Oct 2026). The wizard uploads each file with
+	no parent (the request does not exist yet) and sends their URLs as
+	`job_files`. Only a loose file uploaded by the request's owner or by whoever
+	is sending it (HR filing for someone) is taken; a file already on another
+	document stays there. Once attached, a file is read through the request, so
+	the same people who can open the request can open it. Same shape as
+	ExpenseClaim.link_receipts.
+	"""
+	urls = getattr(request, "job_files", None) or []
+	if isinstance(urls, str):
+		import json
+
+		urls = json.loads(urls) if urls.strip().startswith("[") else [urls]
+	attached = 0
+	for url in dict.fromkeys(u for u in urls if u):
+		loose = next(
+			(
+				f
+				for f in frappe.get_all(
+					"File",
+					filters={"file_url": url},
+					fields=["name", "owner", "attached_to_doctype", "attached_to_name"],
+					limit_page_length=50,
+				)
+				if not f.attached_to_doctype
+				and not f.attached_to_name
+				and f.owner in (request.owner, frappe.session.user)
+			),
+			None,
+		)
+		if not loose:
+			logger.warning(
+				"[manpower] %s: file %s not attached (not a loose file of the sender)", request.name, url
+			)
+			continue
+		frappe.db.set_value(
+			"File",
+			loose.name,
+			{
+				"attached_to_doctype": "Manpower Request",
+				"attached_to_name": request.name,
+				"attached_to_field": "job_files",
+			},
+		)
+		attached += 1
+	logger.info("[manpower] %s: %d job description file(s) attached", request.name, attached)
+
+
 def can_file_manpower_request(employee: str | None) -> bool:
 	"""May `employee` send a manpower request? HR may for anyone; everyone else needs an
 	Active direct report (the same question hrms.api.team.has_team asks of the Team page)."""
@@ -352,6 +403,7 @@ class ManpowerRequest(Document, PWANotificationsMixin):
 	def after_insert(self):
 		# Once, when sent. The approver — usually holding only Employee — could not read it
 		# otherwise; the share is that read (employee_owned_row_scope honours DocShare).
+		link_job_files(self)
 		approver = self._get_doc_approver()
 		logger.info("[manpower] %s sent by %s, approver %s", self.name, self.employee, approver)
 		share_doc_with_approver(self, approver)

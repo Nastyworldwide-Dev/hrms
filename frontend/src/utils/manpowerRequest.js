@@ -84,11 +84,18 @@ export function blankModel({ department = "" } = {}) {
 		band: "",
 		budgeted_salary: "",
 		proposed_salary: "",
+		// optional files with the draft job description: [{ file_url, file_name }]
+		job_files: [],
 	}
 }
 
 //: One answer's slot in the wizard's `extra` map: HR's question, by step and words.
 export const questionKey = (q) => `${q.step}|${q.question}`
+
+//: The question the optional files go with (owner, 29 Oct 2026: "at the draft job description ... can put
+//: attachment there and it is not required"). Matched by its words, since questions are HR's data.
+export const isJobDescription = (q) =>
+	/^draft job description$/i.test(String(q?.question || "").trim())
 
 const blank = (value) => value === undefined || value === null || String(value).trim() === ""
 const amount = (value) => Number(String(value ?? "").trim())
@@ -210,6 +217,8 @@ export function buildInsertPayload(model, extra, questions, employee) {
 			: { location: model.locationChoice }),
 		...(replacing ? { replacing_employee: model.replacing_employee } : {}),
 		...(blank(model.start_date) ? {} : { start_date: model.start_date }),
+		// optional files with the job description: their URLs; the server files them under the request
+		...(model.job_files?.length ? { job_files: model.job_files.map((f) => f.file_url) } : {}),
 		answers: (questions || []).map((q) => ({
 			step: String(q.step),
 			question: q.question,
@@ -501,7 +510,12 @@ export function reviewGroups(model, extra, questions, { t = (x) => x, me = "" } 
 			...fixed[step].map(([label, value]) => ({ label: t(label), value: String(value ?? "") })),
 			...(questions || [])
 				.filter((q) => Number(q.step) === step + 1)
-				.map((q) => ({ label: q.question, value: String(extra?.[questionKey(q)] ?? "").trim() })),
+				.flatMap((q) => {
+					const row = { label: q.question, value: String(extra?.[questionKey(q)] ?? "").trim() }
+					if (!isJobDescription(q)) return [row]
+					const names = (m.job_files || []).map((f) => f.file_name).join(", ")
+					return [row, { label: t("Attachments"), value: names }]
+				}),
 		],
 	}))
 }

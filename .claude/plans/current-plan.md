@@ -1,29 +1,35 @@
-# Plan: Manpower Request print / PDF also refused to Administrator (verifier, 29 Oct 2026)
+# Plan: optional files with the draft job description on a Manpower Request (owner, 29 Oct 2026)
 
-Follow-up to 791270ac4 / 11d74bd1b. Verifier REFUTED "no screen shows salary to Administrator": the Desk print view
-(/printview) and the PDF download (frappe.utils.print_format.download_pdf) render the full request, salary included,
-because frappe.permissions.has_permission returns True for the literal Administrator before any hook and neither path
-runs onload. Both run Document.before_print (frappe/www/printview.py:144; download_pdf -> get_print -> the same render).
+Owner: "at the draft job description I want to add that requester can put attachment there and it is not required
+just if they want to they can put any attachment there". Answers: several files; the same people who can open the
+request can open the files (sender, the approver it was shared with, HR; not Administrator).
 
 ## GOAL
-Administrator (not HR by role, not the sender, not shared) cannot print or download a PDF of a Manpower Request.
+In the wizard's Requirements step, under "Draft job description", an optional "Add files" row: the requester picks
+any number of files (each uploaded at once, removable before sending). After sending, the files are attached to the
+request and listed on its page, openable by whoever can open the request.
 
 ## FLOW
-/printview or download_pdf -> get_rendered_template -> doc.run_method("before_print") -> ManpowerRequest.before_print
--> the same check as onload (_refuse_administrator) -> PermissionError
-Remaining known gaps, by Frappe design (no app hook runs): /api/resource/Manpower Request/<name> and
-frappe.client.get for the literal Administrator account.
+Wizard (step 5, Requirements) -> "Attachments (optional)" row right after the Draft job description question ->
+FileAttachment.upload(null,null,"") per pick -> model.files = [file_url…] -> buildInsertPayload sends `job_files`
+(urls, not a doctype field: read in the controller via doc.flags / a whitelisted arg) -> ManpowerRequest.after_insert
+link_job_files: each loose File owned by the sender with that url -> attached_to Manpower Request/<name>,
+attached_to_field "job_files" -> Detail page lists them (hrms.api.get_attachments, which checks read on the request,
+so the row fence and the Administrator rule apply) -> Review step lists the file names.
+Why not a field: files belong to the request through File.attached_to, the same way every other request attaches
+(expense receipts link the same way: ExpenseClaim.link_receipts).
 
-DESIGN SKILLS: NONE (permission rule)
+DESIGN SKILLS: NONE (existing upload row and attachment row components, existing form section style)
 
-## MOCKUP: NOT NEEDED (no screen change)
+## MOCKUP: NOT NEEDED (reuses the existing "Add a file" row and attachment rows; no new layout)
 
 ## EXPECTED OUTPUT
-Test red first: before_print refuses Administrator, allows HR / sender / shared approver; onload and before_print share
-one check. Suites: no new failures.
+- Tests red first: payload carries job_files; nothing when none; controller attaches only the sender's loose files and
+  ignores another user's or an already-attached file; detail lists them via get_attachments; review shows names.
+- yarn test green; server suites no new failures. No migrate.
 
 ## RISK
-Administrator cannot print one doctype, by design. Rollback: revert.
+Files stay private; reachable only through the request's own read check. Rollback: revert.
 
 ## Pipeline Summary
-verifier finding -> plan -> TDD -> commit -> push -> release -> owner deploys (no migrate).
+owner ask -> plan -> TDD -> commit -> review -> push -> release -> owner deploys (no migrate).

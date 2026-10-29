@@ -434,22 +434,29 @@
 
 								<!-- HR's questions for this step (step 5 is all of them), after the fixed fields -->
 								<section v-if="step < REVIEW_STEP && shownQuestions.length" class="g-form-section">
-									<div class="g-form-group">
-										<FormField
-											v-for="q in shownQuestions"
-											:key="questionKey(q)"
-											v-bind="questionField(q)"
-											:label="q.required ? q.question : q.question + ' (' + __('optional') + ')'"
-											:placeholder="
-												['Choice', 'Yes-No'].includes(q.answer_type)
-													? __('Choose…')
-													: __('Type here')
-											"
-											:reqd="Boolean(q.required)"
-											v-model="extra[questionKey(q)]"
-											:error-message="shown(questionKey(q))"
+									<template v-for="q in shownQuestions" :key="questionKey(q)">
+										<div class="g-form-group">
+											<FormField
+												v-bind="questionField(q)"
+												:label="q.required ? q.question : q.question + ' (' + __('optional') + ')'"
+												:placeholder="
+													['Choice', 'Yes-No'].includes(q.answer_type)
+														? __('Choose…')
+														: __('Type here')
+												"
+												:reqd="Boolean(q.required)"
+												v-model="extra[questionKey(q)]"
+												:error-message="shown(questionKey(q))"
+											/>
+										</div>
+										<!-- optional files go with the draft job description (owner, 29 Oct 2026) -->
+										<JobFilesRow
+											class="mt-2 mb-2"
+											v-if="isJobDescription(q)"
+											v-model:files="model.job_files"
+											v-model:uploading="filesUploading"
 										/>
-									</div>
+									</template>
 								</section>
 								<ResourceError :resource="questions" :what="__('the questions')" />
 							</div>
@@ -508,6 +515,7 @@
 import { IonContent } from "@ionic/vue"
 import { Check, ChevronRight, Lock, Minus, Plus, Users } from "lucide-vue-next"
 import { createResource } from "frappe-ui"
+import JobFilesRow from "@/components/JobFilesRow.vue"
 import { computed, inject, nextTick, reactive, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 
@@ -544,6 +552,7 @@ import {
 	blankModel,
 	buildInsertPayload,
 	clearDraft,
+	isJobDescription,
 	nextBlock,
 	questionField,
 	questionKey,
@@ -570,6 +579,8 @@ const step = ref(0)
 const furthest = ref(0)
 const tried = reactive({})
 const sending = ref(false)
+// a file still uploading holds Next and Send, so it is never sent without it
+const filesUploading = ref(false)
 const sendError = ref("")
 const leaveOpen = ref(false)
 const scroller = ref(null)
@@ -706,6 +717,7 @@ const shown = (field) =>
 // THE one place that lists every reason Next/Send is dimmed.
 const blocker = computed(() => {
 	if (sending.value) return ""
+	if (filesUploading.value) return __("Wait for the file to finish uploading.")
 	if (questions.loading && !questions.data) return __("Loading the questions…")
 	if (questions.error) return __("The questions did not load. Try again.")
 	if (step.value === REVIEW_STEP)
