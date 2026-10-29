@@ -227,9 +227,14 @@ def link_job_files(request) -> None:
 	if isinstance(urls, str):
 		import json
 
-		urls = json.loads(urls) if urls.strip().startswith("[") else [urls]
+		try:
+			urls = json.loads(urls) if urls.strip().startswith("[") else [urls]
+		except ValueError:
+			# a broken list must not undo the request it came with
+			logger.warning("[manpower] %s: job_files was not a list, no file attached", request.name)
+			urls = []
 	attached = 0
-	for url in dict.fromkeys(u for u in urls if u):
+	for url in dict.fromkeys(u for u in urls if isinstance(u, str) and u):
 		loose = next(
 			(
 				f

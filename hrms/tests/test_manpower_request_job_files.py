@@ -87,6 +87,10 @@ class TestLinkJobFiles(unittest.TestCase):
 		files = [_file("F1", "/private/files/jd.pdf")]
 		self.assertEqual(set(self._link(_request('["/private/files/jd.pdf"]'), files)), {"F1"})
 
+	def test_a_malformed_list_attaches_nothing_and_does_not_undo_the_request(self):
+		self.assertEqual(self._link(_request("[bad"), []), {})
+		self.assertEqual(self._link(_request([None, 3, {"x": 1}]), []), {})
+
 	def test_after_insert_attaches_them(self):
 		src = (
 			pathlib.Path(__file__).resolve().parents[1] / "hr/doctype/manpower_request/manpower_request.py"

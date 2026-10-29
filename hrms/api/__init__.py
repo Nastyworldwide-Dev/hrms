@@ -1897,6 +1897,13 @@ def get_attachments(dt: str, dn: str):
 	# and the Helpdesk identity filter broke on a collation clash (live 15 Sep
 	# 2026: error 1267 on every attachment panel).
 	frappe.has_permission(dt, doc=dn, throw=True)
+	# frappe.has_permission passes the literal Administrator before any hook; a
+	# doctype that fences it (Manpower Request: salary, owner 29 Oct 2026) runs its
+	# own form check first, so the file list is refused wherever the form is.
+	from hrms.api.approval import ADMIN_NOT_EXCEPTIONAL
+
+	if dt in ADMIN_NOT_EXCEPTIONAL:
+		frappe.get_doc(dt, dn).run_method("onload")
 	return frappe.get_all(
 		"File",
 		fields=["name", "file_name", "file_url", "is_private"],

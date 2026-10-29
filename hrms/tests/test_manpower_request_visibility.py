@@ -12,7 +12,7 @@ Bench-free:  PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_manpow
 import pathlib
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import _erpnext_stub
@@ -152,6 +152,39 @@ class TestPrintAndPdfRefuseAdministrator(unittest.TestCase):
 		self._print("lina@x", roles=("HR User",))
 		self._print("hafiz@x")
 		self._print("nik@x", shared={"nik@x": ["MPR-0001"]})
+
+
+class TestAttachmentListRefusesAdministrator(unittest.TestCase):
+	"""hrms.api.get_attachments asked frappe.has_permission, which passes the
+	literal Administrator before any hook: the request page refused it, but the
+	file list behind the page was still answered (review of af4b5d9fd)."""
+
+	def _list(self, dt, refuse):
+		import hrms.api as api
+
+		doc = MagicMock()
+		doc.run_method.side_effect = frappe.PermissionError("no") if refuse else None
+		with (
+			patch.object(api.frappe, "has_permission", return_value=True),
+			patch.object(api.frappe, "get_doc", return_value=doc),
+			patch.object(api.frappe, "get_all", return_value=[{"name": "F1"}]) as get_all,
+		):
+			try:
+				api.get_attachments(dt, "MPR-0001")
+			except frappe.PermissionError:
+				return None, doc, get_all
+			return True, doc, get_all
+
+	def test_a_fenced_doctype_runs_its_own_check_before_any_file_is_read(self):
+		listed, doc, get_all = self._list(DT, refuse=True)
+		self.assertIsNone(listed)
+		doc.run_method.assert_called_once_with("onload")
+		get_all.assert_not_called()
+
+	def test_other_doctypes_are_listed_as_before(self):
+		listed, doc, _ = self._list("Leave Application", refuse=False)
+		self.assertTrue(listed)
+		doc.run_method.assert_not_called()
 
 
 class TestHrOnlySurfaces(unittest.TestCase):
