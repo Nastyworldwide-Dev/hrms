@@ -5,7 +5,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { readFileSync } from "node:fs"
 
-import { withGlAccountField, GL_FIELD } from "../expenseGlAccount.js"
+import { withGlAccountField, withoutGlAccount, GL_FIELD } from "../expenseGlAccount.js"
 
 const FIELDS = [
 	{ fieldname: "expense_date", fieldtype: "Date", label: "Expense Date" },
@@ -45,9 +45,22 @@ test("the expense sheet uses it, and no longer copies the type's description", (
 	)
 })
 
-test("the GL row is never sent as part of the line", () => {
+test("the GL row is taken off the line before it is saved, without touching the sheet's copy", () => {
+	const shown = { expense_type: "Travel", amount: 10, [GL_FIELD]: "Travel Expenses" }
+	const saved = withoutGlAccount(shown)
+	assert.equal(GL_FIELD in saved, false)
+	assert.deepEqual(saved, { expense_type: "Travel", amount: 10 })
+	assert.equal(shown[GL_FIELD], "Travel Expenses")
+})
+
+test("both ways a line leaves the sheet go through withoutGlAccount", () => {
 	const src = readFileSync(new URL("../../components/ExpensesTable.vue", import.meta.url), "utf8")
-	assert.match(src, /delete [^\n]*\[GL_FIELD\]|GL_FIELD[^\n]*delete/)
+	const save = src.slice(
+		src.indexOf("const updateExpenseItem"),
+		src.indexOf("resetSelectedItem()", src.indexOf("const updateExpenseItem"))
+	)
+	assert.match(save, /withoutGlAccount\(expenseItem\.value\)/)
+	assert.doesNotMatch(save, /emit\([^)]*expenseItem\.value/)
 })
 
 test("editing a saved line shows its GL row too (the type did not change, so no watcher fires)", () => {

@@ -213,7 +213,7 @@ const deleteExpenseItem = () => {
 }
 
 const updateExpenseItem = () => {
-	// the GL row is shown, not saved: delete expenseItem[GL_FIELD] via withoutGlAccount
+	// the GL row is shown, not saved
 	const line = withoutGlAccount(expenseItem.value)
 	if (editingIdx.value === null) {
 		emit("add-expense-item", line)
