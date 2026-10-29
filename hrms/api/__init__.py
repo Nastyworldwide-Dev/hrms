@@ -1594,6 +1594,21 @@ def configured_expense_claim_types(types: list, account_rows: list, company: str
 	return offered
 
 
+def gl_account_names(account_rows: list, account_names: dict, company: str | None) -> dict:
+	"""{claim type: the GL account's name} for `company` — what the expense line
+	shows, read-only, under Type (owner, 29 Oct 2026). Pure. No company, no
+	guess: an empty map."""
+	if not company:
+		return {}
+	shown = {}
+	for row in account_rows:
+		if row.get("company") == company and row.get("default_account"):
+			account = row["default_account"]
+			shown[row["parent"]] = account_names.get(account) or account
+	logger.debug("[expense] %d GL account(s) shown for %s", len(shown), company)
+	return shown
+
+
 @frappe.whitelist(methods=["GET", "POST"])
 def get_expense_claim_types() -> list[dict]:
 	ClaimType = frappe.qb.DocType("Expense Claim Type")
@@ -1605,12 +1620,31 @@ def get_expense_claim_types() -> list[dict]:
 	own = get_employee_info(fields=("company",))
 	company = own.get("company") if own else None
 	accounts = frappe.get_all(
-		"Expense Claim Account", fields=["parent", "company", "rate_per_km"], limit_page_length=0
+		"Expense Claim Account",
+		fields=["parent", "company", "rate_per_km", "default_account"],
+		limit_page_length=0,
 	)
 	# the employee's company rate wins over the type's (owner, 14 Oct 2026)
 	own_rates = {r.parent: r.rate_per_km for r in accounts if r.company == company and r.rate_per_km}
+	# the GL account each type posts to, by name, for the line's read-only row
+	own_accounts = [r.default_account for r in accounts if r.company == company and r.default_account]
+	account_names = (
+		dict(
+			frappe.get_all(
+				"Account",
+				filters={"name": ("in", own_accounts)},
+				fields=["name", "account_name"],
+				as_list=True,
+				ignore_permissions=True,
+			)
+		)
+		if own_accounts
+		else {}
+	)
+	gl = gl_account_names(accounts, account_names, company)
 	for claim_type in types:
 		claim_type["rate_per_km"] = own_rates.get(claim_type["name"]) or claim_type.get("rate_per_km") or 0
+		claim_type["gl_account"] = gl.get(claim_type["name"])
 	return configured_expense_claim_types(types, accounts, company)
 
 

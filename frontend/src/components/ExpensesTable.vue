@@ -168,6 +168,7 @@ import {
 import { groupFields } from "@/utils/formGroups"
 import { sentenceCase } from "@/utils/sentenceCase"
 import { withCostTagFields } from "@/utils/expenseCostTags"
+import { GL_FIELD, withGlAccountField, withoutGlAccount } from "@/utils/expenseGlAccount"
 import { addItemHint } from "@/utils/addItemHint"
 
 import { useCurrencyConversion } from "@/composables/useCurrencyConversion"
@@ -208,10 +209,12 @@ const deleteExpenseItem = () => {
 }
 
 const updateExpenseItem = () => {
+	// the GL row is shown, not saved: delete expenseItem[GL_FIELD] via withoutGlAccount
+	const line = withoutGlAccount(expenseItem.value)
 	if (editingIdx.value === null) {
-		emit("add-expense-item", expenseItem.value)
+		emit("add-expense-item", line)
 	} else {
-		emit("update-expense-item", expenseItem.value, editingIdx.value)
+		emit("update-expense-item", line, editingIdx.value)
 	}
 	resetSelectedItem()
 }
@@ -293,12 +296,21 @@ const mileageRate = computed(
 	() => claimTypesByID[expenseItem.value.expense_type]?.rate_per_km || 0
 )
 
+// the picked type's GL account for this company, shown read-only under Type
+const glAccount = computed(
+	() => claimTypesByID[expenseItem.value.expense_type]?.gl_account || null
+)
+
 const expenseFields = computed(() =>
 	withCostTagFields(
-		withMileageFields(
-			expensesTableFields.data || [],
-			mileageRate.value,
-			expenseItem.value.expense_type
+		withGlAccountField(
+			withMileageFields(
+				expensesTableFields.data || [],
+				mileageRate.value,
+				expenseItem.value.expense_type
+			),
+			glAccount.value,
+			__
 		)
 			// Project is not asked (owner, 14 Oct 2026)
 			.filter((field) => field.fieldname !== "project")
@@ -388,9 +400,9 @@ watch(
 watch(
 	() => expenseItem.value.expense_type,
 	(value) => {
-		if (!expenseItem.value.description) {
-			expenseItem.value.description = claimTypesByID[value]?.description
-		}
+		// The GL account is its own read-only row now (owner, 29 Oct 2026), not
+		// "GL: ..." copied into the Description for staff to edit.
+		expenseItem.value[GL_FIELD] = claimTypesByID[value]?.gl_account || null
 
 		// fill only: a cost tag picked on the line is the employee's choice
 		expenseItem.value.cost_center ||= props.expenseClaim.cost_center

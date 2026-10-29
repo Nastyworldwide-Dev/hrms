@@ -1,37 +1,30 @@
-# Plan: check-in finds a location indoors and on mobile data (owner, 29 Oct 2026)
+# Plan: expense item shows its GL account as its own read-only row under Type (owner, 29 Oct 2026)
 
-Owner: "some user have problem check in because it does not detect the location" (screenshot: Android, indoors under
-a metal roof, "Location unavailable — Still looking for your location"). Asked how to handle: "it should be can always
-read the location also even the person is using own data".
+Owner (screenshot: New expense item; Description prefilled "GL: Travel Expenses", editable): "for the GL type ... now
+they can edit it as it was on description so instead of that put it like another column so when user request they
+choose on the dropdown and it cannot be edit put the column under type". Choice: "Shown, filled by Type".
 
 ## GOAL
-The check-in sheet gets a usable reading on a phone indoors whether it is on office Wi-Fi or its own mobile data.
+Picking a Type shows "GL account: <account name>" on its own read-only row right under Type, for the claimant's
+company. Description is no longer prefilled with "GL: …" (it is the person's own note).
 
-## CAUSES (from CheckInPanel.vue + utils/geolocation.js)
-1. Only GPS (enableHighAccuracy) is asked first; the network reading (cell towers / Wi-Fi / mobile data) is asked only
-   after GPS gives up (~15 s), and only ONCE per sheet. Indoors GPS times out every 15 s for ever, and if that one
-   network ask failed or was slow, nothing asks again — the person is stuck.
-2. usablePosition() throws away any reading whose timestamp is in the future or > 60 s older than the phone clock. On a
-   phone whose clock is off (manual time, some Samsung), EVERY reading is thrown away.
+## FLOW
+claimTypesResource -> hrms.api.get_expense_claim_types -> each type also carries `gl_account` (its Expense Claim Account
+row for the employee's company, account_name) -> ExpensesTable.vue -> withGlAccountField puts a read-only Data row
+"GL account" after expense_type -> server still sets default_account on save (ExpenseClaim.set_expense_account),
+unchanged.
 
-## FLOW (after)
-Sheet opens → GPS watch (as now) AND a network reading at once → no fix yet → network reading again every 10 s until a
-fix → sharpest-wins keeps the best → the server (not the phone) still decides what a coarse reading is worth (approval
-vs block), unchanged. Clock: a reading whose time disagrees with the phone clock by > 2 min is judged by when it arrived
-(maximumAge 60 s already bounds the browser's cache); 60 s–2 min old is still refused as stale.
+DESIGN SKILLS: NONE (one read-only form row; existing FormView row style)
 
-DESIGN SKILLS: NONE (logic only; wording of an existing message)
-
-## MOCKUP: NOT NEEDED (no layout change; one message's wording)
+## MOCKUP: NOT NEEDED (one read-only row in an existing sheet, same style as its neighbours)
 
 ## EXPECTED OUTPUT
-- Tests red first: network asked at open; asked again every 10 s while no fix; stops once a fix lands; a reading with a
-  phone clock 10 min fast/slow is used; a 90 s-old cached reading is still refused.
-- yarn test green; no server change; no geofence rule change.
+- Tests red first: API returns gl_account per type for the employee's company; the row sits right after Type, is
+  read-only and shows the account; nothing when no Type; Description is not filled with "GL: …".
+- yarn test green; server suite no new failures. No migrate.
 
 ## RISK
-More location requests while the sheet is open with no fix (one per 10 s, network only, stops on fix or close).
-Rollback: revert.
+Display only; the account actually posted is still set by the server. Rollback: revert.
 
 ## Pipeline Summary
-owner report → plan → TDD → commit → review → push → release → owner deploys (frontend build only).
+owner ask -> plan -> TDD -> commit -> review -> push -> release -> owner deploys (no migrate).
