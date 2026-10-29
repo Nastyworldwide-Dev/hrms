@@ -9,7 +9,7 @@
 export const GL_FIELD = "gl_account_shown"
 
 /**
- * `fields` with a read-only "GL account" row after `expense_type`, showing
+ * `fields` with a read-only "GL:" row after `expense_type`, showing
  * `account`. No account (no type picked, or none set for this company): no row.
  */
 export function withGlAccountField(fields, account, __ = (text) => text) {
@@ -17,7 +17,7 @@ export function withGlAccountField(fields, account, __ = (text) => text) {
 	const row = {
 		fieldname: GL_FIELD,
 		fieldtype: "Data",
-		label: __("GL account"),
+		label: __("GL:"),
 		read_only: 1,
 		default: account,
 	}

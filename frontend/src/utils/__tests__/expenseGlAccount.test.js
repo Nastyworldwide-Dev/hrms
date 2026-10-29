@@ -20,7 +20,7 @@ test("the GL row sits right after Type, read-only", () => {
 	assert.deepEqual(names, ["expense_date", "expense_type", GL_FIELD, "description", "amount"])
 	const row = out.find((f) => f.fieldname === GL_FIELD)
 	assert.equal(row.read_only, 1)
-	assert.equal(row.label, "GL account")
+	assert.equal(row.label, "GL:")
 	assert.equal(row.default, "Travel Expenses")
 })
 
@@ -33,7 +33,7 @@ test("no type picked yet: no GL row", () => {
 
 test("the label is translated", () => {
 	const out = withGlAccountField(FIELDS, "Travel Expenses", (t) => `~${t}`)
-	assert.equal(out.find((f) => f.fieldname === GL_FIELD).label, "~GL account")
+	assert.equal(out.find((f) => f.fieldname === GL_FIELD).label, "~GL:")
 })
 
 test("the expense sheet uses it, and no longer copies the type's description", () => {
