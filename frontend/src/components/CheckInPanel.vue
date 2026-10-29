@@ -350,6 +350,15 @@ let hasSessionFix = false
 // nothing asked again. The server still decides what a coarse reading is worth.
 let networkRetryTimer = null
 const NETWORK_RETRY_MS = 10000
+// One ask in flight at a time. The browser's timeout does not start until the
+// person answers the permission prompt, so a fixed timer piled asks up behind
+// an open prompt. An ask unanswered this long is treated as lost.
+let networkAskPending = false
+const NETWORK_ASK_LOST_MS = 30000
+let networkAskedAt = 0
+// A network reading is rough by nature (hundreds of metres); the fresher-wins
+// exception below must not let one replace a GPS-class fix. Same line the fence
+// draws for "too coarse to widen it" (isReadingCoarse).
 // Timestamp of the fix we're currently holding. watchPosition's first reading can
 // be a cached one up to maximumAge old (60s): if it happens to be sharp, the
 // sharpest-fix rule would keep it and reject every fresher live reading, pinning a
@@ -674,7 +683,12 @@ function handleLocationSuccess(position, generation) {
 	// outside their own office (the 102 m-from-Damansara report).
 	// Exception: a reading much fresher than the one we hold takes it regardless of
 	// accuracy — otherwise a stale-but-sharp cached first fix sticks (see fixTimestamp).
-	const muchFresher = hasSessionFix && preferFreshFix(fixTimestamp, readingAt, STALE_FIX_MS)
+	// Fresher wins, except a coarse reading over a fine one: a fresh 900 m
+	// network reading must not replace a 20 m GPS fix that is merely older.
+	const muchFresher =
+		hasSessionFix &&
+		preferFreshFix(fixTimestamp, readingAt, STALE_FIX_MS) &&
+		!(isReadingCoarse(acc) && !isReadingCoarse(accuracyM.value))
 	if (!muchFresher && !shouldReplaceFix(accuracyM.value, acc, hasSessionFix)) return
 	console.info("[CheckInPanel] location fix updated, accuracy(m):", acc)
 	latitude.value = fix.latitude
@@ -757,15 +771,25 @@ function askNetworkLocation(generation) {
 	clearTimeout(networkRetryTimer)
 	networkRetryTimer = null
 	if (generation !== geoGeneration || hasSessionFix || !navigator.geolocation) return
+	networkRetryTimer = setTimeout(() => askNetworkLocation(generation), NETWORK_RETRY_MS)
+	if (networkAskPending && Date.now() - networkAskedAt < NETWORK_ASK_LOST_MS) return
+	networkAskPending = true
+	networkAskedAt = Date.now()
 	console.info("[CheckInPanel] asking for a network location")
+	const answered = () => {
+		if (generation === geoGeneration) networkAskPending = false
+	}
 	navigator.geolocation.getCurrentPosition(
 		(position) => {
+			answered()
 			if (generation === geoGeneration) handleLocationSuccess(position, generation)
 		},
-		(error) => console.info("[CheckInPanel] network location not available yet:", error?.code),
+		(error) => {
+			answered()
+			console.info("[CheckInPanel] network location not available yet:", error?.code)
+		},
 		{ enableHighAccuracy: false, maximumAge: MAX_FIX_AGE_MS, timeout: NETWORK_RETRY_MS }
 	)
-	networkRetryTimer = setTimeout(() => askNetworkLocation(generation), NETWORK_RETRY_MS)
 }
 
 const fetchLocation = () => {
@@ -830,6 +854,7 @@ function stopWatchingLocation() {
 	geoGeneration += 1
 	clearTimeout(networkRetryTimer)
 	networkRetryTimer = null
+	networkAskPending = false
 	clearTimeout(locationDeadlineTimer)
 	locationDeadlineTimer = null
 	locationStalled.value = false

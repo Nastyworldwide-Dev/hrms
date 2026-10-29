@@ -228,8 +228,8 @@ test("invalid or stale device fixes never become usable coordinates", () => {
 			coords: { latitude: 3, longitude: 101.5, accuracy: Infinity },
 			timestamp: 1_800_000_000_000,
 		},
-		// 90 s old: a cached reading past the 60 s the sheet accepts
-		{ coords: { latitude: 3, longitude: 101.5, accuracy: 20 }, timestamp: 1_799_999_910_000 },
+		{ coords: { latitude: 3, longitude: 101.5, accuracy: 20 }, timestamp: 1_800_000_060_000 },
+		{ coords: { latitude: 3, longitude: 101.5, accuracy: 20 }, timestamp: 1_799_999_699_999 },
 	]) {
 		const h = panel()
 		h.vm.handleEmployeeCheckin()
@@ -911,8 +911,37 @@ test("with no reading yet, the network reading is asked again every 10 s", () =>
 	h.coarse[0].error({ code: 2 })
 	h.advance(10_000)
 	assert.equal(h.coarse.length, 2)
+	h.coarse[1].error({ code: 3 })
 	h.advance(10_000)
 	assert.equal(h.coarse.length, 3)
+})
+
+test("an unanswered network ask is not piled on (permission prompt still open)", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.advance(10_000)
+	h.advance(10_000)
+	assert.equal(h.coarse.length, 1)
+	h.advance(10_000) // 30 s unanswered: treated as lost, asked again
+	assert.equal(h.coarse.length, 2)
+})
+
+test("a fresher rough network reading does not unseat a sharp GPS fix", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	// the watch's first reading is a cached sharp one, 50 s old
+	h.watches[0].success(h.fix(3, 101.5, 20, h.Date.now() - 50_000))
+	h.coarse[0].success(h.fix(3.01, 101.51, 900))
+	assert.equal(h.vm.accuracyM.value, 20)
+	assert.equal(h.vm.latitude.value, 3)
+})
+
+test("a fresher sharp reading still unseats a stale sharp one", () => {
+	const h = panel()
+	h.vm.handleEmployeeCheckin()
+	h.watches[0].success(h.fix(3, 101.5, 15, h.Date.now() - 50_000))
+	h.watches[0].success(h.fix(3.0002, 101.5, 25))
+	assert.equal(h.vm.latitude.value, 3.0002)
 })
 
 test("a GPS timeout does not add a second ask on top of the schedule", () => {
@@ -952,19 +981,17 @@ test("closing the sheet stops the asks", () => {
 	assert.equal(h.coarse.length, 1)
 })
 
-test("a phone whose clock is minutes off still gets its reading used", () => {
-	for (const offset of [10 * 60_000, -10 * 60_000, 30_000]) {
-		const h = panel()
-		h.vm.handleEmployeeCheckin()
-		h.watches[0].success(h.fix(3, 101.5, 20, h.Date.now() + offset))
-		assert.equal(h.vm.latitude.value, 3, `clock off by ${offset} ms`)
-	}
-})
-
-test("a reading used despite a wrong clock still expires 60 s after it arrived", () => {
+test("a rough network reading never displaces a sharp GPS fix, but a GPS fix displaces it", () => {
 	const h = panel()
 	h.vm.handleEmployeeCheckin()
-	h.watches[0].success(h.fix(3, 101.5, 20, h.Date.now() - 10 * 60_000))
-	h.advance(61_000)
-	assert.equal(h.vm.latitude.value, null)
+	h.watches[0].success(h.fix(3, 101.5, 15))
+	h.coarse[0].success(h.fix(3.01, 101.51, 900))
+	assert.equal(h.vm.accuracyM.value, 15)
+
+	const g = panel()
+	g.vm.handleEmployeeCheckin()
+	g.coarse[0].success(g.fix(3.01, 101.51, 900))
+	g.watches[0].success(g.fix(3, 101.5, 15))
+	assert.equal(g.vm.accuracyM.value, 15)
+	assert.equal(g.vm.latitude.value, 3)
 })
