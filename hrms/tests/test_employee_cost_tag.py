@@ -1,11 +1,11 @@
-"""Cost Tag/Center from an Excel upload (Data Import → "Cost Tag/Center Upload").
+"""Cost Tag/Center from an Excel upload (Data Import → "Employee Cost Tag").
 
 Owner, 28 Oct 2026: "just follow the file upload: if have same existing can
 replace, if new then new row; the name and staff id is for you to read where to
 put". One Excel row = one upload record; it lands on that employee's Cost
 Tag/Center Allocation table (Employee → Overview).
 
-Bench-free:  PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_cost_tag_center_upload.py
+Bench-free:  PYTHONPATH=.:hrms/tests python3 -m pytest -q hrms/tests/test_employee_cost_tag.py
 """
 
 import datetime
@@ -23,7 +23,7 @@ _frappe_stub.install()
 _erpnext_stub.install()
 import frappe
 
-from hrms.hr.doctype.cost_tag_center_upload import cost_tag_center_upload as upload
+from hrms.hr.doctype.employee_cost_tag import employee_cost_tag as upload
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OCT = datetime.date(2026, 10, 1)
@@ -281,7 +281,7 @@ class TestWhenTheRowsAreApplied(unittest.TestCase):
 			upload.after_data_import(doc)
 		return apply
 
-	def _doc(self, status, count=2, doctype="Cost Tag/Center Upload"):
+	def _doc(self, status, count=2, doctype="Employee Cost Tag"):
 		return frappe._dict(name="DI-1", status=status, reference_doctype=doctype, payload_count=count)
 
 	def test_mid_import_partial_success_does_nothing(self):
@@ -329,17 +329,13 @@ class TestWhenTheRowsAreApplied(unittest.TestCase):
 		hooks = (ROOT / "hooks.py").read_text()
 		block = hooks[hooks.index('"Data Import": {') :]
 		block = block[: block.index("},")]
-		self.assertIn(
-			"hrms.hr.doctype.cost_tag_center_upload.cost_tag_center_upload.after_data_import", block
-		)
+		self.assertIn("hrms.hr.doctype.employee_cost_tag.employee_cost_tag.after_data_import", block)
 		self.assertIn("hrms.utils.naming_series_repair.after_data_import", block)
 
 
 class TestTheUploadDoctype(unittest.TestCase):
 	def _meta(self):
-		return json.loads(
-			(ROOT / "hr/doctype/cost_tag_center_upload/cost_tag_center_upload.json").read_text()
-		)
+		return json.loads((ROOT / "hr/doctype/employee_cost_tag/employee_cost_tag.json").read_text())
 
 	def test_the_template_columns_are_the_ones_hr_asked_for_in_order(self):
 		m = self._meta()
@@ -370,6 +366,13 @@ class TestTheUploadDoctype(unittest.TestCase):
 		for name in ("allocation_month", "percentage"):
 			self.assertEqual(f[name].get("reqd"), 1, name)
 
+	def test_it_is_called_employee_cost_tag_and_is_offered_in_data_import(self):
+		# owner, 29 Oct 2026: typing "employee" in Data Import's Document Type
+		# must offer "Employee Cost Tag"; Data Import lists only allow_import types
+		m = json.loads((ROOT / "hr/doctype/employee_cost_tag/employee_cost_tag.json").read_text())
+		self.assertEqual(m["name"], "Employee Cost Tag")
+		self.assertEqual(m.get("allow_import"), 1)
+
 	def test_only_hr_and_system_manager_can_upload(self):
 		roles = {p["role"]: p for p in self._meta()["permissions"]}
 		self.assertEqual(set(roles), {"System Manager", "HR Manager", "HR User"})
@@ -378,7 +381,7 @@ class TestTheUploadDoctype(unittest.TestCase):
 			self.assertEqual(p.get("create"), 1)
 
 	def test_a_row_made_by_hand_in_desk_lands_at_once_but_an_imported_one_waits(self):
-		src = (ROOT / "hr/doctype/cost_tag_center_upload/cost_tag_center_upload.py").read_text()
+		src = (ROOT / "hr/doctype/employee_cost_tag/employee_cost_tag.py").read_text()
 		self.assertRegex(
 			src,
 			r"def after_insert\(self\):\s*\n\s*if not frappe\.flags\.in_import:\s*\n(?:\s*#[^\n]*\n)?\s*apply_uploads\(\[self\.name\], merge_row=True\)",
@@ -585,7 +588,7 @@ class TestTheUploadIsTypedLoosely(unittest.TestCase):
 	Data Import would refuse outright becomes a per-row reason instead."""
 
 	def _meta(self):
-		m = json.loads((ROOT / "hr/doctype/cost_tag_center_upload/cost_tag_center_upload.json").read_text())
+		m = json.loads((ROOT / "hr/doctype/employee_cost_tag/employee_cost_tag.json").read_text())
 		return {f["fieldname"]: f for f in m["fields"]}
 
 	def test_the_cells_hr_types_are_text(self):
@@ -603,12 +606,12 @@ class TestTheUploadIsTypedLoosely(unittest.TestCase):
 			self.assertEqual(f[name].get("read_only"), 1, name)
 
 	def test_the_type_says_which_columns_to_tick(self):
-		m = json.loads((ROOT / "hr/doctype/cost_tag_center_upload/cost_tag_center_upload.json").read_text())
+		m = json.loads((ROOT / "hr/doctype/employee_cost_tag/employee_cost_tag.json").read_text())
 		for label in ("Employee ID", "Staff Name", "Year/Month", "Cost Tag/Center", "Percentage"):
 			self.assertIn(label, m["description"])
 
 	def test_status_and_reason_from_the_template_are_ignored_on_upload(self):
-		src = (ROOT / "hr/doctype/cost_tag_center_upload/cost_tag_center_upload.py").read_text()
+		src = (ROOT / "hr/doctype/employee_cost_tag/employee_cost_tag.py").read_text()
 		self.assertRegex(
 			src, r"self\.employee_id = self\.month = self\.cost_center_id = self\.percent = None"
 		)

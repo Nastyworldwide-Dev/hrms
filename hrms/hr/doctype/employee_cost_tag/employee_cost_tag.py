@@ -1,9 +1,10 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-"""Cost Tag/Center Upload — one row of HR's Cost Tag/Center Excel.
+"""Employee Cost Tag — one row of HR's Cost Tag/Center Excel.
 
-HR uploads it through Data Import ("Insert New Records"). Owner's rules:
+HR uploads it through Data Import (Document Type "Employee Cost Tag", Insert New
+Records; named so typing "employee" there finds it, owner 29 Oct 2026). Owner's rules:
 
 * 28 Oct 2026 — the rows land on each employee's Cost Tag/Center Allocation
   (Employee → Overview); the Employee ID decides whose profile.
@@ -37,7 +38,7 @@ from frappe.utils import flt
 
 logger = logging.getLogger(__name__)
 
-DOCTYPE = "Cost Tag/Center Upload"
+DOCTYPE = "Employee Cost Tag"
 TABLE = "interco_cost_allocation"
 MONTH_EXAMPLE = "2026-10, Oct 2026 or 10/2026"
 
@@ -45,7 +46,7 @@ _MONTHS = {name.lower(): i for i, name in enumerate(calendar.month_name) if name
 _MONTHS.update({name.lower(): i for i, name in enumerate(calendar.month_abbr) if name})
 
 
-class CostTagCenterUpload(Document):
+class EmployeeCostTag(Document):
 	def before_insert(self):
 		# Columns a downloaded template may carry must not decide them.
 		self.status = "Pending"

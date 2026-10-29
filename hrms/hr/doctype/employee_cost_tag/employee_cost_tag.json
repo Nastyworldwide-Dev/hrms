@@ -2,7 +2,7 @@
  "actions": [],
  "autoname": "hash",
  "creation": "2026-10-28 12:00:00.000000",
- "description": "One row of a Cost Tag/Center Excel upload. In Data Import, tick these columns for the template: Employee ID, Staff Name, Year/Month, Cost Tag/Center, Percentage (Old Cost Tag/Center only for rows from before Cost Tag/Center became a Cost Center). When the import ends, each person's rows go on their profile (Overview → Cost Tag/Center Allocation): a year+month in the file replaces that person's year+month. Open this list to see each row Done or Failed with the reason.",
+ "description": "One row of HR's Cost Tag/Center Excel. In Data Import pick Employee Cost Tag. In Data Import, tick these columns for the template: Employee ID, Staff Name, Year/Month, Cost Tag/Center, Percentage (Old Cost Tag/Center only for rows from before Cost Tag/Center became a Cost Center). When the import ends, each person's rows go on their profile (Overview → Cost Tag/Center Allocation): a year+month in the file replaces that person's year+month. Open this list to see each row Done or Failed with the reason.",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -120,10 +120,10 @@
  "in_create": 0,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-29 11:00:00.000000",
+ "modified": "2026-10-29 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
- "name": "Cost Tag/Center Upload",
+ "name": "Employee Cost Tag",
  "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
@@ -171,5 +171,6 @@
  "sort_order": "DESC",
  "states": [],
  "title_field": "employee_name",
- "track_changes": 0
+ "track_changes": 0,
+ "allow_import": 1
 }
