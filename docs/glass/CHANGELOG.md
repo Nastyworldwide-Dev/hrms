@@ -10,6 +10,21 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.71] — Excel Without Trips — 2026-10-29
+
+### Changed
+- **The Cost Tag/Center Excel takes what HR types.** Year/Month as
+  2026-10, Oct 2026, Oct-26, 10/2026, 01/10/2026 or an Excel date; the tag
+  as CEOF or CEOF - NHSB in any case; 60, 60% or Excel percent cells. A
+  tag in two companies asks for the full name.
+- **A year+month in the file replaces that person's year+month**, so a tag
+  dropped from the file drops off the profile. Other months are not
+  touched.
+- **Wrong person caught.** The Staff Name is checked against the Employee
+  ID; a name alone finds the person when only one has it.
+- **One bad cell fails one row**, with the reason, never the whole file.
+  An HR user who may not edit that employee gets a row saying so.
+
 ## [2.0.0-alpha.70] — Cost Tags from Excel — 2026-10-28
 
 ### Added
