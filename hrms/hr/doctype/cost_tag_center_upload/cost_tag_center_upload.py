@@ -47,13 +47,15 @@ _MONTHS.update({name.lower(): i for i, name in enumerate(calendar.month_abbr) if
 
 class CostTagCenterUpload(Document):
 	def before_insert(self):
-		# A template downloaded with these columns must not decide them.
+		# Columns a downloaded template may carry must not decide them.
 		self.status = "Pending"
 		self.error = None
+		self.employee_id = self.month = self.cost_center_id = self.percent = None
 
 	def after_insert(self):
 		if not frappe.flags.in_import:
-			apply_uploads([self.name])
+			# one row added by hand in Desk: change or add just that row
+			apply_uploads([self.name], merge_row=True)
 
 
 # ---------- reading what HR typed ----------
@@ -74,8 +76,9 @@ def read_month(value):
 	elif m := re.fullmatch(r"\d{1,2}[-/.](\d{1,2})[-/.](\d{4})", text):
 		# day/month/year, as Malaysia writes it
 		month, year = int(m[1]), int(m[2])
-	elif m := re.fullmatch(r"([a-z]+)[\s,./-]+(\d{4})", text):
-		month, year = _MONTHS.get(m[1]), int(m[2])
+	elif m := re.fullmatch(r"([a-z]+)[\s,./-]+(\d{4}|\d{2})", text):
+		# "Oct 2026", and "Oct-26" as Excel's mmm-yy writes it
+		month, year = _MONTHS.get(m[1]), int(m[2]) if len(m[2]) == 4 else 2000 + int(m[2])
 	if not (year and month and 1 <= month <= 12):
 		frappe.throw(
 			_("Year/Month {0} is not a month with a year. Write it like {1}.").format(
@@ -101,18 +104,24 @@ def read_percent(value):
 def scale_fractions(percents):
 	"""A month whose percentages add up to 1 came from Excel percent cells
 	(60% is stored as 0.6): scale it to 100. Anything else is left as typed."""
-	if percents and all(p <= 1 for p in percents) and abs(sum(percents) - 1) < 0.0001:
+	if percents and all(p <= 1 for p in percents) and abs(sum(percents) - 1) <= 0.001:
 		logger.info("[cost_tag_upload] Excel percent cells scaled to 100: %s", percents)
-		return [round(p * 100, 6) for p in percents]
+		return [round(p * 100, 4) for p in percents]
 	return percents
 
 
-def find_cost_center(value):
-	"""The Cost Center HR meant: "CEOF" or "CEOF - NHSB", any case."""
-	text = re.sub(r"\s+", " ", str(value or "")).strip().lower()
-	centers = frappe.get_all(
+def cost_centers():
+	"""Enabled, non-group Cost Centers: read once per upload."""
+	return frappe.get_all(
 		"Cost Center", filters={"is_group": 0, "disabled": 0}, fields=["name", "cost_center_name"]
 	)
+
+
+def find_cost_center(value, centers=None):
+	"""The Cost Center HR meant: "CEOF" or "CEOF - NHSB", any case."""
+	text = re.sub(r"\s+", " ", str(value or "")).strip().lower()
+	if centers is None:
+		centers = cost_centers()
 	exact = [c.name for c in centers if c.name.lower() == text]
 	if exact:
 		return exact[0]
@@ -147,12 +156,14 @@ def find_employee(employee_id, staff_name):
 		return found[0].name
 	if not name:
 		frappe.throw(_("Employee ID is required."))
-	# exact name, any case and spacing; % and _ typed in a name are not wildcards
-	pattern = re.sub(r"([\\%_])", r"\\\1", name)
+	# Narrow by the first word in the database (stored names may carry stray
+	# spaces), then compare whole names here, any case and spacing. % and _
+	# typed in a name are not wildcards.
+	first = re.sub(r"([\\%_])", r"\\\1", name.split(" ")[0])
 	found = [
 		f
 		for f in frappe.get_all(
-			"Employee", filters={"employee_name": ("like", pattern)}, fields=["name", "employee_name"]
+			"Employee", filters={"employee_name": ("like", f"%{first}%")}, fields=["name", "employee_name"]
 		)
 		if re.sub(r"\s+", " ", f.employee_name or "").strip().lower() == name.lower()
 	]
@@ -196,8 +207,9 @@ def place_row(rows, month, cost_center, territory, percentage):
 
 
 def replace_months(existing, incoming):
-	"""The employee's rows after the file: every year+month in `incoming`
-	replaces that year+month; the rest of `existing` is kept as it was."""
+	"""Which existing rows go, and which new rows come in: every year+month in
+	`incoming` replaces that year+month; other months are not touched, so
+	their rows keep their names and history. Returns (drop, add)."""
 	months = {read_month(r.allocation_month) for r in incoming}
 	seen = set()
 	for r in incoming:
@@ -209,17 +221,10 @@ def replace_months(existing, incoming):
 				)
 			)
 		seen.add(key)
-	kept = [
-		{
-			"allocation_month": r.get("allocation_month"),
-			"cost_center": r.get("cost_center"),
-			"territory": r.get("territory"),
-			"percentage": r.get("percentage"),
-		}
-		for r in existing
-		if not r.get("allocation_month") or read_month(r.get("allocation_month")) not in months
+	drop = [
+		r for r in existing if r.get("allocation_month") and read_month(r.get("allocation_month")) in months
 	]
-	return kept + [
+	add = [
 		{
 			"allocation_month": read_month(r.allocation_month),
 			"cost_center": r.cost_center,
@@ -228,16 +233,21 @@ def replace_months(existing, incoming):
 		}
 		for r in incoming
 	]
+	return drop, add
 
 
-def apply_uploads(names):
+def apply_uploads(names, merge_row=False):
 	"""Put the named Pending upload rows on their employees, one save each.
 
-	Each row is read first; an unreadable row fails alone with its reason.
-	Each employee is its own savepoint: one that fails is rolled back alone,
-	its rows marked Failed with the reason, and the rest carry on. The save
-	runs as a Desk save would (in_import off), not with the importer's
-	shortcuts, so defaults, select checks and notifications all apply."""
+	`merge_row` is for one row added by hand in Desk: it changes or adds just
+	that row. An import always replaces the file's months, however many rows.
+
+	Each row is read first; an unreadable row fails alone with its reason,
+	and the other rows of that person's month fail saying so (the month can't
+	total 100% without it). Each employee is its own savepoint: one that
+	fails is rolled back alone, its rows marked Failed with the reason, and
+	the rest carry on. The save runs as a Desk save would (in_import off),
+	with the importing user's own permission on that employee."""
 	records = frappe.get_all(
 		DOCTYPE,
 		filters={"status": "Pending", "name": ("in", list(names))},
@@ -252,12 +262,15 @@ def apply_uploads(names):
 		],
 		order_by="creation asc",
 	)
+	centers = cost_centers()
 	by_employee = {}
+	unread = []
 	for record in records:
 		try:
-			understood = _read(record)
+			understood = _read(record, centers)
 		except Exception as e:
 			_mark([record], "Failed", _clean(e))
+			unread.append(record)
 			continue
 		by_employee.setdefault(understood.employee_id, []).append(understood)
 
@@ -265,10 +278,21 @@ def apply_uploads(names):
 	frappe.flags.in_import = False
 	try:
 		for i, (employee_id, rows) in enumerate(by_employee.items()):
+			blocked = _months_with_unread_rows(rows, unread)
+			if blocked:
+				month = min(blocked)
+				_mark(
+					[r for r in rows if r.allocation_month in blocked],
+					"Failed",
+					_("Not applied: another row for {0} could not be read.").format(month.strftime("%b %Y")),
+				)
+				rows = [r for r in rows if r.allocation_month not in blocked]
+				if not rows:
+					continue
 			save_point = f"cost_tag_upload_{i}"
 			frappe.db.savepoint(save_point)
 			try:
-				_apply_employee(employee_id, rows, single=len(names) == 1)
+				_apply_employee(employee_id, rows, merge_row=merge_row)
 			except Exception as e:
 				frappe.db.rollback(save_point=save_point)
 				_mark(rows, "Failed", _clean(e))
@@ -280,22 +304,40 @@ def apply_uploads(names):
 		frappe.flags.in_import = in_import
 
 
-def _read(record):
+def _months_with_unread_rows(rows, unread):
+	"""Months of this person's readable rows that also had an unreadable row
+	(matched by the same Employee ID cell and a month that can still be read)."""
+	ids = {str(r.employee or "").strip() for r in unread}
+	months = set()
+	for r in unread:
+		try:
+			months.add(read_month(r.allocation_month))
+		except Exception:
+			continue
+	return {
+		row.allocation_month
+		for row in rows
+		if row.allocation_month in months and str(row.typed_employee or "").strip() in ids
+	}
+
+
+def _read(record, centers=None):
 	"""What HR typed → what it means, or a ValidationError saying why not."""
 	if not (record.cost_center or record.territory):
 		frappe.throw(_("Cost Tag/Center is required."))
 	return frappe._dict(
 		name=record.name,
+		typed_employee=record.employee,
 		employee_id=find_employee(record.employee, record.employee_name),
 		allocation_month=read_month(record.allocation_month),
-		cost_center=find_cost_center(record.cost_center) if record.cost_center else None,
+		cost_center=find_cost_center(record.cost_center, centers) if record.cost_center else None,
 		territory=None if record.cost_center else record.territory,
 		percentage=read_percent(record.percentage),
 	)
 
 
-def _apply_employee(employee_id, rows, single=False):
-	logger.info("[cost_tag_upload] employee=%s rows=%d single=%s", employee_id, len(rows), single)
+def _apply_employee(employee_id, rows, merge_row=False):
+	logger.info("[cost_tag_upload] employee=%s rows=%d merge_row=%s", employee_id, len(rows), merge_row)
 	months = {}
 	for r in rows:
 		months.setdefault(r.allocation_month, []).append(r)
@@ -304,16 +346,19 @@ def _apply_employee(employee_id, rows, single=False):
 			r.percentage = p
 
 	employee = frappe.get_doc("Employee", employee_id)
+	# the importer's own right to change this person, not the upload's
+	employee.check_permission("write")
 	existing = employee.get(TABLE) or []
-	if single:
-		# one row added by hand: change or add just that row
+	if merge_row:
 		r = rows[0]
 		row, added = place_row(existing, r.allocation_month, r.cost_center, r.territory, r.percentage)
 		if added:
 			employee.append(TABLE, row)
 	else:
-		employee.set(TABLE, [])
-		for row in replace_months(existing, rows):
+		drop, add = replace_months(existing, rows)
+		for row in drop:
+			employee.remove(row)
+		for row in add:
 			employee.append(TABLE, row)
 	employee.save()
 
