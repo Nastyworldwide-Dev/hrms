@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.72] — Found Indoors — 2026-10-29
+
+### Fixed
+- **Check-in finds your location indoors and on mobile data.** The phone
+  is asked for its network location (mobile data, cell towers, Wi-Fi) at
+  once, beside GPS, and again every 10 seconds until it answers. Before,
+  it was asked only once, after GPS gave up, so under a factory roof
+  check-in could stay on "Location unavailable" for good. A rough
+  reading still follows the shift's rules, as before.
+
 ## [2.0.0-alpha.71] — Excel Without Trips — 2026-10-29
 
 ### Changed

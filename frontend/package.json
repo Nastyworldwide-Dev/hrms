@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.71",
-	"releaseName": "Excel Without Trips",
+	"version": "2.0.0-alpha.72",
+	"releaseName": "Found Indoors",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
