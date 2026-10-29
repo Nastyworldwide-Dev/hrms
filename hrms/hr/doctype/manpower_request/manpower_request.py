@@ -20,10 +20,12 @@ from dateutil.relativedelta import relativedelta
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.share import get_shared
 from frappe.utils import cint, flt, getdate, now_datetime
 
 from hrms.hr.utils import (
 	get_designated_approvers,
+	holds_hr_role,
 	is_own_employee,
 	sees_all_employee_data,
 	share_doc_with_approver,
@@ -219,6 +221,27 @@ def can_file_manpower_request(employee: str | None) -> bool:
 
 
 class ManpowerRequest(Document, PWANotificationsMixin):
+	def onload(self):
+		"""Refuse the Desk form to anyone the row scope would not show it to.
+
+		Frappe answers has_permission True for the literal Administrator before
+		any app hook runs, so the fence in employee_owned_row_scope cannot stop
+		Administrator opening the form. Salary is on it: the sender, the person
+		it was shared with for approval, and HR only (owner, 29 Oct 2026)."""
+		user = frappe.session.user
+		if user != "Administrator":
+			return
+		if (
+			holds_hr_role(user)
+			or is_own_employee(self.employee)
+			or self.name in get_shared(self.doctype, user)
+		):
+			return
+		logger.warning("[manpower] %s refused %s: Administrator is not HR", user, self.name)
+		frappe.throw(
+			_("Only HR, the sender and the approver can open a manpower request."), frappe.PermissionError
+		)
+
 	def before_validate(self):
 		# the sender, unless HR names someone else; runs before the mandatory check
 		if not self.employee:

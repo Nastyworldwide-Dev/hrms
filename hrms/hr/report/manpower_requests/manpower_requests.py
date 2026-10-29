@@ -23,7 +23,7 @@ from frappe import _
 from frappe.utils import getdate, today
 
 from hrms.hr.doctype.manpower_request.manpower_request import request_age
-from hrms.hr.utils import is_hr_operator
+from hrms.hr.utils import holds_hr_role
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +201,8 @@ REQUEST_FIELDS = [
 
 
 def execute(filters=None):
-	if not is_hr_operator():
+	# an HR role, not is_hr_operator: Administrator is not HR here (owner, 29 Oct 2026)
+	if not holds_hr_role():
 		logger.warning("[manpower_requests] refused for %s: not HR", frappe.session.user)
 		frappe.throw(_("Only HR can open the Manpower Requests report."), frappe.PermissionError)
 	filters = frappe._dict(filters or {})

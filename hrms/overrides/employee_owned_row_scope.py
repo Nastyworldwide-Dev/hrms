@@ -175,6 +175,26 @@ def _supervised_reads(user: str, doctype: str) -> list[str]:
 	return rostered_employees(user)
 
 
+#: Doctypes where Administrator is NOT exceptional (owner, 29 Oct 2026, Manpower
+#: Request: salary is on it, "admin is not hr so cannot"). Administrator is
+#: treated as anyone else here: own, shared, or nothing. Frappe's own
+#: has_permission still answers True for the literal Administrator before any
+#: hook runs, so the Desk form is refused in ManpowerRequest.onload instead.
+NO_ADMIN_DOCTYPES = {"Manpower Request"}
+
+
+def _admin_bypass(user: str, doctype: str) -> bool:
+	"""Is this the framework's exceptional Administrator, for this doctype?"""
+	return _is_administrator(user) and doctype not in NO_ADMIN_DOCTYPES
+
+
+def _sees_as_hr(user: str, doctype: str) -> bool:
+	"""HR sight; Administrator does not count where it is not exceptional."""
+	if _is_administrator(user) and doctype in NO_ADMIN_DOCTYPES:
+		return False
+	return _is_hr(user)
+
+
 #: DocShare rows carry read/write/share/submit flags; anything destructive is
 #: checked against `write`, matching hrms.overrides.approval_row_scope.
 _SHARE_RIGHTS = {"read", "write", "share", "submit"}
@@ -254,11 +274,11 @@ def get_permission_query_conditions(doctype: str, user: str | None = None) -> st
 	user = user or frappe.session.user
 	owner_fields = OWNED_DOCTYPES[doctype]
 
-	if _is_administrator(user):
+	if _admin_bypass(user, doctype):
 		return ""
 
 	conditions = []
-	if _is_hr(user):
+	if _sees_as_hr(user, doctype):
 		# broad, but never outside the company / source-instance fence
 		fence = _company_condition(doctype, user)
 		if not fence or doctype not in TEAM_REVIEWED_DOCTYPES:
@@ -295,10 +315,10 @@ def has_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	doctype = doc.get("doctype") if isinstance(doc, dict) else doc.doctype
 	owner_fields = OWNED_DOCTYPES[doctype]
 
-	if _is_administrator(user):
+	if _admin_bypass(user, doctype):
 		return True
 
-	if _is_hr(user):
+	if _sees_as_hr(user, doctype):
 		# an empty set fails closed for a fenced user (company_visible(None)),
 		# and stays open for group HR, whose fence is empty
 		companies = _row_companies(doc, doctype) or {None}

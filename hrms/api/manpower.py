@@ -27,7 +27,7 @@ from hrms.hr.doctype.manpower_request.manpower_request import (
 	can_file_manpower_request,
 	request_age,
 )
-from hrms.hr.utils import get_designated_approvers, is_hr_operator, sees_all_employee_data
+from hrms.hr.utils import get_designated_approvers, holds_hr_role, is_hr_operator, sees_all_employee_data
 from hrms.overrides.company_scope import company_visible
 from hrms.utils.identity import get_employee, normalize_login
 
@@ -172,7 +172,8 @@ def hr_board(department: str | None = None, search: str | None = None) -> dict:
 	nothing is read past permissions. `department` and `search` (position, sender or id) narrow the
 	rows and the counts; the department list for the picker is never narrowed by either.
 	"""
-	if not is_hr_operator():
+	# an HR role, not is_hr_operator: Administrator is not HR here (owner, 29 Oct 2026)
+	if not holds_hr_role():
 		logger.warning("[manpower] hr_board refused for %s: not HR", frappe.session.user)
 		frappe.throw(_("Only HR can open the manpower board."), frappe.PermissionError)
 	filters = [["docstatus", "!=", 2]]
