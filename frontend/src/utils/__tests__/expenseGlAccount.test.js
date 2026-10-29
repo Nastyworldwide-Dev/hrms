@@ -49,3 +49,9 @@ test("the GL row is never sent as part of the line", () => {
 	const src = readFileSync(new URL("../../components/ExpensesTable.vue", import.meta.url), "utf8")
 	assert.match(src, /delete [^\n]*\[GL_FIELD\]|GL_FIELD[^\n]*delete/)
 })
+
+test("editing a saved line shows its GL row too (the type did not change, so no watcher fires)", () => {
+	const src = readFileSync(new URL("../../components/ExpensesTable.vue", import.meta.url), "utf8")
+	const open = src.slice(src.indexOf("const openModal"), src.indexOf("const deleteExpenseItem"))
+	assert.match(open, /\[GL_FIELD\]\s*[:=]\s*claimTypesByID\[item\.expense_type\]\?\.gl_account/)
+})

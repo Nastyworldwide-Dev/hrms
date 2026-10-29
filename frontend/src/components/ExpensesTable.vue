@@ -196,7 +196,11 @@ const isFirstRender = ref(false)
 
 const openModal = async (item, idx) => {
 	if (item) {
-		expenseItem.value = { ...item }
+		// a saved line has no GL row of its own; show its type's again
+		expenseItem.value = {
+			...item,
+			[GL_FIELD]: claimTypesByID[item.expense_type]?.gl_account || null,
+		}
 		editingIdx.value = idx
 	}
 	isFirstRender.value = true
