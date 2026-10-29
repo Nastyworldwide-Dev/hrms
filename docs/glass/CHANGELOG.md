@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.77] — Job Description Files — 2026-10-29
+
+### Added
+- **Optional files with a manpower request's draft job description.**
+  Under "Draft job description" the request has an Attachments row: add
+  any number of files, or none. Each uploads when picked and can be
+  removed before sending; the review lists them, and the request page
+  shows them. Whoever can open the request (sender, approver, HR) can open
+  its files.
+
 ## [2.0.0-alpha.76] — Salary Stays With HR — 2026-10-29
 
 ### Changed

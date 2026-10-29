@@ -1,13 +1,13 @@
 # HANDOFF
-prompt:   Manpower Request: hide from Administrator; sender, approver and HR only (owner, 29 Oct 2026)
+prompt:   Manpower Request: optional files with the draft job description (owner, 29 Oct 2026)
 status:   done
-commit:   alpha.76 on nz-glass (791270ac4, 11d74bd1b, print fix)
-files:    hrms/overrides/employee_owned_row_scope.py
+commit:   alpha.77 on nz-glass (af4b5d9fd, e660d4d35)
+files:    frontend/src/components/JobFilesRow.vue
+frontend/src/views/manpower/ManpowerRequestWizard.vue
+frontend/src/views/manpower/ManpowerRequestDetail.vue
+frontend/src/utils/manpowerRequest.js
 hrms/hr/doctype/manpower_request/manpower_request.py
-hrms/api/approval.py
-hrms/api/manpower.py
-hrms/hr/utils.py
-hrms/tests/test_manpower_request_visibility.py
-verify:   deploy (no migrate); log in as Administrator -> Manpower Request list empty, form/print refused
-flags:    open by Frappe design for literal Administrator: /api/resource/... and frappe.client.get
-next:     job-description attachments (WIP in ~/held-back/job-files-wip.patch), then Replacement Leave
+hrms/api/__init__.py
+verify:   deploy (no migrate); Requests -> Manpower request -> Requirements -> Attachments (optional) -> add 2 files -> Send -> page lists them
+flags:    literal Administrator can still download a private file by URL (Frappe File check); upload row keyed on the words "Draft job description"
+next:     Replacement Leave expiry when the owner says "build it"
