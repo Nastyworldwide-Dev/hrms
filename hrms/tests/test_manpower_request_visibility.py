@@ -127,6 +127,33 @@ class TestTheFormRefusesAdministrator(unittest.TestCase):
 		self._onload("nik@x", shared={"nik@x": ["MPR-0001"]})
 
 
+class TestPrintAndPdfRefuseAdministrator(unittest.TestCase):
+	"""/printview and download_pdf skip onload but run before_print
+	(frappe/www/printview.py), and has_permission passes Administrator first."""
+
+	def _print(self, user, shared=None, roles=()):
+		from hrms.hr.doctype.manpower_request import manpower_request as mr
+
+		doc = mr.ManpowerRequest.__new__(mr.ManpowerRequest)
+		doc.__dict__.update(req())
+		with (
+			patch.object(mr.frappe, "session", frappe._dict(user=user)),
+			patch.object(mr.frappe, "get_roles", return_value=list(roles)),
+			patch.object(mr, "is_own_employee", side_effect=lambda e: LOGIN.get(user) == e),
+			patch.object(mr, "get_shared", side_effect=lambda dt, u, rights=None: (shared or {}).get(u, [])),
+		):
+			doc.before_print(None)
+
+	def test_administrator_cannot_print_or_download_it(self):
+		with self.assertRaises(frappe.PermissionError):
+			self._print("Administrator", roles=ADMIN_ROLES)
+
+	def test_hr_the_sender_and_the_approver_still_can(self):
+		self._print("lina@x", roles=("HR User",))
+		self._print("hafiz@x")
+		self._print("nik@x", shared={"nik@x": ["MPR-0001"]})
+
+
 class TestHrOnlySurfaces(unittest.TestCase):
 	"""The HR board, the report and the hiring-status move are HR only — and
 	Administrator holds every role, so "has an HR role" alone would let it in."""

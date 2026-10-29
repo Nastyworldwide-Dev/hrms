@@ -1,35 +1,29 @@
-# Plan: Manpower Request is hidden from Administrator (owner, 29 Oct 2026)
+# Plan: Manpower Request print / PDF also refused to Administrator (verifier, 29 Oct 2026)
 
-Owner: a Manpower Request carries salary, so only the sender, the approver and HR see it — "admin is not hr so cannot".
-Asked and answered:
-- Who sees it: keep today's line — the sender, the person it was sent to for approval (DocShare), and HR (HR User /
-  HR Manager). Verified 29 Oct: Nik's own manager (the CEO) cannot open Hafiz's request today; no backup reader added.
-- Administrator: hide it everywhere the app controls.
+Follow-up to 791270ac4 / 11d74bd1b. Verifier REFUTED "no screen shows salary to Administrator": the Desk print view
+(/printview) and the PDF download (frappe.utils.print_format.download_pdf) render the full request, salary included,
+because frappe.permissions.has_permission returns True for the literal Administrator before any hook and neither path
+runs onload. Both run Document.before_print (frappe/www/printview.py:144; download_pdf -> get_print -> the same render).
 
 ## GOAL
-The Administrator account (and System Manager without an HR role) sees no Manpower Request in Desk or Nadi unless it is
-their own, shared with them for approval, or they hold an HR role.
+Administrator (not HR by role, not the sender, not shared) cannot print or download a PDF of a Manpower Request.
 
 ## FLOW
-Desk list / report view / export -> permission_query_conditions -> employee_owned_row_scope: Administrator no longer
-"return everything" for Manpower Request -> own + shared, or 1=0
-Desk form -> doc.has_permission -> frappe returns True for the literal Administrator BEFORE app hooks -> so the
-controller's onload refuses: ManpowerRequest.onload throws PermissionError unless HR role / own / shared
-HR board (hrms.api.manpower.hr_board) + Manpower Requests report -> holds_hr_role() (HR role only), not
-is_hr_operator() (which answers True for Administrator)
-Known gap, by Frappe design: /api/resource/Manpower Request/<name> for the literal Administrator account.
+/printview or download_pdf -> get_rendered_template -> doc.run_method("before_print") -> ManpowerRequest.before_print
+-> the same check as onload (_refuse_administrator) -> PermissionError
+Remaining known gaps, by Frappe design (no app hook runs): /api/resource/Manpower Request/<name> and
+frappe.client.get for the literal Administrator account.
 
-DESIGN SKILLS: NONE (permission rule, no screen)
+DESIGN SKILLS: NONE (permission rule)
 
 ## MOCKUP: NOT NEEDED (no screen change)
 
 ## EXPECTED OUTPUT
-Bench-free tests red first: Administrator list condition is 1=0 (others unchanged); has_permission False for
-Administrator on someone else's request; form onload refuses Administrator, allows HR/own/shared; board and report
-refuse Administrator and System Manager, allow HR. Other doctypes keep Administrator as before.
+Test red first: before_print refuses Administrator, allows HR / sender / shared approver; onload and before_print share
+one check. Suites: no new failures.
 
 ## RISK
-Administrator loses sight of one doctype, by design. HR keep everything. Rollback: revert.
+Administrator cannot print one doctype, by design. Rollback: revert.
 
 ## Pipeline Summary
-owner rule -> plan -> TDD -> commit -> review -> push -> release -> owner deploys (no migrate).
+verifier finding -> plan -> TDD -> commit -> push -> release -> owner deploys (no migrate).

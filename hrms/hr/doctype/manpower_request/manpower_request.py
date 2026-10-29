@@ -222,12 +222,20 @@ def can_file_manpower_request(employee: str | None) -> bool:
 
 class ManpowerRequest(Document, PWANotificationsMixin):
 	def onload(self):
-		"""Refuse the Desk form to anyone the row scope would not show it to.
+		"""The Desk form. Frappe answers has_permission True for the literal
+		Administrator before any app hook, so the row fence cannot stop it here."""
+		self._refuse_administrator("open")
 
-		Frappe answers has_permission True for the literal Administrator before
-		any app hook runs, so the fence in employee_owned_row_scope cannot stop
-		Administrator opening the form. Salary is on it: the sender, the person
-		it was shared with for approval, and HR only (owner, 29 Oct 2026)."""
+	def before_print(self, settings=None):
+		"""/printview and the PDF download skip onload but run this (verifier,
+		29 Oct 2026: they printed the salary for Administrator)."""
+		self._refuse_administrator("print")
+
+	def _refuse_administrator(self, action: str) -> None:
+		"""Salary is on it: the sender, the person it was shared with for
+		approval, and HR only (owner, 29 Oct 2026, "admin is not hr so cannot").
+		Only the literal Administrator reaches this; everyone else is fenced by
+		hrms.overrides.employee_owned_row_scope before Frappe gets here."""
 		user = frappe.session.user
 		if user != "Administrator":
 			return
@@ -237,9 +245,10 @@ class ManpowerRequest(Document, PWANotificationsMixin):
 			or self.name in get_shared(self.doctype, user)
 		):
 			return
-		logger.warning("[manpower] %s refused %s: Administrator is not HR", user, self.name)
+		logger.warning("[manpower] %s refused to %s %s: Administrator is not HR", user, action, self.name)
 		frappe.throw(
-			_("Only HR, the sender and the approver can open a manpower request."), frappe.PermissionError
+			_("Only HR, the sender and the approver can {0} a manpower request.").format(_(action)),
+			frappe.PermissionError,
 		)
 
 	def before_validate(self):
