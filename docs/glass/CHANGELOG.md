@@ -10,6 +10,11 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.75] — GL Label — 2026-10-29
+
+### Changed
+- The expense line's GL row is labelled **GL:** instead of "GL account".
+
 ## [2.0.0-alpha.74] — GL Under Type — 2026-10-29
 
 ### Changed
