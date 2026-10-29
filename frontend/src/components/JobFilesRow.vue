@@ -10,7 +10,8 @@
 
   Props:
     files  array — [{ file_url, file_name }] already added
-  Emits: update:files (the new list), update:uploading (true while sending)
+  Emits: update:files (the new list), update:uploading (true while sending),
+         uploaded (the File just sent; the wizard reads a JD's text from it)
 -->
 <template>
 	<div class="g-form-group">
@@ -23,7 +24,7 @@
 			<input
 				type="file"
 				class="sr-only"
-				:accept="SLIP_FILE_TYPES"
+				:accept="JOB_FILE_TYPES"
 				:disabled="uploading"
 				:aria-label="label"
 				@change="pick"
@@ -51,13 +52,12 @@ import { computed, inject, onBeforeUnmount, ref } from "vue"
 import FilePreviewModal from "@/components/FilePreviewModal.vue"
 import GAttachmentRow from "@/components/glass/GAttachmentRow.vue"
 import { FileAttachment } from "@/composables"
-import { SLIP_FILE_TYPES } from "@/utils/timeSlip"
-import { withFile, withoutFile } from "@/utils/jobFiles"
+import { JOB_FILE_TYPES, withFile, withoutFile } from "@/utils/jobFiles"
 
 const props = defineProps({
 	files: { type: Array, default: () => [] },
 })
-const emit = defineEmits(["update:files", "update:uploading"])
+const emit = defineEmits(["update:files", "update:uploading", "uploaded"])
 
 const __ = inject("$translate")
 const uploading = ref(false)
@@ -84,6 +84,8 @@ async function pick(event) {
 		if (!alive) return
 		console.info("[JobFilesRow] file uploaded", uploaded.file_name)
 		emit("update:files", withFile(props.files, uploaded))
+		// the wizard may fill the job description from it
+		emit("uploaded", uploaded)
 	} catch (error) {
 		// FileAttachment already told the person why; the list stays as it was
 		console.warn("[JobFilesRow] upload failed", error?.exc_type || "")

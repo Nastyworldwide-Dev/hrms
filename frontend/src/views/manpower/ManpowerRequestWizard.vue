@@ -455,6 +455,7 @@
 											v-if="isJobDescription(q)"
 											v-model:files="model.job_files"
 											v-model:uploading="filesUploading"
+											@uploaded="fillFromFile(q, $event)"
 										/>
 									</template>
 								</section>
@@ -516,6 +517,7 @@ import { IonContent } from "@ionic/vue"
 import { Check, ChevronRight, Lock, Minus, Plus, Users } from "lucide-vue-next"
 import { createResource } from "frappe-ui"
 import JobFilesRow from "@/components/JobFilesRow.vue"
+import { shouldFillFrom } from "@/utils/jobFiles"
 import { computed, inject, nextTick, reactive, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 
@@ -582,6 +584,40 @@ const sending = ref(false)
 // a file still uploading holds Next and Send, so it is never sent without it
 const filesUploading = ref(false)
 const sendError = ref("")
+
+// An attached JD fills an empty Draft job description box; the box stays editable
+// (owner, 29 Oct 2026). Reading holds Next and Send like an upload does.
+const jdReader = createResource({ url: "hrms.utils.job_description_text.read_job_description" })
+async function fillFromFile(q, file) {
+	const key = questionKey(q)
+	if (!shouldFillFrom(extra[key], file)) return
+	filesUploading.value = true
+	try {
+		const { text } = await jdReader.submit({ file_url: file.file_url })
+		// the person may have started typing while it was read
+		if (String(extra[key] ?? "").trim()) return
+		if (text) {
+			extra[key] = text
+			console.info("[manpower] job description filled from", file.file_name, text.length)
+			gToast({
+				title: __("Filled from {0}", [file.file_name]),
+				text: __("Check it and change anything you need."),
+				variant: "success",
+			})
+		} else {
+			console.info("[manpower] no text in", file.file_name)
+			gToast({
+				title: __("No text in {0}", [file.file_name]),
+				text: __("The file is attached. Type the job description in the box."),
+			})
+		}
+	} catch (error) {
+		// the file stays attached; only the filling is skipped
+		console.warn("[manpower] could not read the job description file", error?.exc_type || "")
+	} finally {
+		filesUploading.value = false
+	}
+}
 const leaveOpen = ref(false)
 const scroller = ref(null)
 
