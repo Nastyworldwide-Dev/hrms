@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.78] — JD Fills Itself — 2026-10-29
+
+### Added
+- **An attached JD fills the draft job description.** On a manpower
+  request, attaching a PDF, Word (.docx) or text file while the Draft job
+  description box is empty puts the file's text in the box; it stays
+  editable. Text already typed is never replaced. A scan, photo or old
+  .doc is only attached, and the person is told to type it. The file
+  picker now also takes Word and text files.
+
 ## [2.0.0-alpha.77] — Job Description Files — 2026-10-29
 
 ### Added

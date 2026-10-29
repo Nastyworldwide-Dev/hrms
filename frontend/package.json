@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.77",
-	"releaseName": "Job Description Files",
+	"version": "2.0.0-alpha.78",
+	"releaseName": "JD Fills Itself",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
