@@ -125,18 +125,9 @@
 <script setup>
 import { TILE } from "@/utils/iconTile"
 import { HUB_PATH } from "@/utils/helpdeskHub"
-import {
-	CalendarDays,
-	CalendarRange,
-	ClipboardList,
-	ExternalLink,
-	Network,
-	Plane,
-	SquareCheck,
-	Users,
-} from "lucide-vue-next"
+import { CalendarDays, ExternalLink, Plane } from "lucide-vue-next"
 import { useRouter } from "vue-router"
-import { computed, inject, markRaw, onMounted, ref, watch } from "vue"
+import { computed, inject, ref } from "vue"
 
 import BaseLayout from "@/components/BaseLayout.vue"
 import HolidayList from "@/components/HolidayList.vue"
@@ -146,14 +137,9 @@ import GListRow from "@/components/glass/GListRow.vue"
 import { MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { isSameOriginPath } from "@/data/appLinks"
 import { EXTERNAL_LINKS, openExternal } from "@/data/externalLinks"
-import { hasCompanyView, hasTeam, isApprover } from "@/data/team"
-import { needsYouResource } from "@/data/needsYou"
-import { manpowerBoardCount } from "@/data/manpower"
-import { userResource } from "@/data/user"
-import { hasHRRole } from "@/utils/issueBoard"
-import { boardRoute } from "@/utils/manpowerBoard"
 import GBadge from "@/components/glass/GBadge.vue"
 import { myApps } from "@/data/myApps"
+import { useTeamItems } from "@/data/teamNav"
 
 const router = useRouter()
 const employee = inject("$employee")
@@ -177,73 +163,9 @@ const moreItems = computed(() => {
 	return items
 })
 
-//: Approvals, Team and Roster (alpha.14 O). The server decides each:
-//: isApprover (anyone something is routed to), hasTeam (direct reports, or HR),
-//: hasCompanyView (an Attendance Report Viewer: Team only, never Roster).
-//: The Approvals number is everything waiting on you, as Home's Needs you.
-const waitingOnYou = computed(
-	() =>
-		(Number(needsYouResource.data?.total) || 0) + (Number(needsYouResource.data?.checkins) || 0)
-)
-//: HR only (the server's own is_hr verdict, as the HR Issue Board): the number is what waits on HR.
-const isHR = computed(() => hasHRRole(userResource.data))
-onMounted(() => {
-	if (isApprover.data) needsYouResource.reload()
-})
-// userResource may still be loading at mount: ask the moment the person is known to be HR
-watch(
-	isHR,
-	(hr) => {
-		if (hr) manpowerBoardCount.reload()
-	},
-	{ immediate: true }
-)
-const needsHr = computed(() => Number(manpowerBoardCount.data?.counts?.needs_hr) || 0)
-const teamItems = computed(() => [
-	...(isHR.value
-		? [
-				{
-					key: "staff-requests",
-					icon: markRaw(ClipboardList),
-					title: __("Manpower requests"),
-					to: { name: boardRoute.name },
-					badge: needsHr.value ? String(needsHr.value) : "",
-				},
-		  ]
-		: []),
-	...(isApprover.data
-		? [
-				{
-					key: "approvals",
-					icon: markRaw(SquareCheck),
-					title: __("Approvals"),
-					to: { name: "Approvals" },
-					badge: waitingOnYou.value ? String(waitingOnYou.value) : "",
-				},
-		  ]
-		: []),
-	...(hasTeam.data || hasCompanyView.data
-		? [{ key: "team", icon: markRaw(Users), title: __("Team"), route: "/team", to: "/team" }]
-		: []),
-	...(hasTeam.data
-		? [
-				{
-					key: "roster",
-					icon: markRaw(CalendarRange),
-					title: __("Roster"),
-					route: "/team/roster",
-					to: "/team/roster",
-				},
-		  ]
-		: []),
-	{
-		key: "org-chart",
-		icon: markRaw(Network),
-		title: __("Organizational Chart"),
-		route: "/org-chart",
-		to: "/org-chart",
-	},
-])
+//: Approvals, Team, Roster, Manpower requests (HR) and the Organizational
+//: Chart: one list in data/teamNav.js, which the laptop SideNav reads too.
+const teamItems = useTeamItems(__)
 
 // Offered by the server (hrms.api.app_links; audit F-15). Every employee is offered Approva; someone
 // the server offers nothing gets no Apps group at all — the heading goes with the rows,

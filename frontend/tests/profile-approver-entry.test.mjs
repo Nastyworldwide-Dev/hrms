@@ -4,8 +4,9 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
 const source = readFileSync(
-	// alpha.14 O: the Approvals entry moved from You to More → Your team
-	fileURLToPath(new URL("../src/views/More.vue", import.meta.url)),
+	// alpha.14 O: the Approvals entry moved from You to More → Your team;
+	// 2 Nov 2026: that list is data/teamNav.js, shared with the laptop SideNav
+	fileURLToPath(new URL("../src/data/teamNav.js", import.meta.url)),
 	"utf8"
 )
 

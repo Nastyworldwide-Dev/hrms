@@ -56,11 +56,14 @@ test("the board uses theme tokens, never a literal colour", () => {
 })
 
 test("More offers 'Manpower requests' to HR only, with a count of what needs HR", () => {
-	assert.match(more, /__\("Manpower requests"\)/)
-	assert.match(more, /userResource\.data/)
-	assert.match(more, /hasHRRole/)
-	assert.match(more, /needs_hr/)
-	assert.match(more, /boardRoute/)
+	// the row is in data/teamNav.js (2 Nov 2026), the list More and SideNav share
+	const team = read("../../data/teamNav.js")
+	assert.match(more, /useTeamItems\(__\)/)
+	assert.match(team, /__\("Manpower requests"\)/)
+	assert.match(team, /userResource\.data/)
+	assert.match(team, /hasHRRole/)
+	assert.match(team, /needs_hr/)
+	assert.match(team, /boardRoute/)
 })
 
 test("the detail page has a Hiring section for HR, saved through set_hiring_status", () => {

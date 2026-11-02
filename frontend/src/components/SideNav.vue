@@ -78,17 +78,33 @@
 			</button>
 			<!-- Public holidays: More has it on the phone, desktop had no way to
 			     reach it (alpha.5 audit). Same sheet, same list. -->
-			<button
-				type="button"
-				class="g-sidenav__item g-focusable"
-				@click="holidaysOpen = true"
-			>
+			<button type="button" class="g-sidenav__item g-focusable" @click="holidaysOpen = true">
 				<CalendarDays class="h-icon-md w-icon-md flex-none" />
 				<span v-show="!collapsed" class="whitespace-nowrap">{{ __("Public holidays") }}</span>
 			</button>
-			<GModal :is-open="holidaysOpen" :title="__('Public holidays')" @did-dismiss="holidaysOpen = false">
+			<GModal
+				:is-open="holidaysOpen"
+				:title="__('Public holidays')"
+				@did-dismiss="holidaysOpen = false"
+			>
 				<HolidayList v-if="holidaysOpen && employee?.data" />
 			</GModal>
+			<!-- Your team: the same rows, gates and counts as More on the phone. -->
+			<hr v-if="teamItems.length" class="g-sidenav__divider" />
+			<button
+				v-for="item in teamItems"
+				:key="item.key"
+				type="button"
+				class="g-sidenav__item g-focusable"
+				:class="{ 'g-sidenav__item--active': isActive(item.route) }"
+				:aria-current="isActive(item.route) ? 'page' : undefined"
+				:aria-label="item.badge ? `${item.title} (${item.badge})` : item.title"
+				@click="switchSection(item.route)"
+			>
+				<component :is="item.icon" class="h-icon-md w-icon-md flex-none" />
+				<span v-show="!collapsed" class="whitespace-nowrap flex-1">{{ item.title }}</span>
+				<GBadge v-if="item.badge" v-show="!collapsed" variant="accent">{{ item.badge }}</GBadge>
+			</button>
 			<!-- Sibling apps, same group as More on the phone. Plain anchors: each
 			     target is its own SPA outside vue-router's base, so a real
 			     navigation is the only thing that reaches it. New tab on desktop so
@@ -103,7 +119,9 @@
 				:is="item.route ? 'router-link' : 'a'"
 				v-for="item in appItems"
 				:key="item.key"
-				v-bind="item.route ? { to: item.route } : { href: item.href, target: '_blank', rel: 'noopener' }"
+				v-bind="
+					item.route ? { to: item.route } : { href: item.href, target: '_blank', rel: 'noopener' }
+				"
 				class="g-sidenav__item g-focusable"
 				:aria-label="item.title"
 				:title="item.sublabel"
@@ -117,6 +135,20 @@
 					aria-hidden="true"
 				/>
 			</component>
+			<!-- Travel (TruTrip), as on More: opens in a new tab. -->
+			<button
+				v-for="item in externalItems"
+				:key="item.key"
+				type="button"
+				class="g-sidenav__item g-focusable"
+				:aria-label="item.title"
+				:title="item.sublabel"
+				@click="openExternal(item)"
+			>
+				<Plane class="h-icon-md w-icon-md flex-none" />
+				<span v-show="!collapsed" class="whitespace-nowrap flex-1">{{ item.title }}</span>
+				<ExternalLink v-show="!collapsed" class="flex-none text-ink-3" aria-hidden="true" />
+			</button>
 		</div>
 
 		<!-- Profile -->
@@ -150,19 +182,19 @@
 
 <script setup>
 import GLogo from "@/components/glass/GLogo.vue"
-import { CalendarDays, ExternalLink, Users } from "lucide-vue-next"
+import { CalendarDays, ExternalLink, Plane } from "lucide-vue-next"
 import GModal from "@/components/glass/GModal.vue"
 import HolidayList from "@/components/HolidayList.vue"
+import GBadge from "@/components/glass/GBadge.vue"
 import { ref, computed, inject } from "vue"
 import { useRoute } from "vue-router"
 import { useIonRouter } from "@ionic/vue"
 import { createAnimation } from "@ionic/core"
 
-import { markRaw } from "vue"
-
 import { TAB_ITEMS, MORE_ITEMS, visibleAppItems } from "@/data/navItems"
 import { myApps } from "@/data/myApps"
-import { hasCompanyView, hasTeam } from "@/data/team"
+import { useTeamItems } from "@/data/teamNav"
+import { EXTERNAL_LINKS, openExternal } from "@/data/externalLinks"
 
 const __ = inject("$translate")
 const user = inject("$user")
@@ -180,11 +212,6 @@ const toggleCollapse = () => {
 	localStorage.setItem(STORAGE_KEY, String(collapsed.value))
 }
 
-// Team was reachable ONLY through the phone More menu — a manager on desktop
-// had no path to their own team page at all (true on v15 live as well; this
-// closes it for both). Same gate More.vue uses: the entry appears once
-// has_team confirms direct reports, or the caller is HR browsing via the
-// selector. hasTeam auto-fetches and is cached, so this costs nothing extra.
 // §20.2: four direct destinations above the divider — TAB_ITEMS without the
 // More container, which has no meaning at lg:.
 const directItems = computed(() =>
@@ -196,14 +223,20 @@ const directItems = computed(() =>
 
 // …and everything More holds, flat, below it. Helpdesk (HR Issues + IT
 // Helpdesk) is in MORE_ITEMS for everyone — the IT pill inside it carries the
-// Helpdesk-app availability gate. Team appears only once has_team confirms
-// direct reports (or the caller is HR browsing via the selector).
-const moreItems = computed(() => [
-	...MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) })),
-	...(hasTeam.data || hasCompanyView.data
-		? [{ icon: markRaw(Users), title: __("Team"), route: "/team" }]
-		: []),
-])
+// Helpdesk-app availability gate.
+const moreItems = computed(() => MORE_ITEMS.map((item) => ({ ...item, title: __(item.title) })))
+
+// "Your team" — the SAME list More renders (data/teamNav.js), each row server-gated.
+// It lived in More.vue alone, so a laptop never had Approvals, Roster, Manpower
+// requests or the Organizational Chart (owner, 2 Nov 2026).
+const teamItems = useTeamItems(__)
+
+// Services outside this site (TruTrip), as on More: a new tab, no session of ours.
+const externalItems = EXTERNAL_LINKS.map((item) => ({
+	...item,
+	title: __(item.title),
+	sublabel: __(item.sublabel),
+}))
 
 // Role-gated (data/appLinks.js); same list the More screen renders.
 const appItems = computed(() =>

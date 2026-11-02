@@ -10,7 +10,8 @@ const SRC = fileURLToPath(new URL("../..", import.meta.url))
 const read = (p) => readFileSync(join(SRC, p), "utf8")
 
 test("More shows Team for a company viewer but keeps Roster behind hasTeam", () => {
-	const more = read("views/More.vue")
+	// the rows are data/teamNav.js since 2 Nov 2026, read by More and SideNav alike
+	const more = read("data/teamNav.js")
 	assert.match(more, /\.\.\.\(hasTeam\.data \|\| hasCompanyView\.data\s*\?\s*\[\{ key: "team"/)
 	const at = more.indexOf('key: "roster"')
 	const roster = more.slice(more.lastIndexOf("...(", at), at)
@@ -19,10 +20,9 @@ test("More shows Team for a company viewer but keeps Roster behind hasTeam", () 
 })
 
 test("the side nav offers Team to a company viewer", () => {
-	assert.match(
-		read("components/SideNav.vue"),
-		/hasTeam\.data \|\| hasCompanyView\.data\s*\?\s*\[\{ icon: markRaw\(Users\), title: __\("Team"\)/
-	)
+	// the side nav reads the same gated list as More (data/teamNav.js)
+	assert.match(read("components/SideNav.vue"), /useTeamItems\(__\)/)
+	assert.match(read("data/teamNav.js"), /hasTeam\.data \|\| hasCompanyView\.data\s*\?\s*\[\{ key: "team"/)
 })
 
 test("the roster link follows the Roster gate, and company view says view only", () => {
