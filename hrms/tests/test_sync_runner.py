@@ -2197,11 +2197,14 @@ class TestStaffPhotoIsHubOwned(_RunnerTestCase):
 		self.assertEqual(row["employee_name"], "Aisha Renamed", "other fields must still mirror")
 
 	def test_image_user_id_and_checkin_fields_are_locally_owned(self):
-		"""Verify that image, user_id, multi_site_checkin, and other_checkin_sites
-		are all in LOCALLY_OWNED_FIELDS for Employee."""
+		"""Verify that image, user_id, additional_login_email, multi_site_checkin and
+		other_checkin_sites are all in LOCALLY_OWNED_FIELDS for Employee.
+
+		additional_login_email (2 Nov 2026) is a login mapping like user_id: HR
+		sets it HERE, and a pull from the ERP must never blank it."""
 		self.assertEqual(
 			set(runner.LOCALLY_OWNED_FIELDS["Employee"]),
-			{"image", "user_id", "multi_site_checkin", "other_checkin_sites"},
+			{"image", "user_id", "additional_login_email", "multi_site_checkin", "other_checkin_sites"},
 		)
 
 

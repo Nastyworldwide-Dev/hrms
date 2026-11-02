@@ -55,3 +55,28 @@ test("non-strings normalize to empty, never throw", () => {
 	assert.equal(normalizeLogin(undefined), "")
 	assert.equal(normalizeLogin(123), "")
 })
+
+// Owner, 2 Nov 2026: one Employee may carry a second login (additional_login_email,
+// HR-set). The server resolves that login to the record; the guard must accept it
+// too, or the second login is bounced to /invalid-employee on every navigation.
+test("employeeGate: the employee's additional login is the same person", () => {
+	const { employeeGate } = identity
+	const employee = { user_id: "aida@nastyworldwide.com", additional_login_email: "Aida@QGDSZ.com" }
+	assert.equal(employeeGate({ to: "Home", employee, user: { name: "aida@qgdsz.com" } }), null)
+	assert.equal(
+		employeeGate({ to: "Home", employee, user: { name: "aida@nastyworldwide.com" } }),
+		null
+	)
+	assert.deepEqual(employeeGate({ to: "Home", employee, user: { name: "someone@qgdsz.com" } }), {
+		name: "InvalidEmployee",
+	})
+	assert.deepEqual(
+		employeeGate({
+			to: "Home",
+			employee: { user_id: "a@x.com", additional_login_email: "" },
+			user: { name: "" },
+		}),
+		{ name: "InvalidEmployee" },
+		"an empty login never matches an empty additional login"
+	)
+})

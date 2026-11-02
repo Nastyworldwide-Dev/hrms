@@ -3,8 +3,14 @@
 // to skip the check whenever the target WAS /invalid-employee, so a valid
 // employee who reached that URL was told "Employee not found".
 export function employeeGate({ to, employee, user }) {
+	// Either of the employee's logins is this person (additional_login_email,
+	// HR-set, 2 Nov 2026); an empty login never matches an empty field.
+	const login = normalizeLogin(user?.name)
 	const valid =
-		Boolean(employee) && normalizeLogin(employee.user_id) === normalizeLogin(user?.name)
+		Boolean(employee) &&
+		Boolean(login) &&
+		(normalizeLogin(employee.user_id) === login ||
+			normalizeLogin(employee.additional_login_email) === login)
 	let redirect = null
 	if (!valid && to !== "InvalidEmployee") redirect = { name: "InvalidEmployee" }
 	else if (valid && (to === "Login" || to === "InvalidEmployee")) redirect = { name: "Home" }

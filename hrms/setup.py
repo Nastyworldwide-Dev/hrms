@@ -184,6 +184,7 @@ def get_company_hr_policy_fields():
 def get_custom_fields():
 	"""HR specific custom fields that need to be added to the masters in ERPNext"""
 	from hrms.sync.runner import get_provenance_custom_fields
+	from hrms.utils.additional_login import get_additional_login_fields
 	from hrms.utils.extension_custom_fields import get_extension_custom_fields
 
 	fields = {
@@ -680,6 +681,10 @@ def get_custom_fields():
 	# check-in flow and the HRMS-only User Permission scope query at runtime
 	for doctype, extension_fields in get_extension_custom_fields().items():
 		fields.setdefault(doctype, []).extend(extension_fields)
+
+	# a second login for one Employee (2 Nov 2026), same install-path reason
+	for doctype, login_fields in get_additional_login_fields().items():
+		fields.setdefault(doctype, []).extend(login_fields)
 
 	return fields
 

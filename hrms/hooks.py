@@ -410,6 +410,8 @@ doc_events = {
 			# validate handler runs side effects (single-writer, see write_block).
 			"hrms.sync.write_block.block_mirrored_writes",
 			"hrms.overrides.employee_master.validate_onboarding_process",
+			# a second login is authority over this record: normalized, unique
+			"hrms.utils.additional_login.validate_additional_login",
 			"hrms.overrides.employee_interco_allocation.validate_interco_allocation",
 			"hrms.overrides.employee_master.set_years_of_service",
 			"hrms.hr.offboarding.validate_offboarding_dates",

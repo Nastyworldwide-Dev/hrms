@@ -21,6 +21,7 @@ from frappe.tests.utils import FrappeTestCase
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from hrms.utils.identity import (
+	ADDITIONAL_LOGIN_FIELD,
 	AMBIGUOUS_EMPLOYEE,
 	INACTIVE_EMPLOYEE,
 	NO_EMPLOYEE,
@@ -385,3 +386,89 @@ class TestOwnEmployees(FrappeTestCase):
 	def test_guest_and_unknown_get_no_scope(self):
 		self.assertEqual(own_employees("Guest"), [])
 		self.assertEqual(own_employees("nobody_here@example.com"), [])
+
+
+class TestAdditionalLoginEmail(FrappeTestCase):
+	"""Owner, 2 Nov 2026: Aida had two logins (aida@nastyworldwide.com and
+	aida@qgdsz.com) for one Employee; only the one in `user_id` reached her
+	data, so the other saw every Nadi section fail. HR can now name a second
+	login on the Employee, and either login resolves to the same record —
+	in any combination, on its own (owner: "can be login whatever condition
+	between the two email")."""
+
+	PRIMARY = "addl_primary@example.com"
+	SECOND = "addl_second@example.org"
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.staff = make_employee(cls.PRIMARY, company=COMPANY)
+		make_user(cls.SECOND)
+
+	def setUp(self):
+		frappe.db.savepoint("addl_login_test")
+		self.addCleanup(frappe.db.rollback, save_point="addl_login_test")
+		frappe.db.set_value(
+			"Employee", self.staff, ADDITIONAL_LOGIN_FIELD, self.SECOND, update_modified=False
+		)
+
+	def test_both_logins_resolve_to_the_same_employee(self):
+		self.assertEqual(resolve_employee_identity(self.PRIMARY).employee, self.staff)
+		self.assertEqual(resolve_employee_identity(self.SECOND).employee, self.staff)
+		self.assertEqual(get_employee(self.SECOND), self.staff)
+
+	def test_the_second_login_resolves_on_its_own(self):
+		# The primary User disabled or gone: the second login still works.
+		frappe.db.set_value("User", self.PRIMARY, "enabled", 0, update_modified=False)
+		self.assertEqual(resolve_employee_identity(self.SECOND).reason, OK)
+
+	def test_the_second_login_is_matched_case_insensitively(self):
+		self.assertEqual(get_employee("  Addl_Second@EXAMPLE.org "), self.staff)
+
+	def test_the_fence_agrees_with_the_login(self):
+		# Row-level scope (own_employees) must hand the second login the same
+		# single record, or Nadi opens and every list is empty.
+		self.assertEqual(own_employees(self.SECOND), [self.staff])
+
+	def test_an_inactive_employee_blocks_both_logins(self):
+		frappe.db.set_value("Employee", self.staff, "status", "Left", update_modified=False)
+		self.assertEqual(resolve_employee_identity(self.PRIMARY).reason, INACTIVE_EMPLOYEE)
+		self.assertEqual(resolve_employee_identity(self.SECOND).reason, INACTIVE_EMPLOYEE)
+		self.assertEqual(own_employees(self.SECOND), [])
+
+	def test_a_second_login_claimed_by_two_records_is_denied(self):
+		# Never guess between two people.
+		other = make_employee("addl_other@example.com", company=COMPANY)
+		frappe.db.set_value("Employee", other, ADDITIONAL_LOGIN_FIELD, self.SECOND, update_modified=False)
+		self.assertEqual(resolve_employee_identity(self.SECOND).reason, AMBIGUOUS_EMPLOYEE)
+		self.assertEqual(own_employees(self.SECOND), [])
+
+	def test_a_login_that_is_one_records_user_id_and_anothers_second_is_denied(self):
+		other = make_employee("addl_other2@example.com", company=COMPANY)
+		frappe.db.set_value("Employee", other, ADDITIONAL_LOGIN_FIELD, self.PRIMARY, update_modified=False)
+		self.assertEqual(resolve_employee_identity(self.PRIMARY).reason, AMBIGUOUS_EMPLOYEE)
+
+	def test_saving_a_second_login_someone_else_already_uses_is_refused(self):
+		other = frappe.get_doc("Employee", make_employee("addl_other3@example.com", company=COMPANY))
+		other.set(ADDITIONAL_LOGIN_FIELD, self.PRIMARY)
+		with self.assertRaises(frappe.ValidationError):
+			other.save(ignore_permissions=True)
+		other.reload()
+		other.set(ADDITIONAL_LOGIN_FIELD, "  ADDL_second@example.org ")
+		with self.assertRaises(frappe.ValidationError):
+			other.save(ignore_permissions=True)
+
+	def test_saving_your_own_user_id_as_your_second_login_is_refused(self):
+		doc = frappe.get_doc("Employee", self.staff)
+		doc.set(ADDITIONAL_LOGIN_FIELD, self.PRIMARY.upper())
+		with self.assertRaises(frappe.ValidationError):
+			doc.save(ignore_permissions=True)
+
+	def test_the_second_login_keeps_the_employee_role(self):
+		# ERPNext strips Employee from any User no Employee names in user_id;
+		# the keeper must restore it for a login that resolves through the
+		# additional email, or Nadi opens and refuses every request.
+		user = frappe.get_doc("User", self.SECOND)
+		user.flags.ignore_permissions = True
+		user.save(ignore_permissions=True)
+		self.assertIn("Employee", frappe.get_roles(self.SECOND))

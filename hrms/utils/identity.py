@@ -80,6 +80,13 @@ AMBIGUOUS_EMPLOYEE = "ambiguous_employee"
 #: authority the authorization model rules out.
 _NON_EMPLOYEE_USERS = frozenset({"Guest", ""})
 
+#: A second login HR may give one Employee (owner, 2 Nov 2026: Aida signs in as
+#: aida@qgdsz.com while her record's user_id is aida@nastyworldwide.com). Either
+#: login resolves to the same record, each on its own. HR-only (permlevel 1):
+#: a self-set second login would let anyone claim anyone's address. Not mirrored
+#: (hrms.sync.runner.LOCALLY_OWNED_FIELDS), exactly like user_id.
+ADDITIONAL_LOGIN_FIELD = "additional_login_email"
+
 #: Fields `get_current_employee_info` has always returned. Kept as one tuple so
 #: the PWA payload cannot drift from what the resolver reads.
 EMPLOYEE_INFO_FIELDS = (
@@ -91,6 +98,8 @@ EMPLOYEE_INFO_FIELDS = (
 	"company",
 	"reports_to",
 	"user_id",
+	# the router guard accepts either login as this employee (2 Nov 2026)
+	ADDITIONAL_LOGIN_FIELD,
 )
 
 
@@ -102,7 +111,11 @@ def normalize_login(value) -> str:
 
 
 def _employees_claiming(user: str) -> list[frappe._dict]:
-	"""Every Employee whose `user_id` normalizes to `user`, active ones first.
+	"""Every Employee whose `user_id` OR additional login normalizes to `user`.
+
+	One record claiming the login through both fields is still one claim. Two
+	records — one by user_id, the other by its additional login — are two, and
+	resolve as AMBIGUOUS like any other pair.
 
 	Normalized in SQL rather than by fetching the table and filtering in Python:
 	`user_id` is indexed, and the alternative reads every employee row on a site
@@ -112,7 +125,9 @@ def _employees_claiming(user: str) -> list[frappe._dict]:
 	return (
 		frappe.qb.from_(employee)
 		.select(employee.name, employee.status, employee.company, employee.user_id)
-		.where(Lower(Trim(employee.user_id)) == user)
+		.where(
+			(Lower(Trim(employee.user_id)) == user) | (Lower(Trim(employee[ADDITIONAL_LOGIN_FIELD])) == user)
+		)
 		.orderby(employee.name)
 		.run(as_dict=True)
 	)
@@ -331,7 +346,8 @@ _DENIAL_MESSAGES = {
 	NOT_AUTHENTICATED: lambda: _("Please sign in to continue."),
 	NO_EMPLOYEE: lambda: _(
 		"Your account is not linked to an employee record. Ask your HR team to set your "
-		"company email on your employee record, then sign in again."
+		"company email, or this sign-in as your additional login email, on your employee "
+		"record, then sign in again."
 	),
 	INACTIVE_EMPLOYEE: lambda: _(
 		"Your employee record is not active, so you cannot use HR right now. Contact your HR manager."

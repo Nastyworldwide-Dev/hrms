@@ -502,7 +502,13 @@ class CustomEmployeeCheckin(EmployeeCheckin):
 		user = frappe.session.user
 		if not user or user == "Guest" or self.device_id or getattr(self.flags, "integration_entry", False):
 			return False
-		return user != frappe.db.get_value("Employee", self.employee, "user_id")
+		# Either of the employee's logins is them (additional_login_email, 2 Nov 2026).
+		logins = frappe.db.get_value("Employee", self.employee, ["user_id", "additional_login_email"]) or (
+			None,
+			None,
+		)
+		mine = {(login or "").strip().lower() for login in logins} - {""}
+		return user.strip().lower() not in mine
 
 	def validate_distance_from_shift_location(self):
 		"""Geofence validation with two modes.

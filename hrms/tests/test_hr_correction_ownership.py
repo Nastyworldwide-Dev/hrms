@@ -204,7 +204,7 @@ class TestManualDeskEntry(unittest.TestCase):
 		doc = SimpleNamespace(employee="HR-EMP-00014", device_id=None, flags=SimpleNamespace())
 		with (
 			patch.object(frappe, "session", frappe._dict(user="hr@nasty.test")),
-			patch.object(frappe.db, "get_value", return_value="siti@nasty.test"),
+			patch.object(frappe.db, "get_value", return_value=("siti@nasty.test", None)),
 		):
 			self.assertTrue(rule(doc))
 
@@ -213,7 +213,22 @@ class TestManualDeskEntry(unittest.TestCase):
 		doc = SimpleNamespace(employee="HR-EMP-00014", device_id=None, flags=SimpleNamespace())
 		with (
 			patch.object(frappe, "session", frappe._dict(user="siti@nasty.test")),
-			patch.object(frappe.db, "get_value", return_value="siti@nasty.test"),
+			patch.object(frappe.db, "get_value", return_value=("siti@nasty.test", None)),
+		):
+			self.assertFalse(rule(doc))
+
+	def test_the_employees_own_punch_from_their_additional_login_is_not(self):
+		# 2 Nov 2026: a second login (additional_login_email) is the same person;
+		# their own bare punch must not be recorded as HR keying it for them.
+		rule = self._rule()
+		doc = SimpleNamespace(employee="HR-EMP-00272", device_id=None, flags=SimpleNamespace())
+		with (
+			patch.object(frappe, "session", frappe._dict(user="aida@qgdsz.com")),
+			patch.object(
+				frappe.db,
+				"get_value",
+				return_value=("aida@nastyworldwide.com", " Aida@QGDSZ.com "),
+			),
 		):
 			self.assertFalse(rule(doc))
 
