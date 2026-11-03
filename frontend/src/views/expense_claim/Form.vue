@@ -11,8 +11,10 @@
 				:id="props.id"
 				:tabbedView="true"
 				:tabs="tabs"
-				:showAttachmentView="Boolean(props.id)"
-				:saveError="props.id ? '' : expenseSendBlock(expenseClaim, expenseApproverDetails.data, __)"
+				:showAttachmentView="true"
+				:saveError="
+					props.id ? '' : expenseSendBlock(expenseClaim, expenseApproverDetails.data, __)
+				"
 				@validateForm="validateForm"
 				:showDownloadPDFButton="true"
 				@formReloaded="onFormReloaded"
@@ -96,9 +98,10 @@ const expenseClaim = ref({
 	posting_date: today,
 })
 
-// The receipt is per line now (owner, 20 Oct 2026): each expense line carries its
-// own, asked in the item sheet (ExpensesTable). The claim-level file row is
-// shown only on a claim that exists, so an old claim keeps listing its file.
+// The receipt is per line (owner, 20 Oct 2026): each expense line carries its own,
+// several if needed, asked in the item sheet (ExpensesTable). The claim also takes
+// any number of files for the whole claim, new or saved (owner, 3 Nov 2026); they
+// are extra papers and never stand in for a line's receipt on the server.
 
 const companyCurrency = computed(() => getCompanyCurrency(expenseClaim.value.company))
 

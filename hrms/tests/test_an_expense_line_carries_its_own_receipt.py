@@ -117,27 +117,61 @@ def _env(files, types=None, user=OWNER):
 	frappe.db.set_value.side_effect = files.set_value
 	frappe.get_all.side_effect = files.get_all
 	frappe.get_cached_value.side_effect = lambda dt, name, field: types.get(name)
-	ns = {"frappe": frappe, "_": lambda s: s, "logger": MagicMock()}
-	for helper in ("receipt_files", "may_use_as_receipt", "has_claim_level_file"):
+	ns = {
+		"frappe": frappe,
+		"_": lambda s: s,
+		"logger": MagicMock(),
+		"getdate": lambda v: str(v)[:10],
+		"LINE_RECEIPTS_SINCE": "2026-10-20",
+	}
+	for helper in (
+		"receipt_files",
+		"may_use_as_receipt",
+		"has_claim_level_file",
+		"line_receipts",
+		"made_before_line_receipts",
+	):
 		ns[helper] = _module_fn(helper, ns)
 	return ns
 
 
-def _claim(*lines, status="Approved", name="HR-EXP-1", owner=OWNER, saved=None, was=None):
-	"""Each line is (expense_type, receipt_url or None). `saved` is the stored copy's
-	receipts by row name; None means a claim being made."""
+def _claim(
+	*lines,
+	status="Approved",
+	name="HR-EXP-1",
+	owner=OWNER,
+	saved=None,
+	was=None,
+	creation="2026-11-03 10:00:00",
+	saved_more=None,
+):
+	"""Each line is (expense_type, receipt_url or None[, [more receipt urls]]). `saved`
+	is the stored copy's receipts by row name; None means a claim being made.
+	`saved_more` is the stored copy's extra receipts by row name."""
 	rows = [
-		SimpleNamespace(name=f"r{i}", idx=i + 1, expense_type=t, receipt=r) for i, (t, r) in enumerate(lines)
+		SimpleNamespace(
+			name=f"r{i}",
+			idx=i + 1,
+			expense_type=line[0],
+			receipt=line[1],
+			more_receipts="\n".join(line[2]) if len(line) > 2 else None,
+		)
+		for i, line in enumerate(lines)
 	]
 	before = (
 		SimpleNamespace(
-			expenses=[SimpleNamespace(name=n, receipt=r) for n, r in saved.items()], approval_status=was
+			expenses=[
+				SimpleNamespace(name=n, receipt=r, more_receipts=(saved_more or {}).get(n))
+				for n, r in saved.items()
+			],
+			approval_status=was,
 		)
 		if saved is not None
 		else None
 	)
 	return SimpleNamespace(
 		name=name,
+		creation=creation,
 		owner=owner,
 		approval_status=status,
 		expenses=rows,
@@ -249,7 +283,22 @@ class TestARequiredTypeNeedsItsReceiptToBeDecided(unittest.TestCase):
 				"attached_to_field": "",
 			}
 		)
-		self.require(_claim(("Parking", None), ("Meal", None)), old)
+		self.require(_claim(("Parking", None), ("Meal", None), creation="2026-10-01 09:00:00"), old)
+
+	def test_a_new_claims_whole_claim_file_does_not_stand_in_for_line_receipts(self):
+		"""3 Nov 2026: a new claim can carry files for the whole claim too. Those are extra
+		papers, not receipts: they must not excuse a line whose type needs its own."""
+		files = FileTable(
+			{
+				"name": "F1",
+				"file_url": "/private/files/itinerary.pdf",
+				"attached_to_doctype": "Expense Claim",
+				"attached_to_name": "HR-EXP-1",
+				"attached_to_field": "",
+			}
+		)
+		with self.assertRaises(_Refused):
+			self.require(_claim(("Parking", None)), files)
 
 	def test_a_claim_level_file_does_not_excuse_a_claim_that_has_line_receipts(self):
 		"""Once a line carries a receipt this is a new-style claim: every required line needs one."""
@@ -375,6 +424,60 @@ class TestEachReceiptIsFiledUnderItsClaim(unittest.TestCase):
 		)
 		self.link(_claim(("Parking", "/private/files/a.pdf"), ("Meal", "/private/files/b.pdf")), files)
 		self.assertEqual([w[0] for w in files.writes], ["F1", "F2"])
+
+
+class TestALineCanCarrySeveralReceipts(unittest.TestCase):
+	"""Owner, 3 Nov 2026: "make that able to attach multiple attachment". A line keeps
+	its first file in `receipt` (so every older reader still works) and the rest in
+	`more_receipts`, one URL per line. Every file is fenced and filed like the first."""
+
+	def test_line_receipts_lists_the_first_then_the_rest(self):
+		env = _env(FileTable())
+		row = SimpleNamespace(receipt="/a.pdf", more_receipts="/b.pdf\n\n /c.pdf \n/a.pdf")
+		self.assertEqual(env["line_receipts"](row), ["/a.pdf", "/b.pdf", "/c.pdf"])
+		self.assertEqual(env["line_receipts"](SimpleNamespace(receipt=None, more_receipts=None)), [])
+
+	def test_someone_elses_file_among_the_extras_is_refused(self):
+		files = FileTable(
+			{"name": "F1", "file_url": "/private/files/a.pdf", "owner": OWNER},
+			{"name": "F2", "file_url": "/private/files/b.pdf", "owner": STRANGER},
+		)
+		with self.assertRaises(_Refused):
+			_method("validate_receipts", _env(files))(
+				_claim(("Parking", "/private/files/a.pdf", ["/private/files/b.pdf"]))
+			)
+
+	def test_the_owners_extra_files_are_accepted(self):
+		files = FileTable(
+			{"name": "F1", "file_url": "/private/files/a.pdf"},
+			{"name": "F2", "file_url": "/private/files/b.pdf"},
+		)
+		_method("validate_receipts", _env(files))(
+			_claim(("Parking", "/private/files/a.pdf", ["/private/files/b.pdf"]))
+		)
+
+	def test_an_extra_file_saved_earlier_is_not_asked_again(self):
+		claim = _claim(
+			("Parking", "/private/files/a.pdf", ["/private/files/gone.pdf"]),
+			saved={"r0": "/private/files/a.pdf"},
+			saved_more={"r0": "/private/files/gone.pdf"},
+		)
+		_method("validate_receipts", _env(FileTable({"name": "F1", "file_url": "/private/files/a.pdf"})))(
+			claim
+		)
+
+	def test_every_file_on_the_line_is_filed_under_the_claim(self):
+		files = FileTable(
+			{"name": "F1", "file_url": "/private/files/a.pdf"},
+			{"name": "F2", "file_url": "/private/files/b.pdf"},
+			{"name": "F3", "file_url": "/private/files/c.pdf"},
+		)
+		env = _env(files)
+		_method("link_receipts", env)(
+			_claim(("Parking", "/private/files/a.pdf", ["/private/files/b.pdf", "/private/files/c.pdf"]))
+		)
+		self.assertEqual([w[0] for w in files.writes], ["F1", "F2", "F3"])
+		self.assertTrue(all(w[1]["attached_to_field"] == "receipt" for w in files.writes))
 
 
 class TestTheControllerRunsTheRules(unittest.TestCase):

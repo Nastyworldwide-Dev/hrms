@@ -73,6 +73,6 @@ test("the claim no longer requires a claim-level attachment", () => {
 	assert.doesNotMatch(src, /receiptRequired/)
 })
 
-test("a new claim has no claim-level file row; an existing one keeps its files listed", () => {
-	assert.match(src, /:showAttachmentView="Boolean\(props\.id\)"/)
+test("a claim, new or saved, takes files for the whole claim (owner, 3 Nov 2026)", () => {
+	assert.match(src, /:showAttachmentView="true"/)
 })

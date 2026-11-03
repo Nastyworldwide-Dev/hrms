@@ -34,7 +34,7 @@
 					</span>
 				</div>
 				<!-- the line's own receipt, to open from here (owner, 20 Oct 2026) -->
-				<ReceiptRow :url="item.receipt" read-only />
+				<ReceiptRow :url="item.receipt" :more="item.more_receipts" read-only />
 			</div>
 		</div>
 	</div>

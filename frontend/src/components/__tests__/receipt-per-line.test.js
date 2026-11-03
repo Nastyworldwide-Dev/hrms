@@ -26,7 +26,9 @@ test("ReceiptRow uploads the picked file at once, with no parent, and emits its 
 	const { script } = row()
 	assert.match(script, /import \{ FileAttachment \} from "@\/composables"/)
 	assert.match(script, /new FileAttachment\(\w+\)\.upload\(null, null, ""\)/)
-	assert.match(script, /emit\("update:url", [\w.]*file_url\)/)
+	// several files since 3 Nov 2026: the list goes back as the first file + the rest
+	assert.match(script, /toReceiptList\(list\.join\("\\n"\), uploaded\.file_url\)/)
+	assert.match(script, /emit\("update:url", receipt\)/)
 })
 
 test("ReceiptRow: a failed upload keeps the old value (the upload already toasted)", () => {
@@ -55,7 +57,7 @@ test("ReceiptRow says Uploading while it uploads and tells its parent", () => {
 test("ReceiptRow: the rule is shown on the row before Add, not only refused at it", () => {
 	const { template } = row()
 	assert.match(template, /v-else-if="required"[^>]*>\s*\{\{ __\("Required"\) \}\}/)
-	assert.match(template, /__\("Tap to replace"\)/)
+	assert.match(template, /__\("Add another"\)/, "once a file is added, the row offers another")
 	assert.match(template, /\{\{ __\("Add a file"\) \}\}/)
 	assert.match(template, /:aria-label=/)
 })
@@ -68,7 +70,7 @@ test("ReceiptRow: the input is reachable by keyboard and a screen reader (g-sr, 
 
 test("ReceiptRow: a sent line's receipt opens from a tap, and an empty one shows nothing", () => {
 	const { template } = row()
-	assert.match(template, /v-if="!readOnly \|\| url"/)
+	assert.match(template, /v-if="!readOnly \|\| files\.length"/)
 	assert.match(template, /<GAttachmentRow\b[\s\S]*?@open=/)
 	assert.match(template, /<FilePreviewModal\b/)
 })
@@ -150,9 +152,30 @@ test("the expense form no longer requires a claim-level attachment", () => {
 	assert.doesNotMatch(script, /claimTypesByID/, "the unused import went with it")
 })
 
-test("old claims keep their claim-level files listed; a new claim has no such row", () => {
+test("a claim, new or saved, takes any number of files for the whole claim", () => {
+	// owner, 3 Nov 2026: "make that able to attach multiple attachment". They are extra
+	// papers; the server never lets them stand in for a new line's receipt.
 	const { template } = parts(read("../../views/expense_claim/Form.vue"))
-	assert.match(template, /:showAttachmentView="Boolean\(props\.id\)"/)
+	assert.match(template, /:showAttachmentView="true"/)
+	assert.doesNotMatch(template, /requireAttachment/)
+})
+
+test("a line takes several receipts: the first stays in receipt, the rest in more_receipts", () => {
+	const { template, script } = table()
+	assert.match(template, /<ReceiptRow\b[\s\S]*?v-model:more="expenseItem\.more_receipts"/)
+	assert.match(script, /\.filter\(\(field\) => field\.fieldname !== "more_receipts"\)/)
+	const { template: rowTemplate, script: rowScript } = row()
+	assert.match(rowTemplate, /v-for="file in files"/, "every file on the line is listed")
+	assert.match(rowTemplate, /removable/, "and each can be taken off before sending")
+	assert.match(rowScript, /emit\("update:more", /)
+})
+
+test("the approver sees every receipt on a line", () => {
+	const { template } = parts(read("../ExpenseItems.vue"))
+	assert.match(
+		template,
+		/<ReceiptRow\s+:url="item\.receipt"\s+:more="item\.more_receipts"\s+read-only\s*\/>/
+	)
 })
 
 // The approver sees each line's receipt on the line
@@ -160,5 +183,5 @@ test("old claims keep their claim-level files listed; a new claim has no such ro
 test("the approver's expense list shows each line's receipt, read-only", () => {
 	const { template, script } = parts(read("../ExpenseItems.vue"))
 	assert.match(script, /import ReceiptRow from "@\/components\/ReceiptRow\.vue"/)
-	assert.match(template, /<ReceiptRow\s+:url="item\.receipt"\s+read-only\s*\/>/)
+	assert.match(template, /<ReceiptRow\s+:url="item\.receipt"[\s\S]*?read-only\s*\/>/)
 })

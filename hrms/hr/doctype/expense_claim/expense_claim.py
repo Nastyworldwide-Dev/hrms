@@ -270,13 +270,15 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		stop an approver deciding the claim.
 		"""
 		before = None if self.is_new() else self.get_doc_before_save()
-		saved = {r.name: r.receipt for r in (before.expenses if before else [])}
+		# every file a line held when it was last saved; a line may carry several (3 Nov 2026)
+		saved = {r.name: set(line_receipts(r)) for r in (before.expenses if before else [])}
 		for row in self.get("expenses"):
-			if not row.receipt or saved.get(row.name) == row.receipt:
-				continue
-			if not any(may_use_as_receipt(self, f) for f in receipt_files(row.receipt)):
-				logger.info("[expense_claim] %s row %s: receipt %s refused", self.name, row.idx, row.receipt)
-				frappe.throw(_("Row #{0}: that receipt file was not found.").format(row.idx))
+			for url in line_receipts(row):
+				if url in saved.get(row.name, ()):
+					continue
+				if not any(may_use_as_receipt(self, f) for f in receipt_files(url)):
+					logger.info("[expense_claim] %s row %s: receipt %s refused", self.name, row.idx, url)
+					frappe.throw(_("Row #{0}: that receipt file was not found.").format(row.idx))
 
 	def require_receipts(self):
 		"""Every line whose type needs a receipt carries one before it is approved.
@@ -310,7 +312,13 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		]
 		if not bare:
 			return
-		if not any(row.receipt for row in rows) and has_claim_level_file(self):
+		# only a claim from before line receipts may lean on a file for the whole claim:
+		# a new claim's whole-claim files are extra papers, not a line's receipt (3 Nov 2026)
+		if (
+			made_before_line_receipts(self)
+			and not any(row.receipt for row in rows)
+			and has_claim_level_file(self)
+		):
 			return
 		logger.info(
 			"[expense_claim] %s row %s: no receipt for %s", self.name, bare[0].idx, bare[0].expense_type
@@ -328,35 +336,40 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		the bytes for nothing.
 		"""
 		for row in self.get("expenses"):
-			if not row.receipt:
-				continue
-			files = receipt_files(row.receipt)
-			if any(
-				f.attached_to_doctype == "Expense Claim" and f.attached_to_name == self.name for f in files
-			):
-				continue
-			loose = next(
-				(
-					f
+			for url in line_receipts(row):
+				files = receipt_files(url)
+				if any(
+					f.attached_to_doctype == "Expense Claim" and f.attached_to_name == self.name
 					for f in files
-					if not f.attached_to_doctype and not f.attached_to_name and may_use_as_receipt(self, f)
-				),
-				None,
-			)
-			if not loose:
-				continue
-			frappe.db.set_value(
-				"File",
-				loose.name,
-				{
-					"attached_to_doctype": "Expense Claim",
-					"attached_to_name": self.name,
-					"attached_to_field": "receipt",
-				},
-			)
-			logger.info(
-				"[expense_claim] %s row %s: receipt %s attached to the claim", self.name, row.idx, loose.name
-			)
+				):
+					continue
+				loose = next(
+					(
+						f
+						for f in files
+						if not f.attached_to_doctype
+						and not f.attached_to_name
+						and may_use_as_receipt(self, f)
+					),
+					None,
+				)
+				if not loose:
+					continue
+				frappe.db.set_value(
+					"File",
+					loose.name,
+					{
+						"attached_to_doctype": "Expense Claim",
+						"attached_to_name": self.name,
+						"attached_to_field": "receipt",
+					},
+				)
+				logger.info(
+					"[expense_claim] %s row %s: receipt %s attached to the claim",
+					self.name,
+					row.idx,
+					loose.name,
+				)
 
 	def set_sanctioned_amount_default(self):
 		"""A NEW line with an amount and no sanctioned amount is sanctioned in full.
@@ -1066,6 +1079,24 @@ def expense_claim_payable_account(company_defaults) -> str | None:
 	expense-claim payable if set, else its ordinary payable (Creditors). Pure."""
 	defaults = company_defaults or {}
 	return defaults.get("default_expense_claim_payable_account") or defaults.get("default_payable_account")
+
+
+#: The day each expense line got its own receipt (alpha.60). A claim made before it
+#: kept its one file on the claim, and that file is still its proof.
+LINE_RECEIPTS_SINCE = "2026-10-20"
+
+
+def made_before_line_receipts(claim) -> bool:
+	"""Filed before lines carried receipts, so its whole-claim file is its proof."""
+	created = getattr(claim, "creation", None)
+	return bool(created) and getdate(created) < getdate(LINE_RECEIPTS_SINCE)
+
+
+def line_receipts(row) -> list:
+	"""Every receipt on one expense line: `receipt` first, then `more_receipts` (one URL
+	per line). Blanks and repeats dropped. A line may carry several (owner, 3 Nov 2026)."""
+	urls = [row.receipt or "", *str(getattr(row, "more_receipts", None) or "").splitlines()]
+	return list(dict.fromkeys(u.strip() for u in urls if u and u.strip()))
 
 
 def receipt_files(url: str) -> list:

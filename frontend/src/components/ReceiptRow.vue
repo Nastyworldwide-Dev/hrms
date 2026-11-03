@@ -1,112 +1,142 @@
 <!--
-  The receipt on one expense line (owner, 20 Oct 2026, alpha.60 #2): one row,
-  "Add a file", in the item sheet. It replaces the one file asked for at the
-  bottom of the whole claim.
+  The receipts on one expense line (owner, 20 Oct 2026, alpha.60 #2; several per
+  line since 3 Nov 2026). One "Add a file" row in the item sheet, and every file
+  added listed under it. It replaces the one file asked for at the bottom of the
+  whole claim.
 
-  Shaped on TimeSlipFields' file row (same classes, same a11y), with one
-  difference: this file is sent the moment it is picked, with no parent (the
-  claim does not exist yet), and the line keeps only its URL. The server checks
-  the file is the claim owner's and files it under the claim when the claim is
-  saved (ExpenseClaim.link_receipts).
+  Each file is sent the moment it is picked, with no parent (the claim does not
+  exist yet), and the line keeps only URLs: the first in `receipt` (every older
+  reader keeps working), the rest in `more_receipts`, one per line
+  (utils/lineReceipts.js). The server checks each file is the claim owner's and
+  files it under the claim when the claim is saved (ExpenseClaim.link_receipts).
 
   Props:
-    url       string  — the line's receipt (a file URL), "" for none
+    url       string  — the line's first receipt (a file URL), "" for none
+    more      string  — the line's other receipts, one URL per line
     required  boolean — the line's type needs a receipt: the row says "Required"
-    readOnly  boolean — a sent claim: the receipt is shown as a tap-to-open file
-  Emits: update:url (the uploaded file's URL), update:uploading (true while sending)
+    readOnly  boolean — a sent claim: the receipts are shown as tap-to-open files
+  Emits: update:url, update:more (the line's two fields), update:uploading (true while sending)
 -->
 <template>
-	<div v-if="!readOnly || url" :class="{ 'g-form-group': !readOnly }">
+	<div v-if="!readOnly || files.length" :class="{ 'g-form-group': !readOnly }">
 		<label v-if="!readOnly" class="g-form-row receipt-file">
 			<span class="g-form-row__label">{{ __("Add a file") }}</span>
-			<!-- A picked file: its name, and that a tap replaces it. While it is
-			     sent the row says so; the input's own label says the same to a
-			     screen reader, since an aria-label replaces the row's text. -->
-			<span class="receipt-file__name" :class="{ 'is-empty': !url || uploading }">
+			<!-- While a file is sent the row says so; the input's own label says the
+			     same to a screen reader, since an aria-label replaces the row's text. -->
+			<span class="receipt-file__name" :class="{ 'is-empty': !files.length || uploading }">
 				<template v-if="uploading">{{ __("Uploading…") }}</template>
-				<template v-else-if="url">{{ name }}</template>
+				<template v-else-if="files.length">{{ __("Add another") }}</template>
 				<template v-else-if="required">{{ __("Required") }}</template>
-				<span v-if="url && !uploading" class="receipt-file__hint">{{ __("Tap to replace") }}</span>
 			</span>
-			<Check
-				v-if="url && !uploading"
-				class="g-form-row__switch h-5 w-5 receipt-file__tick"
-				aria-hidden="true"
-			/>
-			<Upload v-else class="g-form-row__switch h-5 w-5 text-ink-600" aria-hidden="true" />
+			<Upload class="g-form-row__switch h-5 w-5 text-ink-600" aria-hidden="true" />
 			<!-- g-sr, not display:none: a keyboard or screen reader reaches the
 			     proof (design review of c9a824c15), as TimeSlipFields does -->
 			<input
 				class="g-sr"
 				type="file"
+				multiple
 				:accept="SLIP_FILE_TYPES"
 				:disabled="uploading"
 				:aria-label="label"
 				@change="pick"
 			/>
 		</label>
-		<!-- A decided claim's receipt is shown, not changed: a tap opens it -->
-		<template v-else>
-			<GAttachmentRow :file="file" @open="preview = true" />
-			<FilePreviewModal :is-open="preview" :file="file" @did-dismiss="preview = false" />
-		</template>
+		<!-- every file on the line: a tap opens it; before sending, each can be taken off -->
+		<GAttachmentRow
+			v-for="file in files"
+			:key="file.file_url"
+			:file="file"
+			:removable="!readOnly"
+			@open="preview = file"
+			@remove="remove(file)"
+		/>
+		<FilePreviewModal
+			:is-open="Boolean(preview)"
+			:file="preview || {}"
+			@did-dismiss="preview = null"
+		/>
 	</div>
 </template>
 
 <script setup>
-import { Check, Upload } from "lucide-vue-next"
+import { Upload } from "lucide-vue-next"
 import { computed, inject, onBeforeUnmount, ref } from "vue"
 
 import FilePreviewModal from "@/components/FilePreviewModal.vue"
 import GAttachmentRow from "@/components/glass/GAttachmentRow.vue"
 import { FileAttachment } from "@/composables"
+import { fromReceiptList, toReceiptList } from "@/utils/lineReceipts"
 import { receiptName } from "@/utils/receiptName"
 // the types the server's upload takes (hrms.api.upload_base64_file): the same list a time slip offers
 import { SLIP_FILE_TYPES } from "@/utils/timeSlip"
 
 const props = defineProps({
 	url: { type: String, default: "" },
+	more: { type: String, default: "" },
 	required: { type: Boolean, default: false },
 	readOnly: { type: Boolean, default: false },
 })
-const emit = defineEmits(["update:url", "update:uploading"])
+const emit = defineEmits(["update:url", "update:more", "update:uploading"])
 
 const __ = inject("$translate")
 const uploading = ref(false)
-const preview = ref(false)
+const preview = ref(null)
 // the sheet can close mid-upload; a late answer must not land in the next item
 let alive = true
 onBeforeUnmount(() => (alive = false))
 
-const name = computed(() => receiptName(props.url))
-// the shape GAttachmentRow and FilePreviewModal read; one object, not one per render
-const file = computed(() => ({ file_name: name.value, file_url: props.url }))
+const urls = computed(() => toReceiptList(props.url, props.more))
+// the shape GAttachmentRow and FilePreviewModal read
+const files = computed(() =>
+	urls.value.map((url) => ({ file_name: receiptName(url), file_url: url }))
+)
 const label = computed(() => {
 	if (uploading.value) return __("Add a file, uploading")
-	if (props.url) return __("Add a file, {0}. Tap to replace", [name.value])
+	if (files.value.length) return __("Add a file, {0} added. Add another", [files.value.length])
 	return props.required ? __("Add a file, required") : __("Add a file")
 })
 
+function save(list) {
+	const { receipt, more_receipts } = fromReceiptList(list)
+	emit("update:url", receipt)
+	emit("update:more", more_receipts)
+}
+
 async function pick(event) {
 	const input = event.target
-	const picked = input.files?.[0]
-	if (!picked) return
+	const picked = [...(input.files || [])]
+	if (!picked.length) return
 	uploading.value = true
 	emit("update:uploading", true)
+	let list = urls.value
 	try {
-		const uploaded = await new FileAttachment(picked).upload(null, null, "")
-		if (!alive) return
-		console.info("[ReceiptRow] receipt uploaded", uploaded.file_name)
-		emit("update:url", uploaded.file_url)
-	} catch (error) {
-		// FileAttachment already told the person why; the old receipt stays
-		console.warn("[ReceiptRow] receipt upload failed; keeping the old file", error?.exc_type || "")
+		// one at a time, in the order picked: each upload already toasts its own failure
+		for (const file of picked) {
+			try {
+				const uploaded = await new FileAttachment(file).upload(null, null, "")
+				if (!alive) return
+				list = toReceiptList(list.join("\n"), uploaded.file_url)
+			} catch (error) {
+				// FileAttachment already told the person why; the files so far stay
+				console.warn(
+					"[ReceiptRow] one receipt failed to upload; keeping the others",
+					error?.exc_type || ""
+				)
+			}
+		}
+		console.info("[ReceiptRow] receipts on the line:", list.length)
+		save(list)
 	} finally {
 		// the same file can be picked again after a failure
 		input.value = ""
 		if (alive) uploading.value = false
 		emit("update:uploading", false)
 	}
+}
+
+function remove(file) {
+	console.info("[ReceiptRow] receipt taken off the line", file.file_name)
+	save(urls.value.filter((url) => url !== file.file_url))
 }
 </script>
 
@@ -129,16 +159,6 @@ async function pick(event) {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	color: var(--g-ink);
-}
-/* name above, the hint under it: the row grows rather than truncating the hint */
-.receipt-file__hint {
-	display: block;
-	white-space: normal;
-	font-size: var(--g-type-caption-size);
-	color: var(--g-ink2);
-}
-.receipt-file__tick {
-	color: var(--g-success-ink);
 }
 .receipt-file__name.is-empty {
 	color: var(--g-ink2);

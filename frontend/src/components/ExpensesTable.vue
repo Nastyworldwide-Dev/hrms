@@ -69,6 +69,7 @@
 							<ReceiptRow
 								v-if="segment.kind === 'receipt'"
 								v-model:url="expenseItem.receipt"
+								v-model:more="expenseItem.more_receipts"
 								v-model:uploading="receiptUploading"
 								:required="lineNeedsReceipt"
 								:readOnly="isReadOnly"
@@ -320,6 +321,7 @@ const expenseFields = computed(() =>
 			.filter((field) => field.fieldname !== "project")
 			// the receipt has its own row (ReceiptRow), which uploads at once
 			.filter((field) => field.fieldname !== "receipt")
+			.filter((field) => field.fieldname !== "more_receipts")
 			.map((field) =>
 				field.fieldname === "expense_type"
 					? { ...field, documentList: expenseTypeOptions.value }
