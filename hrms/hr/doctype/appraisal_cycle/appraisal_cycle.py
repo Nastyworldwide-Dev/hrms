@@ -226,8 +226,11 @@ class AppraisalCycle(Document):
 				_("Please select employees to create appraisals for"), title=_("No Employees Selected")
 			)
 
-		if not all(appraisee.appraisal_template for appraisee in self.appraisees):
-			self.show_missing_template_message(raise_exception=True)
+		# A template is optional (owner, 3 Nov 2026): an employee without one still gets an
+		# appraisal, its goals left empty for the appraiser to fill in by hand.
+		missing = [row.employee for row in self.appraisees if not row.appraisal_template]
+		if missing:
+			logger.info("[appraisal_cycle] %s: %d appraisee(s) with no template", self.name, len(missing))
 
 		if len(self.appraisees) > 30:
 			frappe.enqueue(

@@ -1,6 +1,8 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import logging
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -9,6 +11,8 @@ from frappe.utils import flt, get_link_to_form
 from hrms.hr.doctype.appraisal_cycle.appraisal_cycle import validate_active_appraisal_cycle
 from hrms.hr.utils import validate_active_employee
 from hrms.mixins.appraisal import AppraisalMixin
+
+logger = logging.getLogger(__name__)
 
 
 class EmployeePerformanceFeedback(Document, AppraisalMixin):
@@ -66,6 +70,11 @@ class EmployeePerformanceFeedback(Document, AppraisalMixin):
 			return
 
 		template = frappe.db.get_value("Appraisal", self.appraisal, "appraisal_template")
+		if not template:
+			# a template is optional (owner, 3 Nov 2026): no template, no preset criteria
+			logger.info("[feedback] %s has no appraisal template: no criteria preset", self.appraisal)
+			self.set("feedback_ratings", [])
+			return
 		template = frappe.get_doc("Appraisal Template", template)
 
 		self.set("feedback_ratings", [])
