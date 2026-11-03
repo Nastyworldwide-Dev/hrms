@@ -1,12 +1,11 @@
 # HANDOFF
-prompt:   expense claim: multiple attachments, per line and for the whole claim (owner, 3 Nov 2026)
+prompt:   appraisal template not mandatory, on Appraisal and Appraisal Cycle (owner, 3 Nov 2026)
 status:   done
-commit:   alpha.80 on nz-glass (ef28d2759)
-files:    frontend/src/components/ReceiptRow.vue
-frontend/src/utils/lineReceipts.js
-frontend/src/views/expense_claim/Form.vue
-hrms/hr/doctype/expense_claim/expense_claim.py
-hrms/hr/doctype/expense_claim_detail/expense_claim_detail.json
-verify:   deploy WITH migrate; new claim -> line: add 2 files -> whole claim: add 1 -> send -> approver opens all 3
-flags:    not tried on a real site; alpha.80 includes alpha.79 (second login email, laptop sidebar)
-next:     Approva nightly login disable: owner fixing in the Approva repo
+commit:   alpha.81 on nz-glass (d3c0099e6)
+files:    hrms/hr/doctype/appraisal/appraisal.json
+hrms/hr/doctype/appraisal_cycle/appraisal_cycle.py
+hrms/hr/doctype/employee_performance_feedback/employee_performance_feedback.py
+hrms/tests/test_appraisal_template_is_optional.py
+verify:   deploy WITH migrate; Desk -> Ilhan's appraisal -> clear template -> Save; cycle -> Create Appraisals with one employee lacking a template
+flags:    bench appraisal suites not run here (no local site with hrms); empty-template appraisals start with no goals
+next:     calendar day sheet (mockup-calendar-day-sheet-v2.html) waits on "build it"

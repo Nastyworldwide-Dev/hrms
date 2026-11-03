@@ -10,6 +10,17 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.81] — Template Optional — 2026-11-03
+
+### Changed
+- **An appraisal can be made without an Appraisal Template.** In Desk,
+  the Appraisal form no longer marks the template required, and an
+  Appraisal Cycle creates appraisals for employees who have no template
+  instead of refusing the whole batch. Those appraisals start with no
+  goals, to be filled in by hand. A template, when chosen, still fills
+  them in as before. Feedback on an appraisal with no template opens
+  with no preset criteria. **Needs migrate** (the form's field changes).
+
 ## [2.0.0-alpha.80] — Every Receipt — 2026-11-03
 
 ### Added

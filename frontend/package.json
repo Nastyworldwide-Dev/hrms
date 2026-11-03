@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.80",
-	"releaseName": "Every Receipt",
+	"version": "2.0.0-alpha.81",
+	"releaseName": "Template Optional",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
