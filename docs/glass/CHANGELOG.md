@@ -10,6 +10,21 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.80] — Every Receipt — 2026-11-03
+
+### Added
+- **An expense line takes several files.** In the item sheet, "Add a
+  file" can be used again ("Add another"), or several files picked at
+  once; each is listed, and any can be removed before sending. The
+  approver sees every file under the line. The line's first file is its
+  receipt as before, so "Receipt Required" works unchanged.
+- **Files for the whole claim, on a new claim too.** The "Add a file"
+  row at the end of the claim was shown only once the claim was saved;
+  it is there from the start now, for any number of files (an
+  itinerary, a trip approval). They are extra papers: on a new claim
+  they never count as a line's receipt. **Needs migrate** (one new field
+  on each expense line).
+
 ## [2.0.0-alpha.79] — Two Doors In — 2026-11-03
 
 ### Added
