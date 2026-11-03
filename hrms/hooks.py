@@ -130,6 +130,8 @@ after_migrate = [
 	# not the rows loses the field for good. Re-asserted on every migrate; writes
 	# nothing when the rows are already there. See hrms/utils/permlevel_guard.py.
 	"hrms.utils.permlevel_guard.after_migrate",
+	# HR keeps read/write on Employee.ic_number (permlevel 2) through any permission reset
+	"hrms.utils.employee_ic.after_migrate",
 	# HR User holds read+select on Holiday List and Holiday List Assignment. The
 	# Holiday List grant is a Custom DocPerm row (not our JSON), so a clone or a
 	# "Restore Original Permissions" drops it for good; re-asserted every
@@ -405,6 +407,8 @@ doc_events = {
 	},
 	"Loan": {"validate": "hrms.hr.utils.validate_loan_repay_from_salary"},
 	"Employee": {
+		# the reader's own IC, and only their own (hrms.utils.employee_ic)
+		"onload": "hrms.utils.employee_ic.share_own_ic",
 		"validate": [
 			# First on purpose: a mirrored row must be rejected before any other
 			# validate handler runs side effects (single-writer, see write_block).

@@ -52,6 +52,13 @@ logger = logging.getLogger(__name__)
 GUARDED_DOCTYPES = ("Employee", "Employee Checkin", "Leave Type", "Shift Type")
 
 
+#: Levels another module grants on its own terms, which this guard must leave alone.
+#: Employee level 2 is the IC number (hrms.utils.employee_ic): HR User and HR Manager
+#: only. This guard gives every restricted level to all of HR_ROLES, System Manager
+#: included, which would hand a technical admin everyone's IC (3 Nov 2026).
+OWNED_ELSEWHERE = frozenset({("Employee", 2)})
+
+
 def guarded_only(needed) -> set:
 	"""Drop anything outside GUARDED_DOCTYPES. Pure."""
 	return {(doctype, level) for doctype, level in needed if doctype in GUARDED_DOCTYPES}
@@ -164,7 +171,7 @@ def _needed_permlevels(frappe) -> set:
 			level = int(field.permlevel or 0)
 			if level > 0:
 				needed.add((doctype, level))
-	return guarded_only(needed)
+	return guarded_only(needed) - OWNED_ELSEWHERE
 
 
 def _permission_source(frappe, doctype: str) -> tuple:

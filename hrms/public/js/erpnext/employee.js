@@ -3,6 +3,13 @@
 
 frappe.ui.form.on("Employee", {
 	refresh: function (frm) {
+		// IC number (3 Nov 2026): HR sees the real field; a person opening their OWN
+		// profile gets it from the server's onload, read-only, and nobody else gets it.
+		const ownIc = frm.doc.__onload && frm.doc.__onload.own_ic_number;
+		if (ownIc && !frm.get_perm(2, "read")) {
+			frm.set_intro("");
+			frm.dashboard.set_headline(__("Your IC number: {0}", [frappe.utils.escape_html(ownIc)]));
+		}
 		frm.set_query("payroll_cost_center", function () {
 			return {
 				filters: {

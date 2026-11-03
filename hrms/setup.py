@@ -185,6 +185,7 @@ def get_custom_fields():
 	"""HR specific custom fields that need to be added to the masters in ERPNext"""
 	from hrms.sync.runner import get_provenance_custom_fields
 	from hrms.utils.additional_login import get_additional_login_fields
+	from hrms.utils.employee_ic import get_ic_fields
 	from hrms.utils.extension_custom_fields import get_extension_custom_fields
 
 	fields = {
@@ -503,7 +504,9 @@ def get_custom_fields():
 				"label": _("Cost Tag/Center Allocation"),
 				"options": "Employee Interco Allocation",
 				"insert_after": "interco_allocation_section",
-				"description": _("Percentage of work per Cost Tag/Center (Cost Center) for each Year/Month; each month must total 100%"),
+				"description": _(
+					"Percentage of work per Cost Tag/Center (Cost Center) for each Year/Month; each month must total 100%"
+				),
 			},
 			{
 				"collapsible": 1,
@@ -655,7 +658,9 @@ def get_custom_fields():
 				"fieldname": "approval_reminder_after_days",
 				"fieldtype": "Int",
 				"label": _("Remind the approver after (working days)"),
-				"description": _("Then every working day until they decide. Only the first approver is reminded."),
+				"description": _(
+					"Then every working day until they decide. Only the first approver is reminded."
+				),
 				"insert_after": "approval_levels",
 			},
 			# Unused since 27 Oct 2026 (the backup is never asked). Hidden, not dropped: the
@@ -685,6 +690,10 @@ def get_custom_fields():
 	# a second login for one Employee (2 Nov 2026), same install-path reason
 	for doctype, login_fields in get_additional_login_fields().items():
 		fields.setdefault(doctype, []).extend(login_fields)
+
+	# the IC number (3 Nov 2026): HR and the employee themselves only
+	for doctype, ic_fields in get_ic_fields().items():
+		fields.setdefault(doctype, []).extend(ic_fields)
 
 	return fields
 
