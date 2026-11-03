@@ -10,6 +10,24 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.79] — Two Doors In — 2026-11-03
+
+### Added
+- **One employee can sign in with a second email.** HR sets
+  **Additional Login Email** on the Employee (next to User ID). Either
+  email opens Nadi with that same record — the same check-ins, leave,
+  overtime and requests — and each works on its own. If the record is
+  not Active, both are blocked. Only HR can set it, and an email another
+  employee already uses is refused. The ERP sync never overwrites it.
+  Notifications still go to the User ID email. **Needs migrate** (adds
+  the field).
+
+### Fixed
+- **A laptop has everything the phone's More screen has.** The sidebar
+  was missing Organizational Chart, TruTrip, Approvals (with its count),
+  Roster and Manpower requests. Both now read one list, each row shown
+  to the same people as on the phone.
+
 ## [2.0.0-alpha.78] — JD Fills Itself — 2026-10-29
 
 ### Added
