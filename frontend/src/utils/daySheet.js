@@ -12,15 +12,27 @@ const OFF = new Set(["On Leave", "Holiday"])
 //: Attendance statuses that mean the person worked (fully or partly).
 const WORKED = new Set(["Present", "Half Day", "Work From Home"])
 
+//: What kind of day it is, whatever attendance says (owner, 3 Nov 2026): the server
+//: sends off_kind ("weekly_off" | "holiday") and the approved leave_type. A rest day
+//: wins over leave around it; a weekend inside leave is not counted as leave.
+function dayOff(day) {
+	if (day.off_kind === "holiday") return "holiday"
+	if (day.off_kind === "weekly_off" || day.status === "Holiday") return "rest"
+	if (day.leave_type || day.status === "On Leave") return "leave"
+	return ""
+}
+
 export function dayAction(day, today) {
 	const past = day.date < today
+	const off = dayOff(day)
 	const taps = day.punches || []
 	const lastTap = taps.at(-1)
 	const loneIn = taps.length > 0 && lastTap?.log_type === "IN"
 	console.info("[daySheet] action for", day.date, day.status, day.claim?.status)
 
-	// A future work day: the only thing to do is ask for it off (§4 row 13).
-	if (day.date > today && !OFF.has(day.status)) {
+	// A future work day: the only thing to do is ask for it off (§4 row 13). A rest
+	// day, a holiday or a day already on leave is not one (owner, 3 Nov 2026).
+	if (day.date > today && !OFF.has(day.status) && !off) {
 		return { kind: "leave", label: "Ask for this day off" }
 	}
 	// Today (and future days off): nothing is settled yet, so nothing is "wrong".
@@ -56,16 +68,39 @@ function claimAction(day) {
 //: One word for the heading: "Wed 16 Sep · Worked" (§4 rule 1). Empty when
 //: the day has nothing recorded, rather than a guess.
 export function dayStatusWord(day, today) {
-	console.info("[daySheet] status word for", day.date, day.status)
-	if (day.status === "On Leave") return "Leave"
-	if (day.status === "Holiday") return "Rest day"
+	console.info(
+		"[daySheet] status word for",
+		day.date,
+		day.status,
+		day.off_kind || "",
+		day.leave_type || ""
+	)
+	const off = dayOff(day)
+	if (off === "holiday") return "Public holiday"
+	if (off === "rest") return "Rest day"
+	// the leave's own name ("Annual Leave"), or "Leave" when none is on record
+	if (off === "leave") return day.leave_type || "Leave"
 	if (day.status === "Absent") return "Absent"
 	if (WORKED.has(day.status)) return "Worked"
 	if (day.date > today) return "Coming up"
 	// "In progress" only while a check-in is still open: a date holding only
 	// last night's check-out is not a day being worked (owner, 26 Sep 2026).
-	if (day.date === today) return (day.punches || []).at(-1)?.log_type === "IN" ? "In progress" : "Today"
+	if (day.date === today)
+		return (day.punches || []).at(-1)?.log_type === "IN" ? "In progress" : "Today"
 	return ""
+}
+
+//: The one line under the shift when the day has no taps (owner, 3 Nov 2026): what
+//: the day is, never "You didn't check in this day." before it has come. "" when the
+//: day has taps, which the sheet lists instead.
+export function dayLine(day, today) {
+	if ((day.punches || []).length) return ""
+	const off = dayOff(day)
+	if (off === "holiday") return day.holiday_name || "Public holiday"
+	if (off === "rest") return "Weekly off"
+	if (off === "leave") return day.leave_type || "Leave"
+	if (day.date > today) return "Working day"
+	return "You didn't check in this day."
 }
 
 //: "8h 02m", never "8.03 h": people read time in hours and minutes (D11).

@@ -46,6 +46,14 @@ class TestDeriveMemberStatus(unittest.TestCase):
 	def test_holiday_without_punches_is_off(self):
 		self.assertEqual(status(is_holiday=True), "Off")
 
+	def test_a_rest_day_inside_leave_is_off_not_leave(self):
+		# owner, 3 Nov 2026: a weekend inside someone's leave listed them "On leave" while
+		# the rest of the team read "Off". The rest day is the same for everyone.
+		self.assertEqual(status(is_holiday=True, on_leave={"leave_type": "Annual Leave"}), "Off")
+
+	def test_punches_on_a_rest_day_still_mean_present(self):
+		self.assertEqual(status(is_holiday=True, has_checkin=True), "Present")
+
 	def test_future_day_is_scheduled(self):
 		self.assertEqual(status(day=date(2026, 8, 13)), "Scheduled")
 

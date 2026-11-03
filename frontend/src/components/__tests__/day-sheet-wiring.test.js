@@ -8,6 +8,8 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
 const sheet = readFileSync(fileURLToPath(new URL("../DaySheet.vue", import.meta.url)), "utf8")
+const template = sheet.slice(0, sheet.indexOf("<script"))
+const script = sheet.slice(sheet.indexOf("<script"))
 
 test("the heading is the date plus the day's status word, on one line", () => {
 	assert.match(sheet, /dayStatusWord\(/)
@@ -32,4 +34,20 @@ test("the leave form starts on the day the sheet sent (?date=)", () => {
 	assert.match(form, /dateFromRoute\(route\.query\)/)
 	assert.match(form, /props\.id \? null : dateFromRoute/, "an existing request keeps its dates")
 	assert.match(form, /from_date: startDay, to_date: startDay/)
+})
+
+// Owner, 3 Nov 2026: a coming Saturday, a holiday and a leave day said "You didn't
+// check in this day."; the row now says what the day is (utils/daySheet.dayLine).
+test("the no-taps row says what the day is, through dayLine", () => {
+	assert.match(script, /import \{[^}]*\bdayLine\b[^}]*\} from "@\/utils\/daySheet"/)
+	assert.match(template, /<GListRow :label="__\(noTapsLine\)" :tappable="false" wrap \/>/)
+	assert.doesNotMatch(
+		template,
+		/__\('You didn\\'t check in this day\.'\)/,
+		"no fixed wording left"
+	)
+})
+
+test("the shift header steps aside on a day off", () => {
+	assert.match(script, /if \(day\.off_kind\) return ""/)
 })

@@ -80,7 +80,7 @@ test("a row that IS a sentence (an empty-state line) opts out with `wrap`: it is
 	assert.match(row, /'whitespace-normal': wrap/)
 	for (const [file, sentence] of [
 		["../../views/Approvals.vue", "Nothing is waiting on you."],
-		["../DaySheet.vue", "You didn\\'t check in this day."],
+		["../DaySheet.vue", ':label="__(noTapsLine)"'],
 		["../HolidayList.vue", "No public holidays ahead are listed yet."],
 		["../WhoToAsk.vue", ':label="NO_MANAGER"'],
 		["../WhoToAsk.vue", ':label="NO_HR"'],

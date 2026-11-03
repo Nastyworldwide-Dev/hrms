@@ -24,7 +24,7 @@ import logging
 from datetime import timedelta
 
 import frappe
-from frappe.utils import add_days, date_diff, flt, getdate
+from frappe.utils import add_days, date_diff, flt, getdate, strip_html
 
 from hrms.utils.timezone import employee_now
 from hrms.utils.worked_days import punch_days
@@ -583,6 +583,54 @@ def _day_shift(employee: str, day, attendance) -> str | None:
 	return default_shift_on(employee, day)
 
 
+def _holiday_list(employee: str):
+	"""The employee's holiday list, or None. One place, so a test can stand in for it."""
+	from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
+
+	return get_holiday_list_for_employee(employee, raise_exception=False)
+
+
+def _day_off(employee: str, day) -> tuple[str | None, str | None]:
+	"""("holiday", its name) for a public holiday, ("weekly_off", None) for a weekly
+	off day, else (None, None). From the employee's own holiday list, the source the
+	grid already colours these days from (owner, 3 Nov 2026: a coming Saturday read
+	"You didn't check in this day." and offered leave)."""
+	holiday_list = _holiday_list(employee) if employee else None
+	if not holiday_list:
+		return None, None
+	rows = frappe.get_all(
+		"Holiday",
+		filters={"parent": holiday_list, "holiday_date": day},
+		fields=["description", "weekly_off"],
+		limit_page_length=1,
+	)
+	if not rows:
+		return None, None
+	if rows[0].weekly_off:
+		return "weekly_off", None
+	# the description is HTML-capable in Desk; the sheet shows it as plain text
+	name = strip_html(rows[0].description or "").strip()
+	return "holiday", name or None
+
+
+def _approved_leave_type(employee: str, day) -> str | None:
+	"""The approved leave covering the day, read before attendance is marked."""
+	rows = frappe.get_all(
+		"Leave Application",
+		filters={
+			"employee": employee,
+			"docstatus": 1,
+			"status": "Approved",
+			"from_date": ("<=", day),
+			"to_date": (">=", day),
+		},
+		fields=["leave_type", "half_day", "half_day_date"],
+		limit_page_length=1,
+		ignore_permissions=True,
+	)
+	return rows[0].leave_type if rows else None
+
+
 def _my_day(employee: str, day) -> dict:
 	"""Everything about the caller's own day."""
 	attendance = frappe.db.get_value(
@@ -599,10 +647,20 @@ def _my_day(employee: str, day) -> dict:
 		if start and end:
 			window = {"shift": shift, "start": str(start), "end": str(end)}
 
+	off_kind, holiday_name = _day_off(employee, day)
+	leave_type = attendance.leave_type if attendance and attendance.leave_type else None
+	if not leave_type and not off_kind:
+		leave_type = _approved_leave_type(employee, day)
+	logger.info("[calendar] day %s off=%s leave=%s", day, off_kind, leave_type)
+
 	return {
 		"date": str(day),
 		"status": attendance.status if attendance else None,
-		"leave_type": attendance.leave_type if attendance else None,
+		"leave_type": leave_type,
+		# What kind of day it is, whatever attendance says (owner, 3 Nov 2026):
+		# "holiday" (named) or "weekly_off". A rest day wins over leave around it.
+		"off_kind": off_kind,
+		"holiday_name": holiday_name,
 		"worked_hours": flt(attendance.working_hours) if attendance else 0.0,
 		"ot_hours": flt(attendance.ot_hours) if attendance else 0.0,
 		"shift": window,

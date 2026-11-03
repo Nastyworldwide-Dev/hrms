@@ -4,7 +4,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { dayAction, dayStatusWord, hoursAsTime, tapWord } from "../daySheet.js"
+import { dayAction, dayLine, dayStatusWord, hoursAsTime, tapWord } from "../daySheet.js"
 
 const TODAY = "2026-09-23"
 const day = (over = {}) => ({
@@ -164,4 +164,80 @@ test("no screen cuts a server time at five characters", async () => {
 		assert.doesNotMatch(source, /\.slice\(0, 5\)/, `${file} slices a time`)
 		assert.match(source, /clockTime\(/, `${file} reads times by value`)
 	}
+})
+
+// ------------------------------------------------ what kind of day (owner, 3 Nov 2026)
+// The sheet read attendance only, so a coming Saturday, a public holiday and a day
+// of approved leave not yet reached all said "Coming up · You didn't check in this
+// day." and offered "Ask for this day off"; a leave day said only "Leave". The server
+// now sends off_kind ("weekly_off" | "holiday"), holiday_name and leave_type.
+
+const FUTURE = "2026-09-30"
+
+test("a weekly off day is a rest day and asks nothing", () => {
+	const sat = day({ date: FUTURE, status: null, punches: [], off_kind: "weekly_off" })
+	assert.equal(dayStatusWord(sat, TODAY), "Rest day")
+	assert.equal(dayAction(sat, TODAY).kind, "none")
+})
+
+test("a public holiday says so and asks nothing", () => {
+	const ph = day({
+		date: FUTURE,
+		status: null,
+		punches: [],
+		off_kind: "holiday",
+		holiday_name: "Deepavali",
+	})
+	assert.equal(dayStatusWord(ph, TODAY), "Public holiday")
+	assert.equal(dayAction(ph, TODAY).kind, "none")
+})
+
+test("a leave day names its leave, coming or marked", () => {
+	const coming = day({ date: FUTURE, status: null, punches: [], leave_type: "Annual Leave" })
+	assert.equal(dayStatusWord(coming, TODAY), "Annual Leave")
+	assert.equal(dayAction(coming, TODAY).kind, "none", "no leave button on a day already on leave")
+	const marked = day({ status: "On Leave", punches: [], leave_type: "Medical Leave" })
+	assert.equal(dayStatusWord(marked, TODAY), "Medical Leave")
+})
+
+test("a rest day inside leave is a rest day, not leave", () => {
+	const sun = day({
+		date: FUTURE,
+		status: null,
+		punches: [],
+		off_kind: "weekly_off",
+		leave_type: "Annual Leave",
+	})
+	assert.equal(dayStatusWord(sun, TODAY), "Rest day")
+})
+
+test("a leave day with no type on record still says Leave", () => {
+	assert.equal(dayStatusWord(day({ status: "On Leave", punches: [] }), TODAY), "Leave")
+})
+
+test("the day's one line says what the day is, never 'didn't check in' before it comes", () => {
+	assert.equal(
+		dayLine(day({ date: FUTURE, status: null, punches: [], off_kind: "weekly_off" }), TODAY),
+		"Weekly off"
+	)
+	assert.equal(
+		dayLine(
+			day({
+				date: FUTURE,
+				status: null,
+				punches: [],
+				off_kind: "holiday",
+				holiday_name: "Deepavali",
+			}),
+			TODAY
+		),
+		"Deepavali"
+	)
+	assert.equal(
+		dayLine(day({ date: FUTURE, status: null, punches: [], leave_type: "Annual Leave" }), TODAY),
+		"Annual Leave"
+	)
+	assert.equal(dayLine(day({ date: FUTURE, status: null, punches: [] }), TODAY), "Working day")
+	assert.equal(dayLine(day({ status: null, punches: [] }), TODAY), "You didn't check in this day.")
+	assert.equal(dayLine(day(), TODAY), "", "a day with taps lists the taps instead")
 })

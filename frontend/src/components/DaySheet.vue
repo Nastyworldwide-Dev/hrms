@@ -52,7 +52,10 @@
 						/>
 					</GListPanel>
 					<GListPanel v-else>
-						<GListRow :label="__('You didn\'t check in this day.')" :tappable="false" wrap />
+						<!-- what the day is (owner, 3 Nov 2026): "Weekly off", the holiday's name,
+						     the leave's name, "Working day" before it comes; only a past
+						     working day with no taps says it was not checked in -->
+						<GListRow :label="__(noTapsLine)" :tappable="false" wrap />
 					</GListPanel>
 					<!-- Said once, under the taps (owner, 26 Sep 2026: "special
 					     wording so it's clear it was cleared out"). -->
@@ -143,7 +146,14 @@ import GSkeleton from "@/components/glass/GSkeleton.vue"
 import ResourceError from "@/components/ResourceError.vue"
 
 import { daySheet } from "@/data/calendar"
-import { dayAction, dayStatusWord, hoursAsTime, tapWord, clockTime } from "@/utils/daySheet"
+import {
+	dayAction,
+	dayLine,
+	dayStatusWord,
+	hoursAsTime,
+	tapWord,
+	clockTime,
+} from "@/utils/daySheet"
 
 const props = defineProps({
 	open: { type: Boolean, default: false },
@@ -197,9 +207,16 @@ const action = computed(() =>
 	me.value ? dayAction(me.value, $dayjs().format("YYYY-MM-DD")) : { kind: "none", note: "" }
 )
 
+//: The one row under the shift when there are no taps (utils/daySheet.dayLine).
+const noTapsLine = computed(() =>
+	me.value ? dayLine(me.value, $dayjs().format("YYYY-MM-DD")) : ""
+)
+
 const shiftLine = computed(() => {
 	const day = me.value
 	if (!day) return ""
+	// a rest day or holiday has no shift to show: the heading already names the day
+	if (day.off_kind) return ""
 	if (day.status === "Holiday") return __("Rest day")
 	if (!day.shift) return __("No shift")
 	return `${day.shift.shift} · ${clockTime(day.shift.start)}–${clockTime(day.shift.end)}`

@@ -5,8 +5,8 @@ see at a glance. Precedence:
 
 1. punches or a present-ish Attendance doc → "Present" (facts beat filings —
    someone who punched in despite approved leave is present)
-2. approved leave overlapping the day → "On Leave"
-3. holiday with no activity → "Off"
+2. holiday or rest day with no activity → "Off" (even inside leave: not counted)
+3. approved leave overlapping the day → "On Leave"
 4. future day → "Scheduled"
 5. past day with nothing at all → "Absent"
 6. today: "Not In Yet" until the shift has ended, then "Absent". No shift (or
@@ -34,10 +34,12 @@ def derive_member_status(
 ) -> str:
 	if has_checkin or attendance_status in PRESENT_ATTENDANCE:
 		return "Present"
-	if on_leave:
-		return "On Leave"
+	# a rest day or holiday is "Off" for everyone, even inside someone's leave (owner,
+	# 3 Nov 2026): it is not counted as leave, and the team list must not say it is
 	if is_holiday:
 		return "Off"
+	if on_leave:
+		return "On Leave"
 	if day > today:
 		return "Scheduled"
 	if day < today:
