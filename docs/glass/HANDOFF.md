@@ -1,11 +1,13 @@
 # HANDOFF
-prompt:   appraisal template not mandatory, on Appraisal and Appraisal Cycle (owner, 3 Nov 2026)
+prompt:   HR as second approver on expense claims; calendar day sheet; IC number (owner, 3-5 Nov 2026)
 status:   done
-commit:   alpha.81 on nz-glass (d3c0099e6)
-files:    hrms/hr/doctype/appraisal/appraisal.json
-hrms/hr/doctype/appraisal_cycle/appraisal_cycle.py
-hrms/hr/doctype/employee_performance_feedback/employee_performance_feedback.py
-hrms/tests/test_appraisal_template_is_optional.py
-verify:   deploy WITH migrate; Desk -> Ilhan's appraisal -> clear template -> Save; cycle -> Create Appraisals with one employee lacking a template
-flags:    bench appraisal suites not run here (no local site with hrms); empty-template appraisals start with no goals
-next:     calendar day sheet (mockup-calendar-day-sheet-v2.html) waits on "build it"
+commit:   alpha.82 on nz-glass (043c9b769, d0737d57e, 08b4dd8c8, 64a7143bb)
+files:    hrms/utils/claim_stages.py
+hrms/api/approval.py
+hrms/api/approvals_list.py
+hrms/hr/doctype/expense_claim/expense_claim.py
+hrms/utils/employee_ic.py
+hrms/api/calendar.py
+verify:   deploy WITH migrate; staff claim -> manager Approve -> "Waiting for HR" -> HR Approve -> paid
+flags:    bench (database) suites not run here; HR's early decision is final, as before
+next:     boss calendar ideas (mockup-calendar-boss-ideas.html) wait on a pick

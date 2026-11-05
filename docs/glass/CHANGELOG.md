@@ -10,6 +10,28 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.82] — HR Signs Off — 2026-11-05
+
+### Changed
+- **HR is the second approver on expense claims.** The manager approves
+  first, as before; their approval now passes the claim to HR instead of
+  finishing it, and the claim reads **Waiting for HR**. Any HR User or HR
+  Manager (inside their company fence) then approves, which is final and
+  pays it out, or rejects it with a reason. HR finds these claims in
+  Approvals and Needs you, and is notified when one arrives. HR can still
+  decide any claim at any time, as before. An employee with nobody above
+  them goes straight to HR. Receipts are still asked at the manager's
+  step. Claims already approved or rejected are unchanged.
+- **A tapped calendar day says what kind of day it is.** A weekend says
+  Rest day, a public holiday shows its name, and neither offers "Ask for
+  this day off"; a leave day names its leave ("Annual Leave"). In a
+  boss's team list, a weekend inside someone's leave reads Off.
+
+### Added
+- **IC Number on the Employee profile in Desk** (Personal Details tab).
+  HR User and HR Manager see and edit everyone's; each employee sees
+  only their own, read-only. **Needs migrate** (this and the claim step).
+
 ## [2.0.0-alpha.81] — Template Optional — 2026-11-03
 
 ### Changed

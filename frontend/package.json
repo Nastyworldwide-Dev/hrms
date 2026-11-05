@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.81",
-	"releaseName": "Template Optional",
+	"version": "2.0.0-alpha.82",
+	"releaseName": "HR Signs Off",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
