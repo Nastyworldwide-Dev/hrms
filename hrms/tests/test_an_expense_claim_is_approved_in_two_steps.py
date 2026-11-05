@@ -22,8 +22,10 @@ class TestWhoDecidesAtEachStep(unittest.TestCase):
 	def test_the_manager_decides_a_new_claim(self):
 		self.assertTrue(cs.may_decide("Draft", on_line=True, is_hr=False))
 
-	def test_hr_cannot_act_before_the_manager(self):
-		self.assertFalse(cs.may_decide("Draft", on_line=False, is_hr=True))
+	def test_hr_may_act_before_the_manager_as_today(self):
+		# owner, 5 Nov 2026: "it will work as today only that now all hr will become second
+		# approver". HR keeps deciding any claim at any time; that decision is final.
+		self.assertTrue(cs.may_decide("Draft", on_line=False, is_hr=True))
 
 	def test_hr_decides_once_the_manager_has_approved(self):
 		self.assertTrue(cs.may_decide("Waiting for HR", on_line=False, is_hr=True))
@@ -47,6 +49,10 @@ class TestWhereADecisionLeadsTheClaim(unittest.TestCase):
 	def test_a_managers_approval_sends_it_to_hr_and_is_not_final(self):
 		self.assertEqual(cs.next_status("Draft", "Approved"), "Waiting for HR")
 		self.assertFalse(cs.is_final("Draft", "Approved"))
+
+	def test_hr_deciding_before_the_manager_is_final(self):
+		self.assertEqual(cs.next_status("Draft", "Approved", by_hr=True), "Approved")
+		self.assertTrue(cs.is_final("Draft", "Approved", by_hr=True))
 
 	def test_a_managers_rejection_ends_it(self):
 		self.assertEqual(cs.next_status("Draft", "Rejected"), "Rejected")

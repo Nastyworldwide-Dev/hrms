@@ -10,9 +10,11 @@
                    manager's approval was before. HR rejects -> Rejected, final.
 
 The owner's words: "hr will work like manager same thing all, just that hr is after
-manager". So HR gets no new screens or rules, only a place in the order:
+manager", then "it will work as today only that now all hr will become second
+approver". So HR gets no new screens or rules, only a place in the order:
 
-  * HR does not see or act on a claim still waiting for its manager;
+  * HR may still decide any claim at any time, as today; deciding one still with its
+    manager is final, and the manager's step is skipped;
   * the manager does not see or act on a claim once it is with HR;
   * an employee with nobody above them goes straight to HR;
   * HR deciding their OWN claim at the HR step is allowed ("any hr including
@@ -50,22 +52,24 @@ def may_decide(status, *, on_line: bool, is_hr: bool) -> bool:
 	"""
 	step = step_of(status)
 	if step == "manager":
-		return on_line
+		# the manager, or HR stepping in as it always could
+		return on_line or is_hr
 	if step == "hr":
 		return is_hr
 	return False
 
 
-def next_status(status, decision) -> str:
-	"""What a decision moves the claim to. Only a manager's approval is not final."""
-	if status == MANAGER_STEP and decision == "Approved":
+def next_status(status, decision, by_hr: bool = False) -> str:
+	"""What a decision moves the claim to. Only the manager's approval is not final;
+	HR stepping in at the manager's step (`by_hr`) decides it outright, as today."""
+	if status == MANAGER_STEP and decision == "Approved" and not by_hr:
 		return HR_STEP
 	return decision
 
 
-def is_final(status, decision) -> bool:
+def is_final(status, decision, by_hr: bool = False) -> bool:
 	"""Does this decision submit the claim (and post it, when approved)?"""
-	return next_status(status, decision) != HR_STEP
+	return next_status(status, decision, by_hr) != HR_STEP
 
 
 def first_status(has_manager: bool) -> str:

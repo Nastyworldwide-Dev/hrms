@@ -558,9 +558,17 @@ def decide(
 		# has to be on the document BEFORE it, or the notice can only say "Rejected" and never why
 		# (flows hunt M1, 5 Oct 2026). It is still recorded as a Comment below, where the sheet reads it.
 		doc.flags.rejection_reason = reason
-	if doctype == claim_stages.DOCTYPE and not claim_stages.is_final(current, status):
+	# HR stepping in on a claim still with its manager decides it outright, as today; someone
+	# on the claim's own line (even one who also holds an HR role) acts as its manager
+	by_hr = (
+		doctype == claim_stages.DOCTYPE
+		and claim_stages.step_of(current) == "manager"
+		and not _on_claim_line(doc)
+		and _is_claim_hr(doc)
+	)
+	if doctype == claim_stages.DOCTYPE and not claim_stages.is_final(current, status, by_hr):
 		# The manager approved: the claim moves on to HR, and nothing is posted yet.
-		doc.set(fieldname, claim_stages.next_status(current, status))
+		doc.set(fieldname, claim_stages.next_status(current, status, by_hr))
 		doc.save()
 		logger.info("[approval] %s approved %s %s; it now waits for HR", frappe.session.user, doctype, name)
 		doc.run_method("notify_hr_step")

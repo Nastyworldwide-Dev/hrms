@@ -85,11 +85,12 @@ class TestTheManagerStep(unittest.TestCase):
 		_decide(doc, MANAGER, "Rejected", on_line=True, is_hr=False, reason="Not a work expense")
 		self.assertEqual((doc.approval_status, doc.docstatus), ("Rejected", 1))
 
-	def test_hr_cannot_act_before_the_manager(self):
+	def test_hr_may_decide_before_the_manager_and_it_is_final(self):
+		# as today (owner, 5 Nov 2026): HR's decision on a claim still with the manager
+		# is final, and the manager's step is skipped
 		doc = _claim("Draft")
-		with self.assertRaises(frappe.PermissionError):
-			_decide(doc, HR, "Approved", on_line=False, is_hr=True)
-		self.assertEqual(doc.writes, [])
+		_decide(doc, HR, "Approved", on_line=False, is_hr=True)
+		self.assertEqual((doc.approval_status, doc.docstatus), ("Approved", 1))
 
 
 class TestTheHRStep(unittest.TestCase):
@@ -129,8 +130,8 @@ class TestTheButtonsFollowTheStep(unittest.TestCase):
 		):
 			return approval.get_decision_actions(doc.doctype, doc.name)["actions"]
 
-	def test_hr_gets_buttons_only_once_the_manager_approved(self):
-		self.assertEqual(self.actions("Draft", on_line=False, is_hr=True), [])
+	def test_hr_gets_buttons_at_both_steps_as_today(self):
+		self.assertEqual(self.actions("Draft", on_line=False, is_hr=True), ["Approved", "Rejected"])
 		self.assertEqual(self.actions("Waiting for HR", on_line=False, is_hr=True), ["Approved", "Rejected"])
 
 	def test_the_manager_loses_the_buttons_once_it_is_with_hr(self):
