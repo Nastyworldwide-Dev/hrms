@@ -153,3 +153,4 @@ hrms.patches.v16_0.backfill_announcement_event_date #2026-10-27 owner: an Event 
 hrms.patches.v16_0.link_cost_allocation_cost_center #2026-10-28 owner: Cost Tag/Center is a Cost Center; old Territory rows take the same-named one, the rest keep working
 hrms.patches.v16_0.add_additional_login_email #2026-11-02 owner: one Employee may have a second login email (HR sets it); either login opens the same record
 hrms.patches.v16_0.add_employee_ic_number #2026-11-03 owner: IC number on Employee; HR sees all, each person only their own
+hrms.patches.v16_0.route_waiting_expense_claims_to_hr #2026-11-05 owner: claims go manager then HR; waiting ones with nobody above move to HR

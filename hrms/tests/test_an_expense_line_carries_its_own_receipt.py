@@ -354,6 +354,14 @@ class TestARequiredTypeNeedsItsReceiptToBeDecided(unittest.TestCase):
 		with self.assertRaises(_Refused):
 			self.require(_claim(("Parking", None), saved={"r0": None}, was="Draft"))
 
+	def test_the_manager_passing_it_to_hr_asks_for_the_receipts(self):
+		"""Two steps (5 Nov 2026): the manager's approval now sets "Waiting for HR", not
+		"Approved". The receipts are still asked at that step, so HR never gets a claim
+		without them."""
+		with self.assertRaises(_Refused):
+			self.require(_claim(("Parking", None), status="Waiting for HR"))
+		self.require(_claim(("Parking", "/private/files/a.pdf"), status="Waiting for HR"))
+
 	def test_a_rejection_needs_no_receipt(self):
 		"""An approver rejects a claim for its missing receipt; that must not be refused."""
 		self.require(_claim(("Parking", None), status="Rejected"))

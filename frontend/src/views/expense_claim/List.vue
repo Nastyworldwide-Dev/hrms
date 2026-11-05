@@ -34,7 +34,7 @@ const FILTER_CONFIG = [
 		fieldname: "approval_status",
 		fieldtype: "Select",
 		label: "Approval Status",
-		options: ["Draft", "Approved", "Rejected"],
+		options: ["Draft", "Waiting for HR", "Approved", "Rejected"],
 	},
 	{
 		fieldname: "status",

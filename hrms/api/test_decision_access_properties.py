@@ -26,7 +26,14 @@ TYPES = [
 	"Replacement Leave Claim",
 	"Compensatory Leave Request",
 ]
-namespace = {"frappe": frappe, "logger": logging.getLogger(__name__)}
+import importlib.util
+
+_cs_spec = importlib.util.spec_from_file_location(
+	"claim_stages", SOURCE.parents[1] / "utils" / "claim_stages.py"
+)
+claim_stages = importlib.util.module_from_spec(_cs_spec)
+_cs_spec.loader.exec_module(claim_stages)
+namespace = {"frappe": frappe, "logger": logging.getLogger(__name__), "claim_stages": claim_stages}
 nodes = []
 for node in ast.parse(SOURCE.read_text()).body:
 	if isinstance(node, ast.Assign) and any(
@@ -47,6 +54,8 @@ for node in ast.parse(SOURCE.read_text()).body:
 		"_request_read_allowed",
 		"_admin_may_read",
 		"get_decision_actions",
+		# expense claims are decided in two steps (5 Nov 2026); its own suite pins the steps
+		"pending_values",
 	}:
 		node.decorator_list = []
 		nodes.append(node)

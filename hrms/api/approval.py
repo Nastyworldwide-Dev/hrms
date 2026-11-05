@@ -17,6 +17,7 @@ from frappe import _
 from frappe.model import get_permitted_fields
 
 from hrms.hr.utils import get_designated_approvers, has_approver_above, is_own_employee
+from hrms.utils import claim_stages
 from hrms.utils.approved_request_guard import (
 	DECISION_FIELD_BY_DOCTYPE,
 	cancel_refusal,
@@ -90,7 +91,9 @@ SELF_APPROVAL_SETTING = {
 }
 
 
-def _is_routed_approver(doc, user: str | None = None, *, system_manager_counts: bool = True) -> bool:
+def _is_routed_approver(
+	doc, user: str | None = None, *, system_manager_counts: bool = True, hr_counts: bool = True
+) -> bool:
 	"""Is the supplied user (by default the session) this request's approver?
 
 	FOUND BY RUNNING AS A REAL USER: a team lead holding only the Employee role
@@ -123,7 +126,8 @@ def _is_routed_approver(doc, user: str | None = None, *, system_manager_counts: 
 	# to include System Manager (14 Sep 2026, Desk cleanup) and a request's other callers read the
 	# request first, so changing the default would change rules nobody has asked to change.
 	hr_roles = {"HR Manager", "HR User"} | ({"System Manager"} if system_manager_counts else set())
-	if hr_roles & set(frappe.get_roles(user)):
+	# hr_counts=False asks for the approval LINE alone (an expense claim's manager step)
+	if hr_counts and hr_roles & set(frappe.get_roles(user)):
 		# HR operators may decide — but a company-fenced one only inside their
 		# fence. company_visible is True for an unfenced operator (no Company
 		# User Permission) and for the request's own companies, so this changes
@@ -293,6 +297,49 @@ DECIDE_THEN_SUBMIT = {
 DECISIONS = ("Approved", "Rejected")
 
 
+def pending_values(doctype: str) -> tuple:
+	"""Every decision-field value meaning "still waiting on someone". One value for
+	every type, two for Expense Claim: its manager, then HR (owner, 5 Nov 2026)."""
+	if doctype == claim_stages.DOCTYPE:
+		return claim_stages.PENDING
+	entry = DECIDE_THEN_SUBMIT.get(doctype)
+	return (entry[1],) if entry else ()
+
+
+def _on_claim_line(doc, user: str | None = None) -> bool:
+	"""The claim's manager or named approver: its approval line, HR left out."""
+	return _is_routed_approver(doc, user, hr_counts=False)
+
+
+def _is_claim_hr(doc, user: str | None = None) -> bool:
+	"""HR User / HR Manager inside the claim's company fence. System Manager alone
+	is not HR here, as for leave and pay (hrms.hr.utils.HR_SEE_ALL_ROLES)."""
+	from hrms.overrides.company_scope import company_visible
+
+	user = frappe.session.user if user is None else user
+	if not {"HR Manager", "HR User"} & set(frappe.get_roles(user)):
+		return False
+	subject = doc.get("employee")
+	company = frappe.db.get_value("Employee", subject, "company") if subject else doc.get("company")
+	return bool(company_visible(company, user))
+
+
+def _claim_step_allows(doc, *, on_line: bool | None = None, is_hr: bool | None = None) -> bool:
+	"""May the caller decide this claim at its current step (claim_stages.may_decide)?"""
+	on_line = _on_claim_line(doc) if on_line is None else on_line
+	is_hr = _is_claim_hr(doc) if is_hr is None else is_hr
+	allowed = claim_stages.may_decide(doc.get("approval_status"), on_line=on_line, is_hr=is_hr)
+	logger.debug(
+		"[approval] claim %s at %s: line=%s hr=%s -> %s",
+		doc.get("name"),
+		doc.get("approval_status"),
+		on_line,
+		is_hr,
+		allowed,
+	)
+	return allowed
+
+
 def decision_field(doctype: str) -> str:
 	"""The decision field for `doctype`, or a hard error.
 
@@ -359,6 +406,13 @@ def _decision_access(doc, status: str = "Approved") -> str | None:
 		return None
 	if not _request_read_allowed(doc):
 		return None
+	if doc.doctype == claim_stages.DOCTYPE and claim_stages.is_pending(doc.get(entry[0])):
+		# Two steps (owner, 5 Nov 2026): manager, then HR. HR acts like the manager,
+		# after the manager, including on their own claim ("any hr including themselve").
+		if not _claim_step_allows(doc):
+			return None
+		if claim_stages.step_of(doc.get(entry[0])) == "hr":
+			return "routed"
 	if is_own_employee(employee):
 		setting = SELF_APPROVAL_SETTING.get(doc.doctype)
 		if not setting:
@@ -486,7 +540,7 @@ def decide(
 	if doc.docstatus == 2:
 		frappe.throw(_("{0} has been cancelled.").format(_(doctype)), frappe.ValidationError)
 
-	if current != DECIDE_THEN_SUBMIT[doctype][1]:
+	if current not in pending_values(doctype):
 		frappe.throw(_("This request is no longer awaiting a decision."), frappe.ValidationError)
 	_check_review_revision(doc, expected_modified, required=True)
 	# After every access and state check, so an unauthorised caller still gets
@@ -495,11 +549,22 @@ def decide(
 	if status == "Rejected" and not reason:
 		frappe.throw(_("Say why this is not approved."), frappe.ValidationError)
 
+	if doctype == claim_stages.DOCTYPE and claim_stages.step_of(current) == "hr":
+		# vouched for by _decision_access above: the HR step, by HR inside the fence.
+		# The claim's own self check (validate_for_self_approval) honours this flag only.
+		doc.flags.hr_step_decision = True
 	if status == "Rejected":
 		# The employee's notice is built inside on_submit, which runs INSIDE doc.submit(): the reason
 		# has to be on the document BEFORE it, or the notice can only say "Rejected" and never why
 		# (flows hunt M1, 5 Oct 2026). It is still recorded as a Comment below, where the sheet reads it.
 		doc.flags.rejection_reason = reason
+	if doctype == claim_stages.DOCTYPE and not claim_stages.is_final(current, status):
+		# The manager approved: the claim moves on to HR, and nothing is posted yet.
+		doc.set(fieldname, claim_stages.next_status(current, status))
+		doc.save()
+		logger.info("[approval] %s approved %s %s; it now waits for HR", frappe.session.user, doctype, name)
+		doc.run_method("notify_hr_step")
+		return _state(doc)
 	doc.set(fieldname, status)
 	# ONE save cycle: validate -> before_submit (mirrored-employee guard) ->
 	# db_update -> on_update -> on_submit (ledger, attendance, notifications).
@@ -802,10 +867,10 @@ def get_decision_actions(doctype: str, name: str) -> dict:
 	if doctype not in DECIDE_THEN_SUBMIT or not frappe.db.exists(doctype, name):
 		return {"actions": [], "modified": None}
 	doc = frappe.get_doc(doctype, name)
-	field, pending = DECIDE_THEN_SUBMIT[doctype]
+	field, _pending = DECIDE_THEN_SUBMIT[doctype]
 	actions = []
 	if doc.docstatus == 0:
-		if doc.get(field) == pending:
+		if doc.get(field) in pending_values(doctype):
 			actions = [status for status in DECISIONS if _decision_access(doc, status)]
 		elif doc.get(field) in DECISIONS and _decision_access(doc, doc.get(field)):
 			actions = ["Submit"]

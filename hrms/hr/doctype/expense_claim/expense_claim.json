@@ -126,7 +126,7 @@
    "fieldtype": "Select",
    "label": "Approval Status",
    "no_copy": 1,
-   "options": "Draft\nApproved\nRejected\nCancelled",
+   "options": "Draft\nWaiting for HR\nApproved\nRejected\nCancelled",
    "permlevel": 1,
    "search_index": 1
   },
@@ -510,7 +510,7 @@
  "idx": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 11:30:00.000000",
+ "modified": "2026-11-05 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Expense Claim",

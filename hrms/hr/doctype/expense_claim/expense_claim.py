@@ -4,7 +4,7 @@
 import logging
 
 import frappe
-from frappe import _
+from frappe import _, bold
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.model.workflow import get_workflow_name
@@ -25,6 +25,7 @@ from erpnext.controllers.accounts_controller import AccountsController
 
 import hrms
 from hrms.hr.utils import (
+	has_approver_above,
 	set_employee_name,
 	share_doc_with_approver,
 	validate_active_employee,
@@ -32,8 +33,25 @@ from hrms.hr.utils import (
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.overrides.employee_company_default import set_company_from_employee
+from hrms.utils import claim_stages
 
 logger = logging.getLogger(__name__)
+
+
+def _claim_hr_users(claim) -> list:
+	"""Enabled HR User / HR Manager logins that can decide `claim` at the HR step: the
+	same test decide() uses (hrms.api.approval._is_claim_hr). Administrator is left
+	out: that login holds every role and is nobody's inbox."""
+	from hrms.api.approval import _is_claim_hr
+
+	users = frappe.get_all(
+		"Has Role",
+		filters={"role": ("in", ["HR User", "HR Manager"]), "parenttype": "User"},
+		pluck="parent",
+		distinct=True,
+	)
+	enabled = set(frappe.get_all("User", filters={"name": ("in", users or [""]), "enabled": 1}, pluck="name"))
+	return sorted(u for u in enabled if u != "Administrator" and _is_claim_hr(claim, u))
 
 
 class InvalidExpenseApproverError(frappe.ValidationError):
@@ -55,8 +73,45 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			frappe.db.get_single_value("HR Settings", "prevent_self_expense_approval"),
 		)
 
+	def before_insert(self):
+		self.start_at_the_right_step()
+
+	def start_at_the_right_step(self):
+		"""A new claim waits for its manager, or straight for HR when nobody is above
+		the employee (owner, 5 Nov 2026). A claim filed already decided, or a site that
+		runs its own Workflow, is left as it is."""
+		if self.approval_status != claim_stages.MANAGER_STEP or get_workflow_name("Expense Claim"):
+			return
+		has_manager = has_approver_above(self.employee, "Expense Claim")
+		self.approval_status = claim_stages.first_status(has_manager)
+		if not has_manager:
+			logger.info(
+				"[expense_claim] %s has nobody above them: the claim goes straight to HR", self.employee
+			)
+
 	def after_insert(self):
-		self.notify_approver()
+		if self.approval_status == claim_stages.HR_STEP:
+			self.notify_hr_step()
+		else:
+			self.notify_approver()
+
+	def notify_hr_step(self):
+		"""Tell every HR person who can now act on this claim (HR User / HR Manager inside
+		its company fence), except the claimant. Returns who was told."""
+		claimant = self._get_employee_user()
+		told = [user for user in _claim_hr_users(self) if user != claimant]
+		for user in told:
+			notification = frappe.new_doc("PWA Notification")
+			notification.message = (
+				f"{bold(self.employee_name)}'s {bold('expense claim')} is waiting for HR: {self.name}"
+			)
+			notification.from_user = claimant
+			notification.to_user = user
+			notification.reference_document_type = self.doctype
+			notification.reference_document_name = self.name
+			notification.insert(ignore_permissions=True)
+		logger.info("[expense_claim] %s waits for HR: %d HR user(s) told", self.name, len(told))
+		return told
 
 	def validate(self):
 		self.set_company()
@@ -293,7 +348,9 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		2026). Once any line carries a receipt the claim is new-style and every required
 		line needs its own.
 		"""
-		if self.approval_status != "Approved":
+		# "Waiting for HR" is the manager's approval (two steps, 5 Nov 2026): the receipts
+		# are asked there, so HR never gets a claim without them
+		if self.approval_status not in ("Approved", "Waiting for HR"):
 			return
 		# a claim already Approved before this save keeps its saved lines as they are:
 		# one approved before this release, with no file at all, must still save
@@ -566,6 +623,13 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		if not is_own_employee(self.employee) or get_workflow_name("Expense Claim"):
 			return
 
+		# HR deciding their own claim at the HR step (owner, 5 Nov 2026: "any hr including
+		# themselve"). Only when decide() set the flag, after its own HR and stage checks: a
+		# hand-set Submit on your own claim in Desk is still refused below.
+		if self.flags.get("hr_step_decision"):
+			logger.info("[expense_claim] %s: HR decided their own claim at the HR step", self.name)
+			return
+
 		if self.approval_status == "Approved" and has_approver_above(self.employee, "Expense Claim"):
 			frappe.throw(_("Your own expense claim is decided by your approver, not by you."))
 
@@ -593,7 +657,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		hrms.refetch_resource("hrms:team_claims")
 
 	def on_submit(self):
-		if self.approval_status == "Draft":
+		if self.approval_status in claim_stages.PENDING:
 			frappe.throw(_("""Approval Status must be 'Approved' or 'Rejected'"""))
 
 		# Told on submit, not on a draft save: only now is the decision transacted.

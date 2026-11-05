@@ -27,11 +27,13 @@ from hrms.api.approval import (
 	APPROVER_FIELD,
 	DECIDE_THEN_SUBMIT,
 	DESIGNATED_APPROVER_DOCTYPES,
+	_is_claim_hr,
 	_is_routed_approver,
 	_leave_balance_now,
 	_request_read_allowed,
 	may_read_leave_reason,
 	may_read_leave_reasons,
+	pending_values,
 )
 from hrms.api.now import _hhmm
 from hrms.hr.utils import get_designated_approvers
@@ -155,6 +157,9 @@ def _sent_to_me(doctype: str, doc, facts: dict, me: dict) -> bool:
 	"""
 	if not me["login"]:
 		return False
+	if doctype == "Expense Claim" and doc.get("approval_status") == "Waiting for HR":
+		# with HR now (5 Nov 2026): it is sent to HR, and no longer to the manager
+		return _is_claim_hr(doc)
 	field = APPROVER_FIELD.get(doctype) or ("approver" if doctype == "Remote Checkin Request" else None)
 	if field and normalize_login(doc.get(field)) == me["login"]:
 		return True
@@ -468,7 +473,9 @@ def _mine_of(
 	while start < SCAN_LIMIT:
 		names = frappe.get_all(
 			doctype,
-			filters={field: pending, "docstatus": 0},
+			# every "still waiting" value: an expense claim waits at two steps, its manager
+			# then HR (5 Nov 2026); every other type has one
+			filters={field: ("in", pending_values(doctype) or (pending,)), "docstatus": 0},
 			pluck="name",
 			order_by="modified asc",
 			limit=PAGE,

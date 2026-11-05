@@ -152,10 +152,31 @@ test("a remote check-in row reads the same rule as every other request", () => {
 // approval (the controller only pays out on submit), and the Approved filter
 // already counted them — only the chip said "Open".
 test("a submitted request still labelled Open reads Approved", () => {
-	for (const doctype of ["Attendance Request", "OT Request", "Replacement Leave Claim", "Leave Application"]) {
+	for (const doctype of [
+		"Attendance Request",
+		"OT Request",
+		"Replacement Leave Claim",
+		"Leave Application",
+	]) {
 		const s = requestStatus(doctype, { status: "Open", docstatus: 1 })
 		assert.equal(s.label, "Approved", doctype)
 		assert.equal(s.pending, false)
 	}
 	assert.equal(requestStatus("Shift Request", { status: "Draft", docstatus: 1 }).label, "Approved")
+})
+
+// Two-step claims (owner, 5 Nov 2026): manager, then HR. A claim the manager has
+// approved says where it is now, and keeps the waiting colour.
+test("an expense claim with HR says Waiting for HR, in the waiting colour", () => {
+	const s = requestStatus("Expense Claim", { approval_status: "Waiting for HR", status: "Draft" })
+	assert.equal(s.label, "Waiting for HR")
+	assert.equal(s.variant, "attention")
+	assert.equal(s.pending, true)
+})
+
+test("a claim still with its manager keeps the plain waiting word", () => {
+	assert.equal(
+		requestStatus("Expense Claim", { approval_status: "Draft", status: "Draft" }).label,
+		"Waiting"
+	)
 })

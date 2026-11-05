@@ -8,6 +8,10 @@ frappe.listview_settings["Expense Claim"] = {
 	add_fields: ["company", "approval_status"],
 	has_indicator_for_draft: 1,
 	get_indicator: (doc) => {
+		// two steps (5 Nov 2026): a claim the manager approved waits for HR, and says so
+		if ((doc.docstatus === 0 || doc.docstatus === "0") && doc.approval_status === "Waiting for HR") {
+			return [__("Waiting for HR"), "orange", "approval_status,=,Waiting for HR"];
+		}
 		if (doc.docstatus === 0 || doc.docstatus === "0") return [__("Waiting"), "orange", "docstatus,=,0"];
 		if (doc.docstatus === 2 || doc.docstatus === "2") return [__("Cancelled"), "red", "docstatus,=,2"];
 		if (doc.approval_status === "Rejected" || doc.status === "Rejected") {

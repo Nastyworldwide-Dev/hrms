@@ -14,6 +14,8 @@ const STATUS_VARIANTS = {
 	// The one word every pending request says on screen. Open / Draft /
 	// Pending stay in the DB untouched — see WAITING below.
 	waiting: "attention",
+	// an expense claim the manager approved, now with HR (two steps, 5 Nov 2026)
+	"waiting for hr": "attention",
 	open: "attention",
 	pending: "attention",
 	unpaid: "attention",
@@ -120,6 +122,9 @@ export function requestStatus(doctype, doc = {}) {
 			// A-H4: the Desk Save path left a decision that never ran.
 			console.info("[requestStatus] decided draft shown as pending", doctype, doc.name)
 			label = WAITING
+		} else if (decision === "Waiting for HR") {
+			// a claim the manager approved: say where it is now (two steps, 5 Nov 2026)
+			label = "Waiting for HR"
 		} else if (rule) {
 			label = WAITING
 		} else {
