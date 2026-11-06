@@ -10,6 +10,14 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.83] — Waiting With — 2026-11-06
+
+### Changed
+- **The expense claim form in Desk says where the claim is.** Approval
+  Status shows "Waiting" (the same word as the label at the top) instead
+  of "Draft", and a "Waiting with" line names the manager, then HR, then
+  Done. Display only; nothing stored changes. No migrate.
+
 ## [2.0.0-alpha.82] — HR Signs Off — 2026-11-05
 
 ### Changed
