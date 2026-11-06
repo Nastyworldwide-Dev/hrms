@@ -5,6 +5,40 @@ frappe.provide("hrms.hr");
 frappe.provide("erpnext.accounts.dimensions");
 
 frappe.ui.form.on("Expense Claim", {
+	// Owner, 6 Nov 2026: the top said "Waiting" while Approval Status said "Draft", which
+	// read as never sent. The box shows the same word as the top, and "Waiting with" names
+	// whose desk the claim is on. Display only: the stored value stays "Draft".
+	show_waiting_with(frm) {
+		const field = frm.fields_dict.approval_status;
+		if (!field || !field.$wrapper) return;
+		const status = frm.doc.approval_status;
+		const shown = { Draft: __("Waiting") }[status] || __(status || "");
+		const select = field.$wrapper.find("select");
+		if (select.length && status === "Draft") {
+			select.find('option[value="Draft"]').text(__("Waiting"));
+		}
+		let where = "";
+		if (frm.doc.docstatus === 0 && status === "Draft") {
+			const approver = frm.doc.expense_approver;
+			const name = approver && frappe.user.full_name(approver);
+			where = approver ? __("Manager · {0}", [name || approver]) : __("Manager");
+		} else if (frm.doc.docstatus === 0 && status === "Waiting for HR") {
+			where = __("HR");
+		} else if (frm.doc.docstatus === 1) {
+			where = __("Done");
+		}
+		field.$wrapper.find(".waiting-with").remove();
+		if (where) {
+			field.$wrapper.append(
+				`<div class="waiting-with" style="margin-top:12px">` +
+					`<div class="control-label" style="margin-bottom:4px">${__("Waiting with")}</div>` +
+					`<div class="like-disabled-input" style="font-weight:600">${frappe.utils.escape_html(where)}</div>` +
+					`</div>`
+			);
+		}
+		console.info("[expense_claim] waiting with:", frm.doc.name, shown, where);
+	},
+
 	setup: function (frm) {
 		frm.set_query("employee_advance", "advances", function () {
 			return {
@@ -104,6 +138,7 @@ frappe.ui.form.on("Expense Claim", {
 	refresh: function (frm) {
 		frm.trigger("toggle_fields");
 		frm.trigger("add_ledger_buttons");
+		frm.trigger("show_waiting_with");
 
 		if (
 			frm.doc.docstatus === 1 &&
