@@ -22,7 +22,7 @@ import _frappe_stub
 
 _frappe_stub.install()
 
-from hrms.api.request_history import history_steps
+from hrms.api.request_history import claim_approval_names, history_steps
 
 SENT = "2026-09-24 09:12:00"
 DECIDED = "2026-09-24 17:58:25"
@@ -76,6 +76,32 @@ class TestSteps(unittest.TestCase):
 			names={},
 		)
 		self.assertEqual(steps[-1]["what"], "approved")
+
+	def test_claim_approvers_follow_the_two_actual_decisions(self):
+		versions = [
+			version([["approval_status", "Draft", "Waiting for HR"]], "manager@x", DECIDED),
+			version([["approval_status", "Waiting for HR", "Approved"]], "hr@x", "2026-09-25 08:00:00"),
+		]
+		names = {"manager@x": "Manager Name", "hr@x": "HR Name"}
+		self.assertEqual(
+			claim_approval_names(versions[:1], SENT, names),
+			{"manager": "Manager Name", "hr": None, "direct": None},
+		)
+		self.assertEqual(
+			claim_approval_names(versions, SENT, names),
+			{"manager": "Manager Name", "hr": "HR Name", "direct": None},
+		)
+
+	def test_direct_hr_approval_and_unrelated_or_old_versions_do_not_invent_a_manager(self):
+		versions = [
+			version([["approval_status", "Draft", "Waiting for HR"]], "old@x", "2026-09-24 08:00:00"),
+			version([["description", "a", "b"]], "manager@x", DECIDED),
+			version([["approval_status", "Draft", "Approved"]], "hr@x", "2026-09-25 08:00:00"),
+		]
+		self.assertEqual(
+			claim_approval_names(versions, SENT, {"hr@x": "HR Name"}),
+			{"manager": None, "hr": None, "direct": "HR Name"},
+		)
 
 	def test_other_edits_are_not_steps(self):
 		steps = history_steps(

@@ -39,6 +39,37 @@ frappe.ui.form.on("Expense Claim", {
 		console.info("[expense_claim] waiting with:", frm.doc.name, shown, where);
 	},
 
+	show_approval_names(frm) {
+		const wrapper = frm.fields_dict.approval_history?.$wrapper;
+		if (!wrapper) return;
+		const requestId = (frm.__approvalNamesRequest || 0) + 1;
+		frm.__approvalNamesRequest = requestId;
+		wrapper.html("");
+		if (frm.is_new()) return;
+		const claim = frm.doc.name;
+		frappe.call({
+			method: "hrms.api.request_history.get_expense_claim_approvers",
+			args: { name: claim },
+			callback: (response) => {
+				if (frm.doc.name !== claim || frm.__approvalNamesRequest !== requestId || !response.message) return;
+				const status = frm.doc.approval_status;
+				const managerLabel = response.message.direct ? __("Approved by") : __("Manager approved by");
+				const manager = response.message.manager || response.message.direct ||
+					(status === "Draft" ? __("Waiting for manager") : status === "Waiting for HR" || response.message.hr ? __("No manager approval") : __("Not recorded"));
+				const hr = response.message.hr ||
+					(status === "Waiting for HR" ? __("Waiting for HR") : response.message.direct ? "—" : status === "Approved" ? __("Not recorded") : "—");
+				wrapper.html(
+					`<div class="row" style="margin-top:8px">` +
+						`<div class="col-sm-6" style="margin-bottom:12px"><div class="control-label" style="margin-bottom:4px">${managerLabel}</div>` +
+						`<div class="like-disabled-input">${frappe.utils.escape_html(manager)}</div></div>` +
+						`<div class="col-sm-6" style="margin-bottom:12px"><div class="control-label" style="margin-bottom:4px">${__("HR approved by")}</div>` +
+						`<div class="like-disabled-input">${frappe.utils.escape_html(hr)}</div></div></div>`
+				);
+				console.info("[expense_claim] approval names shown:", claim, Boolean(response.message.manager), Boolean(response.message.hr));
+			},
+		});
+	},
+
 	setup: function (frm) {
 		frm.set_query("employee_advance", "advances", function () {
 			return {
@@ -139,6 +170,7 @@ frappe.ui.form.on("Expense Claim", {
 		frm.trigger("toggle_fields");
 		frm.trigger("add_ledger_buttons");
 		frm.trigger("show_waiting_with");
+		frm.trigger("show_approval_names");
 
 		if (
 			frm.doc.docstatus === 1 &&

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expense Claim approvers in Desk — mockup</title>
+<style>
+  :root { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #252a32; background: #f5f7fa; }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .notice { padding: 8px 16px; background: #303c54; color: white; text-align: center; font-size: 12px; font-weight: 650; }
+  .top { height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; background: #fff; border-bottom: 1px solid #e3e7ee; }
+  .brand { font-size: 18px; font-weight: 800; color: #243c69; }
+  .search { width: min(320px, 42vw); padding: 8px 13px; border-radius: 7px; background: #f2f4f7; color: #9aa3ae; font-size: 12px; }
+  .shell { display: grid; grid-template-columns: 200px minmax(0, 1fr); min-height: calc(100vh - 86px); }
+  aside { padding: 24px 14px; background: #fff; border-right: 1px solid #e3e7ee; color: #687384; font-size: 13px; }
+  aside b { display: block; padding: 10px 12px; border-radius: 7px; background: #f1f4f9; color: #27374f; }
+  aside span { display: block; padding: 10px 12px; }
+  main { min-width: 0; max-width: 1220px; padding: 25px 28px 60px; }
+  .crumb { margin-bottom: 19px; color: #7c8796; font-size: 12px; }
+  .page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  h1 { margin: 0; font-size: 23px; font-weight: 650; }
+  .status { margin-left: 10px; padding: 4px 8px; border-radius: 5px; background: #fff1d6; color: #9b6614; font-size: 12px; font-weight: 650; vertical-align: middle; }
+  .actions { display: flex; gap: 8px; }
+  button { padding: 8px 14px; border: 1px solid #dce2ea; border-radius: 6px; background: #fff; color: #3b4554; font: inherit; font-size: 12px; }
+  .form { overflow: hidden; border: 1px solid #e1e5eb; border-radius: 7px; background: #fff; box-shadow: 0 3px 14px #29384d0b; }
+  .tabs { display: flex; gap: 24px; padding: 0 25px; border-bottom: 1px solid #e8ebef; color: #6b7584; font-size: 13px; }
+  .tabs span { padding: 16px 0; white-space: nowrap; }
+  .tabs .active { border-bottom: 2px solid #3159ab; color: #273f72; font-weight: 650; }
+  .body { padding: 25px; }
+  h2 { margin: 0 0 22px; font-size: 15px; font-weight: 650; }
+  .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 38px; row-gap: 17px; }
+  .field label { display: block; margin-bottom: 7px; color: #697584; font-size: 12px; font-weight: 550; }
+  .value { min-height: 34px; padding: 8px 10px; border: 1px solid #e4e8ed; border-radius: 5px; background: #f7f8fa; color: #303742; font-size: 13px; }
+  .link { color: #345aa6; }
+  .approval-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 38px; margin-top: 18px; }
+  .pending-value { color: #9b6614; }
+  .below { margin-top: 28px; padding-top: 22px; border-top: 1px solid #e8ebef; }
+  .table { padding: 13px; border: 1px solid #e4e8ed; border-radius: 5px; color: #748090; font-size: 12px; }
+  @media (max-width: 760px) { .shell { grid-template-columns: 1fr; } aside { display: none; } main { padding: 18px 12px; } .body { padding: 18px; } .fields, .approval-fields { grid-template-columns: 1fr; } .approval-fields { gap: 17px; } .tabs { overflow-x: auto; } .actions { display: none; } }
+</style>
+</head>
+<body>
+  <div class="notice">DESK MOCKUP · This is a placement preview, not the live form</div>
+  <header class="top"><div class="brand">Nadi Desk</div><div class="search">Search or type a command…</div><div>◌</div></header>
+  <div class="shell">
+    <aside><b>Human Resources</b><span>Overview</span><span>Employees</span><span>Leave</span><span>Expense Claims</span><span>Reports</span></aside>
+    <main>
+      <div class="crumb">Human Resources / Expense Claim / HR-EXP-2026-00042</div>
+      <div class="page-head"><h1>HR-EXP-2026-00042 <span class="status">Waiting for HR</span></h1><div class="actions"><button>⋯</button><button>Print</button><button>Menu ▾</button></div></div>
+      <div class="form">
+        <nav class="tabs" aria-label="Expense Claim tabs"><span class="active">Expenses &amp; Advances</span><span>Accounting Details</span><span>More Info</span><span>Dashboard</span></nav>
+        <div class="body">
+          <h2>Expense Claim</h2>
+          <div class="fields">
+            <div class="field"><label>From Employee</label><div class="value link">EMP-00042</div></div>
+            <div class="field"><label>Expense Approver</label><div class="value link">m.izzat@example.com</div></div>
+            <div class="field"><label>Employee Name</label><div class="value">Aisyah Ahmad</div></div>
+            <div class="field"><label>Approval Status</label><div class="value">Waiting for HR</div></div>
+            <div class="field"><label>Department</label><div class="value">Operations</div></div>
+            <div class="field"><label>Waiting with</label><div class="value">HR</div></div>
+            <div class="field"><label>Company</label><div class="value">Example Company</div></div>
+          </div>
+          <div class="approval-fields" aria-label="Approval history">
+            <div class="field"><label>Manager approved by</label><div class="value">Muhammad Izzat Bin Aziz</div></div>
+            <div class="field"><label>HR approved by</label><div class="value pending-value">Waiting for HR</div></div>
+          </div>
+          <section class="below"><h2>Expense Details</h2><div class="table">Travel expenses &nbsp; · &nbsp; RM 248.00</div></section>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

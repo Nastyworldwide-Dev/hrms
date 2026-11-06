@@ -16,6 +16,8 @@
   "column_break_5",
   "expense_approver",
   "approval_status",
+  "approval_history_section",
+  "approval_history",
   "currency_section",
   "currency",
   "column_break_imlz",
@@ -129,6 +131,14 @@
    "options": "Draft\nWaiting for HR\nApproved\nRejected\nCancelled",
    "permlevel": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "approval_history_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "approval_history",
+   "fieldtype": "HTML"
   },
   {
    "fieldname": "total_claimed_amount",

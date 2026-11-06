@@ -1,35 +1,30 @@
-# Plan: optional files with the draft job description on a Manpower Request (owner, 29 Oct 2026)
+# Plan: the draft job description fills itself from an attached JD file (owner, 29 Oct 2026)
 
-Owner: "at the draft job description I want to add that requester can put attachment there and it is not required
-just if they want to they can put any attachment there". Answers: several files; the same people who can open the
-request can open the files (sender, the approver it was shared with, HR; not Administrator).
+Owner: "hiring manager attached JD than the hiring manager will no longer needed to key in JD above ... when hiring
+manager attach the attachment of the JD it will auto reflect the job description but still can be edit".
 
 ## GOAL
-In the wizard's Requirements step, under "Draft job description", an optional "Add files" row: the requester picks
-any number of files (each uploaded at once, removable before sending). After sending, the files are attached to the
-request and listed on its page, openable by whoever can open the request.
+On the wizard's Requirements step, attaching a PDF, Word (.docx) or text file while the Draft job description box is
+empty puts the file's text in the box. The person can still edit it. A box that already has text is never overwritten.
+Files with no readable text (a scanned PDF, a photo, old .doc) are only attached, and the person is told to type it.
 
 ## FLOW
-Wizard (step 5, Requirements) -> "Attachments (optional)" row right after the Draft job description question ->
-FileAttachment.upload(null,null,"") per pick -> model.files = [file_url…] -> buildInsertPayload sends `job_files`
-(urls, not a doctype field: read in the controller via doc.flags / a whitelisted arg) -> ManpowerRequest.after_insert
-link_job_files: each loose File owned by the sender with that url -> attached_to Manpower Request/<name>,
-attached_to_field "job_files" -> Detail page lists them (hrms.api.get_attachments, which checks read on the request,
-so the row fence and the Administrator rule apply) -> Review step lists the file names.
-Why not a field: files belong to the request through File.attached_to, the same way every other request attaches
-(expense receipts link the same way: ExpenseClaim.link_receipts).
+JobFilesRow pick -> upload (as today) -> emits "uploaded" -> wizard: shouldFillFrom(box, file) ->
+hrms.api.manpower.read_job_description(file_url) -> only the caller's own File -> job_description_text(name, bytes)
+(pypdf for PDF, zipfile+xml for .docx, utf-8 for .txt; tidied, capped) -> text -> box filled -> toast
+"Filled from <file>. You can edit it." ; empty text -> toast "Could not read text from <file>. Type it in."
 
-DESIGN SKILLS: NONE (existing upload row and attachment row components, existing form section style)
+DESIGN SKILLS: NONE (existing box and toast; the file picker also accepts .docx/.doc/.txt)
 
-## MOCKUP: NOT NEEDED (reuses the existing "Add a file" row and attachment rows; no new layout)
+## MOCKUP: NOT NEEDED (no new layout: the same text box gets filled; one toast)
 
 ## EXPECTED OUTPUT
-- Tests red first: payload carries job_files; nothing when none; controller attaches only the sender's loose files and
-  ignores another user's or an already-attached file; detail lists them via get_attachments; review shows names.
+- Tests red first: text from PDF/.docx/.txt; tidy + cap; unreadable -> ""; another user's file refused;
+  shouldFillFrom only when the box is blank and the file is readable-type; picker accepts Word.
 - yarn test green; server suites no new failures. No migrate.
 
 ## RISK
-Files stay private; reachable only through the request's own read check. Rollback: revert.
+Read only the caller's own upload; nothing is saved by the read. Rollback: revert.
 
 ## Pipeline Summary
 owner ask -> plan -> TDD -> commit -> review -> push -> release -> owner deploys (no migrate).

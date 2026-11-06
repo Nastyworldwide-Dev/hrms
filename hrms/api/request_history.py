@@ -69,6 +69,62 @@ def _display_names(logins) -> dict:
 	return names
 
 
+def claim_approval_names(versions, created, names) -> dict:
+	"""Names of the users who moved a claim through manager and HR approval."""
+	result = {"manager": None, "hr": None, "direct": None}
+	for row in sorted(versions, key=lambda v: str(v.get("creation"))):
+		if str(row.get("creation")) < str(created):
+			continue
+		try:
+			changed = json.loads(row.get("data") or "{}").get("changed") or []
+		except (ValueError, TypeError):
+			continue
+		for item in changed:
+			if not isinstance(item, (list, tuple)) or len(item) != 3 or item[0] != "approval_status":
+				continue
+			_old_field, old, new = item
+			if old == "Draft" and new == "Waiting for HR" and result["manager"] is None:
+				result["manager"] = names.get(row.get("owner"))
+			elif old == "Waiting for HR" and new == "Approved" and result["hr"] is None:
+				result["hr"] = names.get(row.get("owner"))
+			elif old == "Draft" and new == "Approved" and result["direct"] is None:
+				# An older single-step decision and a direct HR decision have the
+				# same transition. The Version row does not identify the role.
+				result["direct"] = names.get(row.get("owner"))
+	logger.debug(
+		"[request_history] claim approval names resolved: manager=%s hr=%s direct=%s",
+		bool(result["manager"]),
+		bool(result["hr"]),
+		bool(result["direct"]),
+	)
+	return result
+
+
+@frappe.whitelist(methods=["GET", "POST"])
+def get_expense_claim_approvers(name: str) -> dict:
+	"""Read the two approval names only for someone permitted to read this claim."""
+	from hrms.api.approval import _request_read_allowed
+
+	doc = frappe.get_doc("Expense Claim", name)
+	if not _request_read_allowed(doc):
+		frappe.throw(_("You cannot read this request."), frappe.PermissionError)
+	versions = frappe.get_all(
+		"Version",
+		filters={"ref_doctype": "Expense Claim", "docname": name},
+		fields=["data", "owner", "creation"],
+		order_by="creation asc",
+		limit_page_length=0,
+		ignore_permissions=True,
+	)
+	result = claim_approval_names(
+		versions,
+		doc.creation,
+		_display_names(v.get("owner") for v in versions),
+	)
+	logger.info("[request_history] Expense Claim %s approver names read", name)
+	return result
+
+
 @frappe.whitelist(methods=["GET", "POST"])
 def get_request_history(doctype: str, name: str) -> list[dict]:
 	"""The request's steps for whoever may read the request, and nobody else."""

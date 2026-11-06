@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.84] — Approval Names — 2026-11-06
+
+### Added
+- **Desk shows who approved an expense claim.** Below "Waiting with", two
+  columns show the manager and HR approvers from the claim's recorded decisions.
+  While HR is next, the HR column says "Waiting for HR". Claims that went
+  straight to HR show no manager approval; older single-step claims show a
+  generic "Approved by" name without guessing the approver's role.
+  **Needs migrate** to add the display area to Expense Claim.
+
 ## [2.0.0-alpha.83] — Waiting With — 2026-11-06
 
 ### Changed
