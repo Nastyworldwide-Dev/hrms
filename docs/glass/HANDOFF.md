@@ -1,13 +1,13 @@
 # HANDOFF
-prompt:   HR as second approver on expense claims; calendar day sheet; IC number (owner, 3-5 Nov 2026)
-status:   done
-commit:   alpha.82 on nz-glass (043c9b769, d0737d57e, 08b4dd8c8, 64a7143bb)
-files:    hrms/utils/claim_stages.py
-hrms/api/approval.py
-hrms/api/approvals_list.py
-hrms/hr/doctype/expense_claim/expense_claim.py
-hrms/utils/employee_ic.py
-hrms/api/calendar.py
-verify:   deploy WITH migrate; staff claim -> manager Approve -> "Waiting for HR" -> HR Approve -> paid
-flags:    bench (database) suites not run here; HR's early decision is final, as before
-next:     boss calendar ideas (mockup-calendar-boss-ideas.html) wait on a pick
+prompt:   HR: Letters Issued child table on Employee (7 Nov 2026)
+status:   partial
+commit:   95f5ae936 (alpha.85, tag v2.0.0-alpha.85) on sepia-tricorne; feat 09f570b3d, fix f3a3a896c
+files:    hrms/utils/employee_letters.py
+hrms/hr/doctype/hr_letter_type/
+hrms/hr/doctype/employee_letter_issued/
+hrms/patches/v16_0/add_employee_letters_issued.py
+hrms/setup.py, hrms/hooks.py, hrms/patches.txt
+hrms/tests/test_employee_letters.py
+verify:   deploy WITH migrate; Employee -> "Letters Issued" under Cost Tag/Center; HR Letter Type has 16 rows
+flags:    permlevel 1 per owner, so HR User sees letters too; fixtures -> setup.py+patch; not migrated (no bench here)
+next:     migrate on Verifica, then open an Employee as HR Manager and as staff to confirm visibility
