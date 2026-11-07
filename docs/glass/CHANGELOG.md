@@ -10,6 +10,17 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.85] — Letters Issued — 2026-11-07
+
+### Added
+- **Letters Issued on the Employee profile.** A collapsible section under
+  Cost Tag/Center Allocation lists each letter HR has issued to the person:
+  date, type, reference, subject, SharePoint link, acknowledged, effective
+  date, issued by, remarks. Newest first. Seen by HR User, HR Manager and
+  System Manager only. The link must be an https:// link on sharepoint.com.
+  Letter types (16, from HR's list) are a new HR Letter Type list HR Manager
+  can add to. Needs migrate.
+
 ## [2.0.0-alpha.84] — Approval Names — 2026-11-06
 
 ### Added
