@@ -78,10 +78,19 @@ def _is_sharepoint_link(link: str) -> bool:
 	"""https:// and a host that is sharepoint.com or one of its subdomains.
 
 	The host is checked, not the whole string: "contains sharepoint.com" would
-	accept https://evil.com/sharepoint.com and https://sharepoint.com.evil.com."""
+	accept https://evil.com/sharepoint.com and https://sharepoint.com.evil.com.
+	A login part (user@) or a backslash is refused outright."""
 	if not link.lower().startswith("https://"):
 		return False
-	host = (urlsplit(link).hostname or "").lower()
+	# Python and browsers parse these differently: urlsplit takes
+	# https://evil.com\\@sharepoint.com as host sharepoint.com, a browser reads
+	# "\\" as "/" and opens evil.com. Refuse anything they could disagree on.
+	if any(ch == "\\" or ch.isspace() or ord(ch) < 32 for ch in link):
+		return False
+	parts = urlsplit(link)
+	if "@" in parts.netloc:
+		return False
+	host = (parts.hostname or "").lower()
 	return host == SHAREPOINT_HOST or host.endswith("." + SHAREPOINT_HOST)
 
 

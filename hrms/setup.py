@@ -10,12 +10,15 @@ from frappe.permissions import add_permission, update_permission_property
 
 from hrms.overrides.company import delete_company_fixtures
 from hrms.utils.company_fence import create_company_fence_roles
+from hrms.utils.employee_letters import seed_letter_types
 
 
 def after_install():
 	create_custom_fields(get_custom_fields(), ignore_validate=True)
 	create_salary_slip_loan_fields()
 	make_fixtures()
+	# HR's letter types: every Letters Issued row needs one (required Link)
+	seed_letter_types()
 	setup_notifications()
 	update_hr_defaults()
 	add_non_standard_user_types()

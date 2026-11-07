@@ -67,6 +67,19 @@ class TestSharePointLink(unittest.TestCase):
 	def test_a_host_merely_ending_in_the_name_is_refused(self):
 		self.refused("https://notsharepoint.com/x")
 
+	def test_a_backslash_cannot_smuggle_another_host(self):
+		# urlsplit reads the host as sharepoint.com; a browser treats "\\" as "/"
+		# and opens evil.com
+		self.refused("https://evil.com\\@sharepoint.com/x")
+		self.refused("https://evil.com\\@x.sharepoint.com/a")
+
+	def test_a_login_part_before_the_host_is_refused(self):
+		self.refused("https://x.sharepoint.com@evil.com/")
+		self.refused("https://user@verifica.sharepoint.com/x")
+
+	def test_spaces_inside_the_link_are_refused(self):
+		self.refused("https://verifica.sharepoint.com/a b")
+
 	def test_a_blank_link_is_refused(self):
 		self.refused("")
 
@@ -117,6 +130,14 @@ class TestFieldsAndAccess(unittest.TestCase):
 
 		self.assertIn("Employee", permlevel_guard.GUARDED_DOCTYPES)
 		self.assertNotIn(("Employee", 1), permlevel_guard.OWNED_ELSEWHERE)
+
+	def test_a_fresh_install_seeds_the_letter_types(self):
+		# letter_type is a required Link, so a site without types cannot save a letter
+		import ast
+
+		tree = ast.parse((HRMS / "setup.py").read_text())
+		install = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "after_install")
+		self.assertIn("seed_letter_types", ast.unparse(install))
 
 	def test_install_path_carries_the_fields(self):
 		self.assertIn("get_letter_fields", (HRMS / "setup.py").read_text())
