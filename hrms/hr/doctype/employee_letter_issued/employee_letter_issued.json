@@ -1,0 +1,104 @@
+{
+ "actions": [],
+ "creation": "2026-11-07 09:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "date_issued",
+  "letter_type",
+  "reference_no",
+  "subject",
+  "sharepoint_link",
+  "acknowledged",
+  "acknowledged_on",
+  "effective_date",
+  "issued_by",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "columns": 1,
+   "fieldname": "date_issued",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date Issued",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "letter_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Letter Type",
+   "options": "HR Letter Type",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "reference_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Reference No"
+  },
+  {
+   "columns": 2,
+   "fieldname": "subject",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Subject"
+  },
+  {
+   "columns": 2,
+   "description": "The letter's link on SharePoint, starting https://",
+   "fieldname": "sharepoint_link",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "SharePoint Link",
+   "options": "URL",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "acknowledged",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Acknowledged"
+  },
+  {
+   "depends_on": "eval:doc.acknowledged",
+   "fieldname": "acknowledged_on",
+   "fieldtype": "Date",
+   "label": "Acknowledged On"
+  },
+  {
+   "fieldname": "effective_date",
+   "fieldtype": "Date",
+   "label": "Effective Date"
+  },
+  {
+   "fieldname": "issued_by",
+   "fieldtype": "Link",
+   "label": "Issued By",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-07 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Employee Letter Issued",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

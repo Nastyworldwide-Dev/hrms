@@ -417,6 +417,8 @@ doc_events = {
 			# a second login is authority over this record: normalized, unique
 			"hrms.utils.additional_login.validate_additional_login",
 			"hrms.overrides.employee_interco_allocation.validate_interco_allocation",
+			# SharePoint https links only; newest letter first
+			"hrms.utils.employee_letters.validate_letters",
 			"hrms.overrides.employee_master.set_years_of_service",
 			"hrms.hr.offboarding.validate_offboarding_dates",
 		],

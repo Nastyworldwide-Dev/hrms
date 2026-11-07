@@ -186,6 +186,7 @@ def get_custom_fields():
 	from hrms.sync.runner import get_provenance_custom_fields
 	from hrms.utils.additional_login import get_additional_login_fields
 	from hrms.utils.employee_ic import get_ic_fields
+	from hrms.utils.employee_letters import get_letter_fields
 	from hrms.utils.extension_custom_fields import get_extension_custom_fields
 
 	fields = {
@@ -694,6 +695,10 @@ def get_custom_fields():
 	# the IC number (3 Nov 2026): HR and the employee themselves only
 	for doctype, ic_fields in get_ic_fields().items():
 		fields.setdefault(doctype, []).extend(ic_fields)
+
+	# Letters Issued (7 Nov 2026), after the Cost Tag/Center Allocation table
+	for doctype, letter_fields in get_letter_fields().items():
+		fields.setdefault(doctype, []).extend(letter_fields)
 
 	return fields
 
