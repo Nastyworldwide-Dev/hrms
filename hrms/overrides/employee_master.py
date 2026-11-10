@@ -140,6 +140,20 @@ def validate_onboarding_process(doc, method=None):
 		onboarding.db_set("employee", doc.name)
 
 
+def deactivate_sales_person(doc, method=None):
+	"""Employee.on_update: a Resigned employee's Sales Person is disabled.
+
+	ERPNext does this from the Employee form only for "Left"
+	(erpnext.setup.doctype.employee.employee.deactivate_sales_person), which no
+	longer exists. Server-side here so auto-offboarding counts too.
+	"""
+	if not is_leaver(doc.status) or not doc.has_value_changed("status"):
+		return
+	for sales_person in frappe.get_all("Sales Person", {"employee": doc.name, "enabled": 1}, pluck="name"):
+		frappe.db.set_value("Sales Person", sales_person, "enabled", 0)
+		logger.info("[employee] %s %s: Sales Person %s disabled", doc.name, doc.status, sales_person)
+
+
 def publish_update(doc, method=None):
 	import hrms
 

@@ -65,7 +65,10 @@ doctype_js = {
 	"Delivery Trip": "public/js/erpnext/delivery_trip.js",
 	"Bank Transaction": "public/js/erpnext/bank_transaction.js",
 }
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_list_js = {
+	# colours for HR's five Employee statuses (10 Nov 2026)
+	"Employee": "public/js/erpnext/employee_list.js",
+}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -425,6 +428,8 @@ doc_events = {
 		"on_update": [
 			"hrms.overrides.employee_master.update_approver_role",
 			"hrms.overrides.employee_master.publish_update",
+			# Resigned replaced Left: ERPNext's own switch-off only knows Left
+			"hrms.overrides.employee_master.deactivate_sales_person",
 			# Reconcile the rule-managed Shift Assignment when shift_location /
 			# department changes (no-op otherwise; never blocks the save).
 			"hrms.hr.shift_rules.reconcile_on_employee_update",

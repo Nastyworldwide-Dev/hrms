@@ -151,7 +151,7 @@ class TestEmployeeLeaveBalance(HRMSTestSuite):
 		)
 
 		# set employee as inactive
-		frappe.db.set_value("Employee", inactive_emp, "status", "Inactive")
+		frappe.db.set_value("Employee", inactive_emp, "status", "Resigned")
 
 		filters = frappe._dict(
 			{
@@ -169,7 +169,7 @@ class TestEmployeeLeaveBalance(HRMSTestSuite):
 				"date": allocation.from_date,
 				"company": "_Test Company",
 				"employee": inactive_emp,
-				"employee_status": "Inactive",
+				"employee_status": "Resigned",
 			}
 		)
 		report = execute(filters)
