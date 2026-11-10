@@ -46,9 +46,23 @@ frappe.ui.form.on("Employee", {
 		});
 		frm.set_df_property("holiday_list", "hidden", 1);
 
-		// hide naming series field based on hr settings
+		// The naming-series mode hides Employee Number on the create form. On an
+		// existing profile it is useful to see the saved value, but it must not
+		// become an editable alternative to the generated employee ID.
 		frappe.db.get_single_value("HR Settings", "emp_created_by").then((value) => {
 			frm.toggle_display("naming_series", value === "Naming Series");
+			if (!frm.fields_dict.employee_number) return;
+			if (value === "Employee Number") {
+				frm.set_df_property("employee_number", "read_only", frm.is_new() ? 0 : 1);
+				frm.set_df_property("employee_number", "hidden", 0);
+			} else if (frm.is_new()) {
+				frm.set_df_property("employee_number", "read_only", 0);
+				frm.set_df_property("employee_number", "hidden", 1);
+			} else {
+				frm.set_df_property("employee_number", "read_only", 1);
+				frm.set_df_property("employee_number", "hidden", 0);
+			}
+			console.info("[employee] Employee Number display mode:", value, "existing:", !frm.is_new());
 		});
 	},
 
