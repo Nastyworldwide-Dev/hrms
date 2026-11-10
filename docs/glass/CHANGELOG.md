@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.87] — Employee Status — 2026-11-10
+
+### Changed
+- **Employee Status is Active, Resigned, Terminated, Deceased, Suspended.**
+  Everyone who was Left or Inactive is now Resigned; a missing relieving date
+  stays blank for HR to fill in. Resigned works everywhere Left did (payslips,
+  leave, check-ins, logins, offboarding, transfers, reports). Terminated,
+  Deceased and Suspended are selectable only: no login, no other rules yet.
+  **Needs migrate.**
+
 ## [2.0.0-alpha.86] — Employee Number — 2026-11-10
 
 ### Fixed
