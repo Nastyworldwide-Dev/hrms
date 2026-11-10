@@ -107,16 +107,20 @@ class EmployeeMaster(Employee):
 def leaver_status_problem(status, relieving_date, previous_status=None):
 	"""What must be checked before an Employee is saved with `status`. Pure.
 
-	None — not a leaver, nothing to check. "reports" — check nobody Active
-	still reports to them. "relieving_date" — refuse: no relieving date.
+	None — nothing to check. "reports" — check nobody Active still reports to
+	them. "relieving_date" — refuse: no relieving date.
 
-	The relieving date is required only when the status is CHANGED to
-	Resigned. Everyone moved from Left/Inactive by the 10 Nov 2026 patch keeps
-	a blank date until HR fills it in, and must still be saveable meanwhile.
+	Both checks apply only when the status is CHANGED to Resigned, as ERPNext's
+	did for Left. Everyone moved from Left/Inactive by the 10 Nov 2026 patch
+	keeps a blank date until HR fills it in, and must still be saveable.
 	"""
-	if not is_leaver(status):
+	if not is_leaver(status) or is_leaver(previous_status):
+		# Already a leaver: nothing to re-check. A manager moved from Inactive
+		# by the patch may still have Active staff reporting in (Inactive never
+		# had this check), and HR must be able to save the row — to fill in
+		# the relieving date, say — before re-pointing them.
 		return None
-	if not relieving_date and not is_leaver(previous_status):
+	if not relieving_date:
 		return "relieving_date"
 	return "reports"
 

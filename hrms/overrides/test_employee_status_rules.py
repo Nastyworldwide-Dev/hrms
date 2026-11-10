@@ -29,7 +29,11 @@ class TestLeaverStatusProblem(unittest.TestCase):
 
 	def test_a_migrated_resigned_row_without_a_date_still_saves(self):
 		# moved from Left/Inactive by the patch; HR fills the date in later
-		self.assertEqual(leaver_status_problem("Resigned", None, previous_status="Resigned"), "reports")
+		self.assertIsNone(leaver_status_problem("Resigned", None, previous_status="Resigned"))
+
+	def test_a_migrated_inactive_manager_with_staff_still_saves(self):
+		# Inactive never had the reports check; re-saving must not add it
+		self.assertIsNone(leaver_status_problem("Resigned", "2026-11-30", previous_status="Resigned"))
 
 	def test_the_other_new_statuses_have_no_leaver_rules(self):
 		for status in ("Active", "Terminated", "Deceased", "Suspended"):
