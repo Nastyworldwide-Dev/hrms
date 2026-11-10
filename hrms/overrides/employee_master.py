@@ -8,12 +8,18 @@ from dateutil.relativedelta import relativedelta
 import frappe
 from frappe import _
 from frappe.model.naming import set_name_by_naming_series
+from frappe.permissions import remove_user_permission
 from frappe.query_builder import Interval
 from frappe.query_builder.functions import Count, CurDate, UnixTimestamp
 from frappe.utils import add_years, cint, get_link_to_form, getdate
 
-from erpnext.setup.doctype.employee.employee import Employee
+from erpnext.setup.doctype.employee.employee import (
+	Employee,
+	InactiveEmployeeStatusError,
+	validate_employee_role,
+)
 
+from hrms.utils.employee_status import STATUS_OPTIONS, is_leaver
 from hrms.utils.identity import own_employees
 
 logger = logging.getLogger(__name__)
@@ -38,6 +44,81 @@ class EmployeeMaster(Employee):
 				self.name = self.employee_name
 
 		self.employee = self.name
+
+	def validate(self):
+		"""ERPNext's Employee.validate, with HR's five statuses (10 Nov 2026).
+
+		The core method hard-codes Active / Inactive / Suspended / Left as the
+		only allowed values, so it cannot be called with Resigned. This is the
+		same body step for step; only the allowed list differs.
+		"""
+		if self.status not in STATUS_OPTIONS:
+			logger.warning("[employee] %s refused status %r", self.name, self.status)
+			frappe.throw(_("Status must be one of {0}").format(", ".join(_(s) for s in STATUS_OPTIONS)))
+
+		self.employee = self.name
+		self.set_employee_name()
+		self.validate_date()
+		self.validate_email()
+		self.validate_status()
+		self.validate_reports_to()
+		self.set_preferred_email()
+		self.validate_preferred_email()
+
+		if self.user_id:
+			self.validate_user_details()
+		else:
+			existing_user_id = frappe.db.get_value("Employee", self.name, "user_id")
+			if existing_user_id:
+				user = frappe.get_doc("User", existing_user_id)
+				validate_employee_role(user, ignore_emp_check=True)
+				user.save(ignore_permissions=True)
+				remove_user_permission("Employee", self.name, existing_user_id, ignore_permissions=True)
+
+	def validate_status(self):
+		"""ERPNext's Left checks, for Resigned (the status that replaced Left)."""
+		previous = None if self.is_new() else (self.get_doc_before_save() or {}).get("status")
+		problem = leaver_status_problem(self.status, self.relieving_date, previous_status=previous)
+		if problem is None:
+			return
+		if problem == "relieving_date":
+			logger.info("[employee] %s set %s without a relieving date: refused", self.name, self.status)
+			frappe.throw(_("Please enter relieving date."))
+		reports = frappe.db.get_all(
+			"Employee",
+			filters={"reports_to": self.name, "status": "Active"},
+			fields=["name", "employee_name"],
+		)
+		if reports:
+			logger.warning(
+				"[employee] %s not set %s: %d active report(s)", self.name, self.status, len(reports)
+			)
+			links = "</li><li>".join(
+				get_link_to_form("Employee", row.name, label=row.employee_name) for row in reports
+			)
+			message = _("The following employees are currently still reporting to {0}:").format(
+				frappe.bold(self.employee_name)
+			)
+			message += f"<br><br><ul><li>{links}</li></ul><br>"
+			message += _("Please make sure the employees above report to another Active employee.")
+			frappe.throw(message, InactiveEmployeeStatusError, _("Cannot Relieve Employee"))
+
+
+def leaver_status_problem(status, relieving_date, previous_status=None):
+	"""What must be checked before an Employee is saved with `status`. Pure.
+
+	None — not a leaver, nothing to check. "reports" — check nobody Active
+	still reports to them. "relieving_date" — refuse: no relieving date.
+
+	The relieving date is required only when the status is CHANGED to
+	Resigned. Everyone moved from Left/Inactive by the 10 Nov 2026 patch keeps
+	a blank date until HR fills it in, and must still be saveable meanwhile.
+	"""
+	if not is_leaver(status):
+		return None
+	if not relieving_date and not is_leaver(previous_status):
+		return "relieving_date"
+	return "reports"
 
 
 def validate_onboarding_process(doc, method=None):

@@ -155,3 +155,4 @@ hrms.patches.v16_0.add_additional_login_email #2026-11-02 owner: one Employee ma
 hrms.patches.v16_0.add_employee_ic_number #2026-11-03 owner: IC number on Employee; HR sees all, each person only their own
 hrms.patches.v16_0.route_waiting_expense_claims_to_hr #2026-11-05 owner: claims go manager then HR; waiting ones with nobody above move to HR
 hrms.patches.v16_0.add_employee_letters_issued #2026-11-07 HR: Letters Issued table on Employee after Cost Tag/Center Allocation; HR roles only; seeds HR's letter types
+hrms.patches.v16_0.employee_status_options #2026-11-10 HR: Employee Status is Active, Resigned, Terminated, Deceased, Suspended; everyone Left or Inactive becomes Resigned
