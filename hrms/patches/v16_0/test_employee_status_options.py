@@ -7,10 +7,14 @@ without a relieving date are moved too. A second run changes nothing.
     python3 -m pytest hrms/patches/v16_0/test_employee_status_options.py
 """
 
+import importlib.util
+import pathlib
 import sys
 import types
 import unittest
 from unittest.mock import MagicMock, patch
+
+PATCH = pathlib.Path(__file__).with_name("employee_status_options.py")
 
 
 class _Site:
@@ -55,11 +59,12 @@ def _run(site):
 		"frappe.custom.doctype.property_setter.property_setter": setter_module,
 	}
 	with patch.dict(sys.modules, modules):
-		sys.modules.pop("hrms.patches.v16_0.employee_status_options", None)
-		from hrms.patches.v16_0 import employee_status_options
-
-		employee_status_options.execute()
-	sys.modules.pop("hrms.patches.v16_0.employee_status_options", None)
+		# a fresh copy from the file every run: an import would hand back the
+		# module already bound to whichever frappe stub loaded it first
+		spec = importlib.util.spec_from_file_location("_employee_status_options_under_test", PATCH)
+		module = importlib.util.module_from_spec(spec)
+		spec.loader.exec_module(module)
+		module.execute()
 
 
 class TestEmployeeStatusOptionsPatch(unittest.TestCase):
