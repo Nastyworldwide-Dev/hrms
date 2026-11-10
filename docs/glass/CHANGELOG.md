@@ -10,6 +10,13 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.86] — Employee Number — 2026-11-10
+
+### Fixed
+- **Employee Number shows on the Desk Employee profile.** On a saved profile it
+  appears under Overview → Company Details, read-only so it cannot differ from
+  the employee ID. New employees behave as before. Display only; no migrate.
+
 ## [2.0.0-alpha.85] — Letters Issued — 2026-11-07
 
 ### Added

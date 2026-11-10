@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.85",
-	"releaseName": "Letters Issued",
+	"version": "2.0.0-alpha.86",
+	"releaseName": "Employee Number",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
