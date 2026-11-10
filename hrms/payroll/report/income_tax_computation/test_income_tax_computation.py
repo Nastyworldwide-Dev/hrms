@@ -179,7 +179,7 @@ class TestIncomeTaxComputation(HRMSTestSuite):
 		frappe.db.delete("Employee")
 		users = [
 			{"email": "test_itrc1@example.com", "args": {"status": "Active"}},
-			{"email": "test_itrc2@example.com", "args": {"status": "Inactive"}},
+			{"email": "test_itrc2@example.com", "args": {"status": "Terminated"}},
 			{"email": "test_itrc3@example.com", "args": {"status": "Suspended"}},
 			{"email": "test_itrc4@example.com", "args": {"status": "Resigned", "relieving_date": getdate()}},
 		]

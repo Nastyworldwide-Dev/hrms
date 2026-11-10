@@ -40,7 +40,7 @@ frappe.query_reports["Income Tax Computation"] = {
 			fieldname: "employee_status",
 			label: __("Employee Status"),
 			fieldtype: "Select",
-			options: "\nActive\nInactive\nSuspended\nLeft",
+			options: "\nActive\nResigned\nTerminated\nDeceased\nSuspended",
 			default: "Active",
 			width: "90px",
 		},
