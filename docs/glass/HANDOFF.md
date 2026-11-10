@@ -1,10 +1,12 @@
 # HANDOFF
-prompt:   Employee Number visible on Desk Employee profile (10 Nov 2026)
-status:   done
-commit:   c62b26998 (alpha.86, tag v2.0.0-alpha.86) on nz-glass; fix 30e5c9786
-files:    hrms/public/js/erpnext/employee.js
-hrms/public/js/erpnext/employee.test.js
-frontend/package.json, docs/glass/CHANGELOG.md
-verify:   node --test hrms/public/js/erpnext/employee.test.js; after the Frappe Cloud deploy: Employee -> Overview -> Company Details shows Employee Number, read-only
-flags:    no migrate; display only; not checked in a browser (no local site)
-next:     deploy alpha.86 on Frappe Cloud and check one saved Employee profile
+prompt:   Employee Status -> Active/Resigned/Terminated/Deceased/Suspended (10 Nov 2026)
+status:   partial
+commit:   eda1ace50 on nz-glass (no version bump/tag yet)
+files:    hrms/utils/employee_status.py (new)
+hrms/patches/v16_0/employee_status_options.py (new)
+hrms/overrides/employee_master.py
+hrms/sync/runner.py, hrms/hr/offboarding.py, salary_slip.py, hr/utils.py
+hrms/public/js/erpnext/employee_list.js (new), 4 report .js
+verify:   python3 -m pytest -q hrms/utils/test_employee_status.py hrms/overrides/test_employee_status_rules.py hrms/patches/v16_0/test_employee_status_options.py hrms/tests/test_leaver_status_everywhere.py; deploy needs bench migrate
+flags:    no bench site, site tests not run; Inactive guards now never fire (owner Q2); Terminated/Deceased label-only (owner Q1)
+next:     owner answers Q1/Q2, then version bump + Frappe Cloud deploy + migrate
