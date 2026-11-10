@@ -44,6 +44,7 @@ from erpnext.setup.doctype.employee.employee import (
 from hrms.hr.doctype.leave_policy_assignment.leave_policy_assignment import (
 	calculate_pro_rated_leaves,
 )
+from hrms.utils.employee_status import LEAVER_STATUS
 from hrms.utils.identity import own_employees
 
 DateTimeLikeObject = str | datetime.date | datetime.datetime
@@ -646,7 +647,7 @@ def get_leave_allocations(date, leave_type):
 			& (leave_allocation.leave_type == leave_type)
 			& (leave_allocation.leave_policy_assignment.isnotnull())
 			& (leave_allocation.leave_policy.isnotnull())
-			& (employee.status != "Left")
+			& (employee.status != LEAVER_STATUS)
 			# Mirrored allocations are owned by their source instance
 			# (single-writer, hrms/sync/write_block.py). Accrual writes the
 			# ledger hook-free, so it must be excluded here at the query or the

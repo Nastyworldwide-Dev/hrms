@@ -60,7 +60,7 @@ class TestEmployeeTransfer(HRMSTestSuite):
 		transfer.submit()
 		self.assertTrue(transfer.new_employee_id)
 		self.assertEqual(frappe.get_value("Employee", transfer.new_employee_id, "status"), "Active")
-		self.assertEqual(frappe.get_value("Employee", transfer.employee, "status"), "Left")
+		self.assertEqual(frappe.get_value("Employee", transfer.employee, "status"), "Resigned")
 
 	def test_employee_history(self):
 		employee = make_employee(

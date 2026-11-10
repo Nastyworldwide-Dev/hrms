@@ -361,7 +361,7 @@ class TestSalarySlip(HRMSTestSuite):
 		frappe.db.set_value(
 			"Employee",
 			new_emp_id,
-			{"date_of_joining": joining_date, "relieving_date": relieving_date, "status": "Left"},
+			{"date_of_joining": joining_date, "relieving_date": relieving_date, "status": "Resigned"},
 		)
 
 		frappe.delete_doc("Salary Slip", new_ss.name, force=True)
@@ -402,7 +402,7 @@ class TestSalarySlip(HRMSTestSuite):
 		frappe.db.set_value(
 			"Employee",
 			new_emp_id,
-			{"date_of_joining": joining_date, "relieving_date": relieving_date, "status": "Left"},
+			{"date_of_joining": joining_date, "relieving_date": relieving_date, "status": "Resigned"},
 		)
 
 		new_ss = make_employee_salary_slip(
@@ -435,7 +435,7 @@ class TestSalarySlip(HRMSTestSuite):
 		frappe.db.set_value(
 			"Employee",
 			new_emp_id,
-			{"date_of_joining": joining_date, "relieving_date": relieving_date, "status": "Left"},
+			{"date_of_joining": joining_date, "relieving_date": relieving_date, "status": "Resigned"},
 		)
 
 		holidays = 0
@@ -860,7 +860,7 @@ class TestSalarySlip(HRMSTestSuite):
 			{
 				"date_of_joining": add_days(nowdate(), -60),
 				"relieving_date": relieving_date,
-				"status": "Left",
+				"status": "Resigned",
 			},
 		)
 
@@ -1813,7 +1813,7 @@ class TestSalarySlip(HRMSTestSuite):
 
 		make_leave_application(emp_id, leave_start_date, leave_end_date, "Leave Without Pay")
 
-		frappe.db.set_value("Employee", emp_id, {"relieving_date": relieving_date, "status": "Left"})
+		frappe.db.set_value("Employee", emp_id, {"relieving_date": relieving_date, "status": "Resigned"})
 
 		ss = make_employee_salary_slip(
 			emp_id,

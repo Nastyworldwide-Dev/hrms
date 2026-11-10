@@ -297,7 +297,7 @@ class TestStatusSweep(unittest.TestCase):
 		# relieved Tue Aug 25; Sat 29 + Sun 30 off -> 3rd working day is Fri Aug 28
 		counters, employee = self._run(D(2026, 8, 25), holidays={D(2026, 8, 29), D(2026, 8, 30)})
 		self.assertEqual(counters["marked_left"], 1)
-		self.assertEqual(employee.status, "Left")
+		self.assertEqual(employee.status, "Resigned")
 		self.assertTrue(employee.saved)
 		self.assertTrue(employee.comments)
 
@@ -309,7 +309,7 @@ class TestStatusSweep(unittest.TestCase):
 
 	def test_live_recheck_never_forces_a_changed_employee(self):
 		# query saw Active, but the live document is already Left
-		employee = _FakeEmployee(status="Left", relieving_date=D(2026, 8, 25))
+		employee = _FakeEmployee(status="Resigned", relieving_date=D(2026, 8, 25))
 		counters, employee = self._run(D(2026, 8, 25), employee=employee)
 		self.assertEqual(counters["marked_left"], 0)
 		self.assertFalse(employee.saved)

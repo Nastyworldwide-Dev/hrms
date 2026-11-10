@@ -8,6 +8,7 @@ from frappe.model.document import Document
 from frappe.utils import getdate
 
 from hrms.hr.utils import update_employee_work_history
+from hrms.utils.employee_status import LEAVER_STATUS
 
 
 class EmployeeTransfer(Document):
@@ -39,7 +40,7 @@ class EmployeeTransfer(Document):
 			self.db_set("new_employee_id", new_employee.name)
 			# relieve the old employee
 			employee.db_set("relieving_date", self.transfer_date)
-			employee.db_set("status", "Left")
+			employee.db_set("status", LEAVER_STATUS)
 		else:
 			employee = update_employee_work_history(employee, self.transfer_details, date=self.transfer_date)
 			if self.new_company and self.company != self.new_company:

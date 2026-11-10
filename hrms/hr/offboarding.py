@@ -25,6 +25,8 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, cint, flt, formatdate, getdate
 
+from hrms.utils.employee_status import LEAVER_STATUS
+
 logger = logging.getLogger(__name__)
 
 
@@ -341,13 +343,13 @@ def update_relieved_employee_status(employee: str | None = None) -> dict:
 				continue
 			# Employee.save with status Left also disables the linked User
 			# (erpnext update_user_status) — intended: offboarding revokes login.
-			employee.status = "Left"
+			employee.status = LEAVER_STATUS
 			employee.flags.ignore_permissions = True
 			employee.save()
 			employee.add_comment(
 				"Comment",
-				_("Status set to Left automatically: {0} working day(s) after relieving date {1}").format(
-					working_days, relieving_date
+				_("Status set to {0} automatically: {1} working day(s) after relieving date {2}").format(
+					_(LEAVER_STATUS), working_days, relieving_date
 				),
 			)
 			counters["marked_left"] += 1

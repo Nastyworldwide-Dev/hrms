@@ -390,7 +390,18 @@ class TestPlanImport(unittest.TestCase):
 		)
 
 	def test_a_left_employees_punch_after_the_relieving_date_is_refused(self):
-		employees = {"EMP-1": {"status": "Left", "relieving_date": "2026-09-03"}}
+		for status in ("Resigned", "Left"):  # Left: a row not yet migrated
+			with self.subTest(status=status):
+				self._refuses_after_relieving(status)
+
+	def test_terminated_deceased_and_suspended_have_no_leaver_rule_yet(self):
+		for status in ("Terminated", "Deceased", "Suspended"):
+			employees = {"EMP-1": {"status": status, "relieving_date": "2026-09-03"}}
+			plan = ci.plan_import([punch("EMP-1", "2026-09-04 08:30:00", "IN", "R-AFTER")], [], employees)
+			self.assertEqual([row["remote_name"] for row in plan["insert"]], ["R-AFTER"], status)
+
+	def _refuses_after_relieving(self, status):
+		employees = {"EMP-1": {"status": status, "relieving_date": "2026-09-03"}}
 		plan = ci.plan_import(
 			[
 				punch("EMP-1", "2026-09-04 01:04:00", "OUT", "R-CLOSES-LAST-DAY"),

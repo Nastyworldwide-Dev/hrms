@@ -162,7 +162,7 @@ class TestIncomeTaxComputation(HRMSTestSuite):
 			payroll_period=self.payroll_period,
 			test_tax=True,
 		)
-		frappe.db.set_value("Employee", employee, {"relieving_date": relieving_date, "status": "Left"})
+		frappe.db.set_value("Employee", employee, {"relieving_date": relieving_date, "status": "Resigned"})
 
 		filters = frappe._dict(
 			{
@@ -181,7 +181,7 @@ class TestIncomeTaxComputation(HRMSTestSuite):
 			{"email": "test_itrc1@example.com", "args": {"status": "Active"}},
 			{"email": "test_itrc2@example.com", "args": {"status": "Inactive"}},
 			{"email": "test_itrc3@example.com", "args": {"status": "Suspended"}},
-			{"email": "test_itrc4@example.com", "args": {"status": "Left", "relieving_date": getdate()}},
+			{"email": "test_itrc4@example.com", "args": {"status": "Resigned", "relieving_date": getdate()}},
 		]
 
 		for user in users:

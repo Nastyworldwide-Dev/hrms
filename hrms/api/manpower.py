@@ -29,6 +29,7 @@ from hrms.hr.doctype.manpower_request.manpower_request import (
 )
 from hrms.hr.utils import get_designated_approvers, holds_hr_role, sees_all_employee_data
 from hrms.overrides.company_scope import company_visible
+from hrms.utils.employee_status import LEAVER_STATUS
 from hrms.utils.identity import get_employee, normalize_login
 
 DOCTYPE = "Manpower Request"
@@ -115,7 +116,7 @@ def replaceable_staff(department: str) -> list[dict]:
 		filters=filters,
 		or_filters=[
 			{"status": "Active"},
-			{"status": "Left", "relieving_date": [">=", str(earliest)]},
+			{"status": LEAVER_STATUS, "relieving_date": [">=", str(earliest)]},
 		],
 		fields=["name", "employee_name", "designation", "status", "relieving_date"],
 	)

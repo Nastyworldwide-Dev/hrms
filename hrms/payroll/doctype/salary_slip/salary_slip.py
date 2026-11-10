@@ -58,6 +58,7 @@ from hrms.payroll.utils import (
 )
 from hrms.regional.china.utils import get_china_social_insurance
 from hrms.regional.malaysia.utils import get_eis_contribution, get_socso_contribution
+from hrms.utils.employee_status import LEAVER_STATUS, is_leaver
 from hrms.utils.holiday_list import get_holiday_dates_between
 from hrms.utils.ot_calculation import get_ot_pay
 
@@ -676,10 +677,12 @@ class SalarySlip(TransactionBase):
 
 		if self.relieving_date:
 			employee_status = frappe.db.get_value("Employee", self.employee, "status")
-			if self.relieving_date < getdate(self.start_date) and employee_status != "Left":
+			if self.relieving_date < getdate(self.start_date) and not is_leaver(employee_status):
 				frappe.throw(
-					_("Employee {0} relieved on {1} must be set as 'Left'").format(
-						get_link_to_form("Employee", self.employee), formatdate(self.relieving_date)
+					_("Employee {0} relieved on {1} must be set as '{2}'").format(
+						get_link_to_form("Employee", self.employee),
+						formatdate(self.relieving_date),
+						_(LEAVER_STATUS),
 					)
 				)
 

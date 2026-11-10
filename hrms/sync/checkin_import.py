@@ -75,6 +75,7 @@ from hrms.sync.missing_checkins import (
 	resolve_window,
 )
 from hrms.utils.dry_run import wants_dry_run
+from hrms.utils.employee_status import is_leaver
 
 logger = logging.getLogger(__name__)
 
@@ -141,10 +142,10 @@ def attendance_day(entry) -> date:
 
 
 def left_before(employee: dict, entry: dict) -> bool:
-	"""A Left employee's punch dated after their relieving date. Pure."""
+	"""A Resigned employee's punch dated after their relieving date. Pure."""
 	relieving = employee.get("relieving_date")
 	left = (
-		employee.get("status") == "Left" and bool(relieving) and _to_date(relieving) < attendance_day(entry)
+		is_leaver(employee.get("status")) and bool(relieving) and _to_date(relieving) < attendance_day(entry)
 	)
 	if left:
 		logger.info(

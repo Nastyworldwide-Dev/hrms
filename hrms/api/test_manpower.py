@@ -449,7 +449,7 @@ class TestReplaceableStaff(unittest.TestCase):
 			asked["or_filters"],
 			[
 				{"status": "Active"},
-				{"status": "Left", "relieving_date": [">=", "2026-04-22"]},
+				{"status": "Resigned", "relieving_date": [">=", "2026-04-22"]},
 			],
 		)
 
@@ -465,7 +465,7 @@ class TestReplaceableStaff(unittest.TestCase):
 				name="E3",
 				employee_name="Joel",
 				designation="Designer",
-				status="Left",
+				status="Resigned",
 				relieving_date="2026-09-12",
 			),
 			dict(
@@ -475,7 +475,7 @@ class TestReplaceableStaff(unittest.TestCase):
 				name="E4",
 				employee_name="Aziz",
 				designation="Executive",
-				status="Left",
+				status="Resigned",
 				relieving_date="2026-10-05",
 			),
 			dict(
