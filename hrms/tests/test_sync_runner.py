@@ -685,6 +685,26 @@ class TestMastersAreMirroredSoLinksResolve(_RunnerTestCase):
 		payload = runner._mirror_payload({"name": "HR-EMP-0001"}, "nasty-live", "Employee")
 		self.assertEqual(payload[runner.PROVENANCE_FIELD], "nasty-live")
 
+	def test_an_employee_left_or_inactive_on_the_source_arrives_resigned(self):
+		"""HR's statuses (10 Nov 2026): the source ERPs still send Left and
+		Inactive, which the hub's dropdown no longer has."""
+		for old in ("Left", "Inactive"):
+			payload = runner._mirror_payload({"name": "HR-EMP-0001", "status": old}, "nasty-live", "Employee")
+			self.assertEqual(payload["status"], "Resigned", old)
+
+	def test_the_current_statuses_arrive_unchanged(self):
+		for status in ("Active", "Resigned", "Terminated", "Deceased", "Suspended"):
+			payload = runner._mirror_payload(
+				{"name": "HR-EMP-0001", "status": status}, "nasty-live", "Employee"
+			)
+			self.assertEqual(payload["status"], status)
+
+	def test_only_employee_status_is_translated(self):
+		payload = runner._mirror_payload(
+			{"name": "HR-SHA-1", "status": "Inactive"}, "nasty-live", "Shift Assignment"
+		)
+		self.assertEqual(payload["status"], "Inactive")
+
 	def test_a_master_that_already_exists_locally_is_left_alone(self):
 		self.seed_parent("Leave Type", "Annual Leave", leave_type_name="Annual Leave", max_leaves_allowed=20)
 		client = self.client({"Leave Type": [{"name": "Annual Leave", "max_leaves_allowed": 5}]})
@@ -2223,8 +2243,17 @@ class TestUserStatusIsReconciled(_RunnerTestCase):
 		self.seed_parent("Employee", "HR-EMP-0001", company="Acme", user_id="aisha@hub.example")
 		self.seed_parent("User", "aisha@hub.example", enabled=1)
 
+		self._sync("Resigned")
+
+		self.assertEqual(self.store.rows("User")["aisha@hub.example"]["enabled"], 0)
+
+	def test_an_employee_still_left_on_the_source_has_their_user_disabled(self):
+		self.seed_parent("Employee", "HR-EMP-0001", company="Acme", user_id="aisha@hub.example")
+		self.seed_parent("User", "aisha@hub.example", enabled=1)
+
 		self._sync("Left")
 
+		self.assertEqual(self.store.rows("Employee")["HR-EMP-0001"]["status"], "Resigned")
 		self.assertEqual(self.store.rows("User")["aisha@hub.example"]["enabled"], 0)
 
 	def test_a_reactivated_employee_has_their_user_re_enabled(self):
@@ -2238,7 +2267,7 @@ class TestUserStatusIsReconciled(_RunnerTestCase):
 	def test_an_unlinked_employee_touches_no_user(self):
 		self.seed_parent("Employee", "HR-EMP-0001", company="Acme")
 
-		self._sync("Left")
+		self._sync("Resigned")
 
 		self.assertEqual(self.store.rows("User"), {})
 

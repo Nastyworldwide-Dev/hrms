@@ -52,6 +52,7 @@ def _log():
 
 #: Custom field stamped on every mirrored row. Read by `hrms.sync.parity`.
 from hrms.sync.cutover import leave_existing_row_alone
+from hrms.utils.employee_status import to_current
 
 PROVENANCE_FIELD = "synced_from_instance"
 
@@ -712,6 +713,11 @@ def _mirror_payload(row: dict, instance_name: str, doctype: str) -> dict:
 
 	for key, value in _REQUIRED_DEFAULTS.get(doctype, {}).items():
 		payload.setdefault(key, value)
+
+	if doctype == "Employee" and "status" in payload:
+		# The source ERPs still use Left and Inactive; HR's dropdown here has
+		# Resigned in their place (hrms.utils.employee_status, 10 Nov 2026).
+		payload["status"] = to_current(payload["status"])
 
 	# Masters and Company shells stay unstamped — they are HR-owned on this hub,
 	# and a stamp would hand them to the write-block and to parity's row counts.
