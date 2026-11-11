@@ -109,3 +109,29 @@ test("a reused Employee form resets visibility and editability for each mode", (
 	employeeForm.refresh(frm);
 	assert.deepEqual(metadata.employee_number, { hidden: 0, read_only: 0 });
 });
+
+test("Cost Tag/Center picks a leaf Territory, the ERP's cost tags (owner, 11 Nov 2026)", () => {
+	let employeeForm;
+	const sandbox = {
+		__: (text) => text,
+		frappe: {
+			ui: { form: { on(doctype, events) { if (doctype === "Employee") employeeForm = events; } } },
+			db: { get_single_value() { return { then() {} }; } },
+		},
+	};
+	vm.runInNewContext(fs.readFileSync(path.join(__dirname, "employee.js"), "utf8"), sandbox);
+	const queries = {};
+	const frm = {
+		doc: { name: "HR-EMP-001", company: "Example" },
+		fields_dict: {},
+		set_query(field, table, fn) { queries[`${table || ""}.${field}`] = fn || table; },
+		set_df_property() {},
+		toggle_display() {},
+		is_new() { return false; },
+	};
+	employeeForm.refresh(frm);
+	const query = queries["interco_cost_allocation.territory"];
+	assert.ok(query, "the territory column has a query");
+	assert.equal(JSON.stringify(query().filters), JSON.stringify({ is_group: 0 }));
+	assert.equal(queries["interco_cost_allocation.cost_center"], undefined, "the old Cost Center column is read-only");
+});

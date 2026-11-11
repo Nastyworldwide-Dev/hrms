@@ -24,10 +24,10 @@ frappe.query_reports["Intercompany Salary Cost Allocation"] = {
 			options: "Company",
 		},
 		{
-			fieldname: "cost_center",
+			fieldname: "territory",
 			label: __("Cost Tag/Center"),
 			fieldtype: "Link",
-			options: "Cost Center",
+			options: "Territory",
 		},
 	],
 };

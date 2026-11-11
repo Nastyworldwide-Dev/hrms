@@ -33,16 +33,11 @@ frappe.ui.form.on("Employee", {
 				};
 			});
 		}
-		// Cost Tag/Center: every company's cost centers, leaves only, not disabled,
-		// and not each company's default "Main" (they buried the real tags)
-		frm.set_query("cost_center", "interco_cost_allocation", () => {
-			return {
-				filters: {
-					is_group: 0,
-					disabled: 0,
-					cost_center_name: ["!=", "Main"],
-				},
-			};
+		// Cost Tag/Center: the ERP's cost tags, which NASTY keeps as Territory
+		// (owner, 11 Nov 2026; mirrored by the sync). Leaves only: a group such as
+		// "All Territories" cannot carry a split.
+		frm.set_query("territory", "interco_cost_allocation", () => {
+			return { filters: { is_group: 0 } };
 		});
 		frm.set_df_property("holiday_list", "hidden", 1);
 

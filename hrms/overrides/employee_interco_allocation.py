@@ -18,8 +18,9 @@ def validate_interco_allocation(doc, method=None):
 	100% with no cost tag twice. An empty table is allowed — the allocation
 	report then shows the employee's full cost as unallocated.
 
-	The tag is a Cost Center. Rows saved while it was a Territory keep that
-	Territory and stay valid, so HR never has to re-enter an old split."""
+	The tag is a Territory, the ERP's cost tags (owner, 11 Nov 2026). Rows saved
+	while it was a Cost Center (28 Oct - 11 Nov) keep it and stay valid, so HR
+	never has to re-enter an old split."""
 	rows = doc.get("interco_cost_allocation") or []
 	if not rows:
 		return
@@ -34,7 +35,7 @@ def validate_interco_allocation(doc, method=None):
 			frappe.throw(
 				_("Cost Tag/Center allocation row {0}: percentage must be greater than 0.").format(row.idx)
 			)
-		tag = row.get("cost_center") or row.get("territory")
+		tag = row.get("territory") or row.get("cost_center")
 		if not tag:
 			frappe.throw(
 				_("Cost Tag/Center allocation row {0}: Cost Tag/Center is required.").format(row.idx)

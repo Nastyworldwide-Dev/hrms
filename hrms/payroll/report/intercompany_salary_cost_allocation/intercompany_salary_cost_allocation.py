@@ -24,8 +24,9 @@ def execute(filters=None):
 	allocations = _get_employee_allocations({s.employee for s in slips})
 
 	rows = build_allocation_rows(slips, employer_costs, allocations)
-	if filters.cost_center:
-		rows = [r for r in rows if r["cost_tag"] == filters.cost_center]
+	# Cost Tag/Center is a Territory again (owner, 11 Nov 2026)
+	if filters.territory:
+		rows = [r for r in rows if r["cost_tag"] == filters.territory]
 	logger.info("[interco_report] user=%s slips=%d rows=%d", frappe.session.user, len(slips), len(rows))
 	return _get_columns(), rows
 
@@ -74,7 +75,7 @@ def build_allocation_rows(slips, employer_costs, allocations) -> list[dict]:
 					"employee": slip.employee,
 					"employee_name": slip.employee_name,
 					"company": slip.company,
-					"cost_tag": allocation.get("cost_center") or allocation.get("territory"),
+					"cost_tag": allocation.get("territory") or allocation.get("cost_center"),
 					"percentage": flt(allocation["percentage"]),
 					"gross_pay": flt(slip.gross_pay) if i == 0 else 0,
 					"employer_contributions": contributions if i == 0 else 0,
