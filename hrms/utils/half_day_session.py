@@ -180,3 +180,24 @@ def approved_session(employee, day):
 	if session:
 		logger.info("[half_day_session] %s on %s is off in the %s", employee, day, session)
 	return session
+
+
+def half_days_to_close(rows, end_date):
+	"""The waiting half-day rows whose day is over and may stop waiting. Pure.
+
+	`end_date` is the last day whose shift has fully ended before the check-in
+	sync (ShiftType.get_start_and_end_dates), the same line the absent sweep
+	draws. Owner, 11 Nov 2026: the wait used to end at the sync's own date, so a
+	half day was closed during its morning and the punches that followed never
+	filled the hours. No end date: nothing closes.
+	"""
+	if not end_date:
+		return []
+	closing = [r for r in rows if r["attendance_date"] <= end_date]
+	logger.info(
+		"[half_day_session] %d of %d waiting half day(s) may close (end %s)",
+		len(closing),
+		len(rows),
+		end_date,
+	)
+	return closing

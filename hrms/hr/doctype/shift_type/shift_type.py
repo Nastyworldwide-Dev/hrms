@@ -1106,15 +1106,29 @@ class ShiftType(Document):
 		return True
 
 	def mark_absent_for_half_day_dates(self, employee):
-		half_day_attendances = frappe.get_all(
-			"Attendance",
-			filters={
-				"employee": employee,
-				"status": "Half Day",
-				"modify_half_day_status": 1,
-				"attendance_date": ["<=", getdate(self.last_sync_of_checkin)],
-			},
-			fields=["name", "attendance_date"],
+		"""Close the half days whose shift is over and brought no punches.
+
+		Only days up to the shift BEFORE the last sync, the absent sweep's own
+		line (owner, 11 Nov 2026): closing at the sync's date shut a half day
+		during its morning, and the IN and OUT that came after were linked as
+		evidence while the hours stayed 0.00."""
+		from hrms.utils.half_day_session import half_days_to_close
+
+		_start_date, end_date = self.get_start_and_end_dates(employee)
+		if not end_date:
+			return
+		half_day_attendances = half_days_to_close(
+			frappe.get_all(
+				"Attendance",
+				filters={
+					"employee": employee,
+					"status": "Half Day",
+					"modify_half_day_status": 1,
+					"attendance_date": ["<=", end_date],
+				},
+				fields=["name", "attendance_date"],
+			),
+			getdate(end_date),
 		)
 		start_time = get_time(self.start_time)
 		for attendance in half_day_attendances:
