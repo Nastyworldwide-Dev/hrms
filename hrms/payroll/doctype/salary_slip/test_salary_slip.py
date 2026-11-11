@@ -26,7 +26,6 @@ from frappe.utils.make_random import get_random
 
 import erpnext
 from erpnext.accounts.utils import get_fiscal_year
-from erpnext.setup.doctype.employee.employee import InactiveEmployeeStatusError
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from hrms.hr.doctype.leave_allocation.test_leave_allocation import create_leave_allocation
@@ -88,31 +87,10 @@ class TestSalarySlip(HRMSTestSuite):
 		self.assertEqual(leave_detail.used_leaves, 4)
 		self.assertEqual(leave_detail.available_leaves, 6)
 
-	def test_employee_status_inactive(self):
-		from hrms.payroll.doctype.salary_structure.test_salary_structure import make_salary_structure
-
-		employee = make_employee("test_employee_status@company.com", company="_Test Company")
-		employee_doc = frappe.get_doc("Employee", employee)
-		employee_doc.status = "Inactive"
-		employee_doc.save()
-		employee_doc.reload()
-
-		make_holiday_list()
-		frappe.db.set_value(
-			"Company", employee_doc.company, "default_holiday_list", "Salary Slip Test Holiday List"
-		)
-
-		ss = frappe.qb.DocType("Salary Structure")
-		frappe.qb.from_(ss).delete().where(ss.name == "Test Inactive Employee Salary Slip").run()
-		salary_structure = make_salary_structure(
-			"Test Inactive Employee Salary Slip",
-			"Monthly",
-			employee=employee_doc.name,
-			company=employee_doc.company,
-		)
-		salary_slip = make_salary_slip(salary_structure.name, employee=employee_doc.name)
-
-		self.assertRaises(InactiveEmployeeStatusError, salary_slip.save)
+	# test_employee_status_inactive retired 11 Nov 2026: HR's statuses have no
+	# Inactive (everyone Inactive became Resigned, hrms.utils.employee_status),
+	# and the owner kept Resigned working exactly as Left did, which never
+	# blocked a payslip. validate_active_employee's Inactive check never fires.
 
 	@HRMSTestSuite.change_settings(
 		"Payroll Settings", {"payroll_based_on": "Attendance", "daily_wages_fraction_for_half_day": 0.75}

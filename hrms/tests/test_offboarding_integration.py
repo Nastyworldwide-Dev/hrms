@@ -108,7 +108,7 @@ class TestOffboardingIntegration(HRMSTestSuite):
 		counters = update_relieved_employee_status(employee=self.employee.name)
 		self.assertEqual(counters["marked_left"], 1)
 		self.employee.reload()
-		self.assertEqual(self.employee.status, "Left")
+		self.assertEqual(self.employee.status, "Resigned")
 
 		# rerun: the employee no longer matches the criteria, nothing happens
 		counters = update_relieved_employee_status(employee=self.employee.name)
