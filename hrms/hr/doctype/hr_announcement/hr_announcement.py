@@ -92,14 +92,20 @@ class HRAnnouncement(Document):
 		doctype = AUDIENCE_DOCTYPE.get(self.audience)
 		if not doctype:
 			frappe.throw(_("{0} is not an audience this app knows.").format(self.audience))
-		if not self.audience_value:
+		from hrms.api.announcements import audience_targets
+
+		targets = audience_targets(self.audience_value)
+		if not targets:
 			frappe.throw(_("Choose which {0} this is for.").format(self.audience.lower()))
-		# The value is a typed name rather than a validated Link, so the check
-		# is ours. Without it a typo publishes an announcement addressed to a
+		# The values are names rather than validated Links, so the check is
+		# ours. Without it a typo publishes an announcement addressed to a
 		# department that does not exist — which shows it to nobody, silently,
 		# and HR has no way to tell that from "nobody has read it yet".
-		if not frappe.db.exists(doctype, self.audience_value):
-			frappe.throw(_("There is no {0} called {1}.").format(self.audience.lower(), self.audience_value))
+		for target in targets:
+			if not frappe.db.exists(doctype, target):
+				frappe.throw(_("There is no {0} called {1}.").format(self.audience.lower(), target))
+		# one name per line, each once, in the order HR picked them
+		self.audience_value = "\n".join(dict.fromkeys(targets))
 
 	def validate_dates(self):
 		if getdate(self.publish_until) < getdate(self.publish_from):

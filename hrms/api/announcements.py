@@ -69,6 +69,14 @@ def _reader():
 	)
 
 
+def audience_targets(audience_value) -> list[str]:
+	"""The names an announcement is addressed to, one per line (owner, 11 Nov 2026:
+	HR picks several companies, departments or branches). A value saved before
+	is one name on one line, so it reads the same. Never split on commas: a
+	company name may carry one. Pure."""
+	return [line.strip() for line in str(audience_value or "").splitlines() if line.strip()]
+
+
 def audience_matches(audience, audience_value, reader) -> bool:
 	"""Is this announcement addressed to this reader?
 
@@ -80,16 +88,17 @@ def audience_matches(audience, audience_value, reader) -> bool:
 	"""
 	if audience == "Everyone":
 		return True
-	if not audience_value:
+	targets = audience_targets(audience_value)
+	if not targets:
 		# A targeted announcement with no target is a misconfiguration. Showing
 		# it to everyone is the failure mode that matters.
 		return False
 	if audience == "Company":
-		return audience_value == reader.company
+		return reader.company in targets
 	if audience == "Department":
-		return audience_value == reader.department
+		return reader.department in targets
 	if audience == "Branch":
-		return audience_value == reader.branch
+		return reader.branch in targets
 	logger.warning("[announcements] unknown audience %r — hidden", audience)
 	return False
 
@@ -418,12 +427,13 @@ def _audience_employees(doc) -> list[str]:
 	the card, and the number's whole value is that it is trustworthy.
 	"""
 	filters = {"status": "Active"}
+	targets = ("in", audience_targets(doc.audience_value) or [""])
 	if doc.audience == "Company":
-		filters["company"] = doc.audience_value
+		filters["company"] = targets
 	elif doc.audience == "Department":
-		filters["department"] = doc.audience_value
+		filters["department"] = targets
 	elif doc.audience == "Branch":
-		filters["branch"] = doc.audience_value
+		filters["branch"] = targets
 	return frappe.get_all("Employee", filters=filters, pluck="name", ignore_permissions=True)
 
 

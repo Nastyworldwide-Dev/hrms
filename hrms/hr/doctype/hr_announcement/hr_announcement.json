@@ -104,11 +104,11 @@
   },
   {
    "fieldname": "audience_value",
-   "fieldtype": "Data",
-   "label": "Which one",
+   "fieldtype": "Small Text",
+   "label": "Which ones",
    "depends_on": "eval:doc.audience && doc.audience != 'Everyone'",
    "mandatory_depends_on": "eval:doc.audience && doc.audience != 'Everyone'",
-   "description": "The company, department or branch name this is for. A plain name rather than a Link: a Dynamic Link resolves its target doctype during Frappe's _validate_links(), which runs before every controller hook, so a target derived from `audience` can never be set in time — verified on the bench, 22 Sep 2026. The fence compares names (api/announcements.audience_matches)."
+   "description": "Pick one or more from the list. Saved one name per line."
   },
   {
    "fieldname": "schedule_section",
@@ -184,7 +184,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-27 12:00:00.000000",
+ "modified": "2026-11-11 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Announcement",
