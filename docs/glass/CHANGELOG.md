@@ -10,6 +10,19 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.96] — Cost Tag Held Back — 2026-11-11
+
+### Changed
+- **Cost Tag/Center stays on Cost Center for now.** The switch back to Territory
+  (alpha.93 and alpha.94) is held back from this deploy at the owner's request;
+  nothing about Cost Tag/Center, its Excel upload, the cost allocation report or
+  the ERP sync changes. The work is kept for a later release.
+
+Deploy **this** version, not alpha.93 to alpha.95. It carries everything else from
+alpha.87 to alpha.95: Employee Status, half-day hours on Home and Calendar, the
+half-day hours fix and repair, and the org chart counts. **Needs migrate.** No
+ERP sync step needed.
+
 ## [2.0.0-alpha.95] — Half Day Hours Fixed — 2026-11-11
 
 ### Fixed
