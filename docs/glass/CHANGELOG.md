@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.90] — Team Counts — 2026-11-11
+
+### Added
+- **Org chart: the people under someone's team.** The count on a card now reads
+  "5 / 37": 5 report directly, 37 report to those five (one level down). One
+  number when nobody is under the direct reports. The open person's card says it
+  in words: "5 report directly, 37 report to them".
+
+Includes alpha.87 to alpha.89 if they are not live yet. **Needs migrate.**
+
 ## [2.0.0-alpha.89] — Half Day Bar — 2026-11-11
 
 ### Fixed
