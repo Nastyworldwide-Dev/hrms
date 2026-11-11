@@ -60,7 +60,7 @@ def _matches(row, filters):
 	return True
 
 
-def _find(rows):
+def _find(rows, paid=False):
 	def exists(doctype, filters):
 		hit = next((r for r in rows if _matches(r, filters)), None)
 		return hit["name"] if hit else None
@@ -68,6 +68,10 @@ def _find(rows):
 	with (
 		patch.object(frappe.db, "exists", side_effect=exists, create=True),
 		patch.object(frappe, "get_doc", side_effect=lambda dt, name: {"name": name}, create=True),
+		patch(
+			"hrms.overrides.remote_checkin_request_hooks._repair_financial_dependency",
+			return_value="SAL-SLIP-1" if paid else None,
+		),
 	):
 		found = ck.get_existing_half_day_attendance("EMP-1", DAY)
 	return found and found["name"]
@@ -90,6 +94,14 @@ class TestHalfDayLeaveRowWaitsForPunches(unittest.TestCase):
 
 	def test_a_draft_or_cancelled_row_is_not_found(self):
 		self.assertIsNone(_find(_rows(modify_half_day_status=0, docstatus=2)))
+
+	def test_a_closed_row_on_a_paid_day_is_left_for_hr(self):
+		# review of c552c5e90: a late punch never silently changes a paid day
+		self.assertIsNone(_find(_rows(modify_half_day_status=0), paid=True))
+
+	def test_a_waiting_row_is_filled_whatever_the_payroll(self):
+		# still waiting: nothing has been paid against its result yet
+		self.assertEqual(_find(_rows(), paid=True), "HR-ATT-1")
 
 
 if __name__ == "__main__":

@@ -201,3 +201,20 @@ def half_days_to_close(rows, end_date):
 		end_date,
 	)
 	return closing
+
+
+def half_day_cutoff(shift_end_date, last_sync_date):
+	"""The last day a waiting half day may close on. Pure.
+
+	`shift_end_date` is the absent sweep's line (the shift before the last sync,
+	under THIS shift type). It is None when the person's previous shift was a
+	different shift type (a roster, a one-off assignment); the half day must not
+	then wait for ever (review of 47b3fc2f2), so the day before the last sync
+	stands in: any shift dated before that has ended, and today never closes."""
+	from datetime import timedelta
+
+	if shift_end_date:
+		return shift_end_date
+	if not last_sync_date:
+		return None
+	return last_sync_date - timedelta(days=2)

@@ -1112,9 +1112,13 @@ class ShiftType(Document):
 		line (owner, 11 Nov 2026): closing at the sync's date shut a half day
 		during its morning, and the IN and OUT that came after were linked as
 		evidence while the hours stayed 0.00."""
-		from hrms.utils.half_day_session import half_days_to_close
+		from hrms.utils.half_day_session import half_day_cutoff, half_days_to_close
 
 		_start_date, end_date = self.get_start_and_end_dates(employee)
+		end_date = half_day_cutoff(
+			getdate(end_date) if end_date else None,
+			getdate(self.last_sync_of_checkin) if self.last_sync_of_checkin else None,
+		)
 		if not end_date:
 			return
 		half_day_attendances = half_days_to_close(

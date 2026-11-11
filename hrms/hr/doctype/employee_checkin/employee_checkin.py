@@ -854,6 +854,19 @@ def get_existing_half_day_attendance(employee, attendance_date):
 			},
 		)
 		if attendance_name:
+			# A closed row may already have fed a payout (review of c552c5e90):
+			# a payslip or overtime that counted it is corrected by HR, never
+			# silently by a late punch.
+			from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
+
+			if _repair_financial_dependency(employee, attendance_date, attendance_name, for_update=True):
+				logger.warning(
+					"[checkin] %s on %s: half-day row %s has no times but a payout depends on it; left for HR",
+					employee,
+					attendance_date,
+					attendance_name,
+				)
+				return None
 			logger.info(
 				"[checkin] %s on %s: half-day leave row %s had no times, filling it from punches",
 				employee,

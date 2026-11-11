@@ -8,7 +8,8 @@ The cause is fixed in ShiftType.mark_absent_for_half_day_dates and
 get_existing_half_day_attendance; this repairs the rows it already left behind.
 
 A row is repaired when it is a submitted Half Day with a leave behind it, no
-in or out time, 0 hours, a shift, and the punches linked to it pair into a
+in or out time, 0 hours, a shift, is this site's own row (not mirrored), no
+payslip or overtime has counted the day, and the punches linked to it pair into a
 day under that shift's own rules (ShiftType.get_attendance). Only the in and
 out times, the hours and the late/early marks are written; the status, the
 leave and who owns the row are not touched. A row whose punches do not pair
@@ -35,8 +36,10 @@ def stuck_rows():
 			"out_time": ("is", "not set"),
 			"working_hours": ("in", [0, None]),
 			"shift": ("is", "set"),
+			# a mirrored row is its source's copy; the source corrects it
+			"synced_from_instance": ("is", "not set"),
 		},
-		fields=["name", "employee", "attendance_date", "shift"],
+		fields=["name", "employee", "attendance_date", "shift", "half_day_status"],
 		order_by="attendance_date asc",
 	)
 
@@ -62,10 +65,15 @@ def repair_values(day) -> dict | None:
 
 def execute():
 	from hrms.hr.doctype.shift_type.shift_type import counts_for_attendance, linked_checkins
+	from hrms.overrides.remote_checkin_request_hooks import _repair_financial_dependency
 
 	rows = stuck_rows()
-	repaired, unpaired = 0, []
+	repaired, unpaired, paid = 0, [], []
 	for row in rows:
+		# a submitted payslip or overtime counted this day: HR corrects it (review of 7fec2d6f2)
+		if _repair_financial_dependency(row.employee, row.attendance_date, row.name, for_update=True):
+			paid.append(row.name)
+			continue
 		logs = [log for log in linked_checkins(row.name) if counts_for_attendance(log)]
 		shift = frappe.get_cached_doc("Shift Type", row.shift)
 		values = repair_values(
@@ -81,6 +89,14 @@ def execute():
 			unpaired.append(row.name)
 			continue
 		frappe.db.set_value("Attendance", row.name, values, update_modified=False)
+		logger.info(
+			"[patch] half-day leave hours: %s %s %s: half_day_status %s -> Present, %s h",
+			row.name,
+			row.employee,
+			row.attendance_date,
+			row.half_day_status,
+			values["working_hours"],
+		)
 		frappe.get_doc(
 			{
 				"doctype": "Comment",
@@ -94,9 +110,12 @@ def execute():
 		).insert(ignore_permissions=True)
 		repaired += 1
 	logger.info(
-		"[patch] half-day leave hours: %d of %d row(s) filled; %d left for HR (punches do not pair): %s",
+		"[patch] half-day leave hours: %d of %d row(s) filled; %d left for HR (punches do not pair): %s;"
+		" %d left for HR (already paid): %s",
 		repaired,
 		len(rows),
 		len(unpaired),
 		", ".join(unpaired[:50]),
+		len(paid),
+		", ".join(paid[:50]),
 	)
