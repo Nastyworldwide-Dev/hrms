@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.91] — Whole Team — 2026-11-11
+
+### Changed
+- **Org chart: the second number counts everyone below.** "5 / 120" is 5 direct
+  reports and 120 more people under them, every level down to the lowest, so the
+  CEO's card covers the whole office. alpha.90 counted one level only. The open
+  card says it in words: "5 report directly, 120 more below them".
+
+Includes alpha.87 to alpha.90 if they are not live yet. **Needs migrate.**
+
 ## [2.0.0-alpha.90] — Team Counts — 2026-11-11
 
 ### Added
