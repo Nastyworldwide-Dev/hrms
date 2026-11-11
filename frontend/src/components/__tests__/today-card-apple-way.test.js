@@ -15,7 +15,8 @@ test("while working, a gauge runs from the shift start to its end, labelled at b
 	assert.match(bar, /class="g-now__gauge"/)
 	assert.match(bar, /role="meter"|role="progressbar"/)
 	assert.match(bar, /:aria-valuenow=/)
-	assert.match(bar, /clockTime\(shift\.start\)[\s\S]*clockTime\(shift\.end\)/)
+	// both ends label the window worked: the half on a half day (owner, 11 Nov 2026)
+	assert.match(bar, /clockTime\(gaugeWindow\(shift\)\.start\)[\s\S]*clockTime\(gaugeWindow\(shift\)\.end\)/)
 })
 
 test("past the end the gauge turns orange; long past it asks 'Forgot to check out?'", () => {

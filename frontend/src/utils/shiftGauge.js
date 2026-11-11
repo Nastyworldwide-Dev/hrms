@@ -42,3 +42,13 @@ export function shiftGauge({ start, end, leaveBy, nowMin }) {
 	const level = pastMin >= FORGOT_AFTER_MIN ? "forgot" : pastMin > 0 ? "past" : "working"
 	return { fraction: done / length, leftMin: Math.max(own - now, 0), pastMin, level }
 }
+
+//: The part of the shift the gauge spans: on an approved half day, the half worked
+//: (the server's half_start / half_end, owner 11 Nov 2026); otherwise the whole shift.
+export function gaugeWindow(shift) {
+	if (!shift) return null
+	const half = shift.half_day && shift.half_start && shift.half_end
+	return half
+		? { start: shift.half_start, end: shift.half_end }
+		: { start: shift.start, end: shift.end }
+}

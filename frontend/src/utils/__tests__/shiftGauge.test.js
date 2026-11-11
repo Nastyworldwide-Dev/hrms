@@ -4,7 +4,7 @@
 // levels"). Worked out from the clock and the shift window, never counted up.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { shiftGauge, FORGOT_AFTER_MIN } from "../shiftGauge.js"
+import { gaugeWindow, shiftGauge, FORGOT_AFTER_MIN } from "../shiftGauge.js"
 
 const at = (hhmm) => {
 	const [h, m] = hhmm.split(":").map(Number)
@@ -88,4 +88,43 @@ test("night shift, late in: leave time after midnight", () => {
 	const g = shiftGauge({ start: "22:00", end: "06:00", leaveBy: "06:20", nowMin: at("06:10") })
 	assert.equal(g.level, "working")
 	assert.equal(g.leftMin, 10)
+})
+
+// Owner, 11 Nov 2026: on a half day the bar ran over the whole shift. Morning off
+// started it at 09:00 (Qina was due at 13:30); afternoon off ran it to 18:00, past
+// the 13:30 she may leave, because the leave time was never allowed before the end.
+test("gaugeWindow: a morning-off half day runs from mid-shift", () => {
+	const shift = {
+		start: "09:00",
+		end: "18:00",
+		half_day: "AM",
+		half_start: "13:30",
+		half_end: "18:00",
+	}
+	assert.deepEqual(gaugeWindow(shift), { start: "13:30", end: "18:00" })
+	const g = shiftGauge({ ...gaugeWindow(shift), leaveBy: "18:02", nowMin: at("14:00") })
+	assert.equal(g.leftMin, 242)
+	assert.equal(g.fraction, 30 / 272)
+})
+
+test("gaugeWindow: an afternoon-off half day ends at mid-shift", () => {
+	const shift = {
+		start: "09:00",
+		end: "18:00",
+		half_day: "PM",
+		half_start: "09:00",
+		half_end: "13:30",
+	}
+	const g = shiftGauge({ ...gaugeWindow(shift), leaveBy: "13:30", nowMin: at("11:00") })
+	assert.equal(g.leftMin, 150)
+	assert.equal(g.level, "working")
+	assert.equal(
+		shiftGauge({ ...gaugeWindow(shift), leaveBy: "13:30", nowMin: at("14:00") }).level,
+		"past"
+	)
+})
+
+test("gaugeWindow: a full day is the whole shift", () => {
+	assert.deepEqual(gaugeWindow({ start: "09:00", end: "18:00" }), { start: "09:00", end: "18:00" })
+	assert.equal(gaugeWindow(null), null)
 })

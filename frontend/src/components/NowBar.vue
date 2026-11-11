@@ -70,9 +70,9 @@
 				<div class="g-now__gauge-fill" :style="{ width: `${gauge.fraction * 100}%` }" />
 			</div>
 			<div class="g-now__gauge-ends" aria-hidden="true">
-				<span>{{ clockTime(shift.start) }}</span>
+				<span>{{ clockTime(gaugeWindow(shift).start) }}</span>
 				<b>{{ gaugeMiddle }}</b>
-				<span>{{ leaveHHMM || clockTime(shift.end) }}</span>
+				<span>{{ leaveHHMM || clockTime(gaugeWindow(shift).end) }}</span>
 			</div>
 		</div>
 		<!-- Long past the shift end: probably a forgotten check-out. Said once,
@@ -80,7 +80,9 @@
 		     a person might overlook"); the fix is the card's own button below. -->
 		<p v-if="gauge?.level === 'forgot'" class="g-now__forgot" role="status">
 			{{
-				__("You were due to leave at {0}. Forgot to check out?", [leaveAt || clockTime(shift.end)])
+				__("You were due to leave at {0}. Forgot to check out?", [
+					leaveAt || clockTime(gaugeWindow(shift).end),
+				])
 			}}
 		</p>
 		<!-- The shift line's place while pending (alpha.8 r3: it arrived after
@@ -152,7 +154,7 @@
 
 <script setup>
 import { siteTime } from "@/utils/siteTime"
-import { shiftGauge } from "@/utils/shiftGauge"
+import { gaugeWindow, shiftGauge } from "@/utils/shiftGauge"
 import { clockTime, shiftHours } from "@/utils/daySheet"
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
@@ -293,8 +295,8 @@ const nowMin = computed(() => {
 const gauge = computed(() =>
 	stateKey.value === "working" && shift.value && nowMin.value !== null
 		? shiftGauge({
-				start: shift.value.start,
-				end: shift.value.end,
+				// a half day spans the half worked (owner, 11 Nov 2026)
+				...gaugeWindow(shift.value),
 				leaveBy: leaveHHMM.value,
 				nowMin: nowMin.value,
 		  })
