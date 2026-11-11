@@ -735,7 +735,8 @@ if __name__ == "__main__":
 
 class TestNextLevelSize(unittest.TestCase):
 	"""Owner, 11 Nov 2026: a card shows its direct reports AND the people who
-	report to those direct reports (Afiq: 5 direct, 4+7+7+12+7 = 37 below them)."""
+	report to those direct reports (her example: Afiq, 5 direct and 37 below
+	them). Here EMP-1 has 2 direct reports with 3 and 1 people under them."""
 
 	EMPLOYEES = (
 		_employee("EMP-1", "Afiq"),
@@ -770,3 +771,26 @@ class TestNextLevelSize(unittest.TestCase):
 		]
 		person = _get_node(employee="EMP-1", employees=employees)["person"]
 		self.assertEqual(person["next_level_size"], 1)
+
+	def test_inactive_people_are_not_counted_at_either_level(self):
+		employees = [
+			_employee("EMP-1", "Afiq"),
+			_employee("EMP-2", "Amran", reports_to="EMP-1"),
+			{**_employee("EMP-3", "Gone", reports_to="EMP-1"), "status": "Left"},
+			_employee("EMP-4", "Dina", reports_to="EMP-2"),
+			{**_employee("EMP-5", "Away", reports_to="EMP-2"), "status": "Left"},
+			_employee("EMP-6", "Under gone", reports_to="EMP-3"),
+		]
+		person = _get_node(employee="EMP-1", employees=employees)["person"]
+		self.assertEqual((person["team_size"], person["next_level_size"]), (1, 1))
+
+	def test_a_direct_report_in_another_company_is_out_for_staff_in_for_hr(self):
+		employees = [
+			_employee("EMP-1", "Afiq"),
+			_employee("EMP-2", "Zed", company="Company B", reports_to="EMP-1"),
+			_employee("EMP-3", "Dina", reports_to="EMP-2"),
+		]
+		staff = _get_node(employee="EMP-1", employees=employees)["person"]
+		hr = _get_node(employee="EMP-1", is_hr=True, employees=employees)["person"]
+		self.assertEqual((staff["team_size"], staff["next_level_size"]), (0, 0))
+		self.assertEqual((hr["team_size"], hr["next_level_size"]), (1, 1))
