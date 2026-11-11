@@ -10,6 +10,18 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.88] — Half Day Hours — 2026-11-11
+
+### Fixed
+- **A half day shows the half you work.** On an approved half-day leave, the
+  shift line on Home and on the Calendar day sheet showed the whole shift
+  (09:00–18:00). It now shows the half worked, e.g. 13:30–18:00 · half day for
+  a morning off, 09:00–13:30 · half day for an afternoon off.
+- **A new site gets HR's five Employee statuses** (alpha.87 only set them on an
+  existing site through migrate).
+
+Deploy together with alpha.87 if it is not live yet. **Needs migrate.**
+
 ## [2.0.0-alpha.87] — Employee Status — 2026-11-10
 
 ### Changed
