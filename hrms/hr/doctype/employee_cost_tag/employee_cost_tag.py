@@ -138,6 +138,26 @@ def find_cost_center(value, centers=None):
 	frappe.throw(_("Cost Tag/Center {0} was not found.").format(frappe.bold(value)))
 
 
+def territories():
+	"""Leaf Territories, the ERP's cost tags (mirrored by the sync): read once per upload."""
+	return frappe.get_all("Territory", filters={"is_group": 0}, pluck="name")
+
+
+def find_tag(value, territory_names=None, centers=None):
+	"""(cost_center, territory) for the tag HR typed (owner, 11 Nov 2026).
+
+	Cost Tag/Center is a Territory again, so a leaf Territory of that name, any
+	case, wins. A tag that is only a Cost Center ("PFME", "CEOF - NHSB") still
+	lands, in the old column, exactly as before. Neither: refused with the name."""
+	text = re.sub(r"\s+", " ", str(value or "")).strip().lower()
+	if territory_names is None:
+		territory_names = territories()
+	match = [t for t in territory_names if (t or "").strip().lower() == text]
+	if len(match) == 1:
+		return None, match[0]
+	return find_cost_center(value, centers), None
+
+
 def find_employee(employee_id, staff_name):
 	"""Whose profile: the ID decides, and the name, when given, must agree.
 	With no ID, the name finds the person if exactly one has it."""
@@ -192,17 +212,18 @@ def place_row(rows, month, cost_center, territory, percentage):
 	for row in rows:
 		if row.get("allocation_month") and read_month(row.get("allocation_month")) != month:
 			continue
-		if cost_center:
-			same = row.get("cost_center") == cost_center
+		# a row is known by its Territory first, as the Employee's own check reads it
+		if territory:
+			same = row.get("territory") == territory
 		else:
-			same = not row.get("cost_center") and row.get("territory") == territory
+			same = not row.get("territory") and row.get("cost_center") == cost_center
 		if same:
 			row.percentage = flt(percentage)
 			return row, False
 	return frappe._dict(
 		allocation_month=month,
-		cost_center=cost_center,
-		territory=None if cost_center else territory,
+		cost_center=None if territory else cost_center,
+		territory=territory,
 		percentage=flt(percentage),
 	), True
 
@@ -214,7 +235,7 @@ def replace_months(existing, incoming):
 	months = {read_month(r.allocation_month) for r in incoming}
 	seen = set()
 	for r in incoming:
-		key = (read_month(r.allocation_month), r.cost_center or r.territory)
+		key = (read_month(r.allocation_month), r.territory or r.cost_center)
 		if key in seen:
 			frappe.throw(
 				_("{0} appears more than once for {1} in the file.").format(
@@ -228,8 +249,8 @@ def replace_months(existing, incoming):
 	add = [
 		{
 			"allocation_month": read_month(r.allocation_month),
-			"cost_center": r.cost_center,
-			"territory": None if r.cost_center else r.territory,
+			"cost_center": None if r.territory else r.cost_center,
+			"territory": r.territory,
 			"percentage": flt(r.percentage),
 		}
 		for r in incoming
@@ -264,11 +285,12 @@ def apply_uploads(names, merge_row=False):
 		order_by="creation asc",
 	)
 	centers = cost_centers()
+	tags = territories()
 	by_employee = {}
 	unread = []
 	for record in records:
 		try:
-			understood = _read(record, centers)
+			understood = _read(record, centers, tags)
 		except Exception as e:
 			_mark([record], "Failed", _clean(e))
 			unread.append(record)
@@ -322,17 +344,21 @@ def _months_with_unread_rows(rows, unread):
 	}
 
 
-def _read(record, centers=None):
+def _read(record, centers=None, tags=None):
 	"""What HR typed → what it means, or a ValidationError saying why not."""
 	if not (record.cost_center or record.territory):
 		frappe.throw(_("Cost Tag/Center is required."))
+	if record.cost_center:
+		cost_center, territory = find_tag(record.cost_center, tags, centers)
+	else:
+		cost_center, territory = None, record.territory
 	return frappe._dict(
 		name=record.name,
 		typed_employee=record.employee,
 		employee_id=find_employee(record.employee, record.employee_name),
 		allocation_month=read_month(record.allocation_month),
-		cost_center=find_cost_center(record.cost_center, centers) if record.cost_center else None,
-		territory=None if record.cost_center else record.territory,
+		cost_center=cost_center,
+		territory=territory,
 		percentage=read_percent(record.percentage),
 	)
 
