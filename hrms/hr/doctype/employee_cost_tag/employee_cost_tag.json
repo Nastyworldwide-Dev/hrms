@@ -44,14 +44,14 @@
    "reqd": 1
   },
   {
-   "description": "The tag, e.g. CEOF or Malaysia: a Territory (the ERP's cost tags), or an old Cost Center name.",
+   "description": "The tag, e.g. CEOF or CEOF - NHSB.",
    "fieldname": "cost_center",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Cost Tag/Center"
   },
   {
-   "description": "Leave blank. Only for re-uploading a row that already names a Territory.",
+   "description": "Only for a row saved before Cost Tag/Center became a Cost Center. Leave blank for new rows.",
    "fieldname": "territory",
    "fieldtype": "Link",
    "label": "Old Cost Tag/Center",
@@ -120,7 +120,7 @@
  "in_create": 0,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-11 12:00:00.000000",
+ "modified": "2026-10-29 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Employee Cost Tag",

@@ -73,40 +73,51 @@ class TestLinkCostAllocationCostCenter(unittest.TestCase):
 		self.assertIn("hrms.patches.v16_0.link_cost_allocation_cost_center", post)
 
 
-class TestCostTagColumn(unittest.TestCase):
-	"""Owner, 11 Nov 2026: Cost Tag/Center is a Territory again (the ERP's cost
-	tags, now mirrored). The 28 Oct Cost Center column stays beside it,
-	read-only, so a split saved meanwhile still counts."""
-
+class TestCostCenterColumn(unittest.TestCase):
 	def _fields(self):
 		meta = json.loads(
 			(ROOT / "hr/doctype/employee_interco_allocation/employee_interco_allocation.json").read_text()
 		)
 		return meta["field_order"], {f["fieldname"]: f for f in meta["fields"]}
 
-	def test_the_tag_links_to_territory_and_shows_in_the_grid(self):
+	def test_the_tag_links_to_cost_center_and_shows_in_the_grid(self):
 		order, fields = self._fields()
-		t = fields["territory"]
-		self.assertEqual((t["fieldtype"], t["options"], t["label"]), ("Link", "Territory", "Cost Tag/Center"))
-		self.assertEqual(t.get("in_list_view"), 1)
-		self.assertFalse(t.get("read_only"))
-		self.assertLess(order.index("territory"), order.index("percentage"))
-
-	def test_the_old_cost_center_shows_in_the_grid_read_only(self):
-		_, fields = self._fields()
 		cc = fields["cost_center"]
-		self.assertEqual((cc["fieldtype"], cc["options"]), ("Link", "Cost Center"))
+		self.assertEqual(
+			(cc["fieldtype"], cc["options"], cc["label"]), ("Link", "Cost Center", "Cost Tag/Center")
+		)
 		self.assertEqual(cc.get("in_list_view"), 1)
-		self.assertEqual(cc.get("read_only"), 1)
-		self.assertFalse(cc.get("reqd"))
+		self.assertLess(order.index("cost_center"), order.index("percentage"))
 
-	def test_hr_limited_to_one_company_still_sees_every_tag(self):
+	def test_the_old_territory_shows_in_the_grid_read_only(self):
+		# an unmatched old row ("All Territories") must not look like a blank tag
 		_, fields = self._fields()
-		self.assertEqual(fields["territory"].get("ignore_user_permissions"), 1)
+		t = fields["territory"]
+		self.assertEqual((t["fieldtype"], t["options"]), ("Link", "Territory"))
+		self.assertEqual(t.get("in_list_view"), 1)
+		self.assertEqual(t.get("read_only"), 1)
+		self.assertFalse(t.get("reqd"))
 
-	def test_the_employee_form_offers_only_leaf_territories(self):
+	def test_hr_limited_to_one_company_still_sees_every_cost_center(self):
+		# Cost Center has a company; Company user permissions would hide the
+		# other companies' cost centers and refuse them on save
+		_, fields = self._fields()
+		self.assertEqual(fields["cost_center"].get("ignore_user_permissions"), 1)
+
+	def test_the_employee_form_hides_each_companys_main(self):
+		# owner, 28 Oct 2026: every company has a default "Main" cost center;
+		# a dozen of them buried CEOF, PFME, NTGY... under the fold
 		js = (ROOT / "public/js/erpnext/employee.js").read_text()
-		self.assertRegex(js, r'set_query\("territory",\s*"interco_cost_allocation"[\s\S]{0,120}is_group:\s*0')
+		block = js[js.index('set_query("cost_center", "interco_cost_allocation"') :]
+		block = block[: block.index("});")]
+		self.assertRegex(block, r'cost_center_name:\s*\["!=",\s*"Main"\]')
+
+	def test_the_employee_form_offers_only_enabled_leaf_cost_centers(self):
+		js = (ROOT / "public/js/erpnext/employee.js").read_text()
+		self.assertRegex(
+			js,
+			r'set_query\("cost_center",\s*"interco_cost_allocation"[\s\S]{0,200}is_group:\s*0[\s\S]{0,60}disabled:\s*0',
+		)
 
 
 if __name__ == "__main__":

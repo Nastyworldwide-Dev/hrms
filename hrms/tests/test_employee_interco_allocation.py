@@ -105,18 +105,8 @@ class TestCostCenterOrOldTerritory(unittest.TestCase):
 
 	def test_the_same_cost_center_twice_in_a_month_is_refused(self):
 		doc = _employee(
-			_row(1, "2026-10-01", "CEOF - NHSB", 50),
+			_row(1, "2026-10-01", "CEOF - NHSB", 50, territory="Malaysia"),
 			_row(2, "2026-10-01", "CEOF - NHSB", 50),
-		)
-		with self.assertRaises(frappe.ValidationError):
-			validate_interco_allocation(doc)
-
-	def test_the_same_territory_twice_in_a_month_is_refused(self):
-		# Cost Tag/Center is a Territory again (owner, 11 Nov 2026); a row that
-		# still carries its old Cost Center is known by its Territory
-		doc = _employee(
-			_row(1, "2026-10-01", "CEOF - NHSB", 50, territory="CEOF"),
-			_row(2, "2026-10-01", None, 50, territory="CEOF"),
 		)
 		with self.assertRaises(frappe.ValidationError):
 			validate_interco_allocation(doc)

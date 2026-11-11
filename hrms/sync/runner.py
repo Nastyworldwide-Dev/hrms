@@ -134,12 +134,6 @@ MASTER_DOCTYPES = (
 	# always lands before its child, and it is SOURCE-OWNED: see
 	# `SOURCE_OWNED_MASTERS` for why a re-pull overwrites the hub's copy.
 	"Cost Center",
-	# The ERP's cost tags as NASTY registers them (owner, 11 Nov 2026): Employee
-	# Cost Tag/Center allocation picks a Territory, and the hub held only
-	# ERPNext's three defaults because it was never mirrored. ERP-owned like Cost
-	# Center (SOURCE_OWNED_MASTERS), read parents first, renumbered after the
-	# run by `_rebuild_territory_tree`. It has no company, so it is never scoped.
-	"Territory",
 	"Employee Grade",
 	"Holiday List",
 	# Before Shift Type, which links to it, and before every stamped doctype that
@@ -366,7 +360,7 @@ def blocked_by(doctype: str, failed: set[str] | frozenset[str]) -> list[str]:
 #: ones by name alone — ERPNext autonames both sides "<name> - <abbr>", and the
 #: company shell copied the source's abbr, so the names agree by construction
 #: (`localise_cost_center` handles an abbr HR changed since).
-SOURCE_OWNED_MASTERS = frozenset({"Cost Center", "Territory"})
+SOURCE_OWNED_MASTERS = frozenset({"Cost Center"})
 
 CREATE_ONLY_DOCTYPES = frozenset({"Company", *MASTER_DOCTYPES}) - SOURCE_OWNED_MASTERS
 
@@ -412,7 +406,7 @@ PAGE_ORDER = "modified asc, name asc"
 #: parent before its children without gating anything. Department stays on
 #: `modified` order deliberately: its rows are create-only and its shape has
 #: been proven in production that way.
-PAGE_ORDER_BY_DOCTYPE = {"Cost Center": "lft asc, name asc", "Territory": "lft asc, name asc"}
+PAGE_ORDER_BY_DOCTYPE = {"Cost Center": "lft asc, name asc"}
 
 #: Savepoint wrapping each row write, so a row that fails rolls back ITSELF and
 #: not the whole uncommitted pass. `sync_instance` commits once per doctype, so
@@ -549,7 +543,6 @@ LOCALLY_OWNED_FIELDS = {
 	"Employee": ("user_id", "additional_login_email", "multi_site_checkin", "other_checkin_sites", "image"),
 	"Department": ("lft", "rgt", "old_parent"),
 	"Cost Center": ("lft", "rgt", "old_parent"),
-	"Territory": ("lft", "rgt", "old_parent"),
 }
 
 
@@ -1704,17 +1697,6 @@ def _rebuild_cost_center_tree() -> None:
 	_log().info("[sync] rebuilt the Cost Center tree from mirrored parent links")
 
 
-def _rebuild_territory_tree() -> None:
-	"""Recompute Territory's `lft`/`rgt` from the parent links just mirrored, for
-	the same reason as the Cost Center tree: the positions were dropped at the
-	payload, and a moved tag was written by `db.set_value`, which renumbers
-	nothing."""
-	from frappe.utils.nestedset import rebuild_tree
-
-	rebuild_tree("Territory")
-	_log().info("[sync] rebuilt the Territory tree from mirrored parent links")
-
-
 def _mirror_company_holiday_defaults(client) -> int:
 	"""Point each mirrored Company at the Holiday List the source gives it.
 
@@ -2110,20 +2092,6 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 			_rebuild_cost_center_tree()
 		except Exception as e:
 			_log().warning("[sync] could not rebuild the Cost Center tree: %s", e)
-
-		try:
-			_rebuild_territory_tree()
-		except Exception as e:
-			_log().warning("[sync] could not rebuild the Territory tree: %s", e)
-
-		# Cost Tag/Center rows saved as a Cost Center take the Territory of the same
-		# name. Migrate runs before the first sync fills the list, so here too.
-		try:
-			from hrms.patches.v16_0.link_cost_allocation_territory import link_rows_to_territory
-
-			link_rows_to_territory()
-		except Exception as e:
-			_log().warning("[sync] could not link cost allocation rows to a Territory: %s", e)
 		_finish_run(run_name, status, totals, errors, gaps=run_gaps, notes=schema_notes)
 		# Telling somebody is strictly less important than the pull itself, so a
 		# bell that will not ring must never turn a finished run into a failed one.

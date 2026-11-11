@@ -125,8 +125,6 @@ class TestApplyUploads(unittest.TestCase):
 			patch.object(upload.frappe, "db", db),
 			patch.object(upload, "find_employee", side_effect=lambda eid, name: eid),
 			patch.object(upload, "find_cost_center", side_effect=lambda v, centers=None: v),
-			# no Territory of that name: these rows exercise the Cost Center path
-			patch.object(upload, "territories", return_value=[]),
 		):
 			upload.apply_uploads([r.name for r in records])
 		marks = {}
@@ -625,47 +623,3 @@ class TestTheUploadIsTypedLoosely(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
-
-
-class TestTheUploadReadsATerritory(unittest.TestCase):
-	"""Owner, 11 Nov 2026: Cost Tag/Center is a Territory again (the ERP's cost
-	tags). The cell HR types is looked up as a leaf Territory first, any case;
-	a tag that is only a Cost Center still lands, in the old column."""
-
-	TERRITORIES = ("Malaysia", "CEOF")
-	CENTERS = (frappe._dict(name="PFME - NHSB", cost_center_name="PFME"),)
-
-	def _find(self, value):
-		return upload.find_tag(value, self.TERRITORIES, self.CENTERS)
-
-	def test_a_territory_any_case_is_a_territory(self):
-		self.assertEqual(self._find("malaysia"), (None, "Malaysia"))
-		self.assertEqual(self._find(" CEOF "), (None, "CEOF"))
-
-	def test_a_tag_only_in_cost_centers_still_lands_as_one(self):
-		self.assertEqual(self._find("PFME"), ("PFME - NHSB", None))
-
-	def test_a_tag_in_neither_list_is_refused(self):
-		with self.assertRaises(frappe.ValidationError):
-			self._find("Nowhere")
-
-	def test_a_new_row_by_territory_replaces_the_same_territory(self):
-		rows = [_existing(OCT, territory="CEOF", pct=100)]
-		row, added = upload.place_row(rows, OCT, None, "CEOF", 60)
-		self.assertFalse(added)
-		self.assertEqual(row.percentage, 60)
-
-	def test_a_row_carrying_both_is_known_by_its_territory(self):
-		rows = [_existing(OCT, cost_center="CEOF - NHSB", territory="CEOF", pct=100)]
-		_row, added = upload.place_row(rows, OCT, None, "CEOF", 40)
-		self.assertFalse(added)
-
-	def test_the_upload_columns_read_territory_first(self):
-		f = {
-			x["fieldname"]: x
-			for x in json.loads((ROOT / "hr/doctype/employee_cost_tag/employee_cost_tag.json").read_text())[
-				"fields"
-			]
-		}
-		self.assertEqual(f["cost_center"]["label"], "Cost Tag/Center")
-		self.assertIn("Territory", f["cost_center"]["description"])

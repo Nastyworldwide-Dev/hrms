@@ -2,7 +2,6 @@
 # License: GNU General Public License v3. See license.txt
 
 import datetime
-import pathlib
 import unittest
 
 import frappe
@@ -132,8 +131,8 @@ class TestSplitFollowsYearMonth(unittest.TestCase):
 
 
 class TestCostCenterOrOldTerritory(unittest.TestCase):
-	"""A row with only a Cost Center (set 28 Oct - 11 Nov 2026) or only a Territory
-	shows whichever it has, so old splits keep their name and total."""
+	"""The Cost Tag/Center column shows the Cost Center, or the old Territory
+	for rows saved before the switch, so old splits keep their name and total."""
 
 	def test_cost_center_is_shown(self):
 		alloc = {
@@ -157,28 +156,3 @@ class TestCostCenterOrOldTerritory(unittest.TestCase):
 		}
 		rows = build_allocation_rows([_slip(datetime.date(2026, 10, 31))], {}, alloc)
 		self.assertEqual((rows[0]["cost_tag"], rows[0]["allocated_amount"]), ("All Territories", 1000.0))
-
-
-class TestTerritoryWinsOverAnOldCostCenter(unittest.TestCase):
-	"""Owner, 11 Nov 2026: Cost Tag/Center is a Territory again. A row HR moves to
-	a Territory keeps its old Cost Center beside it, read-only; the Territory is
-	the tag the report shows."""
-
-	def test_territory_is_shown_before_a_leftover_cost_center(self):
-		alloc = {
-			"EMP-9": [
-				{
-					"allocation_month": OCT,
-					"cost_center": "CEOF - NHSB",
-					"territory": "CEOF",
-					"percentage": 100,
-				}
-			]
-		}
-		rows = build_allocation_rows([_slip(datetime.date(2026, 10, 31))], {}, alloc)
-		self.assertEqual(rows[0]["cost_tag"], "CEOF")
-
-	def test_the_filter_is_a_territory(self):
-		source = (pathlib.Path(__file__).with_name("intercompany_salary_cost_allocation.js")).read_text()
-		self.assertIn('fieldname: "territory"', source)
-		self.assertIn('options: "Territory"', source)

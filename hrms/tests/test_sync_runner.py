@@ -630,8 +630,7 @@ class TestCompanyIsMirroredCreateOnly(_RunnerTestCase):
 			runner.CREATE_ONLY_DOCTYPES,
 			frozenset({"Company", *runner.MASTER_DOCTYPES}) - runner.SOURCE_OWNED_MASTERS,
 		)
-		# Territory joined 11 Nov 2026: the ERP's cost tags, owned there like Cost Center.
-		self.assertEqual(runner.SOURCE_OWNED_MASTERS, frozenset({"Cost Center", "Territory"}))
+		self.assertEqual(runner.SOURCE_OWNED_MASTERS, frozenset({"Cost Center"}))
 		for doctype in runner.STAMPED_DOCTYPES:
 			self.assertNotIn(doctype, runner.CREATE_ONLY_DOCTYPES)
 
@@ -3211,73 +3210,3 @@ class TestAppendOnlyPunchesAfterCutover(_RunnerTestCase):
 
 if __name__ == "__main__":
 	unittest.main(verbosity=2)
-
-
-class TestTerritoryIsTheErpsCostTagList(_RunnerTestCase):
-	"""Owner, 11 Nov 2026: Cost Tag/Center on the Employee picks a Territory again,
-	the list NASTY's ERP registers as its cost tags (Approva posts with it). The hub
-	held only ERPNext's three defaults because Territory was never mirrored. It is
-	now: an ERP-owned master like Cost Center, read parents first, overwritten on
-	every pull, its tree renumbered here, and never deleted."""
-
-	SEED_EXCLUDE: ClassVar[tuple] = ("Employee",)
-
-	ROWS = (
-		{
-			"name": "Malaysia",
-			"territory_name": "Malaysia",
-			"parent_territory": "All Territories",
-			"is_group": 0,
-			"lft": 2,
-			"rgt": 3,
-			"modified": "2026-09-01 09:00:00",
-		},
-		{
-			"name": "CEOF",
-			"territory_name": "CEOF",
-			"parent_territory": "All Territories",
-			"is_group": 0,
-			"lft": 4,
-			"rgt": 5,
-			"modified": "2026-09-02 09:00:00",
-		},
-	)
-
-	def test_it_is_an_erp_owned_master_pulled_before_the_employees(self):
-		order = list(runner.DEFAULT_SYNC_DOCTYPES)
-		self.assertIn("Territory", runner.MASTER_DOCTYPES)
-		self.assertIn("Territory", runner.SOURCE_OWNED_MASTERS)
-		self.assertLess(order.index("Territory"), order.index("Employee"))
-		self.assertEqual(runner.PAGE_ORDER_BY_DOCTYPE["Territory"], "lft asc, name asc")
-
-	def test_every_tag_lands_and_the_positions_are_not_copied(self):
-		self.seed_parent("Territory", "All Territories", territory_name="All Territories", is_group=1)
-		client = self.client({"Territory": [dict(r) for r in self.ROWS]})
-		result = runner.sync_doctype(client, "Territory")
-		rows = self.store.rows("Territory")
-		self.assertEqual(set(rows), {"All Territories", "Malaysia", "CEOF"})
-		self.assertEqual((result["inserted"], result["errored"]), (2, 0))
-		for positional in ("lft", "rgt", "old_parent"):
-			self.assertNotIn(positional, rows["CEOF"])
-
-	def test_a_renamed_tag_on_the_erp_overwrites_the_hub_copy(self):
-		self.seed_parent("Territory", "All Territories", territory_name="All Territories", is_group=1)
-		self.seed_parent("Territory", "CEOF", territory_name="CEO Office (old)", is_group=0)
-		runner.sync_doctype(self.client({"Territory": [dict(r) for r in self.ROWS]}), "Territory")
-		self.assertEqual(self.store.rows("Territory")["CEOF"]["territory_name"], "CEOF")
-
-	def test_the_tree_is_renumbered_after_a_run(self):
-		source = pathlib.Path(runner.__file__).read_text()
-		self.assertIn('rebuild_tree("Territory")', source)
-
-
-class TestCostAllocationRowsFollowTheTerritories(unittest.TestCase):
-	"""Migrate runs before the first sync fills the Territory list, so the patch
-	that moves Cost Center rows to their Territory also runs after each sync."""
-
-	def test_the_run_links_cost_allocation_rows_after_the_territories_land(self):
-		source = pathlib.Path(runner.__file__).read_text()
-		tree = source.index("_rebuild_territory_tree()\n\t\texcept")
-		link = source.index("link_rows_to_territory()")
-		self.assertLess(tree, link, "after the Territory tree is renumbered")
-		self.assertIn("except Exception", source[link : link + 200], "never fails the run")

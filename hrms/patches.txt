@@ -156,5 +156,4 @@ hrms.patches.v16_0.add_employee_ic_number #2026-11-03 owner: IC number on Employ
 hrms.patches.v16_0.route_waiting_expense_claims_to_hr #2026-11-05 owner: claims go manager then HR; waiting ones with nobody above move to HR
 hrms.patches.v16_0.add_employee_letters_issued #2026-11-07 HR: Letters Issued table on Employee after Cost Tag/Center Allocation; HR roles only; seeds HR's letter types
 hrms.patches.v16_0.employee_status_options #2026-11-10 HR: Employee Status is Active, Resigned, Terminated, Deceased, Suspended; everyone Left or Inactive becomes Resigned
-hrms.patches.v16_0.link_cost_allocation_territory #2026-11-11 owner: Cost Tag/Center is a Territory again; rows saved as a Cost Center take the Territory of the same name, the rest stay
 hrms.patches.v16_0.fill_half_day_leave_hours #2026-11-11 owner: half-day leave days left at 0.00 h take their hours from the check-in and check-out linked to them; rows whose punches do not pair are left for HR
