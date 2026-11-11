@@ -10,6 +10,17 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.89] — Half Day Bar — 2026-11-11
+
+### Fixed
+- **The shift bar on a half day covers the half you work.** While checked in, the
+  progress bar under the hours ran over the whole shift: on a morning off it
+  started at 09:00, so it looked more than half done the moment you walked in at
+  13:30. It now starts at 13:30 on a morning off and ends at 13:30 on an
+  afternoon off. Full days are unchanged.
+
+Includes alpha.87 and alpha.88 if they are not live yet. **Needs migrate.**
+
 ## [2.0.0-alpha.88] — Half Day Hours — 2026-11-11
 
 ### Fixed
