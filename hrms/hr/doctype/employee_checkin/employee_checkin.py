@@ -828,20 +828,41 @@ def get_overtime_data(shift_name, working_hours):
 
 
 def get_existing_half_day_attendance(employee, attendance_date):
-	attendance_name = frappe.db.exists(
-		"Attendance",
-		{
-			"employee": employee,
-			"attendance_date": attendance_date,
-			"status": "Half Day",
-			"modify_half_day_status": 1,
-			"leave_type": ("is", "set"),
-		},
-	)
+	"""A half-day leave's own row, still waiting for the day's punches.
+
+	Waiting means flagged (modify_half_day_status), or (owner, 11 Nov 2026) a
+	submitted leave row that still has no times: the hourly job closes the wait
+	when it reaches the day before any punch has arrived, and a punch arriving
+	later then left the row at 0.00 h. A row with times is never re-filled.
+	"""
+	base = {
+		"employee": employee,
+		"attendance_date": attendance_date,
+		"status": "Half Day",
+		"leave_type": ("is", "set"),
+	}
+	attendance_name = frappe.db.exists("Attendance", {**base, "modify_half_day_status": 1})
+	if not attendance_name:
+		attendance_name = frappe.db.exists(
+			"Attendance",
+			{
+				**base,
+				"leave_application": ("is", "set"),
+				"docstatus": 1,
+				"in_time": ("is", "not set"),
+				"out_time": ("is", "not set"),
+			},
+		)
+		if attendance_name:
+			logger.info(
+				"[checkin] %s on %s: half-day leave row %s had no times, filling it from punches",
+				employee,
+				attendance_date,
+				attendance_name,
+			)
 
 	if attendance_name:
-		attendance_doc = frappe.get_doc("Attendance", attendance_name)
-		return attendance_doc
+		return frappe.get_doc("Attendance", attendance_name)
 	return None
 
 
