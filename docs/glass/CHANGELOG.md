@@ -10,6 +10,18 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.92] — Half Day Hours Count — 2026-11-11
+
+### Fixed
+- **A half-day leave day counts the hours worked.** When the leave was approved
+  before the day's check-in and check-out arrived, the Attendance row could stay
+  at 0.00 hours with the punches shown as Counted. It now takes the in, out and
+  hours from those punches. A row someone typed times into is never changed.
+  Days already stuck at 0.00 are filled the next time a punch for that day is
+  processed; older ones can be fixed with Fix Day.
+
+Includes alpha.87 to alpha.91 if they are not live yet. **Needs migrate.**
+
 ## [2.0.0-alpha.91] — Whole Team — 2026-11-11
 
 ### Changed

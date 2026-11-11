@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.91",
-	"releaseName": "Whole Team",
+	"version": "2.0.0-alpha.92",
+	"releaseName": "Half Day Hours Count",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
