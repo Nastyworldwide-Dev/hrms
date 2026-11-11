@@ -85,15 +85,16 @@ export function chainLadder(chain) {
 	return { direct: list[0] || null, above: list.slice(1).reverse() }
 }
 
-//: The count on a card: "5 / 37" when the direct reports have people of their own
-//: (owner, 11 Nov 2026), else "4". `label` is what a screen reader says. Null with no reports.
+//: The count on a card: "5 / 120" when people sit below the direct reports, every
+//: level down (owner, 11 Nov 2026), else "4". `label` is what a screen reader says
+//: and the open card shows in words. Null with no reports.
 export function teamCount(card, __) {
 	const direct = card?.team_size || 0
 	if (!direct) return null
-	const below = card.next_level_size || 0
+	const below = card.below_size || 0
 	if (!below) return { text: String(direct), label: __("Team of {0}", [direct]) }
 	return {
 		text: `${direct} / ${below}`,
-		label: __("{0} report directly, {1} report to them", [direct, below]),
+		label: __("{0} report directly, {1} more below them", [direct, below]),
 	}
 }

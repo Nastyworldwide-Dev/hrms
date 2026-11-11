@@ -94,6 +94,8 @@ def _get_node(
 				elif isinstance(val, tuple) and val[0] == "is":
 					if val[1] == "not set":
 						filtered = [e for e in filtered if not e.get("reports_to")]
+					elif val[1] == "set":
+						filtered = [e for e in filtered if e.get("reports_to")]
 				else:
 					filtered = [e for e in filtered if e.get("reports_to") == val]
 			if "company" in filters:
@@ -733,10 +735,10 @@ if __name__ == "__main__":
 	unittest.main()
 
 
-class TestNextLevelSize(unittest.TestCase):
-	"""Owner, 11 Nov 2026: a card shows its direct reports AND the people who
-	report to those direct reports (her example: Afiq, 5 direct and 37 below
-	them). Here EMP-1 has 2 direct reports with 3 and 1 people under them."""
+class TestBelowSize(unittest.TestCase):
+	"""Owner, 11 Nov 2026: a card shows its direct reports AND everyone below
+	them, every level down, so the CEO's card covers the whole office. Here
+	EMP-1 has 2 direct reports and 5 people below them over two more levels."""
 
 	EMPLOYEES = (
 		_employee("EMP-1", "Afiq"),
@@ -746,21 +748,21 @@ class TestNextLevelSize(unittest.TestCase):
 		_employee("EMP-5", "Eli", reports_to="EMP-2"),
 		_employee("EMP-6", "Faiz", reports_to="EMP-2"),
 		_employee("EMP-7", "Gina", reports_to="EMP-3"),
-		_employee("EMP-8", "Hana", reports_to="EMP-7"),  # three levels down: not counted
+		_employee("EMP-8", "Hana", reports_to="EMP-7"),  # three levels down: counted
 	)
 
-	def test_the_person_counts_direct_reports_and_the_level_below(self):
+	def test_the_person_counts_direct_reports_and_every_level_below(self):
 		person = _get_node(employee="EMP-1", employees=self.EMPLOYEES)["person"]
-		self.assertEqual((person["team_size"], person["next_level_size"]), (2, 4))
+		self.assertEqual((person["team_size"], person["below_size"]), (2, 5))
 
 	def test_each_report_card_carries_its_own_level_below(self):
 		reports = {r["id"]: r for r in _get_node(employee="EMP-1", employees=self.EMPLOYEES)["reports"]}
-		self.assertEqual((reports["EMP-2"]["team_size"], reports["EMP-2"]["next_level_size"]), (3, 0))
-		self.assertEqual((reports["EMP-3"]["team_size"], reports["EMP-3"]["next_level_size"]), (1, 1))
+		self.assertEqual((reports["EMP-2"]["team_size"], reports["EMP-2"]["below_size"]), (3, 0))
+		self.assertEqual((reports["EMP-3"]["team_size"], reports["EMP-3"]["below_size"]), (1, 1))
 
 	def test_nobody_below_is_zero(self):
 		reports = {r["id"]: r for r in _get_node(employee="EMP-2", employees=self.EMPLOYEES)["reports"]}
-		self.assertEqual(reports["EMP-4"]["next_level_size"], 0)
+		self.assertEqual(reports["EMP-4"]["below_size"], 0)
 
 	def test_staff_never_count_another_company_below(self):
 		employees = [
@@ -770,7 +772,7 @@ class TestNextLevelSize(unittest.TestCase):
 			_employee("EMP-4", "Dina", reports_to="EMP-2"),
 		]
 		person = _get_node(employee="EMP-1", employees=employees)["person"]
-		self.assertEqual(person["next_level_size"], 1)
+		self.assertEqual(person["below_size"], 1)
 
 	def test_inactive_people_are_not_counted_at_either_level(self):
 		employees = [
@@ -782,7 +784,7 @@ class TestNextLevelSize(unittest.TestCase):
 			_employee("EMP-6", "Under gone", reports_to="EMP-3"),
 		]
 		person = _get_node(employee="EMP-1", employees=employees)["person"]
-		self.assertEqual((person["team_size"], person["next_level_size"]), (1, 1))
+		self.assertEqual((person["team_size"], person["below_size"]), (1, 1))
 
 	def test_a_direct_report_in_another_company_is_out_for_staff_in_for_hr(self):
 		employees = [
@@ -792,5 +794,14 @@ class TestNextLevelSize(unittest.TestCase):
 		]
 		staff = _get_node(employee="EMP-1", employees=employees)["person"]
 		hr = _get_node(employee="EMP-1", is_hr=True, employees=employees)["person"]
-		self.assertEqual((staff["team_size"], staff["next_level_size"]), (0, 0))
-		self.assertEqual((hr["team_size"], hr["next_level_size"]), (1, 1))
+		self.assertEqual((staff["team_size"], staff["below_size"]), (0, 0))
+		self.assertEqual((hr["team_size"], hr["below_size"]), (1, 1))
+
+	def test_a_reporting_loop_is_counted_once_and_ends(self):
+		employees = [
+			_employee("EMP-1", "Afiq", reports_to="EMP-3"),
+			_employee("EMP-2", "Amran", reports_to="EMP-1"),
+			_employee("EMP-3", "Cao", reports_to="EMP-2"),
+		]
+		person = _get_node(employee="EMP-1", employees=employees)["person"]
+		self.assertEqual((person["team_size"], person["below_size"]), (1, 1))

@@ -159,24 +159,25 @@ test("teamPreview default is 4 boxes, two rows of two", () => {
 	assert.equal(teamPreview(six).more, 2)
 })
 
-// Owner, 11 Nov 2026: Afiq's card reads "5 / 37": 5 report to Afiq, 37 report to those five.
+// Owner, 11 Nov 2026: a card counts its direct reports and everyone below them, every
+// level down: "5 / 120" is 5 direct reports and 120 more people under those five.
 const say = (text, args = []) => args.reduce((s, a, i) => s.replace(`{${i}}`, a), text)
 
-test("teamCount: direct reports and the people under them", () => {
-	assert.deepEqual(teamCount({ team_size: 5, next_level_size: 37 }, say), {
-		text: "5 / 37",
-		label: "5 report directly, 37 report to them",
+test("teamCount: direct reports and everyone below them", () => {
+	assert.deepEqual(teamCount({ team_size: 5, below_size: 120 }, say), {
+		text: "5 / 120",
+		label: "5 report directly, 120 more below them",
 	})
 })
 
-test("teamCount: nobody under the direct reports shows one number", () => {
-	assert.deepEqual(teamCount({ team_size: 4, next_level_size: 0 }, say), {
+test("teamCount: nobody below the direct reports shows one number", () => {
+	assert.deepEqual(teamCount({ team_size: 4, below_size: 0 }, say), {
 		text: "4",
 		label: "Team of 4",
 	})
 })
 
 test("teamCount: no reports at all is no count", () => {
-	assert.equal(teamCount({ team_size: 0, next_level_size: 0 }, say), null)
+	assert.equal(teamCount({ team_size: 0, below_size: 0 }, say), null)
 	assert.equal(teamCount(null, say), null)
 })
