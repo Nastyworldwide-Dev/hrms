@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.97] — Whole Team Count — 2026-11-11
+
+### Changed
+- **Org chart: the second number is the whole team.** A card reads "5 / 42": 5
+  report directly, 42 people in the team in all (the 5 plus everyone below them,
+  every level down). The open card says "5 report directly, 42 in total".
+
+Deploy **this** version. Same as alpha.96 otherwise: Cost Tag/Center is not
+changed. **Needs migrate.**
+
 ## [2.0.0-alpha.96] — Cost Tag Held Back — 2026-11-11
 
 ### Changed
