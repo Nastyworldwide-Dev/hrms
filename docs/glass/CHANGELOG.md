@@ -10,6 +10,21 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.95] — Half Day Hours Fixed — 2026-11-11
+
+### Fixed
+- **Half-day leave days no longer end up at 0.00 hours.** The hourly job closed a
+  half-day row during the person's own shift, so the check-in and check-out that
+  came after were linked but never counted (live: 10 Nov, 09:01 to 13:33 showed
+  0.00). A half day now waits until its shift is over.
+- **Days already stuck at 0.00 are repaired on migrate**, from the check-in and
+  check-out already linked to them. Each repaired row gets a comment. Left for HR
+  and listed in the migrate log: days with only one punch, days a submitted
+  payslip or overtime already counted, and rows copied from another ERP.
+- A late punch never changes a day that a payslip or overtime has already counted.
+
+**Needs migrate.** Includes alpha.87 to alpha.94 if they are not live yet.
+
 ## [2.0.0-alpha.94] — Cost Tag Upload — 2026-11-11
 
 ### Fixed
