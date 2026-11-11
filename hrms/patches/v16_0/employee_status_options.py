@@ -26,6 +26,14 @@ logger = logging.getLogger(__name__)
 
 
 def execute():
+	set_status_options()
+	move_retired_statuses()
+	frappe.clear_cache(doctype="Employee")
+
+
+def set_status_options():
+	"""The dropdown. Also run by `hrms.setup.after_install`: a fresh install
+	records every patch as already applied, so it would never get here."""
 	make_property_setter(
 		"Employee",
 		"status",
@@ -34,7 +42,10 @@ def execute():
 		"Text",
 		validate_fields_for_doctype=False,
 	)
+	logger.info("[patch] employee status: options set to %s", ", ".join(STATUS_OPTIONS))
 
+
+def move_retired_statuses():
 	for old, new in RETIRED_STATUSES.items():
 		names = frappe.get_all("Employee", filters={"status": old}, pluck="name")
 		if not names:
@@ -48,5 +59,3 @@ def execute():
 			new,
 			undated,
 		)
-
-	frappe.clear_cache(doctype="Employee")

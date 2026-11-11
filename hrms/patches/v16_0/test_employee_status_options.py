@@ -113,5 +113,18 @@ class TestEmployeeStatusOptionsPatch(unittest.TestCase):
 		self.assertEqual(self.statuses(), first)
 
 
+class TestFreshInstall(unittest.TestCase):
+	"""A fresh install records every patch as already applied, so the
+	dropdown must also be set from `after_install`."""
+
+	def test_after_install_sets_the_status_options(self):
+		import ast
+
+		setup = PATCH.parents[2] / "setup.py"
+		tree = ast.parse(setup.read_text())
+		install = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "after_install")
+		self.assertIn("set_status_options()", ast.unparse(install))
+
+
 if __name__ == "__main__":
 	unittest.main()
