@@ -10,6 +10,21 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.93] — Cost Tag Territory — 2026-11-11
+
+### Changed
+- **Cost Tag/Center picks a Territory again.** On the Employee form the Cost
+  Tag/Center allocation now lists the ERP's cost tags (its Territory list), not
+  Cost Centers. Nadi now copies every Territory from the ERP on each sync, so
+  the list matches the ERP and new tags appear by themselves.
+- Splits saved as a Cost Center in the last two weeks move to the Territory of
+  the same name (MALAYSIA → Malaysia). Ones with no match keep their Cost
+  Center in the read-only **Old Cost Tag/Center** column and still count in the
+  Intercompany Salary Cost Allocation report until HR picks a Territory.
+
+**After deploy: run migrate, then run the ERP sync once** so the Territory list
+fills. Includes alpha.87 to alpha.92 if they are not live yet.
+
 ## [2.0.0-alpha.92] — Half Day Hours Count — 2026-11-11
 
 ### Fixed
