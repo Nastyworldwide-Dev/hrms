@@ -10,6 +10,18 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.94] — Cost Tag Upload — 2026-11-11
+
+### Fixed
+- **The Cost Tag/Center Excel upload reads a Territory.** A tag typed in the
+  upload (Data Import → Employee Cost Tag), such as "Malaysia" or "CEOF", is now
+  looked up in the Territory list first, any case, like the Employee form. A tag
+  that is only a Cost Center still works. alpha.93 alone would have refused a
+  Territory-only tag as "not found".
+
+**After deploy: run migrate, then run the ERP sync once.** Includes alpha.87 to
+alpha.93 if they are not live yet.
+
 ## [2.0.0-alpha.93] — Cost Tag Territory — 2026-11-11
 
 ### Changed
