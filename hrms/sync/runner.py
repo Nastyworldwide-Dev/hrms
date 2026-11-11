@@ -2115,6 +2115,15 @@ def sync_instance(client, doctypes=None, since=None, incremental: bool = True) -
 			_rebuild_territory_tree()
 		except Exception as e:
 			_log().warning("[sync] could not rebuild the Territory tree: %s", e)
+
+		# Cost Tag/Center rows saved as a Cost Center take the Territory of the same
+		# name. Migrate runs before the first sync fills the list, so here too.
+		try:
+			from hrms.patches.v16_0.link_cost_allocation_territory import link_rows_to_territory
+
+			link_rows_to_territory()
+		except Exception as e:
+			_log().warning("[sync] could not link cost allocation rows to a Territory: %s", e)
 		_finish_run(run_name, status, totals, errors, gaps=run_gaps, notes=schema_notes)
 		# Telling somebody is strictly less important than the pull itself, so a
 		# bell that will not ring must never turn a finished run into a failed one.

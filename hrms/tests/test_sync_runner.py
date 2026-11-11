@@ -3269,3 +3269,15 @@ class TestTerritoryIsTheErpsCostTagList(_RunnerTestCase):
 	def test_the_tree_is_renumbered_after_a_run(self):
 		source = pathlib.Path(runner.__file__).read_text()
 		self.assertIn('rebuild_tree("Territory")', source)
+
+
+class TestCostAllocationRowsFollowTheTerritories(unittest.TestCase):
+	"""Migrate runs before the first sync fills the Territory list, so the patch
+	that moves Cost Center rows to their Territory also runs after each sync."""
+
+	def test_the_run_links_cost_allocation_rows_after_the_territories_land(self):
+		source = pathlib.Path(runner.__file__).read_text()
+		tree = source.index("_rebuild_territory_tree()\n\t\texcept")
+		link = source.index("link_rows_to_territory()")
+		self.assertLess(tree, link, "after the Territory tree is renumbered")
+		self.assertIn("except Exception", source[link : link + 200], "never fails the run")
