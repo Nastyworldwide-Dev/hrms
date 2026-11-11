@@ -1,11 +1,11 @@
 # HANDOFF
-prompt:   Employee Status (87) + half day hours/bar (88-89) + org team counts (90-91) + half day worked hours (92) + Cost Tag back to Territory (93-94), 11 Nov 2026
+prompt:   statuses (87), half day hours/bar (88-89,92,95), org counts (90-91), Cost Tag Territory (93-94), 11 Nov 2026
 status:   done
-commit:   see tag v2.0.0-alpha.94 on nz-glass
-files:    hrms/utils/employee_status.py, patches/v16_0/employee_status_options.py
-hrms/overrides/employee_master.py, hrms/sync/runner.py, hrms/api/org_chart.py
-hrms/utils/half_day_session.py, hrms/api/now.py, hrms/api/calendar.py
-frontend/src/utils/{daySheet,shiftGauge,orgChart}.js, NowBar.vue, OrgChart.vue
-verify:   after deploy + migrate: Employee Status 5 options; half day shows 13:30-18:00 and bar from 13:30; org chart card reads "direct / everyone below" (CEO = whole office)
-flags:    tested on local v16 bench ~/hrms16-bench; Cost Tag reviewed (no Critical), upload path fixed in 94; 3 payslip site tests fail before and after; org second count is every level below the direct reports
-next:     deploy alpha.94 WITH migrate, then run the ERP sync once (fills Territory); HR fills relieving dates for former Inactive staff before next payroll
+commit:   tag v2.0.0-alpha.95 on nz-glass
+files:    hrms/hr/doctype/shift_type/shift_type.py, employee_checkin/employee_checkin.py
+hrms/utils/half_day_session.py, patches/v16_0/fill_half_day_leave_hours.py
+hrms/sync/runner.py (Territory), employee_interco_allocation + employee_cost_tag
+hrms/utils/employee_status.py, hrms/api/org_chart.py, frontend NowBar/DaySheet/OrgChart
+verify:   after deploy + migrate: Irfan HR-ATT-2026-23168 shows 09:01-13:33 ~4.5 h; migrate log lists half days left for HR; then run ERP sync once (Territory)
+flags:    tested on local v16 bench ~/hrms16-bench; reviewed (no Critical); test_decision_access_properties is flaky on old code too (expense claim helpers not lifted)
+next:     deploy alpha.95 WITH migrate, run ERP sync once, HR fixes the half days listed in the migrate log
