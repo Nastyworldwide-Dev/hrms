@@ -646,6 +646,10 @@ def _my_day(employee: str, day) -> dict:
 		start, end = frappe.db.get_value("Shift Type", shift, ["start_time", "end_time"]) or (None, None)
 		if start and end:
 			window = {"shift": shift, "start": str(start), "end": str(end)}
+			# a half day shows the half worked, as Home does (owner, 11 Nov 2026)
+			from hrms.api.now import _half_day_hours
+
+			window.update(_half_day_hours(employee, day, start, end))
 
 	off_kind, holiday_name = _day_off(employee, day)
 	leave_type = attendance.leave_type if attendance and attendance.leave_type else None

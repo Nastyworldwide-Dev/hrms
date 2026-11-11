@@ -26,6 +26,31 @@ def late_early_bounds(shift_start, shift_end, session):
 	return (middle, shift_end) if session == "AM" else (shift_start, middle)
 
 
+def half_day_window(start, end, session):
+	"""("HH:MM", "HH:MM") the person actually works on a half day. Pure.
+
+	`start` / `end` are the Shift Type's clock times as stored ("9:00:00").
+	AM off -> from mid-shift to the end; PM off -> from the start to mid-shift.
+	A night shift's middle falls after midnight. No session: the whole shift.
+	"""
+
+	def minutes(value):
+		hours, _, rest = str(value).partition(":")
+		return int(hours) * 60 + int(rest.partition(":")[0] or 0)
+
+	def clock(total):
+		total %= 24 * 60
+		return f"{total // 60:02d}:{total % 60:02d}"
+
+	first, last = minutes(start), minutes(end)
+	if session not in SESSIONS:
+		return clock(first), clock(last)
+	length = (last - first) % (24 * 60) or 24 * 60
+	middle = clock(first + length // 2)
+	logger.info("[half_day_session] %s window %s-%s off %s: middle %s", "shift", start, end, session, middle)
+	return (middle, clock(last)) if session == "AM" else (clock(first), middle)
+
+
 def session_hint(shift_start, shift_end, session):
 	"""(clock, sentence) the employee reads under the AM | PM choice. Pure."""
 	if session not in SESSIONS or not (shift_start and shift_end):

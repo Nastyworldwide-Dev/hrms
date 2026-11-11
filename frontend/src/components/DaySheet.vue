@@ -153,6 +153,7 @@ import {
 	hoursAsTime,
 	tapWord,
 	clockTime,
+	shiftHours,
 } from "@/utils/daySheet"
 
 const props = defineProps({
@@ -219,7 +220,7 @@ const shiftLine = computed(() => {
 	if (day.off_kind) return ""
 	if (day.status === "Holiday") return __("Rest day")
 	if (!day.shift) return __("No shift")
-	return `${day.shift.shift} · ${clockTime(day.shift.start)}–${clockTime(day.shift.end)}`
+	return shiftHours(day.shift, __)
 })
 
 //: "8h 02m worked · 1h 30m overtime" — time, not decimals (D11).

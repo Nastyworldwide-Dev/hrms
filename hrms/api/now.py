@@ -188,6 +188,10 @@ def _shift_window(employee, on_date):
 		return None
 	return {
 		"shift": shift_type,
+		# On an approved half day the line shows the half they work (owner,
+		# 11 Nov 2026). start/end stay the whole shift: the time-slip offer
+		# measures lateness from them, and the server already moves that line.
+		**_half_day_hours(employee, on_date, start, end),
 		# the late rule the day is marked by, so the check-in sheet can offer a
 		# time slip at the same moment the day would turn late (owner, 14 Oct 2026)
 		"late_grace": cint(grace),
@@ -198,6 +202,20 @@ def _shift_window(employee, on_date):
 		"start": _hhmm(start),
 		"end": _hhmm(end),
 	}
+
+
+def _half_day_hours(employee, on_date, start, end) -> dict:
+	"""{"half_day": "AM"|"PM", "half_start", "half_end"} on an approved half day, else {}."""
+	from hrms.utils.half_day_session import approved_session, half_day_window
+
+	session = approved_session(employee, on_date)
+	if not session:
+		return {}
+	half_start, half_end = half_day_window(start, end, session)
+	logger.info(
+		"[now] employee=%s half day %s on %s: %s-%s", employee, session, on_date, half_start, half_end
+	)
+	return {"half_day": session, "half_start": half_start, "half_end": half_end}
 
 
 def default_shift_on(employee, on_date) -> str | None:

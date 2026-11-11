@@ -145,3 +145,35 @@ class TestHintsForTheForm(unittest.TestCase):
 				"PM_short": "",
 			},
 		)
+
+
+class TestHalfDayWindow(unittest.TestCase):
+	"""The shift line on Home and the Calendar day sheet on a half day (owner,
+	11 Nov 2026): it showed the whole shift on a day the person works half."""
+
+	def test_am_off_starts_at_midshift(self):
+		from hrms.utils.half_day_session import half_day_window
+
+		self.assertEqual(half_day_window("09:00", "18:00", "AM"), ("13:30", "18:00"))
+
+	def test_pm_off_ends_at_midshift(self):
+		from hrms.utils.half_day_session import half_day_window
+
+		self.assertEqual(half_day_window("09:00", "18:00", "PM"), ("09:00", "13:30"))
+
+	def test_night_shift_middle_falls_after_midnight(self):
+		from hrms.utils.half_day_session import half_day_window
+
+		self.assertEqual(half_day_window("22:00", "06:00", "AM"), ("02:00", "06:00"))
+		self.assertEqual(half_day_window("22:00", "06:00", "PM"), ("22:00", "02:00"))
+
+	def test_a_full_day_or_unknown_half_keeps_the_whole_shift(self):
+		from hrms.utils.half_day_session import half_day_window
+
+		for session in (None, "", "both"):
+			self.assertEqual(half_day_window("09:00", "18:00", session), ("09:00", "18:00"))
+
+	def test_seconds_in_the_stored_time_are_accepted(self):
+		from hrms.utils.half_day_session import half_day_window
+
+		self.assertEqual(half_day_window("9:00:00", "18:00:00", "AM"), ("13:30", "18:00"))

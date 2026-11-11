@@ -4,7 +4,14 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { dayAction, dayLine, dayStatusWord, hoursAsTime, tapWord } from "../daySheet.js"
+import {
+	dayAction,
+	dayLine,
+	dayStatusWord,
+	hoursAsTime,
+	shiftHours,
+	tapWord,
+} from "../daySheet.js"
 
 const TODAY = "2026-09-23"
 const day = (over = {}) => ({
@@ -240,4 +247,26 @@ test("the day's one line says what the day is, never 'didn't check in' before it
 	assert.equal(dayLine(day({ date: FUTURE, status: null, punches: [] }), TODAY), "Working day")
 	assert.equal(dayLine(day({ status: null, punches: [] }), TODAY), "You didn't check in this day.")
 	assert.equal(dayLine(day(), TODAY), "", "a day with taps lists the taps instead")
+})
+
+// Owner, 11 Nov 2026: a half day showed the whole shift on Home and the day sheet.
+const WHOLE = { shift: "Day", start: "09:00:00", end: "18:00:00" }
+const plain = (text, args = []) => args.reduce((s, a, i) => s.replace(`{${i}}`, a), text)
+
+test("shiftHours: the whole shift on a full day", () => {
+	assert.equal(shiftHours(WHOLE, plain), "Day · 09:00–18:00")
+})
+
+test("shiftHours: morning off runs from mid-shift and says half day", () => {
+	const half = { ...WHOLE, half_day: "AM", half_start: "13:30", half_end: "18:00" }
+	assert.equal(shiftHours(half, plain), "Day · 13:30–18:00 · half day")
+})
+
+test("shiftHours: afternoon off runs until mid-shift", () => {
+	const half = { ...WHOLE, half_day: "PM", half_start: "09:00", half_end: "13:30" }
+	assert.equal(shiftHours(half, plain), "Day · 09:00–13:30 · half day")
+})
+
+test("shiftHours: no shift is an empty line", () => {
+	assert.equal(shiftHours(null, plain), "")
 })

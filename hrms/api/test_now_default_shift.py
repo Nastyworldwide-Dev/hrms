@@ -98,3 +98,32 @@ class TestADayMarkedOffIsARestDay(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestHalfDayShowsTheHalfWorked(unittest.TestCase):
+	"""Owner, 11 Nov 2026: on a half day the shift line still showed the whole
+	shift. start/end stay whole (the time-slip offer measures from them); the
+	half worked rides alongside."""
+
+	def _window(self, session):
+		with (
+			patch("hrms.utils.geofence.resolve_assignment", return_value=None),
+			patch.object(now, "_is_rest_day", return_value=False),
+			patch.object(frappe.db, "get_value", side_effect=_db("Day"), create=True),
+			patch("hrms.utils.half_day_session.approved_session", return_value=session),
+		):
+			return now._shift_window("EMP-1", "2026-11-11")
+
+	def test_morning_off_works_from_midshift(self):
+		window = self._window("AM")
+		self.assertEqual(
+			(window["half_day"], window["half_start"], window["half_end"]), ("AM", "13:30", "18:00")
+		)
+		self.assertEqual((window["start"], window["end"]), ("09:00", "18:00"))
+
+	def test_afternoon_off_works_until_midshift(self):
+		window = self._window("PM")
+		self.assertEqual((window["half_start"], window["half_end"]), ("09:00", "13:30"))
+
+	def test_a_full_day_carries_no_half(self):
+		self.assertNotIn("half_day", self._window(None))

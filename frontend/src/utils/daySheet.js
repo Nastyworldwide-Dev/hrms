@@ -120,6 +120,21 @@ export function tapWord(logType) {
 	return ""
 }
 
+//: "Day · 09:00–18:00", or on an approved half day the half worked:
+//: "Day · 13:30–18:00 · half day" (owner, 11 Nov 2026). Home and the day sheet share it.
+export function shiftHours(shift, __) {
+	if (!shift) return ""
+	const half = Boolean(shift.half_day && shift.half_start && shift.half_end)
+	if (half)
+		console.info("[daySheet] half day hours:", shift.half_day, shift.half_start, shift.half_end)
+	const [from, to] = half ? [shift.half_start, shift.half_end] : [shift.start, shift.end]
+	return __(half ? "{0} · {1}–{2} · half day" : "{0} · {1}–{2}", [
+		shift.shift,
+		clockTime(from),
+		clockTime(to),
+	])
+}
+
 //: "HH:MM" from a server time, whatever its width. The server sends "9:00:00"
 //: for a one-digit hour; slicing five characters left "9:00:" (live audit,
 //: 23 Sep). Read by value, not by position.

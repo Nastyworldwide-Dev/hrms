@@ -153,7 +153,7 @@
 <script setup>
 import { siteTime } from "@/utils/siteTime"
 import { shiftGauge } from "@/utils/shiftGauge"
-import { clockTime } from "@/utils/daySheet"
+import { clockTime, shiftHours } from "@/utils/daySheet"
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
 import GButton from "@/components/glass/GButton.vue"
@@ -258,11 +258,8 @@ const detail = computed(() => {
 		return __("In {0} · leave at {1}", [inAt.value, leaveAt.value])
 	}
 	if (shift.value) {
-		return __("{0} · {1}–{2}", [
-			shift.value.shift,
-			clockTime(shift.value.start),
-			clockTime(shift.value.end),
-		])
+		// a half day reads as the half worked (owner, 11 Nov 2026)
+		return shiftHours(shift.value, __)
 	}
 	// No shift, but they finished today: say when, because that is the only
 	// other fact the bar has and it is the one the old line carried.
