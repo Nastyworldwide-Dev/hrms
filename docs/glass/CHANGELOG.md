@@ -10,6 +10,18 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.98] — Announcement Companies — 2026-11-11
+
+### Fixed
+- **Announcements: pick the companies from a list, as many as you need.** On a
+  new HR Announcement, "Which ones" now lists the real companies (or
+  departments, or branches) to search and pick from, instead of an empty box to
+  type an exact name into. Pick several to reach staff in all of them with one
+  announcement. Announcements made before keep their one company.
+
+Deploy **this** version. Same as alpha.97 otherwise: Cost Tag/Center is not
+changed. **Needs migrate.**
+
 ## [2.0.0-alpha.97] — Whole Team Count — 2026-11-11
 
 ### Changed
