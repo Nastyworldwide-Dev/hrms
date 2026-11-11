@@ -58,6 +58,29 @@ def _team_sizes(ids, scope: dict | None = None) -> dict:
 	return {r["reports_to"]: r["n"] for r in rows}
 
 
+def _next_level_sizes(ids, scope: dict | None = None) -> dict:
+	"""{manager: people who report to that manager's direct reports}.
+
+	Owner, 11 Nov 2026: a card reads "5 / 37" for Afiq, 5 direct reports and 37
+	reporting to those five. One level below the direct reports only, never the
+	whole tree. Two grouped reads, under the same company scope as team_size.
+	"""
+	direct = frappe.get_all(
+		"Employee",
+		filters={"status": "Active", "reports_to": ["in", list(ids)], **(scope or {})},
+		fields=["name", "reports_to"],
+		limit_page_length=0,
+	)
+	if not direct:
+		return {}
+	below = _team_sizes([d["name"] for d in direct], scope)
+	totals = {}
+	for d in direct:
+		totals[d["reports_to"]] = totals.get(d["reports_to"], 0) + below.get(d["name"], 0)
+	logger.info("[org_chart] next level sizes for %d managers", len(totals))
+	return totals
+
+
 @frappe.whitelist(methods=["GET"])
 def get_node(employee: str | None = None, company: str | None = None) -> dict:
 	"""The person, their chain up, reports, peers, and (HR only) gaps."""
@@ -118,6 +141,7 @@ def get_node(employee: str | None = None, company: str | None = None) -> dict:
 	today = getdate()
 	leaves = by_employee(ids, today)
 	sizes = _team_sizes(ids, scope)
+	next_sizes = _next_level_sizes(ids, scope)
 
 	def card(row: dict) -> dict:
 		rid = row["name"]
@@ -132,6 +156,7 @@ def get_node(employee: str | None = None, company: str | None = None) -> dict:
 			"image": photo_url(rid, row["image"]) if row.get("image") else "",
 			"away": bool(rows_off) and off_session(rows_off, today) is None,
 			"team_size": sizes.get(rid, 0),
+			"next_level_size": next_sizes.get(rid, 0),
 		}
 
 	result = {

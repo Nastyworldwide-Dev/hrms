@@ -229,6 +229,10 @@
 								<p class="oc-focus__designation">{{ person.designation }}</p>
 								<p class="oc-focus__meta">{{ subline(person) }}</p>
 								<p v-if="isHR" class="oc-focus__meta">{{ person.company }}</p>
+								<!-- direct reports and the people under them, in words (owner, 11 Nov 2026) -->
+								<p v-if="teamCount(person, __)" class="oc-focus__meta">
+									{{ teamCount(person, __).label }}
+								</p>
 								<div v-if="person.id === userId || person.away" class="oc-focus__chips">
 									<span v-if="person.id === userId" class="oc-chip">{{ __("This is you") }}</span>
 									<span v-if="person.away" class="oc-chip oc-chip--away">{{
@@ -254,11 +258,11 @@
 									>
 										<button class="oc-kid" @click="focusPerson(p.id)">
 											<span
-												v-if="p.team_size"
+												v-if="teamCount(p, __)"
 												class="oc-count"
-												:aria-label="__('Team of {0}', [p.team_size])"
+												:aria-label="teamCount(p, __).label"
 											>
-												<Users class="w-3 h-3" aria-hidden="true" />{{ p.team_size }}
+												<Users class="w-3 h-3" aria-hidden="true" />{{ teamCount(p, __).text }}
 											</span>
 											<GAvatar :image="p.image" :label="p.name" round badge />
 											<span class="oc-kid__name">{{ p.name }}</span>
@@ -364,6 +368,7 @@ import {
 	chainLadder,
 	gapsMessage as makeGapsMessage,
 	gapSub,
+	teamCount,
 } from "@/utils/orgChart"
 
 const router = useRouter()

@@ -9,6 +9,7 @@ import {
 	gapsMessage,
 	gapSub,
 	chainLadder,
+	teamCount,
 } from "../orgChart.js"
 
 test("teamPreview shows first n reports with overflow", () => {
@@ -156,4 +157,26 @@ test("teamPreview default is 4 boxes, two rows of two", () => {
 	const six = Array.from({ length: 6 }, (_, i) => ({ id: String(i) }))
 	assert.equal(teamPreview(six).shown.length, 4)
 	assert.equal(teamPreview(six).more, 2)
+})
+
+// Owner, 11 Nov 2026: Afiq's card reads "5 / 37": 5 report to Afiq, 37 report to those five.
+const say = (text, args = []) => args.reduce((s, a, i) => s.replace(`{${i}}`, a), text)
+
+test("teamCount: direct reports and the people under them", () => {
+	assert.deepEqual(teamCount({ team_size: 5, next_level_size: 37 }, say), {
+		text: "5 / 37",
+		label: "5 report directly, 37 report to them",
+	})
+})
+
+test("teamCount: nobody under the direct reports shows one number", () => {
+	assert.deepEqual(teamCount({ team_size: 4, next_level_size: 0 }, say), {
+		text: "4",
+		label: "Team of 4",
+	})
+})
+
+test("teamCount: no reports at all is no count", () => {
+	assert.equal(teamCount({ team_size: 0, next_level_size: 0 }, say), null)
+	assert.equal(teamCount(null, say), null)
 })

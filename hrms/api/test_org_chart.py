@@ -731,3 +731,42 @@ class TestWhoMaySeeAPhoto(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestNextLevelSize(unittest.TestCase):
+	"""Owner, 11 Nov 2026: a card shows its direct reports AND the people who
+	report to those direct reports (Afiq: 5 direct, 4+7+7+12+7 = 37 below them)."""
+
+	EMPLOYEES = (
+		_employee("EMP-1", "Afiq"),
+		_employee("EMP-2", "Amran", reports_to="EMP-1"),
+		_employee("EMP-3", "Cao", reports_to="EMP-1"),
+		_employee("EMP-4", "Dina", reports_to="EMP-2"),
+		_employee("EMP-5", "Eli", reports_to="EMP-2"),
+		_employee("EMP-6", "Faiz", reports_to="EMP-2"),
+		_employee("EMP-7", "Gina", reports_to="EMP-3"),
+		_employee("EMP-8", "Hana", reports_to="EMP-7"),  # three levels down: not counted
+	)
+
+	def test_the_person_counts_direct_reports_and_the_level_below(self):
+		person = _get_node(employee="EMP-1", employees=self.EMPLOYEES)["person"]
+		self.assertEqual((person["team_size"], person["next_level_size"]), (2, 4))
+
+	def test_each_report_card_carries_its_own_level_below(self):
+		reports = {r["id"]: r for r in _get_node(employee="EMP-1", employees=self.EMPLOYEES)["reports"]}
+		self.assertEqual((reports["EMP-2"]["team_size"], reports["EMP-2"]["next_level_size"]), (3, 0))
+		self.assertEqual((reports["EMP-3"]["team_size"], reports["EMP-3"]["next_level_size"]), (1, 1))
+
+	def test_nobody_below_is_zero(self):
+		reports = {r["id"]: r for r in _get_node(employee="EMP-2", employees=self.EMPLOYEES)["reports"]}
+		self.assertEqual(reports["EMP-4"]["next_level_size"], 0)
+
+	def test_staff_never_count_another_company_below(self):
+		employees = [
+			_employee("EMP-1", "Afiq"),
+			_employee("EMP-2", "Amran", reports_to="EMP-1"),
+			_employee("EMP-3", "Zed", company="Company B", reports_to="EMP-2"),
+			_employee("EMP-4", "Dina", reports_to="EMP-2"),
+		]
+		person = _get_node(employee="EMP-1", employees=employees)["person"]
+		self.assertEqual(person["next_level_size"], 1)
