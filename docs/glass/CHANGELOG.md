@@ -10,6 +10,17 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.99] — Manager Approves Claims — 2026-11-12
+
+### Fixed
+- **A manager can approve an expense claim again.** Since claims became two
+  steps (manager, then HR), the manager's Approve was refused with "Only the
+  approver can change the decision of this request", so claims sat with the
+  manager and only HR could move them. The manager's approval now goes through
+  and the claim moves on to HR, as designed. Nothing else changes.
+
+No migrate step needed for this fix.
+
 ## [2.0.0-alpha.98] — Announcement Companies — 2026-11-11
 
 ### Fixed
