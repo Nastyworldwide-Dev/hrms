@@ -209,3 +209,50 @@ class TestEveryExposedDecisionFieldIsGuarded(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestTheManagerMovesAClaimOnToHR(unittest.TestCase):
+	"""Live, 12 Nov 2026: Afif's claim "Goes to Zainul Azhar", Azhar taps Approve and
+	gets "Only the approver can change the decision of this request."
+
+	The manager's approval moves the claim Draft -> Waiting for HR with a plain save.
+	The guard then asked _decision_access about the document as it NOW stands, at the
+	HR step, where only HR may decide, so the manager, who had just been let through
+	by decide() for the manager step, was refused on his own save. The guard must ask
+	about the step the claim was AT, which is what the person acted on."""
+
+	def _claim(self, stored="Draft", now="Waiting for HR"):
+		doc = _Doc(
+			doctype="Expense Claim",
+			name="HR-EXP-0001",
+			employee=STAFF,
+			approval_status=now,
+			flags=frappe._dict(),
+		)
+		doc._doc_before_save = frappe._dict(approval_status=stored)
+		doc.__islocal = False
+		return doc
+
+	def test_the_claims_manager_may_send_it_on_to_hr(self):
+		# on the line, not HR: may decide at the manager step, not at the HR step
+		with (
+			patch.object(approval, "_on_claim_line", return_value=True),
+			patch.object(approval, "_is_claim_hr", return_value=False),
+		):
+			_validate(self._claim(), "azhar@example.com", routed=True)
+
+	def test_someone_off_the_line_still_cannot(self):
+		with (
+			patch.object(approval, "_on_claim_line", return_value=False),
+			patch.object(approval, "_is_claim_hr", return_value=False),
+			self.assertRaises(frappe.PermissionError),
+		):
+			_validate(self._claim(), "stranger@example.com")
+
+	def test_the_manager_cannot_decide_it_once_it_is_with_hr(self):
+		with (
+			patch.object(approval, "_on_claim_line", return_value=True),
+			patch.object(approval, "_is_claim_hr", return_value=False),
+			self.assertRaises(frappe.PermissionError),
+		):
+			_validate(self._claim(stored="Waiting for HR", now="Approved"), "azhar@example.com", routed=True)
