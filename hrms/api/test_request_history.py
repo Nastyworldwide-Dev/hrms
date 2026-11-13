@@ -15,6 +15,7 @@ nadi.w0.approver, 24 Sep 17:58.
 import json
 import pathlib
 import sys
+import typing
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tests"))
@@ -34,6 +35,10 @@ def version(changed, owner, when):
 		"owner": owner,
 		"creation": when,
 	}
+
+
+def _names(result):
+	return {k: result[k] for k in ("manager", "hr", "direct")}
 
 
 class TestSteps(unittest.TestCase):
@@ -84,11 +89,11 @@ class TestSteps(unittest.TestCase):
 		]
 		names = {"manager@x": "Manager Name", "hr@x": "HR Name"}
 		self.assertEqual(
-			claim_approval_names(versions[:1], SENT, names),
+			_names(claim_approval_names(versions[:1], SENT, names)),
 			{"manager": "Manager Name", "hr": None, "direct": None},
 		)
 		self.assertEqual(
-			claim_approval_names(versions, SENT, names),
+			_names(claim_approval_names(versions, SENT, names)),
 			{"manager": "Manager Name", "hr": "HR Name", "direct": None},
 		)
 
@@ -99,7 +104,7 @@ class TestSteps(unittest.TestCase):
 			version([["approval_status", "Draft", "Approved"]], "hr@x", "2026-09-25 08:00:00"),
 		]
 		self.assertEqual(
-			claim_approval_names(versions, SENT, {"hr@x": "HR Name"}),
+			_names(claim_approval_names(versions, SENT, {"hr@x": "HR Name"})),
 			{"manager": None, "hr": None, "direct": "HR Name"},
 		)
 
@@ -180,3 +185,36 @@ class TestTheReasonBelongsToThisDocument(unittest.TestCase):
 		src = (pathlib.Path(__file__).resolve().parent / "approval.py").read_text()
 		body = src[src.index("def get_rejection_reason") : src.index("def _check_review_revision")]
 		self.assertIn('"creation": (">=", doc.creation)', body)
+
+
+class TestTheManagerStepHasItsDate(unittest.TestCase):
+	"""Owner, 13 Nov 2026: a claim says on what date its manager approved it. The
+	manager's step (Draft -> Waiting for HR) was not a step at all: History went
+	straight from Sent to HR's final Approved."""
+
+	VERSIONS = (
+		version([["approval_status", "Draft", "Waiting for HR"]], "manager@x", "2026-11-12 09:15:00"),
+		version([["approval_status", "Waiting for HR", "Approved"]], "hr@x", "2026-11-13 10:00:00"),
+	)
+	NAMES: typing.ClassVar[dict] = {"manager@x": "Azhar", "hr@x": "HR Name"}
+
+	def test_the_history_lists_the_manager_approval_with_its_date(self):
+		steps = history_steps(SENT, "staff@x", self.VERSIONS, "approval_status", self.NAMES)
+		self.assertEqual(
+			[(s["what"], s["who"], s["when"]) for s in steps],
+			[
+				("sent", None, SENT),
+				("manager_approved", "Azhar", "2026-11-12 09:15:00"),
+				("approved", "HR Name", "2026-11-13 10:00:00"),
+			],
+		)
+
+	def test_the_desk_form_gets_the_dates_with_the_names(self):
+		result = claim_approval_names(self.VERSIONS, SENT, self.NAMES)
+		self.assertEqual(result["manager_on"], "2026-11-12 09:15:00")
+		self.assertEqual(result["hr_on"], "2026-11-13 10:00:00")
+		self.assertEqual(result["manager"], "Azhar")
+
+	def test_a_claim_still_with_its_manager_has_no_date(self):
+		result = claim_approval_names([], SENT, {})
+		self.assertIsNone(result["manager_on"])

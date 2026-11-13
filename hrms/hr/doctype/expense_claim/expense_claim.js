@@ -58,12 +58,20 @@ frappe.ui.form.on("Expense Claim", {
 					(status === "Draft" ? __("Waiting for manager") : status === "Waiting for HR" || response.message.hr ? __("No manager approval") : __("Not recorded"));
 				const hr = response.message.hr ||
 					(status === "Waiting for HR" ? __("Waiting for HR") : response.message.direct ? "—" : status === "Approved" ? __("Not recorded") : "—");
+				// the date each step was taken (owner, 13 Nov 2026), under the name
+				const on = (when) =>
+					when
+						? `<div class="text-muted small" style="margin-top:4px">${__("on {0}", [
+								frappe.utils.escape_html(frappe.datetime.str_to_user(when)),
+						  ])}</div>`
+						: "";
+				const managerOn = response.message.manager_on || response.message.direct_on;
 				wrapper.html(
 					`<div class="row" style="margin-top:8px">` +
 						`<div class="col-sm-6" style="margin-bottom:12px"><div class="control-label" style="margin-bottom:4px">${managerLabel}</div>` +
-						`<div class="like-disabled-input">${frappe.utils.escape_html(manager)}</div></div>` +
+						`<div class="like-disabled-input">${frappe.utils.escape_html(manager)}</div>${on(managerOn)}</div>` +
 						`<div class="col-sm-6" style="margin-bottom:12px"><div class="control-label" style="margin-bottom:4px">${__("HR approved by")}</div>` +
-						`<div class="like-disabled-input">${frappe.utils.escape_html(hr)}</div></div></div>`
+						`<div class="like-disabled-input">${frappe.utils.escape_html(hr)}</div>${on(response.message.hr_on)}</div></div>`
 				);
 				console.info("[expense_claim] approval names shown:", claim, Boolean(response.message.manager), Boolean(response.message.hr));
 			},

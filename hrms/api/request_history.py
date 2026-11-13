@@ -42,10 +42,13 @@ def history_steps(created, created_by, versions, decision_field, names, reason=N
 			changed = json.loads(row.get("data") or "{}").get("changed") or []
 		except ValueError:
 			continue
-		for field, _old, new in changed:
+		for field, old, new in changed:
 			step = None
 			if field == decision_field and new in DECISION_STEPS:
 				step = DECISION_STEPS[new]
+			elif field == decision_field and old == "Draft" and new == "Waiting for HR":
+				# an expense claim's manager approval (owner, 13 Nov 2026: say on what date)
+				step = "manager_approved"
 			elif field == "docstatus" and new == 2:
 				step = "cancelled"
 			if step:
@@ -71,7 +74,7 @@ def _display_names(logins) -> dict:
 
 def claim_approval_names(versions, created, names) -> dict:
 	"""Names of the users who moved a claim through manager and HR approval."""
-	result = {"manager": None, "hr": None, "direct": None}
+	result = {"manager": None, "hr": None, "direct": None, "manager_on": None, "hr_on": None, "direct_on": None}
 	for row in sorted(versions, key=lambda v: str(v.get("creation"))):
 		if str(row.get("creation")) < str(created):
 			continue
@@ -83,14 +86,19 @@ def claim_approval_names(versions, created, names) -> dict:
 			if not isinstance(item, (list, tuple)) or len(item) != 3 or item[0] != "approval_status":
 				continue
 			_old_field, old, new = item
-			if old == "Draft" and new == "Waiting for HR" and result["manager"] is None:
+			# the date each step was taken (owner, 13 Nov 2026), beside who took it
+			when = str(row.get("creation"))
+			if old == "Draft" and new == "Waiting for HR" and result["manager_on"] is None:
 				result["manager"] = names.get(row.get("owner"))
-			elif old == "Waiting for HR" and new == "Approved" and result["hr"] is None:
+				result["manager_on"] = when
+			elif old == "Waiting for HR" and new == "Approved" and result["hr_on"] is None:
 				result["hr"] = names.get(row.get("owner"))
-			elif old == "Draft" and new == "Approved" and result["direct"] is None:
+				result["hr_on"] = when
+			elif old == "Draft" and new == "Approved" and result["direct_on"] is None:
 				# An older single-step decision and a direct HR decision have the
 				# same transition. The Version row does not identify the role.
 				result["direct"] = names.get(row.get("owner"))
+				result["direct_on"] = when
 	logger.debug(
 		"[request_history] claim approval names resolved: manager=%s hr=%s direct=%s",
 		bool(result["manager"]),

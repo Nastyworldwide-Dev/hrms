@@ -144,3 +144,34 @@ test("an older approval response cannot overwrite a newer refresh", () => {
 	assert.match(markup, /Newest Manager/);
 	assert.doesNotMatch(markup, /Stale Manager/);
 });
+
+// Owner, 13 Nov 2026: the claim says on what date its manager approved it.
+test("Desk shows the date the manager approved, and the date HR approved", () => {
+	const handlers = {};
+	let markup = "";
+	const sandbox = {
+		__: (text, args = []) => args.reduce((s, a, i) => s.replace(`{${i}}`, a), text),
+		console: { info() {} },
+		frappe: {
+			provide() {},
+			ui: { form: { on(doctype, events) { handlers[doctype] = events; } } },
+			utils: { escape_html: (value) => value },
+			datetime: { str_to_user: (value) => `user(${value})` },
+			call(options) {
+				options.callback({
+					message: { manager: "Azhar", manager_on: "2026-11-12 09:15:00", hr: "HR Name", hr_on: "2026-11-13 10:00:00" },
+				});
+			},
+		},
+	};
+	vm.runInNewContext(fs.readFileSync(path.join(dir, "expense_claim.js"), "utf8"), sandbox);
+	const frm = {
+		doc: { name: "HR-EXP-1", approval_status: "Approved", docstatus: 1 },
+		fields_dict: { approval_history: { $wrapper: { html(value) { markup = value; } } } },
+		is_new: () => false,
+	};
+	handlers["Expense Claim"].show_approval_names(frm);
+	assert.match(markup, /Azhar/);
+	assert.match(markup, /on user\(2026-11-12 09:15:00\)/);
+	assert.match(markup, /on user\(2026-11-13 10:00:00\)/);
+});

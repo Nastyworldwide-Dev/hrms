@@ -56,10 +56,11 @@ const props = defineProps({
 
 const __ = inject("$translate")
 
-const ICON = { sent: Send, approved: Check, rejected: X, cancelled: Ban }
+const ICON = { sent: Send, manager_approved: Check, approved: Check, rejected: X, cancelled: Ban }
 //: The iOS system colours the app already uses for these outcomes.
 const TINT = {
 	sent: TILE.neutral,
+	manager_approved: "var(--g-tile-leave)",
 	approved: "var(--g-tile-leave)",
 	rejected: "var(--g-danger)",
 	cancelled: TILE.neutral,

@@ -3,6 +3,8 @@
 
 const WORDS = {
 	sent: "Sent",
+	// an expense claim's first step, the manager's approval (owner, 13 Nov 2026)
+	manager_approved: "Manager approved",
 	approved: "Approved",
 	rejected: "Not approved",
 	cancelled: "Cancelled",
