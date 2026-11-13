@@ -10,6 +10,17 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.104] — Manager Approved On — 2026-11-13
+
+### Added
+- **Expense Claim list: Manager Approved On.** A new column beside Total Claimed
+  Amount shows when the manager approved each claim, and it is in the filter bar,
+  so HR can list, for example, every claim a manager approved last week. Filled
+  in automatically from now on, and for existing claims from their history.
+  Claims approved in one step before 5 Nov have no manager step and stay blank.
+
+**Needs migrate** (new field and the fill-in of existing claims).
+
 ## [2.0.0-alpha.103] — Review Types — 2026-11-13
 
 ### Added
