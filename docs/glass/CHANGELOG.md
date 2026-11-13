@@ -10,6 +10,18 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.106] — Claim Paid — 2026-11-13
+
+### Added
+- **HR mark a claim Paid.** Approved claims now have a **Payment** field: Pending or
+  Paid. After paying a claim in the payment app, HR switch it to **Paid** and the
+  claim reads **Approved · paid** in Desk and in Nadi. Only HR User and HR Manager
+  can change it, and only on an approved claim. It is a column and a filter in the
+  Expense Claim list. No accounts or payments are created. Existing claims start
+  as Pending.
+
+**Needs migrate.**
+
 ## [2.0.0-alpha.105] — Older Claims Dated — 2026-11-13
 
 ### Fixed
