@@ -15,6 +15,7 @@ import logging
 import frappe
 from frappe import _
 from frappe.model import get_permitted_fields
+from frappe.utils import now_datetime
 
 from hrms.hr.utils import get_designated_approvers, has_approver_above, is_own_employee
 from hrms.utils import claim_stages
@@ -569,6 +570,8 @@ def decide(
 	if doctype == claim_stages.DOCTYPE and not claim_stages.is_final(current, status, by_hr):
 		# The manager approved: the claim moves on to HR, and nothing is posted yet.
 		doc.set(fieldname, claim_stages.next_status(current, status, by_hr))
+		# the date HR list and filter by (owner, 13 Nov 2026)
+		doc.manager_approved_on = now_datetime()
 		doc.save()
 		logger.info("[approval] %s approved %s %s; it now waits for HR", frappe.session.user, doctype, name)
 		doc.run_method("notify_hr_step")
@@ -674,7 +677,7 @@ def check_many(items: str | list) -> dict:
 			continue
 		answer = get_decision_actions(doctype, name)
 		if "Approved" in answer["actions"]:
-			from frappe.utils import get_datetime
+			from frappe.utils import get_datetime, now_datetime
 
 			# The approver decides what THEY saw. Handing back the server's fresh revision would let
 			# a request the employee edited after the list loaded go through for dates the approver

@@ -158,3 +158,4 @@ hrms.patches.v16_0.add_employee_letters_issued #2026-11-07 HR: Letters Issued ta
 hrms.patches.v16_0.employee_status_options #2026-11-10 HR: Employee Status is Active, Resigned, Terminated, Deceased, Suspended; everyone Left or Inactive becomes Resigned
 hrms.patches.v16_0.fill_half_day_leave_hours #2026-11-11 owner: half-day leave days left at 0.00 h take their hours from the check-in and check-out linked to them; rows whose punches do not pair are left for HR
 hrms.patches.v16_0.add_performance_review_type #2026-11-13 owner: Performance Review Type on Appraisal; HR keep the list (Confirmation, PIP, Performance, Assignment Review, Others to start)
+hrms.patches.v16_0.backfill_claim_manager_approved_on #2026-11-13 owner: Manager Approved On on Expense Claim, beside Total Claimed Amount and filterable; existing claims filled from their own history

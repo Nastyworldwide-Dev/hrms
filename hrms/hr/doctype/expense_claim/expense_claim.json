@@ -40,6 +40,7 @@
   "total_advance_amount",
   "grand_total",
   "total_claimed_amount",
+  "manager_approved_on",
   "total_taxes_and_charges",
   "total_amount_reimbursed",
   "gain_loss_section",
@@ -151,6 +152,17 @@
    "options": "currency",
    "read_only": 1,
    "width": "160px"
+  },
+  {
+   "fieldname": "manager_approved_on",
+   "fieldtype": "Datetime",
+   "label": "Manager Approved On",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "no_copy": 1,
+   "description": "When the manager approved and the claim moved on to HR. Set by the system."
   },
   {
    "fieldname": "total_sanctioned_amount",
@@ -520,7 +532,7 @@
  "idx": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-05 12:00:00.000000",
+ "modified": "2026-11-13 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Expense Claim",
