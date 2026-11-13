@@ -773,6 +773,24 @@ def _department_index() -> dict:
 	}
 
 
+def headcount_under(name, staff, index, company=None) -> int:
+	"""Active employees in this department's subtree (owner, 13 Nov 2026: a row reads
+	"13 / 20", appraised out of headcount). Pure: `staff` is
+	[{"department", "company", "status"}], `index` the department tree by name."""
+	active = [s for s in staff if s["status"] == "Active" and (not company or s["company"] == company)]
+	if name == NO_DEPARTMENT:
+		return sum(1 for s in active if not s["department"])
+	node = index.get(name)
+	if not node:
+		return 0
+	count = 0
+	for s in active:
+		child = index.get(s["department"]) if s["department"] else None
+		if child and node.lft <= child.lft and child.rgt <= node.rgt:
+			count += 1
+	return count
+
+
 @frappe.whitelist(methods=["GET", "POST"])
 def get_department_kpi(
 	parent: str | None = None,
@@ -816,6 +834,9 @@ def get_department_kpi(
 	data = _scored_rows(viewer, reports, year, cycle, company, None)
 	rows = data["rows"]
 	index = _department_index()
+	# Everyone on the hub, appraised or not, for "appraised / headcount" per row. Same
+	# group-level audience as _scored_rows (see its fence note); one read.
+	staff = frappe.get_all("Employee", fields=["department", "company", "status"])
 
 	if parent and parent != NO_DEPARTMENT and parent not in index:
 		frappe.throw(_("No such department: {0}.").format(parent))
@@ -878,6 +899,7 @@ def get_department_kpi(
 					"label": child.name,
 					"is_group": bool(child.is_group),
 					**roll_up(people_under(child.name)),
+					"staff_count": headcount_under(child.name, staff, index, company),
 				}
 			)["headcount"]
 		),
@@ -894,6 +916,7 @@ def get_department_kpi(
 					"label": _("No department"),
 					"is_group": False,
 					**roll_up(orphans),
+					"staff_count": headcount_under(NO_DEPARTMENT, staff, index, company),
 				}
 			)
 
@@ -942,7 +965,14 @@ def get_department_kpi(
 			"is_root": at_root,
 		},
 		"breadcrumb": trail,
-		"summary": roll_up(people_here),
+		"summary": {
+			**roll_up(people_here),
+			"staff_count": headcount_under(here or NO_DEPARTMENT, staff, index, company)
+			if here
+			else sum(
+				1 for s in staff if s["status"] == "Active" and (not company or s["company"] == company)
+			),
+		},
 		"departments": departments,
 		"people": sorted(people, key=lambda r: -r["total_score"]),
 		"companies": data["companies"],

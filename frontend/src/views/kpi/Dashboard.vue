@@ -214,7 +214,14 @@
 								<GSkeleton v-if="teamResource.loading" width="180px" height="20px" />
 								<div v-else class="flex items-center gap-2.5">
 									<GBadge variant="accent">
-										{{ __("{0} appraised", [teamSummary.headcount]) }}
+										{{
+											teamSummary.staff_count
+												? __("{0} of {1} appraised", [
+														teamSummary.headcount,
+														teamSummary.staff_count,
+												  ])
+												: __("{0} appraised", [teamSummary.headcount])
+										}}
 									</GBadge>
 									<span class="text-xs font-sans font-bold text-ink-700">
 										{{ __("Top") }} {{ score1(teamSummary.top_score) }}
@@ -614,7 +621,8 @@ const treeDepartments = computed(() => departmentKpi.data?.departments || [])
 
 const DEPARTMENT_COLUMNS = computed(() => [
 	{ key: "label", label: __("Department"), action: true },
-	{ key: "headcount", label: __("People"), numeric: true },
+	// submitted / headcount (owner, 13 Nov 2026): appraised out of everyone in the department
+	{ key: "headcount", label: __("Submitted"), numeric: true },
 	{ key: "score", label: __("Average"), numeric: true },
 ])
 
@@ -623,7 +631,7 @@ const treeDepartmentRows = computed(() =>
 		// carried so a row can open the node; no column renders it
 		name: d.name,
 		label: d.label,
-		headcount: d.headcount,
+		headcount: d.staff_count ? `${d.headcount} / ${d.staff_count}` : d.headcount,
 		score: score1(d.average_score),
 	}))
 )
