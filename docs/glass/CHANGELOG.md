@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.102] — Manager Approval Date — 2026-11-13
+
+### Added
+- **A claim shows when its manager approved it.** In the app, a claim's History
+  now has a line **"Manager approved by Azhar"** with the date and time, between
+  Sent and HR's approval. On the Desk claim form, the date appears under the
+  manager's name and under HR's. Existing claims show their dates too.
+
+No migrate step needed.
+
 ## [2.0.0-alpha.101] — KPI Headcount — 2026-11-13
 
 ### Changed
