@@ -12,6 +12,7 @@
   "company",
   "status",
   "column_break_3",
+  "cycle_type",
   "start_date",
   "end_date",
   "section_break_4",
@@ -48,6 +49,15 @@
   "appraisees"
  ],
  "fields": [
+  {
+   "fieldname": "cycle_type",
+   "fieldtype": "Select",
+   "label": "Cycle Type",
+   "options": "\nMonthly\nQuarterly\nHalf Yearly\nYearly",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Fills the End Date from the Start Date. The dates can still be changed."
+  },
   {
    "fieldname": "start_date",
    "fieldtype": "Date",
@@ -159,17 +169,17 @@
   },
   {
    "default": "70",
-   "description": "Output KPI weight within Section A (80%). A2 auto-calculated as 80 \u2212 A1.",
+   "description": "Output KPI weight within Section A (80%). A2 auto-calculated as 80 − A1.",
    "fieldname": "a1_weight_pct",
    "fieldtype": "Int",
-   "label": "A1 \u2014 Output KPI Weight %"
+   "label": "A1 — Output KPI Weight %"
   },
   {
    "default": "10",
-   "description": "Competency weight (auto: 80 \u2212 A1)",
+   "description": "Competency weight (auto: 80 − A1)",
    "fieldname": "a2_weight_pct",
    "fieldtype": "Int",
-   "label": "A2 \u2014 Competency Weight %",
+   "label": "A2 — Competency Weight %",
    "read_only": 1
   },
   {
@@ -314,7 +324,7 @@
    "link_fieldname": "appraisal_cycle"
   }
  ],
- "modified": "2026-03-18 00:00:00.000000",
+ "modified": "2026-11-13 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Appraisal Cycle",
@@ -367,7 +377,7 @@
    "share": 1
   }
  ],
- "search_fields": "start_date, end_date",
+ "search_fields": "cycle_type, start_date, end_date",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [

@@ -42,6 +42,11 @@ function get_conversion_factor(weighted_avg, table) {
 }
 
 frappe.ui.form.on("Appraisal", {
+	setup(frm) {
+		// a review type HR switched off is not offered on a new choice (13 Nov 2026)
+		frm.set_query("performance_review_type", () => ({ filters: { disabled: 0 } }));
+	},
+
 	refresh(frm) {
 		// Fetch score conversion table from cycle for live calculations
 		if (frm.doc.appraisal_cycle && !frm._score_conversion_table) {

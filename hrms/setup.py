@@ -19,6 +19,10 @@ def after_install():
 	make_fixtures()
 	# HR's letter types: every Letters Issued row needs one (required Link)
 	seed_letter_types()
+	# HR's performance review types, picked on each Appraisal (13 Nov 2026)
+	from hrms.utils.performance_review_type import seed_review_types
+
+	seed_review_types()
 	# HR's five Employee statuses (10 Nov 2026): the patch never runs here
 	from hrms.patches.v16_0.employee_status_options import set_status_options
 

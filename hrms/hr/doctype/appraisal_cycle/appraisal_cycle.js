@@ -23,6 +23,24 @@ frappe.ui.form.on("Appraisal Cycle", {
 		frm.trigger("set_autocompletions_for_final_score_formula");
 	},
 
+	// Cycle Type (owner, 13 Nov 2026): Monthly, Quarterly, Half Yearly or Yearly fills the
+	// End Date from the Start Date. HR can still change either date.
+	cycle_type(frm) {
+		frm.trigger("fill_end_date");
+	},
+
+	start_date(frm) {
+		frm.trigger("fill_end_date");
+	},
+
+	fill_end_date(frm) {
+		const months = { Monthly: 1, Quarterly: 3, "Half Yearly": 6, Yearly: 12 }[frm.doc.cycle_type];
+		if (!months || !frm.doc.start_date) return;
+		const end = frappe.datetime.add_days(frappe.datetime.add_months(frm.doc.start_date, months), -1);
+		console.info("[appraisal_cycle] end date from cycle type:", frm.doc.cycle_type, end);
+		frm.set_value("end_date", end);
+	},
+
 	a1_weight_pct(frm) {
 		let a1 = cint(frm.doc.a1_weight_pct) || 70;
 		frm.set_value("a2_weight_pct", 80 - a1);

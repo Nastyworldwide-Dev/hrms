@@ -16,6 +16,7 @@
   "column_break0",
   "company",
   "appraisal_cycle",
+  "performance_review_type",
   "start_date",
   "end_date",
   "personal_particulars_section",
@@ -206,6 +207,15 @@
    "reqd": 1
   },
   {
+   "fieldname": "performance_review_type",
+   "fieldtype": "Link",
+   "options": "Performance Review Type",
+   "label": "Performance Review Type",
+   "in_standard_filter": 1,
+   "in_list_view": 0,
+   "description": "What kind of review this is. HR keep the list under Performance Review Type."
+  },
+  {
    "fieldname": "appraisal_kra",
    "fieldtype": "Table",
    "label": "KRA vs Goals",
@@ -326,10 +336,10 @@
   },
   {
    "default": "70",
-   "description": "Output KPI weight within Section A (80%). A2 = 80 \u2212 A1.",
+   "description": "Output KPI weight within Section A (80%). A2 = 80 − A1.",
    "fieldname": "a1_weight_pct",
    "fieldtype": "Int",
-   "label": "A1 \u2014 Output KPI Weight %"
+   "label": "A1 — Output KPI Weight %"
   },
   {
    "fieldname": "column_break_a1a2",
@@ -337,10 +347,10 @@
   },
   {
    "default": "10",
-   "description": "Competency weight (auto-calculated: 80 \u2212 A1)",
+   "description": "Competency weight (auto-calculated: 80 − A1)",
    "fieldname": "a2_weight_pct",
    "fieldtype": "Int",
-   "label": "A2 \u2014 Competency Weight %",
+   "label": "A2 — Competency Weight %",
    "read_only": 1
   },
   {
@@ -425,7 +435,7 @@
   {
    "fieldname": "section_break_kras",
    "fieldtype": "Section Break",
-   "label": "A1 \u2014 Output KPIs"
+   "label": "A1 — Output KPIs"
   },
   {
    "fieldname": "section_break_goals",
@@ -474,7 +484,7 @@
   {
    "fieldname": "section_a2_heading",
    "fieldtype": "Section Break",
-   "label": "A2 \u2014 Competency"
+   "label": "A2 — Competency"
   },
   {
    "fieldname": "functional_competencies",
@@ -585,10 +595,10 @@
   {
    "fieldname": "b4_section",
    "fieldtype": "Section Break",
-   "label": "B4 \u2014 Exceeds Expectations (+5% to +10%)"
+   "label": "B4 — Exceeds Expectations (+5% to +10%)"
   },
   {
-   "description": "8 criteria \u00d7 max 3 pts = 24 pts possible. Score 8\u201314 = +5%. Score 15\u201324 = +10%. Requires Section A \u2265 71%.",
+   "description": "8 criteria × max 3 pts = 24 pts possible. Score 8–14 = +5%. Score 15–24 = +10%. Requires Section A ≥ 71%.",
    "fieldname": "b4_evidence",
    "fieldtype": "Table",
    "label": "B4 Evidence",
@@ -604,7 +614,7 @@
   {
    "fieldname": "b5_section",
    "fieldtype": "Section Break",
-   "label": "B5 \u2014 Outstanding (+15% to +20%)"
+   "label": "B5 — Outstanding (+15% to +20%)"
   },
   {
    "description": "Requires full B4 (15+ pts) AND no written warning AND no serious misconduct. B5 replaces B4 (not additive).",
@@ -683,7 +693,7 @@
    "label": "Leadership Gate Info"
   },
   {
-   "description": "Two-Key Rule: Leaders must pass both KPI output AND leadership score \u2265 60% to unlock Rating B or A.",
+   "description": "Two-Key Rule: Leaders must pass both KPI output AND leadership score ≥ 60% to unlock Rating B or A.",
    "fieldname": "leadership_scorecard",
    "fieldtype": "Table",
    "label": "Leadership Scorecard",
@@ -707,7 +717,7 @@
   },
   {
    "default": "0",
-   "description": "Score \u2265 60% required. Failure caps final score at 80% (Rating C max).",
+   "description": "Score ≥ 60% required. Failure caps final score at 80% (Rating C max).",
    "fieldname": "leadership_gate_passed",
    "fieldtype": "Check",
    "label": "Leadership Gate Passed",
@@ -766,20 +776,20 @@
   {
    "fieldname": "section_a_score",
    "fieldtype": "Float",
-   "label": "Section A \u2014 Core Performance (max 80%)",
+   "label": "Section A — Core Performance (max 80%)",
    "read_only": 1
   },
   {
    "fieldname": "section_b_score",
    "fieldtype": "Float",
-   "label": "Section B \u2014 Differentiator (bonus)",
+   "label": "Section B — Differentiator (bonus)",
    "read_only": 1
   },
   {
    "fieldname": "section_c_score",
    "fieldtype": "Float",
    "hidden": 1,
-   "label": "Section C \u2014 Extra Functions",
+   "label": "Section C — Extra Functions",
    "read_only": 1
   },
   {
@@ -931,7 +941,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-03 12:00:00.000000",
+ "modified": "2026-11-13 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Appraisal",
