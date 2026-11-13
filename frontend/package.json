@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.99",
-	"releaseName": "Manager Approves Claims",
+	"version": "2.0.0-alpha.100",
+	"releaseName": "Long Attachments",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

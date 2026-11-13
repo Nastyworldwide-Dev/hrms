@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.100] — Long Attachments — 2026-11-13
+
+### Changed
+- **A long attachment opens cropped.** A tall image, such as a phone screenshot,
+  now opens showing its top, fading out at the bottom. Tap it, or **Show whole
+  image**, to see all of it; **Show less** goes back. Normal photos, PDFs and
+  documents open as before.
+
+No migrate step needed.
+
 ## [2.0.0-alpha.99] — Manager Approves Claims — 2026-11-12
 
 ### Fixed
