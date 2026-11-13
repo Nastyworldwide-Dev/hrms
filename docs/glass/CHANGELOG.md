@@ -10,6 +10,18 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.105] — Older Claims Dated — 2026-11-13
+
+### Fixed
+- **Manager Approved On is filled for older claims too.** Claims approved before
+  5 Nov went through in one step, so the column was blank for them even though the
+  claim itself says "Approved by … on …". Where that one-step approval was made by
+  the claim's own approver, its date now shows in the column. Claims HR approved
+  directly, still waiting, or rejected stay blank.
+- The column now appears in the Expense Claim list for everyone, without picking it.
+
+**Needs migrate.**
+
 ## [2.0.0-alpha.104] — Manager Approved On — 2026-11-13
 
 ### Added

@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.104",
-	"releaseName": "Manager Approved On",
+	"version": "2.0.0-alpha.105",
+	"releaseName": "Older Claims Dated",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",
