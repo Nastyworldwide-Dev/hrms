@@ -10,6 +10,19 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.103] — Review Types — 2026-11-13
+
+### Added
+- **Performance Review Type on each Appraisal.** Pick Confirmation Review, PIP
+  Review, Performance Review, Assignment Review or Others. HR keep the list
+  themselves under **Performance Review Type** in Desk: add new types, rename them,
+  or tick **Disabled** to stop offering one. Old appraisals don't need a type.
+- **Appraisal Cycle: Cycle Type.** Monthly, Quarterly, Half Yearly or Yearly.
+  Picking one fills the End Date from the Start Date; the dates can still be
+  changed. The type shows in the cycle picker on an Appraisal.
+
+**Needs migrate** (new list, new fields, starting types).
+
 ## [2.0.0-alpha.102] — Manager Approval Date — 2026-11-13
 
 ### Added
