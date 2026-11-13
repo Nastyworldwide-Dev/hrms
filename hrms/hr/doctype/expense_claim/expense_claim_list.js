@@ -5,7 +5,7 @@
 // Frappe used to draw this pill from the doctype's own "states" list (Draft / Submitted / Unpaid ...),
 // which outranks any list script; that list is now empty so this rule decides.
 frappe.listview_settings["Expense Claim"] = {
-	add_fields: ["company", "approval_status"],
+	add_fields: ["company", "approval_status", "payment_status"],
 	has_indicator_for_draft: 1,
 	get_indicator: (doc) => {
 		// two steps (5 Nov 2026): a claim the manager approved waits for HR, and says so
@@ -18,6 +18,10 @@ frappe.listview_settings["Expense Claim"] = {
 			return [__("Rejected"), "red", "approval_status,=,Rejected"];
 		}
 		if (doc.status === "Paid") return [__("Paid"), "green", "status,=,Paid"];
+		// paid out in the payment app and marked here by HR (owner, 13 Nov 2026)
+		if (doc.approval_status === "Approved" && doc.payment_status === "Paid") {
+			return [__("Approved · paid"), "green", "payment_status,=,Paid"];
+		}
 		// submitted and approved, money not paid out yet. The click filter is the DECISION, not the money
 		// word: an approved claim with nothing sanctioned keeps the stored status "Submitted" (set_status),
 		// and a filter on "Unpaid" would not list it (design review of 3f761024f).

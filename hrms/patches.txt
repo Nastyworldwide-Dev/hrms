@@ -160,3 +160,4 @@ hrms.patches.v16_0.fill_half_day_leave_hours #2026-11-11 owner: half-day leave d
 hrms.patches.v16_0.add_performance_review_type #2026-11-13 owner: Performance Review Type on Appraisal; HR keep the list (Confirmation, PIP, Performance, Assignment Review, Others to start)
 hrms.patches.v16_0.backfill_claim_manager_approved_on #2026-11-13 owner: Manager Approved On on Expense Claim, beside Total Claimed Amount and filterable; existing claims filled from their own history
 hrms.patches.v16_0.backfill_claim_manager_approved_on_one_step #2026-11-13 owner: Manager Approved On also for claims approved in one step by their own approver before 5 Nov; column added to the saved list layout
+hrms.patches.v16_0.add_claim_payment_status #2026-11-13 owner: Payment (Pending / Paid) on Expense Claim, HR mark it after paying in the payment app; no accounts touched

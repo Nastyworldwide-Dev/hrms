@@ -25,6 +25,7 @@ const STATUS_VARIANTS = {
 	"approved & submitted": "progress",
 	"approved, not paid yet": "progress",
 	"approved · unpaid": "progress",
+	"approved · paid": "success",
 	approved: "success",
 	paid: "success",
 	rejected: "danger",
@@ -84,6 +85,9 @@ const REQUEST_TYPES = {
 		// A second axis after approval: payment. Finance reads "Approved & Unpaid".
 		submitted(doc) {
 			if (doc.approval_status === "Rejected") return "Rejected"
+			// paid out in the payment app and marked by HR (owner, 13 Nov 2026)
+			if (doc.approval_status === "Approved" && doc.payment_status === "Paid")
+				return "Approved · paid"
 			// The person's words (alpha.6 W1): approved, money not yet paid out.
 			// One line on a phone (owner, 29 Sep 2026: it wrapped in the list).
 			if (doc.approval_status === "Approved" && ["Unpaid", "Submitted"].includes(doc.status)) {

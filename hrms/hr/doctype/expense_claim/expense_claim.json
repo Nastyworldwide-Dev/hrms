@@ -16,6 +16,7 @@
   "column_break_5",
   "expense_approver",
   "approval_status",
+  "payment_status",
   "approval_history_section",
   "approval_history",
   "currency_section",
@@ -132,6 +133,20 @@
    "options": "Draft\nWaiting for HR\nApproved\nRejected\nCancelled",
    "permlevel": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "label": "Payment",
+   "options": "Pending\nPaid",
+   "default": "Pending",
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "permlevel": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "depends_on": "eval:doc.approval_status=='Approved'",
+   "description": "HR marks it Paid once the claim has been paid (in the payment app). No accounts are touched."
   },
   {
    "fieldname": "approval_history_section",
@@ -532,7 +547,7 @@
  "idx": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-13 16:30:00.000000",
+ "modified": "2026-11-13 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Expense Claim",

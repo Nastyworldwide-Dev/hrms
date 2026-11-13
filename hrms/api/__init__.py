@@ -1461,6 +1461,8 @@ def get_expense_claims(
 		"`tabExpense Claim`.currency",
 		"`tabExpense Claim`.approval_status",
 		"`tabExpense Claim`.status",
+		# HR's Payment mark: the claim reads "Approved · paid" (13 Nov 2026)
+		"`tabExpense Claim`.payment_status",
 		"`tabExpense Claim`.expense_approver",
 		"`tabExpense Claim`.total_claimed_amount",
 		"`tabExpense Claim`.posting_date",

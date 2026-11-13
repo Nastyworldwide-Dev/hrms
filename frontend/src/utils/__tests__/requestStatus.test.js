@@ -180,3 +180,20 @@ test("a claim still with its manager keeps the plain waiting word", () => {
 		"Waiting"
 	)
 })
+
+// Owner, 13 Nov 2026: HR mark a claim paid after paying it in the payment app.
+test("an approved claim HR marked paid reads Approved · paid, in green", () => {
+	const paid = requestStatus("Expense Claim", {
+		approval_status: "Approved",
+		status: "Unpaid",
+		payment_status: "Paid",
+	})
+	assert.equal(paid.label, "Approved · paid")
+	assert.equal(paid.variant, "success")
+	const pending = requestStatus("Expense Claim", {
+		approval_status: "Approved",
+		status: "Unpaid",
+		payment_status: "Pending",
+	})
+	assert.equal(pending.label, "Approved · unpaid")
+})

@@ -34,6 +34,7 @@ from hrms.hr.utils import (
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.overrides.employee_company_default import set_company_from_employee
 from hrms.utils import claim_stages
+from hrms.utils.claim_payment import validate_payment_status
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 	def validate(self):
 		self.set_company()
+		validate_payment_status(self)
 		self.set_posting_date()
 		validate_active_employee(self.employee)
 		set_employee_name(self)
@@ -667,6 +669,10 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		update_reimbursed_amount(self)
 		self.update_claimed_amount_in_employee_advance()
 		self.create_exchange_gain_loss_je()
+
+	def before_update_after_submit(self):
+		# Payment is the one field HR change on an approved claim
+		validate_payment_status(self)
 
 	def on_update_after_submit(self):
 		if self.check_if_fields_updated([], {"taxes": ("account_head",), "expenses": ()}):
