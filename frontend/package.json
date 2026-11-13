@@ -1,8 +1,8 @@
 {
 	"name": "nadi-ui",
 	"private": true,
-	"version": "2.0.0-alpha.100",
-	"releaseName": "Long Attachments",
+	"version": "2.0.0-alpha.101",
+	"releaseName": "KPI Headcount",
 	"type": "module",
 	"scripts": {
 		"postinstall": "patch-package",

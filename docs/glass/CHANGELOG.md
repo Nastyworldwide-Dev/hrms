@@ -10,6 +10,16 @@ The version lives in `frontend/package.json` and shows on **You → About this
 app**. Git tags are `v<version>` (alpha.2 onward; older `v2.x` tags were selfie
 releases).
 
+## [2.0.0-alpha.101] — KPI Headcount — 2026-11-13
+
+### Changed
+- **KPI score tab: appraised out of headcount.** Each department now reads, for
+  example, **Supply Chain - NHSB 13 / 20**: 13 people appraised out of 20 Active
+  staff in that department. The column is called **Submitted**, and the top
+  badge reads "66 of 120 appraised". The company filter applies to both numbers.
+
+No migrate step needed.
+
 ## [2.0.0-alpha.100] — Long Attachments — 2026-11-13
 
 ### Changed
